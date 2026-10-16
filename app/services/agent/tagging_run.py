@@ -121,6 +121,13 @@ async def infer_with_progress(inference, run, messages, response_model, on_progr
     return response
 
 
+# The model's batch answer, parsed and checked; ValueError says what is wrong with it.
+def _validated_batch_proposals(content, batch, scope_note_ids, namespace_note_ids, policy, namespace_vocabulary):
+    return validate_proposals(
+        TagBatchResult.model_validate_json(content), batch, scope_note_ids, namespace_note_ids, policy, namespace_vocabulary,
+    )
+
+
 async def infer_validated_batch(
     inference, run, messages, batch, scope_note_ids, namespace_note_ids, policy,
     context_tokens, namespace_vocabulary,
@@ -135,13 +142,8 @@ async def infer_validated_batch(
         response = await infer_with_progress(inference, run, attempt_messages, TagBatchResult, lambda progress: None)
         # lint: allow-PY001 rationale="one bounded correction for invalid external model proposals"
         try:
-            return validate_proposals(
-                TagBatchResult.model_validate_json(response.content),
-                batch,
-                scope_note_ids,
-                namespace_note_ids,
-                policy,
-                namespace_vocabulary,
+            return _validated_batch_proposals(
+                response.content, batch, scope_note_ids, namespace_note_ids, policy, namespace_vocabulary,
             )
         # lint: allow-PY001 rationale="external model errors are corrected once, never silently accepted"
         except ValueError as exc:

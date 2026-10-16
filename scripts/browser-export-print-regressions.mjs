@@ -548,7 +548,9 @@ async function wrappingCase(browser, page) {
     const ids = [];
     let previous = null;
     for (const [, tags, content] of formats) {
-      const note = previous === null ? await NotesAPI.createChild(root.id, '') : await NotesAPI.createSibling(previous, '');
+      let note;
+      if (previous === null) note = await NotesAPI.createChild(root.id, '');
+      else note = await NotesAPI.createSibling(previous, '');
       await NotesAPI.saveNote(note.id, content === embed ? `<p>![[${ids[0]}]]</p>` : content, tags);
       ids.push(note.id);
       previous = note.id;
@@ -629,8 +631,10 @@ async function imageBoundsCase(browser, page) {
     context.fillRect(0, 0, 200, 120);
     const smallImage = `<img src="${canvas.toDataURL('image/png')}">`;
     const make = async (parent, previous, html, tags) => {
-      const note = parent === null ? await NotesAPI.createNote(null, '')
-        : previous === null ? await NotesAPI.createChild(parent, '') : await NotesAPI.createSibling(previous, '');
+      let note;
+      if (parent === null) note = await NotesAPI.createNote(null, '');
+      else if (previous === null) note = await NotesAPI.createChild(parent, '');
+      else note = await NotesAPI.createSibling(previous, '');
       await NotesAPI.saveNote(note.id, html, tags);
       return note.id;
     };

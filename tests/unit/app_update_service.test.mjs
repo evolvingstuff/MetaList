@@ -64,7 +64,7 @@ test('PyPI outage is an explicit failed check, not a claim of being up to date',
     t.mock.method(globalThis, 'fetch', async () => ({ok: false, status: 503, json: async () => ({detail: 'Could not reach PyPI'})}));
     const outcome = await checkRelease();
     assert.equal(outcome.release, null);
-    assert.match(outcome.error, /Could not check PyPI/);
+    assert.match(outcome.message, /Could not check PyPI/);
 });
 
 test('internal malformed-release errors remain fatal', async t => {

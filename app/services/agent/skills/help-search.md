@@ -8,7 +8,7 @@ claim that you inspected current notes or settings: none are supplied here.
 Prefer user-facing steps over implementation details. If the reference does not
 answer a question, say what is unknown; do not invent syntax or controls.
 
-Sources: docs/ui/search-syntax.md, docs/ui/search-semantics.md
+Sources: docs/ui/search-syntax.md, docs/ui/search-semantics.md, docs/ui/controls.md
 
 # Search Syntax
 
@@ -116,7 +116,7 @@ rules as the tag bar:
 - `/* ... */` comment regions are ignored.
 
 In addition, notes implicitly inherit **non-meta** tag terms from parents and referenced notes:
-- A note’s effective tags include its own tags plus non-meta tags inherited through its parents and note references (`[[UUID]]` and `![[UUID]]`). A reference contributes tags from its source and that source's complete descendant subtree, including further references within the subtree. It excludes tags inherited from ancestors above the source. Children of the referencing note inherit its effective tags normally. Accepted and proposed tag contributions remain separate until combined for search.
+- A note’s effective tags include its own tags plus non-meta tags inherited through its parents and note references (`[[UUID]]`, links and embeds). A reference contributes tags from its source and that source's complete descendant subtree, including further references within the subtree. It excludes tags inherited from ancestors above the source. Children of the referencing note inherit its effective tags normally. Accepted and proposed tag contributions remain separate until combined for search.
 - Tags starting with `@` (meta tags like `@monospace`) are **not** inherited.
 - Tag-bar `/* ... */` comments are **not** inherited (they only affect text search for the note that contains them).
 
@@ -227,9 +227,62 @@ Results are still **windowed by root notes**:
 
 ## Embedded References and Search
 
-Both embedded (`![[UUID]]`) and linked (`[[UUID]]`) note references participate in tag inheritance:
+Note references (`[[UUID]]`), links and embeds alike, participate in tag inheritance:
 - Non-meta tags on the source or its descendants supply required/forbidden tag hits for the host and its children, including through chains of references. For `foo → bar → baz`, a reference to `bar` matches tags on `bar` and `baz`, but excludes tags inherited from `foo`. Searching for a tag on `baz` includes the reference host; an expanded embed displays the full `bar → baz` subtree. Link-mode references retain their compact rendering.
 - Canonical notes still inherit their own ancestors' tags. The referencing host also retains inheritance from its own parents. Source text does not supply required/forbidden quoted-text hits; source meta tags and comments do not pass through references.
 - Subtree/reference cycles converge from direct tags, without importing parent inheritance. Removing a tag/reference clears stale contributions, including within cycles. An explicit reference to an ancestor still contributes that referenced subtree's tags.
 - Inherited-tag metadata, suggestions, and Untagged Notes use the same computed tags. Ontology inference continues to run per note after inheritance.
 - Updates are maintained in memory on edits, tag changes, moves, deletion, and restoration; collapse/expand does not rebuild tag inheritance.
+
+# Search Bar (typing and suggestions)
+
+From docs/ui/controls.md.
+
+### Search Input Behavior
+- The search field keeps a muted search icon inside the input before and during typing; hovering the field shows a `Search` tooltip.
+- Pressing `Enter` while focused in the search input creates a new **root** note.
+- Pressing `Esc` while focused in the search input blurs the field and dismisses search suggestions, without clearing the current query or search results.
+- The right side of the black search header shows only the result's root-note count.
+  MetaList does not tokenize search results during startup, ordinary interaction,
+  or snapshot refresh merely to populate this UI. The existing `Show/Hide search
+  result count` preference controls the count.
+- If the search query contains required tag terms (unquoted tokens like `asdf`), the new root note is created with those tags in its tag bar.
+- When creating a child (`⇧ + ⌘ + Enter`) or sibling (`⌘ + Enter`) note under a note that already provides the required **non-meta** tags via inheritance, the new note is **not** redundantly tagged.
+- **Sorted tabs: adding and editing notes.** In any non-normal sort order a new or edited root note could land far from where you are, so:
+
+  | Sort | While you edit a note | New root note at the top (`Enter` outside edit mode, Add Note, pasting or dropping into a new note) | New root note below a root note (`⌘ + Enter`, Split, paste as sibling) |
+  |---|---|---|---|
+  | Normal | — | allowed | allowed |
+  | Datetime created | order frozen (editing never changes it anyway) | allowed: it lands at the top | blocked |
+  | Datetime last updated | order frozen | allowed: it lands at the top | blocked |
+  | Alphabetical | order frozen | blocked | blocked |
+  | Content volume | order frozen, also while editing a child note | blocked | blocked |
+
+  - Child notes (`⇧ + ⌘ + Enter`, paste as child, or a sibling of a child note) can always be added: the sort orders only root notes.
+  - A blocked action does nothing and shows a banner saying why (switch to Normal order, or add a child note). Pasting a copied note onto an empty note fills that note, so it is never blocked.
+  - **Order frozen while editing:** the note you are editing (or the root note containing it) stays where it was, even when saving changes its date, name or size. In the date orders it shows under its neighbour's date header meanwhile.
+  - **Leaving edit mode:** the note then moves to its sorted place, and the screen stays on the surrounding notes (like a mail app), so nothing you are looking at jumps. If the note keeps its place, your caret or reading line stays put as usual.
+- Sort modes do not change canonical insertion behavior. New roots are still inserted into the manual root order first, then rendered in the active sort order.
+
+### Search Suggestions
+- Suggestions are **tag-only** (no text suggestions).
+- For a blank search or the first tag prefix in a query, the first suggestion slots can be personalized from ordered activity windows. The default windows are 1, 7, and 30 calendar days.
+- Case-equivalent tags are collapsed in the suggestion list, and the most-used spelling is shown.
+- Search execution, typing, scrolling, hovering, rendering, collapsing, and programmatic tab switches do not earn credit.
+- Entering edit mode, manually expanding a note, entering full-screen note view, running a shell note, toggling todo/done, and successfully reordering/indenting/outdenting a note count as intentional note engagements. Structural no-ops do not count.
+- Each engagement increments every raw searchable tag on the note, including inherited tags and meta tags, before ontology inference. This lets an `@shell` child under `shortcut` credit both raw tags without rewarding unrelated inferred tags.
+- By default, each note can earn only one engagement credit in the same active tab and executed-search context, even when other notes are engaged between two interactions with it. The context limits repetition but does not filter the credited note tags. Leaving that context and later returning starts a fresh flow.
+- Successfully adding one or more explicit tags awards one credit to each newly added tag. It does not re-credit tags already present or inherited from ancestors; removals and case-only changes award nothing.
+- Accepting a search suggestion by click or `Enter` awards one credit to the selected tag every time. Clicking a search-context tab awards one credit to each known positive tag term in that tab's executed query; excluded tags and quoted text do not earn credit.
+- Counts are stored in sparse daily buckets. Days without activity have no bucket and do not consume retention capacity; the latest 365 populated days are retained.
+- Each configured window chooses its highest-count matching tag, excluding tags already chosen by earlier windows. The remaining suggestions retain normal namespace-frequency ordering.
+- `Cmd/Ctrl+/` → `Search suggestion stats & settings…` is the single place for suggestion activity controls. Changes to its ordered 1–365 day slots, default-on time-window labels, and default-on one-credit-per-note-per-search-context limit persist immediately. It also shows every retained populated date and tag-credit count and includes a confirmed `Reset activity` action. Disabling the credit limit makes every qualifying interaction count; removing every slot disables personalization.
+- Confirmations, errors, and completion notices use MetaList modals, login-state messaging, or banners; native browser `alert`, `confirm`, and `prompt` dialogs are forbidden by the development startup sanity gate.
+- While typing a partial tag token, suggestions are segment-aware for connector-separated tags: a prefix can match the start of the full tag or the start of any connector-separated segment (`-`, `_`, `.`, `/`).
+- Example: `wor` can suggest `workspaces` and `databricks-workspaces`; `orksp` suggests neither.
+- When the active prefix starts with `@`, matching meta-tag suggestions are ordered by notebook usage frequency (note count), with alphabetical tiebreaks for equal counts.
+- After completing a tag and adding a space, suggestions are ordered by tag co-occurrence with all existing tag tokens in the query (strict overlap count > Jaccard within overlap).
+- Suggestions appear only when the search input is focused.
+- Moving the pointer below the suggestion popup, or horizontally outside the centered notes column, hides open search suggestions while keeping focus in the search input. After that pointer dismissal, suggestions stay closed until the user resumes typing or clicks the search input again.
+- Arrow keys move selection; `Enter` accepts the selected suggestion without adding a trailing space.
+- Suggestion matching is broader than actual filtering: search results still match exact effective tag terms only.

@@ -6,8 +6,10 @@ import { ErrorHandler } from '../../error-handler.js';
 import { areScrollAnchorsEqual, computeScrollAnchor } from './scroll-anchor-service.js';
 import { CommandGate } from './command-gate-service.js';
 import { buildSessionHeaders } from '../../session-auth.js';
+import { AuthenticationRequiredError } from '../../client-state-api.js';
 import { restoreReferenceNavigationFromSession } from './reference-source-navigation-service.js';
 
+const HTTP_UNAUTHORIZED = 401;
 const TAB_STATE_ENDPOINT = CONFIG.API.NOTES.TAB_STATE;
 const TAB_STATE_NEW_TAB_ENDPOINT = CONFIG.API.NOTES.TAB_STATE_NEW_TAB;
 const TAB_STATE_DELETE_TAB_ENDPOINT = CONFIG.API.NOTES.TAB_STATE_DELETE_TAB;
@@ -146,6 +148,10 @@ async function callTabStateApiAt(endpoint, method, body) {
     });
     if (!response.ok) {
         ErrorHandler.handleApiError(null, response);
+        // The session ended: handleApiError has shown the login screen.
+        if (response.status === HTTP_UNAUTHORIZED) {
+            throw new AuthenticationRequiredError(`tab-state ${method}: the session has ended`);
+        }
         throw new HttpRequestError(`tab-state ${method} failed with status ${response.status}`);
     }
     return await response.json();
@@ -185,8 +191,10 @@ function captureUndoContext() {
     if (searchQuery !== null && typeof searchQuery !== 'string') {
         throw new Error('ModeContext.searchQuery must be a string or null');
     }
-    const normalizedSearch = searchQuery === null ? '' : searchQuery;
-    return `tab:${tabId}|search:${normalizedSearch}|epoch:${epoch}`;
+    if (searchQuery === null) {
+        return `tab:${tabId}|search:|epoch:${epoch}`;
+    }
+    return `tab:${tabId}|search:${searchQuery}|epoch:${epoch}`;
 }
 
 export async function setTabSortModeOnServer(tabId, sortMode) {
@@ -266,7 +274,14 @@ async function pollPersistScroll() {
         return;
     }
     moduleState.isScrollPersisting = true;
-    await persistCurrentScroll().finally(() => {
+    // The session can end while a save is in flight (it expired, a backup
+    // restore or a password change ended it): the login screen already shows,
+    // and the last moment's scroll is not saved. Every other failure surfaces.
+    await persistCurrentScroll().catch((error) => { // shockharness: ignore[EXC002] reason="a session that ended is shown as the login screen; the last moment's scroll is dropped on purpose"
+        if (!(error instanceof AuthenticationRequiredError)) {
+            throw error;
+        }
+    }).finally(() => {
         moduleState.isScrollPersisting = false;
     });
 }

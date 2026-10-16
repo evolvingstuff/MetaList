@@ -16,10 +16,15 @@ import {
     actionCopyNote,
     actionPasteNoteSibling,
     actionPasteNoteChild,
+    actionPasteReferenceSibling,
+    actionPasteReferenceChild,
     splitCurrentNoteFromSelection,
     unformatCurrentNoteContent,
+    actionCopyNoteById,
+    deleteNoteOutsideEdit,
 } from '../actions/note-actions.js';
 import { actionSaveNote } from '../actions/content-actions.js';
+import { confirmRemovingReferencedNote, deleteEditedNoteAskingIfReferenced } from '../services/referenced-note-removal-service.js';
 import { actionDeselectNote, actionExitEditingWithoutSavingOrRefreshing, actionSaveAndExitEditingWithoutRefreshing } from '../actions/selection-actions.js';
 import { blockRootNoteCreation, requireCreatedNoteId } from '../services/root-note-creation-service.js';
 import { actionUndo, actionRedo } from '../actions/history-actions.js';
@@ -78,7 +83,6 @@ import { sanitizeAndInsertExternalPaste } from '../services/html-paste-sanitizer
 import { cleanTrackingInText } from '../../url-tracking-cleaner.js';
 import {
     resolveClipboardTrackingAfterPasteEvent,
-    shouldAllowBrowserPasteForShortcut,
     shouldCreateTopNoteForPaste,
 } from '../services/clipboard-shortcut-policy-service.js';
 import {
@@ -100,7 +104,6 @@ import { promptForImageFileInsertMode } from '../services/image-file-insert-choi
 import { attachPickedFileToCurrentNote, insertReferenceTokenIntoActiveEditor } from '../services/file-reference-service.js';
 import { shouldCreateTopNoteForFileDrop } from '../services/file-drop-policy-service.js';
 import { shouldDeleteSelectedNoteFromKeyboard } from '../services/note-delete-shortcut-policy-service.js';
-import { syncBacklinksPanelPlacement } from '../services/backlinks-panel-service.js';
 import {
     hideSearchContextsOverlay,
     initializeSearchContextsHover,
@@ -165,7 +168,7 @@ function isTagBarNoteShortcut(event) {
     if (MOVE_KEYS.has(event.key)) {
         return true;
     }
-    return TAG_BAR_META_SHORTCUT_KEYS.has(event.key);
+    return TAG_BAR_META_SHORTCUT_KEYS.has(shortcutKeyOf(event));
 }
 
 export function initKeyboardEvents() {
@@ -198,7 +201,6 @@ export function initKeyboardEvents() {
 
 function handleSearchContextsViewportChange() {
     updateSearchContextsOverlayPlacement();
-    syncBacklinksPanelPlacement();
 }
 
 function markSystemClipboardAsTrusted() {
@@ -259,6 +261,15 @@ function syncClipboardTrackingFromPasteEventHtml(clipboardHtml) {
         ModeContext.setClipboardMode(resolved.clipboardMode);
     }
     return resolved.hasNoteClipboardHtml;
+}
+
+// The key a shortcut is named by. With Shift held a letter arrives in upper
+// case (Control+Shift+R is 'R'); ⌘/Control shortcuts name the lower-case letter.
+function shortcutKeyOf(event) {
+    if ((event.metaKey || event.ctrlKey) && /^[A-Z]$/.test(event.key)) {
+        return event.key.toLowerCase();
+    }
+    return event.key;
 }
 
 function handleKeyDown(event) {
@@ -423,15 +434,15 @@ function handleKeyDown(event) {
             needsServer = true;
 	        } else if (isMoveKey && metaOrCtrl) {
 	            needsServer = true;
-        } else if (event.key === 'v' && metaOrCtrl) {
+        } else if (shortcutKeyOf(event) === 'v' && metaOrCtrl) {
             needsServer = true;
-        } else if (event.key === 'u' && metaOrCtrl) {
+        } else if (shortcutKeyOf(event) === 'u' && metaOrCtrl) {
             needsServer = true;
-        } else if (event.key === 's' && metaOrCtrl) {
+        } else if (shortcutKeyOf(event) === 's' && metaOrCtrl) {
             needsServer = true;
-        } else if (event.key === 'c' && metaOrCtrl) {
+        } else if (shortcutKeyOf(event) === 'c' && metaOrCtrl) {
             needsServer = true;
-        } else if ((event.key === 'z' || event.key === 'y') && metaOrCtrl) {
+        } else if ((shortcutKeyOf(event) === 'z' || shortcutKeyOf(event) === 'y') && metaOrCtrl) {
             needsServer = true;
         }
         
@@ -448,7 +459,7 @@ function handleKeyDown(event) {
         // Allow ESC and search while disconnected.
     }
 
-    switch (event.key) {
+    switch (shortcutKeyOf(event)) {
         case 'Tab':
             if (ModeContext.isEditing) {
                 handleToggleTagBarFocusShortcut(event);
@@ -509,15 +520,9 @@ function handleKeyDown(event) {
 	                handleIndentNoteShortcut(event);
 	            }
 	            break;
-        case 'v':
-            if (event.metaKey || event.ctrlKey) {
-                if (event.shiftKey) {
-                    handlePasteNoteChildShortcut(event);
-                } else {
-                    handlePasteNoteSiblingShortcut(event);
-                }
-            }
-            break;
+        // ⌘V / ⇧⌘V: the browser pastes, and handlePasteEvent decides from what
+        // was pasted. Only MetaList's note marker in the pasted HTML pastes the
+        // copied note; another app's ⌘V (a dictation app typing words) is text.
         case 'z':
             if (event.metaKey || event.ctrlKey) {
                 if (event.shiftKey) {
@@ -701,7 +706,7 @@ function handleToggleTagBarFocusShortcut(event) {
 }
 
 function revealCaretForCurrentNote() {
-    // Most keystrokes happen after the caret is already visible; collapsed-note edit mode is the exception.
+    // A click shows the caret; a note selected without one (a pasted note, a robot press) shows it on the first key.
     if (!ModeContext.isEditing || !ModeContext.isCaretHidden) {
         return;
     }
@@ -860,9 +865,7 @@ function handleDeleteNoteShortcut(event) {
     event.preventDefault();
 
 	if (noteId) {
-	    void CommandGate.run('keyboard.delete', async () => {
-	        await deleteNote(noteId);
-	    });
+	    void deleteEditedNoteAskingIfReferenced(noteId, 'keyboard.delete');
 	} else {
                 
         Logger.logNoop('Delete shortcut pressed but no note is selected', {
@@ -1209,33 +1212,6 @@ async function handleCopyNoteShortcut(event) {
     }
 }
 
-function ensureSelectionInsideEditableContent(contentElement) {
-    if (!contentElement) {
-        throw new Error('ensureSelectionInsideEditableContent requires content element');
-    }
-
-    const selection = window.getSelection();
-    if (!selection) {
-        throw new Error('Selection API unavailable');
-    }
-
-    const hasRangeInContent = (
-        selection.rangeCount > 0
-        && contentElement.contains(selection.anchorNode)
-        && contentElement.contains(selection.focusNode)
-    );
-    if (hasRangeInContent) {
-        return;
-    }
-
-    const range = document.createRange();
-    range.selectNodeContents(contentElement);
-    range.collapse(false);
-    contentElement.focus();
-    selection.removeAllRanges();
-    selection.addRange(range);
-}
-
 function _linePrefixText(fullText) {
     if (typeof fullText !== 'string') {
         throw new Error('_linePrefixText requires string');
@@ -1348,50 +1324,6 @@ function _isSelectionCollapsedOnEmptyVisualLine(contentElement, range) {
     return false;
 }
 
-function getSelectionLineContext(contentElement) {
-    if (!(contentElement instanceof HTMLElement)) {
-        throw new Error('getSelectionLineContext requires content element');
-    }
-
-    const selection = window.getSelection();
-    if (!selection) {
-        throw new Error('Selection API unavailable');
-    }
-    if (selection.rangeCount === 0) {
-        throw new Error('Selection range missing');
-    }
-
-    const range = selection.getRangeAt(0);
-    if (!contentElement.contains(range.startContainer) || !contentElement.contains(range.endContainer)) {
-        throw new Error('Selection is outside editable content');
-    }
-
-    if (_isSelectionCollapsedOnEmptyVisualLine(contentElement, range)) {
-        return {
-            hasTextBeforeOnLine: false,
-            hasTextAfterOnLine: false,
-        };
-    }
-
-    const beforeRange = document.createRange();
-    beforeRange.selectNodeContents(contentElement);
-    beforeRange.setEnd(range.startContainer, range.startOffset);
-    const beforeText = beforeRange.toString();
-
-    const afterRange = document.createRange();
-    afterRange.selectNodeContents(contentElement);
-    afterRange.setStart(range.endContainer, range.endOffset);
-    const afterText = afterRange.toString();
-
-    const beforeLineText = _linePrefixText(beforeText);
-    const afterLineText = _lineSuffixText(afterText);
-
-    return {
-        hasTextBeforeOnLine: _lineHasVisibleText(beforeLineText),
-        hasTextAfterOnLine: _lineHasVisibleText(afterLineText),
-    };
-}
-
 function insertPlainTextAtCurrentSelection(text) {
     if (typeof text !== 'string') {
         throw new Error('insertPlainTextAtCurrentSelection requires text string');
@@ -1448,7 +1380,7 @@ function handleInsertEmbedReferenceShortcut(event) {
         }
         void CommandGate.run('keyboard.paste_reference_new_top_note', async () => {
             const newNoteId = requireCreatedNoteId(await createNoteAtTop(), 'pasteReferenceNewTopNote');
-            insertReferenceTokenIntoActiveEditor(`![[${referenceNoteId}]]`);
+            insertReferenceTokenIntoActiveEditor(`[[${referenceNoteId}]]`);
             await actionSaveNote(newNoteId);
             ModeContext.resetEditSessionState({ startedCollapsed: false });
         });
@@ -1456,38 +1388,20 @@ function handleInsertEmbedReferenceShortcut(event) {
     }
 
     if (typeof currentNoteId !== 'string' || currentNoteId.length === 0) {
-        throw new Error('Reference insertion requires current note id while editing');
+        throw new Error('Reference paste requires current note id while editing');
     }
 
+    // A reference pastes where the note itself would: ⇧⌘R as the first child
+    // (⇧⌘V), ⌘R below the note or into it when empty (⌘V).
     if (event.shiftKey) {
         void CommandGate.run('keyboard.paste_reference_child', async () => {
-            await createChildNote();
-            insertReferenceTokenIntoActiveEditor(`![[${referenceNoteId}]]`);
+            await actionPasteReferenceChild(referenceNoteId);
         });
         return;
     }
-
-    const noteElement = DOMUtils.getNoteById(currentNoteId);
-    const contentElement = DOMUtils.getNoteContent(noteElement);
-    if (!(contentElement instanceof HTMLElement)) {
-        throw new Error('Current note missing editable content element');
-    }
-
-    ensureSelectionInsideEditableContent(contentElement);
-    const lineContext = getSelectionLineContext(contentElement);
-    const referenceToken = `![[${referenceNoteId}]]`;
-    let insertionText = referenceToken;
-    if (lineContext.hasTextBeforeOnLine) {
-        insertionText = `\n${insertionText}`;
-    }
-    if (lineContext.hasTextAfterOnLine) {
-        insertionText = `${insertionText}\n`;
-    }
-    insertPlainTextAtCurrentSelection(insertionText);
-
-    if (!ModeContext.isDirty) {
-        ModeContext.setDirty(true);
-    }
+    void CommandGate.run('keyboard.paste_reference_sibling', async () => {
+        await actionPasteReferenceSibling(referenceNoteId);
+    });
 }
 
 async function handleSplitNoteShortcut(event) {
@@ -1581,8 +1495,13 @@ async function handleCutNoteShortcut(event) {
     event.preventDefault();
     event.stopPropagation();
 
+    // Other notes referencing it: asked first; the dialog leaves edit mode.
+    const decision = await confirmRemovingReferencedNote(currentNoteId, 'cut');
+    if (decision === null || decision === 'cancelled') {
+        return;
+    }
     const cutResult = await CommandGate.run('keyboard.cut_note', async () => {
-        const copyResult = await actionCopyNote();
+        const copyResult = await actionCopyNoteById(currentNoteId);
         const renderedHtml = copyResult?.html;
         const renderedPlainText = copyResult?.plain_text;
 
@@ -1594,7 +1513,11 @@ async function handleCutNoteShortcut(event) {
             });
         }
 
-        await deleteNote(currentNoteId);
+        if (decision === 'unreferenced') {
+            await deleteNote(currentNoteId);
+        } else {
+            await deleteNoteOutsideEdit(currentNoteId);
+        }
     });
     if (cutResult === null) {
         return;
@@ -1602,91 +1525,6 @@ async function handleCutNoteShortcut(event) {
     markNoteClipboardAsTrusted();
 }
 
-function handlePasteNoteSiblingShortcut(event) {
-    if (!event) {
-        throw new Error('handlePasteNoteSiblingShortcut called without an event object');
-    }
-
-    Logger.logDebug('Paste sibling shortcut triggered', {
-        isEditing: ModeContext.isEditing,
-        currentNoteId: ModeContext.currentNoteId,
-        clipboardMode: ModeContext.clipboardMode,
-        noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
-    }, Logger.LogCategory.EVENT);
-
-    const shouldAllowBrowserPaste = shouldAllowBrowserPasteForShortcut({
-        clipboardMode: ModeContext.clipboardMode,
-        noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
-        isEditing: ModeContext.isEditing,
-        currentNoteId: ModeContext.currentNoteId,
-    });
-    if (shouldAllowBrowserPaste) {
-        if (ModeContext.clipboardMode === 'system') {
-            Logger.logDebug('System clipboard mode - allowing default paste behavior', {}, Logger.LogCategory.EVENT);
-            return; // NO preventDefault - let browser handle text paste
-        }
-        if (moduleState.noteClipboardRequiresBrowserValidation) {
-            Logger.logDebug('Note clipboard requires browser validation - allowing paste event inspection', {}, Logger.LogCategory.EVENT);
-            return;
-        }
-        Logger.logNoop('Note paste shortcut conditions not met', {
-            isEditing: ModeContext.isEditing,
-            currentNoteId: ModeContext.currentNoteId,
-            clipboardMode: ModeContext.clipboardMode,
-            noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
-        });
-        return;
-    }
-
-    // YES preventDefault - prevent browser, do note paste
-    event.preventDefault();
-    void CommandGate.run('keyboard.paste_sibling', async () => {
-        await actionPasteNoteSibling();
-    });
-}
-
-function handlePasteNoteChildShortcut(event) {
-    if (!event) {
-        throw new Error('handlePasteNoteChildShortcut called without an event object');
-    }
-
-    Logger.logDebug('Paste child shortcut triggered', {
-        isEditing: ModeContext.isEditing,
-        currentNoteId: ModeContext.currentNoteId,
-        clipboardMode: ModeContext.clipboardMode,
-        noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
-    }, Logger.LogCategory.EVENT);
-
-    const shouldAllowBrowserPaste = shouldAllowBrowserPasteForShortcut({
-        clipboardMode: ModeContext.clipboardMode,
-        noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
-        isEditing: ModeContext.isEditing,
-        currentNoteId: ModeContext.currentNoteId,
-    });
-    if (shouldAllowBrowserPaste) {
-        if (ModeContext.clipboardMode === 'system') {
-            Logger.logDebug('System clipboard mode - allowing default paste behavior', {}, Logger.LogCategory.EVENT);
-            return; // NO preventDefault - let browser handle text paste
-        }
-        if (moduleState.noteClipboardRequiresBrowserValidation) {
-            Logger.logDebug('Note clipboard requires browser validation - allowing paste event inspection', {}, Logger.LogCategory.EVENT);
-            return;
-        }
-        Logger.logNoop('Note paste child shortcut conditions not met', {
-            isEditing: ModeContext.isEditing,
-            currentNoteId: ModeContext.currentNoteId,
-            clipboardMode: ModeContext.clipboardMode,
-            noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
-        });
-        return;
-    }
-    
-    // YES preventDefault - prevent browser, do note paste
-    event.preventDefault();
-    void CommandGate.run('keyboard.paste_child', async () => {
-        await actionPasteNoteChild();
-    });
-}
 
 function handleHelpModalShortcut(event) {
     if (!event) {
@@ -3160,8 +2998,8 @@ function handlePasteEvent(event) {
         if (hasActiveNote) {
             event.preventDefault();
             
-			// Determine if shift is held for child paste
-			if (event.shiftKey) {
+			// ⇧⌘V (its keystroke asked for a plain paste) pastes the note as a child.
+			if (isPlainPaste) {
 				void CommandGate.run('paste_event.child', async () => {
 					await actionPasteNoteChild();
 				});
@@ -3569,7 +3407,6 @@ export function updateSearchContextsList() {
         updateSearchContextsOverlayPlacement();
     }
 
-    syncBacklinksPanelPlacement();
     updateReferenceSourceIndicator();
 }
 
@@ -3959,13 +3796,6 @@ async function runReferenceSearchInActiveTab(referenceQuery, context) {
             normalizedReferenceQuery.length,
         );
     }
-}
-
-export async function openReferenceInCurrentTab(referenceNoteId) {
-    if (typeof referenceNoteId !== 'string' || referenceNoteId.length === 0) {
-        throw new Error('openReferenceInCurrentTab requires referenceNoteId');
-    }
-    await runReferenceSearchInActiveTab(referenceNoteId, 'reference.link_open_current_tab');
 }
 
 async function moveTabContext(tabId, hoveredTabId) {

@@ -215,7 +215,7 @@ class SelectedNoteContext:
     status: Literal["none", "available", "unavailable"]
     note_id: str
     tree_notes: tuple[SelectedTreeNote, ...]
-    unavailable_reason: str = ""
+    unavailable_reason: str
 
     def __post_init__(self) -> None:
         assert isinstance(self.tree_notes, tuple)
@@ -257,6 +257,11 @@ class SelectedNoteContext:
         return ()
 
 
+
+# No note was selected when the chat was opened.
+NO_SELECTED_NOTE = SelectedNoteContext(status="none", note_id="", tree_notes=(), unavailable_reason="")
+
+
 @dataclass(frozen=True, slots=True)
 class ScopedSearchSnapshot:
     run_id: str
@@ -271,7 +276,7 @@ class ScopedSearchSnapshot:
     preparation_ms: float
     # Note text extracted on first read during the run (NoteText).
     text_extraction: TextExtractionMeter
-    selected_note: SelectedNoteContext = SelectedNoteContext("none", "", ())
+    selected_note: SelectedNoteContext
 
     @property
     def note_count(self) -> int:
@@ -403,7 +408,7 @@ class ScopedSearchSnapshotFactory:
         self, note_id: str, visible_scope: ResolvedViewScope, boundary: CloudPrivacyBoundary,
     ) -> SelectedNoteContext:
         if note_id == "":
-            return SelectedNoteContext("none", "", ())
+            return SelectedNoteContext("none", "", (), unavailable_reason="")
         if not self._notes.has_note(note_id):
             return SelectedNoteContext("unavailable", "", (), "not_found")
         exclusion_reason = self._privacy_evaluator.exclusion_reason(note_id=note_id, boundary=boundary)
@@ -426,7 +431,7 @@ class ScopedSearchSnapshotFactory:
             if record.parent_id is not None:
                 parent_id = record.parent_id
             tree_notes.append(SelectedTreeNote(tree_id, parent_id, content_text, record.tags))
-        return SelectedNoteContext("available", note_id, tuple(tree_notes))
+        return SelectedNoteContext("available", note_id, tuple(tree_notes), unavailable_reason="")
 
     def _selected_tree_note_ids(self, root_id: str, allowed_note_ids: frozenset[str]) -> tuple[str, ...]:
         ordered = []

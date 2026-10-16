@@ -141,7 +141,7 @@ export const Auth = {
         document.documentElement.removeAttribute('data-theme');
     },
 
-    _setLoginNamespaceStatus(text, state = 'info') {
+    _setLoginNamespaceStatus(text, state) {
         if (typeof text !== 'string') {
             throw new Error('Auth._setLoginNamespaceStatus requires text string');
         }
@@ -173,7 +173,7 @@ export const Auth = {
         switcher.hidden = !shouldShow;
     },
 
-    _renderLoginNamespacePicker(catalog, disabled = false) {
+    _renderLoginNamespacePicker(catalog, disabled) {
         const select = this._requireElement('login-namespace-select');
         const switcher = this._requireElement('login-namespace-switcher');
         if (!catalog || typeof catalog !== 'object') {
@@ -235,7 +235,7 @@ export const Auth = {
 
         const select = this._requireElement('login-namespace-select');
         select.disabled = true;
-        this._setLoginNamespaceStatus('Loading namespaces...');
+        this._setLoginNamespaceStatus('Loading namespaces...', 'info');
 
         const response = await fetch(CONFIG.API.AUTH.LOGIN_NAMESPACES.LIST);
         if (!response.ok) {
@@ -250,7 +250,7 @@ export const Auth = {
             this._setCurrentNamespace(payload.currentNamespace);
         }
         this._renderLoginNamespacePicker(payload, false);
-        this._setLoginNamespaceStatus('');
+        this._setLoginNamespaceStatus('', 'info');
     },
 
     _clearLoginError() {
@@ -666,7 +666,7 @@ export const Auth = {
                     getComposerHeight: () => CommandPalette.getAiChatComposerHeight(),
                     saveComposerHeight: (height) => CommandPalette.saveAiChatComposerHeight(height),
                     setVisible: (isVisible) => CommandPalette.applyPreference('pref.show_ai_chat', isVisible),
-                    openSettings: () => CommandPalette.openAiAgentSettings(),
+                    openSettings: () => CommandPalette.openAiAgentSettings(false),
                     openMenu: (menuId, scope, signal) => CommandPalette.openAgentMenu(menuId, scope, signal),
                 });
                 startupPhase = 'revealing the workspace';
@@ -742,7 +742,7 @@ export const Auth = {
             throw new Error('A password change is already running');
         }
         this._isPasswordChanging = true;
-        return operation().catch((error) => {
+        return operation().catch((error) => { // shockharness: ignore[EXC001] reason="the handler only resets state, then rethrows the error unchanged"
             this._isPasswordChanging = false;
             throw error;
         });
@@ -791,7 +791,7 @@ export const Auth = {
                 if (!event.persisted || this._currentNamespace === null) return;
                 namespaceSelect.value = this._currentNamespace;
                 namespaceSelect.disabled = false;
-                this._setLoginNamespaceStatus('');
+                this._setLoginNamespaceStatus('', 'info');
                 this._showLoginPanelAfterSwitch();
             });
         }

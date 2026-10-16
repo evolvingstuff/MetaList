@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             getComposerHeight: () => CommandPalette.getAiChatComposerHeight(),
             saveComposerHeight: (height) => CommandPalette.saveAiChatComposerHeight(height),
             setVisible: (isVisible) => CommandPalette.applyPreference('pref.show_ai_chat', isVisible),
-            openSettings: () => CommandPalette.openAiAgentSettings(),
+            openSettings: () => CommandPalette.openAiAgentSettings(false),
             openMenu: (menuId, scope, signal) => CommandPalette.openAgentMenu(menuId, scope, signal),
         });
         Auth.revealMainApp();

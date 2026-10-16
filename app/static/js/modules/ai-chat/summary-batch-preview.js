@@ -34,14 +34,26 @@ function validatePreview(preview) {
 }
 
 
+function fillCard(card, validated) {
+    const { batchNumber, status } = validated;
+    card.className = `summary-batch-preview is-${status}`;
+    card.dataset.summaryBatch = String(batchNumber);
+    card.dataset.summaryStatus = status;
+    card.replaceChildren(...buildCardBody(card.ownerDocument, validated));
+}
+
+
 function validateTransition(existing, { batchNumber, status }) {
-    const previousStatus = existing === undefined ? '' : existing.dataset.summaryStatus;
-    if (status === 'writing' && previousStatus !== '') {
-        throw new Error(`Summary batch ${batchNumber} started more than once`);
+    if (existing === undefined) {
+        if (status !== 'writing') {
+            const verb = status === 'streaming' ? 'streamed' : 'completed';
+            throw new Error(`Summary batch ${batchNumber} ${verb} before it started`);
+        }
+        return;
     }
-    if (status !== 'writing' && previousStatus === '') {
-        const verb = status === 'streaming' ? 'streamed' : 'completed';
-        throw new Error(`Summary batch ${batchNumber} ${verb} before it started`);
+    const previousStatus = existing.dataset.summaryStatus;
+    if (status === 'writing') {
+        throw new Error(`Summary batch ${batchNumber} started more than once`);
     }
     if (status === 'streaming' && previousStatus === 'complete') {
         throw new Error(`Summary batch ${batchNumber} streamed after it completed`);
@@ -114,19 +126,16 @@ export function renderSummaryBatchPreview(stack, preview) {
         (card) => card.dataset.summaryBatch === String(batchNumber),
     );
     validateTransition(existing, validated);
-    const card = existing === undefined
-        ? stack.ownerDocument.createElement('section')
-        : existing;
-    card.className = `summary-batch-preview is-${status}`;
-    card.dataset.summaryBatch = String(batchNumber);
-    card.dataset.summaryStatus = status;
-    card.replaceChildren(...buildCardBody(stack.ownerDocument, validated));
     if (existing === undefined) {
+        const card = stack.ownerDocument.createElement('section');
+        fillCard(card, validated);
         const followingCard = Array.from(stack.children).find(
             (candidate) => Number(candidate.dataset.summaryBatch) > batchNumber,
         );
         if (followingCard === undefined) stack.append(card);
         else stack.insertBefore(card, followingCard);
+    } else {
+        fillCard(existing, validated);
     }
     stack.dataset.summaryBatchCount = String(batchCount);
     stack.hidden = false;

@@ -151,16 +151,20 @@ def _recreate_default_namespace(*, args: argparse.Namespace) -> None:
     )
 
 
+def _run_deletion(*, args: argparse.Namespace) -> None:
+    normalized_namespace = validate_namespace(namespace=args.namespace)
+    _stop_process(pid=args.pid)
+    _delete_namespace_directory(namespace=normalized_namespace)
+    if args.recreate_default:
+        _recreate_default_namespace(args=args)
+    mark_namespace_deletion_job_succeeded(job_id=args.job_id)
+
+
 def main() -> None:
     args = _parse_args()
     main_capture = CapturedExceptionContext(Exception, boundary='app/services/namespace_deletion_worker.py:main:main_capture')
     with main_capture:
-        normalized_namespace = validate_namespace(namespace=args.namespace)
-        _stop_process(pid=args.pid)
-        _delete_namespace_directory(namespace=normalized_namespace)
-        if args.recreate_default:
-            _recreate_default_namespace(args=args)
-        mark_namespace_deletion_job_succeeded(job_id=args.job_id)
+        _run_deletion(args=args)
     if main_capture.captured_exception is not None:
         mark_namespace_deletion_job_failed(
             job_id=args.job_id,

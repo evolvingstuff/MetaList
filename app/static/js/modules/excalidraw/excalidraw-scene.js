@@ -27,9 +27,10 @@ export function parseSceneJson(sceneText) {
     try {
         scene = JSON.parse(sceneText);
     } catch (error) {
-        throw error instanceof SyntaxError
-            ? new UserInputRejected('This file is not a valid Excalidraw diagram (it is not JSON).')
-            : error;
+        if (!(error instanceof SyntaxError)) {
+            throw error;
+        }
+        throw new UserInputRejected('This file is not a valid Excalidraw diagram (it is not JSON).', { cause: error });
     }
     if (scene === null || typeof scene !== 'object' || scene.type !== 'excalidraw' || !Array.isArray(scene.elements)) {
         throw new UserInputRejected('This file is not a valid Excalidraw diagram.');

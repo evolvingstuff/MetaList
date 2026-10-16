@@ -62,7 +62,7 @@ class _RequestTransactionState:
     commit_callbacks: list[Callable[[], None]]
     rollback_callbacks: list[Callable[[], None]]
     recoveries: dict[Path, LiveDatabaseRecovery | MemoryDatabaseRecovery]
-    did_write: bool = False
+    did_write: bool
 
 
 _request_transaction_state: ContextVar[Optional[_RequestTransactionState]] = ContextVar(
@@ -165,7 +165,7 @@ def recoverable_database_change(database_path: Path):
 def begin_request_transaction() -> Iterator[None]:
     if _request_transaction_state.get() is not None:
         raise RuntimeError("Request transaction already active")
-    state = _RequestTransactionState(session=None, guard=None, commit_callbacks=[], rollback_callbacks=[], recoveries={})
+    state = _RequestTransactionState(session=None, guard=None, commit_callbacks=[], rollback_callbacks=[], recoveries={}, did_write=False)
     token = _request_transaction_state.set(state)
     succeeded = False
     try:

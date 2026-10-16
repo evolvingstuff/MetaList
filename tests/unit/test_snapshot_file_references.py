@@ -285,7 +285,8 @@ def _diagram_record() -> SimpleNamespace:
 
 @pytest.mark.parametrize(
     ("host_content", "host_collapsed"),
-    [(f"<div>[[{_SOURCE_ID}]]</div>", False), (f"<div>![[{_SOURCE_ID}]]</div>", True)],
+    # A link (text around the reference), and a collapsed note that is only the reference.
+    [(f"<div>See [[{_SOURCE_ID}]]</div>", False), (f"<div>![[{_SOURCE_ID}]]</div>", True)],
 )
 def test_compact_reference_to_a_diagram_note_shows_the_diagram_thumbnail(
     monkeypatch: pytest.MonkeyPatch, host_content: str, host_collapsed: bool,
@@ -319,7 +320,7 @@ def test_compact_reference_to_a_diagram_note_shows_the_diagram_thumbnail(
 
 def test_compact_reference_keeps_text_when_the_source_starts_with_text(monkeypatch: pytest.MonkeyPatch) -> None:
     notes = {
-        "host": _Note("host", None, None, _SOURCE_ID, False, f"<div>[[{_SOURCE_ID}]]</div>", ""),
+        "host": _Note("host", None, None, _SOURCE_ID, False, f"<div>See [[{_SOURCE_ID}]]</div>", ""),
         _SOURCE_ID: _Note(_SOURCE_ID, None, "host", None, False, f"<div>Kyoto hotel</div><div>![[{_DIAGRAM_ID}]]</div>", ""),
     }
     state = _state_for(
@@ -338,7 +339,7 @@ def test_compact_reference_keeps_text_when_the_source_starts_with_text(monkeypat
 def test_compact_reference_shows_an_inline_image_thumbnail_with_its_line_text(monkeypatch: pytest.MonkeyPatch) -> None:
     image = "data:image/png;base64,iVBORw0KGgo="
     notes = {
-        "host": _Note("host", None, None, _SOURCE_ID, False, f"<div>[[{_SOURCE_ID}]]</div>", ""),
+        "host": _Note("host", None, None, _SOURCE_ID, False, f"<div>See [[{_SOURCE_ID}]]</div>", ""),
         _SOURCE_ID: _Note(_SOURCE_ID, None, "host", None, False, f'<div><img src="{image}" alt="map"> Route map</div>', ""),
     }
     state = _state_for(
@@ -376,7 +377,7 @@ def test_redacted_password_and_ai_chat_references_stay_text_only() -> None:
     password_source = _Note(_SOURCE_ID, None, None, None, False, f"<div>![[{_DIAGRAM_ID}]] hunter2</div>", "@password")
     exported = render_note_content_with_embeds(
         note_id="host",
-        content_html=f"<div>[[{_SOURCE_ID}]]</div>",
+        content_html=f"<div>See [[{_SOURCE_ID}]]</div>",
         tags="",
         context=context_for(password_source),
         static_export=True,
@@ -404,7 +405,7 @@ def test_exported_compact_reference_embeds_the_diagram_preview() -> None:
     def export(data_url: str) -> str:
         return render_note_content_with_embeds(
             note_id="host",
-            content_html=f"<div>[[{_SOURCE_ID}]]</div>",
+            content_html=f"<div>See [[{_SOURCE_ID}]]</div>",
             tags="",
             context=EmbedRenderContext(
                 has_note=lambda note_id: note_id == _SOURCE_ID,

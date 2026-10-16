@@ -59,7 +59,7 @@ def render_latex_math_to_html(latex_text: str, *, display: str) -> LatexRenderRe
 
     conversion_capture = CapturedExceptionContext(*_LATEX_CONVERSION_ERRORS, boundary='app/services/latex_rendering.py:render_latex_math_to_html:conversion_capture')
     rendered_math = ""
-    with conversion_capture:
+    with conversion_capture: # shockharness: ignore[EXC001] reason="the types are _LATEX_CONVERSION_ERRORS, passed as *args; app/exception_boundaries.py registers them"
         rendered_math = _render_math_segment(latex_text, display=display)
     if conversion_capture.captured_exception is not None:
         return _render_latex_error_result(
@@ -85,7 +85,7 @@ def render_latex_to_html(latex_text: str) -> LatexRenderResult:
     segments = _parse_latex_segments(latex_text)
     parts: list[str] = []
     segment_capture = CapturedExceptionContext(*_LATEX_CONVERSION_ERRORS, boundary='app/services/latex_rendering.py:render_latex_to_html:segment_capture')
-    with segment_capture:
+    with segment_capture: # shockharness: ignore[EXC001] reason="the types are _LATEX_CONVERSION_ERRORS, passed as *args; app/exception_boundaries.py registers them"
         for segment in segments:
             if segment.segment_type == "text":
                 parts.append(_render_text_segment(segment.value))

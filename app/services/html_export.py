@@ -16,6 +16,7 @@ from app.services.embedded_references import collect_active_reference_tokens
 from app.services.embedded_references import extract_collapsed_preview_source_html
 from app.services.embedded_references import render_collapsed_note_content_with_embeds
 from app.services.embedded_references import render_note_content_with_embeds
+from app.services.embedded_references import sole_reference_token
 from app.services.markdown_rendering import strip_latex_source_attributes
 from app.services.file_registry import file_registry
 from app.services.file_storage import download_file, find_file_preview
@@ -455,10 +456,13 @@ def exported_credential_counts(
             (child, in_scope) for child in note_store.get_children(note_id)
             if not in_scope or allowed_note_ids is None or child in allowed_note_ids
         )
+        # A note that is only a reference embeds it (its subtree is shown); any
+        # other reference is a link.
+        embeds_reference = sole_reference_token(record.content) is not None
         for reference in collect_active_reference_tokens(record.content):
             if not note_store.has_note(reference.note_id):
                 continue
-            if reference.is_embed:
+            if embeds_reference:
                 pending.append((reference.note_id, False))
                 continue
             linked_tags = note_store.get_note(reference.note_id).tags

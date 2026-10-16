@@ -87,7 +87,7 @@ export function createAutosaveController(options) {
         }
         state.dirty = false;
         setStatus(AUTOSAVE_STATUS.SAVING);
-        state.inFlight = Promise.resolve().then(save).then((result) => {
+        state.inFlight = Promise.resolve().then(save).then((result) => { // shockharness: ignore[EXC001] reason="the handler only resets state, then rethrows the error unchanged"
             if (result === null || typeof result !== 'object' || typeof result.ok !== 'boolean') {
                 throw new Error('Autosave save() must resolve to { ok: boolean }');
             }

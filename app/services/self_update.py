@@ -43,8 +43,7 @@ def schedule_self_update(
     current_pid: int,
     platform_name: str,
     environ: Mapping[str, str],
-    # lint: allow-PY002 rationale="Preserve the existing CLI scheduler contract; the in-app caller supplies the reviewed release pin"
-    expected_target_version: str | None = None,
+    expected_target_version: str | None,
 ) -> SelfUpdateScheduleResult:
     _validate_schedule_inputs(
         current_version=current_version,
@@ -137,10 +136,9 @@ def _back_up_namespaces_before_update() -> tuple[Path, ...]:
     backup_capture = CapturedExceptionContext(
         OSError, sqlite3.Error, tarfile.TarError, ValueError, RuntimeError,
     boundary='app/services/self_update.py:_back_up_namespaces_before_update:backup_capture')
+    namespaces_directory = resolve_namespaces_directory()
     with backup_capture:
-        backup_paths = backup_all_namespaces_for_update(
-            namespaces_directory=resolve_namespaces_directory(),
-        )
+        backup_paths = backup_all_namespaces_for_update(namespaces_directory=namespaces_directory)
     if backup_capture.captured_exception is not None:
         raise RuntimeError(
             f"MetaList backup failed; update aborted: {backup_capture.captured_exception}. "

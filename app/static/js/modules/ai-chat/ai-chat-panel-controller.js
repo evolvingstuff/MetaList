@@ -1718,11 +1718,14 @@ class AiChatPanelController {
             return;
         }
         const existingOpenAll = references.querySelector('.ai-chat-open-all-references');
-        const referenceQuery = existingOpenAll === null
-            ? Array.from(references.querySelectorAll('li[data-ref-query]'))
+        let referenceQuery;
+        if (existingOpenAll === null) {
+            referenceQuery = Array.from(references.querySelectorAll('li[data-ref-query]'))
                 .map((item) => item.dataset.refQuery)
-                .join(' OR ')
-            : existingOpenAll.dataset.refQuery;
+                .join(' OR ');
+        } else {
+            referenceQuery = existingOpenAll.dataset.refQuery;
+        }
         if (typeof referenceQuery !== 'string' || referenceQuery.length === 0) {
             throw new Error('Tag proposal result requires referenced note IDs');
         }

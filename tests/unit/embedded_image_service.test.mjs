@@ -78,10 +78,6 @@ function installEmbeddedImageTestEnvironment(t, options) {
                     const buffer = Buffer.from(arrayBuffer);
                     this.result = `data:${blob.type};base64,${buffer.toString('base64')}`;
                     this.onload();
-                })
-                .catch((error) => {
-                    this.error = error;
-                    this.onerror();
                 });
         }
     }

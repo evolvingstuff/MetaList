@@ -51,6 +51,7 @@ from app.services.exception_capture import CapturedExceptionContext
 from app.services.namespace_deletion_jobs import load_namespace_deletion_job
 from app.services.namespace_rename_jobs import load_namespace_rename_job
 from app.services.namespace_switcher import build_namespace_catalog
+from app.services.namespace_switcher import NamespaceOpenResult
 from app.services.namespace_switcher import open_or_launch_namespace
 from app.services.namespace_runtime_guard import start_namespace_runtime_guard
 from app.services.diagnostics import configure_process_diagnostics
@@ -593,6 +594,18 @@ async def namespace_deleted_page(request: Request):
     )
 
 
+
+def _open_catalog_namespace(*, namespace: str) -> NamespaceOpenResult:
+    port, https_port = _resolve_catalog_profile(namespace=namespace)
+    return open_or_launch_namespace(
+        environ=os.environ,
+        current_namespace=ACTIVE_NAMESPACE,
+        namespace=namespace,
+        port=port,
+        https_port=https_port,
+    )
+
+
 @app.get("/namespace-deleted/open")
 async def namespace_deleted_open_page(request: Request):
     job_id = request.query_params.get("job")
@@ -621,14 +634,7 @@ async def namespace_deleted_open_page(request: Request):
     launch_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/main.py:namespace_deleted_open_page:launch_capture')
     result = None
     with launch_capture:
-        port, https_port = _resolve_catalog_profile(namespace=namespace)
-        result = open_or_launch_namespace(
-            environ=os.environ,
-            current_namespace=ACTIVE_NAMESPACE,
-            namespace=namespace,
-            port=port,
-            https_port=https_port,
-        )
+        result = _open_catalog_namespace(namespace=namespace)
     if launch_capture.captured_exception is not None:
         exc = launch_capture.captured_exception
         return HTMLResponse(str(exc), status_code=400)

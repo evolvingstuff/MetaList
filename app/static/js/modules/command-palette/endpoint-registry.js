@@ -103,7 +103,6 @@ export function buildCommandPaletteEndpoints(deps) {
     const openTaggingVocabulary = requireAction(actions, 'openTaggingVocabulary');
 
     const defaults = {
-        showBacklinks: true,
         showNoteTags: false,
         showTabUi: false,
         showSearchResultsCount: true,
@@ -114,16 +113,6 @@ export function buildCommandPaletteEndpoints(deps) {
     const sortModeActionValue = (sortMode) => (getSortMode() === sortMode ? 'Current' : '↵');
 
     return [
-        {
-            id: 'pref.show_backlinks',
-            kind: 'boolean',
-            get label() {
-                return visibilityLabel(preferencesStore, 'pref.show_backlinks', defaults.showBacklinks, 'backlinks');
-            },
-            persistenceKey: 'pref.show_backlinks',
-            defaultValue: defaults.showBacklinks,
-            apply: (next) => applyPreference('pref.show_backlinks', next),
-        },
         {
             id: 'pref.show_note_tags',
             kind: 'boolean',
@@ -263,7 +252,7 @@ export function buildCommandPaletteEndpoints(deps) {
             id: 'form.ai_agent_settings',
             kind: 'form',
             label: 'AI agent settings',
-            execute: async () => openAiAgentSettings(),
+            execute: async () => openAiAgentSettings(false),
         },
         {
             id: 'form.cloud_ai_privacy',
@@ -355,7 +344,7 @@ export function buildCommandPaletteEndpoints(deps) {
             id: 'form.reminders',
             kind: 'form',
             label: 'Reminders',
-            execute: async () => openReminders(),
+            execute: async () => openReminders({ search: '' }),
         },
 
         {

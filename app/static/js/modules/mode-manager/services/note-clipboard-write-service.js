@@ -9,6 +9,15 @@ function normalizeClipboardText(value, fieldName) {
     return value;
 }
 
+// A clipboard item carries both HTML and plain text: a note rendered as only
+// one of them writes the other as empty text.
+function clipboardPart(text) {
+    if (text === null) {
+        return '';
+    }
+    return text;
+}
+
 function resolveClipboardApi(clipboardApi) {
     if (clipboardApi !== undefined) {
         return clipboardApi;
@@ -142,7 +151,7 @@ export async function writeRenderedNoteToSystemClipboard({
         return false;
     }
 
-    const plainText = plainTextValue === null ? '' : plainTextValue;
+    const plainText = clipboardPart(plainTextValue);
     const resolvedClipboardApi = resolveClipboardApi(clipboardApi);
     const resolvedDocument = resolveDocument(documentRef);
     const ResolvedClipboardItem = resolveClipboardItemClass(clipboardItemClass);
@@ -243,12 +252,10 @@ export async function writeRenderedNotePromiseToSystemClipboard({
             if (renderedHtml === null && renderedPlainText === null) {
                 throw new Error('Rendered note clipboard payload has no HTML or plain text');
             }
-            const html = renderedHtml === null ? '' : renderedHtml;
-            return new ResolvedBlob([html], { type: 'text/html' });
+            return new ResolvedBlob([clipboardPart(renderedHtml)], { type: 'text/html' });
         });
         const plainTextBlobPromise = payloadPromise.then((payload) => {
-            const plainText = payload.renderedPlainText === null ? '' : payload.renderedPlainText;
-            return new ResolvedBlob([plainText], { type: 'text/plain' });
+            return new ResolvedBlob([clipboardPart(payload.renderedPlainText)], { type: 'text/plain' });
         });
         const clipboardItem = new ResolvedClipboardItem({
             'text/html': htmlBlobPromise,

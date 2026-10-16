@@ -213,7 +213,8 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
         undefined,
     );
 
-    assert.equal(endpoints.find((endpoint) => endpoint.id === 'pref.show_backlinks').label, 'Hide backlinks');
+    // The Backlinks panel is gone; ↖ and Referenced by replace it.
+    assert.equal(endpointIds.has('pref.show_backlinks'), false);
     assert.equal(endpoints.find((endpoint) => endpoint.id === 'pref.show_note_tags').label, 'Show tags in list');
     assert.equal(endpoints.find((endpoint) => endpoint.id === 'pref.show_tab_ui').label, 'Show tabs');
     assert.equal(
@@ -222,14 +223,12 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
     );
     assert.equal(endpoints.some((endpoint) => endpoint.id === 'pref.show_perf_overlay'), false);
 
-    storedPreferences.set('pref.show_backlinks', 'false');
     storedPreferences.set('pref.show_note_tags', 'true');
     storedPreferences.set('pref.show_tab_ui', 'true');
     storedPreferences.set('pref.show_search_results_count', 'false');
     storedPreferences.set('pref.show_perf_overlay', 'true');
     storedPreferences.set('pref.animated_transitions', 'false');
 
-    assert.equal(endpoints.find((endpoint) => endpoint.id === 'pref.show_backlinks').label, 'Show backlinks');
     assert.equal(endpoints.find((endpoint) => endpoint.id === 'pref.show_note_tags').label, 'Hide tags in list');
     assert.equal(endpoints.find((endpoint) => endpoint.id === 'pref.show_tab_ui').label, 'Hide tabs');
     assert.equal(

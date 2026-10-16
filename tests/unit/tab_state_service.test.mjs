@@ -3,12 +3,16 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { ApplicationState } from '../../app/static/js/modules/application-state.js';
 
+class HttpRequestError extends Error {}
+class AuthenticationRequiredError extends HttpRequestError {}
+
 async function harness() {
     const source = readFileSync(new URL(
         '../../app/static/js/modules/mode-manager/services/tab-state-service.js', import.meta.url,
     ), 'utf8').replace(/^import[\s\S]*?from '[^']+';\s*/gm, '').replace(/^export /gm, '');
     const requests = [];
     const polls = [];
+    const apiErrors = [];
     const restoredReferenceTabs = [];
     let serverVersion = 1;
     const payload = {
@@ -36,13 +40,15 @@ async function harness() {
         CommandGate: { isBusy: () => false }, buildSessionHeaders: () => ({}),
         computeScrollAnchor: () => null, areScrollAnchorsEqual: (a, b) => a === b,
         restoreReferenceNavigationFromSession: (tabs) => restoredReferenceTabs.push(tabs),
-        ErrorHandler: { handleApiError() {} }, HttpRequestError: Error,
+        ErrorHandler: { handleApiError(_error, response) { apiErrors.push(response.status); } },
+        HttpRequestError, AuthenticationRequiredError,
         fetch: async (_endpoint, options) => {
             if (options.method === 'GET') return { ok: true, json: async () => structuredClone(payload) };
             const sent = JSON.parse(options.body);
             return await new Promise((resolve, reject) => requests.push({
                 sent, reject,
                 complete: () => resolve({ ok: true, json: async () => ({ ...sent, version: ++serverVersion }) }),
+                answer: status => resolve({ ok: false, status, json: async () => ({ detail: 'refused' }) }),
             }));
         },
     };
@@ -52,7 +58,7 @@ async function harness() {
     assert.equal(polls.length, 1);
     // Reference-tab labels are restored from the freshly loaded server tabs.
     assert.deepEqual(restoredReferenceTabs, [payload.tabs]);
-    return { service, requests, context, payload, window, poll: polls[0] };
+    return { service, requests, context, payload, window, poll: polls[0], apiErrors };
 }
 
 test('scroll polls cannot overlap a slow save and write the same tab position twice', async () => {
@@ -147,4 +153,32 @@ test('a waiting snapshot save reads fresh state after the previous response', as
     assert.equal(initialCount, 1);
     assert.equal(h.requests[1].sent.tabs.first.searchQuery, 'updated search');
     assert.equal(h.requests[1].sent.version, 2);
+});
+
+test('a scroll save that finds the session ended shows the login screen and is dropped quietly', async () => {
+    // The session can end while a save is in flight (it expired, a backup
+    // restore or a password change ended it): the 401 shows the login screen,
+    // and the last moment's scroll is not saved; it is no crash.
+    const h = await harness();
+    h.window.scrollY = 100;
+    const first = h.poll();
+    h.requests[0].answer(401);
+    await first;
+    assert.deepEqual(h.apiErrors, [401]);
+    // Not recorded as saved: the next poll sends it again.
+    const next = h.poll();
+    assert.equal(h.requests.length, 2);
+    assert.equal(h.requests[1].sent.tabs.first.scrollY, 100);
+    h.requests[1].complete();
+    await next;
+});
+
+test('a scroll save refused for another reason still surfaces its error', async () => {
+    const h = await harness();
+    h.window.scrollY = 100;
+    const first = h.poll();
+    const rejected = assert.rejects(first, error => error instanceof HttpRequestError && !(error instanceof AuthenticationRequiredError));
+    h.requests[0].answer(500);
+    await rejected;
+    assert.deepEqual(h.apiErrors, [500]);
 });

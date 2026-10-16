@@ -139,7 +139,7 @@ export function analyzeSearchQueryInput(rawInput) {
             break;
         }
 
-        let prefix = null;
+        let prefix = '';
         const firstChar = rawInput[index];
         if (firstChar === '+' || firstChar === '-') {
             prefix = firstChar;
@@ -177,17 +177,16 @@ export function analyzeSearchQueryInput(rawInput) {
         const isQuoteStart = QUOTE_CHARS.has(nextChar);
         if (isQuoteStart && prefix === '+') {
             // `+` is a tag-term modifier only. Drop it for quoted text.
-            prefix = null;
+            prefix = '';
         }
 
-        if (isQuoteStart && (prefix === null || prefix === '-')) {
+        if (isQuoteStart && (prefix === '' || prefix === '-')) {
             const quoteChar = nextChar;
             index += 1;
             const { normalizedInner, closed, nextIndex } = readQuotedInner(rawInput, index, quoteChar);
             index = nextIndex;
 
-            const prefixText = prefix === null ? '' : prefix;
-            const normalized = `${prefixText}${quoteChar}${normalizedInner}`;
+            const normalized = `${prefix}${quoteChar}${normalizedInner}`;
 
             if (!closed) {
                 normalizedTerms.push(normalized);
@@ -222,9 +221,8 @@ export function analyzeSearchQueryInput(rawInput) {
         }
 
         if (rawToken === OR_OPERATOR) {
-            const prefixText = prefix === null ? '' : prefix;
-            normalizedTerms.push(`${prefixText}${OR_OPERATOR}`);
-            if (prefix !== null) {
+            normalizedTerms.push(`${prefix}${OR_OPERATOR}`);
+            if (prefix !== '') {
                 isComplete = false;
                 if (!warningMessage) {
                     warningMessage = 'OR is reserved and cannot be used as a tag';
@@ -264,8 +262,7 @@ export function analyzeSearchQueryInput(rawInput) {
             continue;
         }
 
-        const prefixText = prefix === null ? '' : prefix;
-        const normalizedTag = `${prefixText}${enforcedToken}`;
+        const normalizedTag = `${prefix}${enforcedToken}`;
         normalizedTerms.push(normalizedTag);
         sanitizedTerms.push(normalizedTag);
         currentClauseTermCount += 1;

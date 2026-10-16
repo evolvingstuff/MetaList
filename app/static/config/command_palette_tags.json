@@ -1,10 +1,6 @@
 {
   "endpoints": [
     {
-      "id": "pref.show_backlinks",
-      "tags": ["backlinks", "links", "show", "hide", "toggle", "view", "notes"]
-    },
-    {
       "id": "pref.show_note_tags",
       "tags": ["tags", "show", "hide", "toggle", "view", "notes", "list"]
     },

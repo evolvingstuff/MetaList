@@ -76,11 +76,10 @@ function installBrowserEnvironment(t, { animatedTransitions, webAnimations = fal
             if (child.parentElement) {
                 child.parentElement.children = child.parentElement.children.filter((existingChild) => existingChild !== child);
             }
-            const index = reference === null ? -1 : this.children.indexOf(reference);
-            if (index === -1) {
+            if (reference === null) {
                 this.children.push(child);
             } else {
-                this.children.splice(index, 0, child);
+                this.children.splice(this.children.indexOf(reference), 0, child);
             }
             child.parentElement = this;
             child.isConnected = this.isConnected;

@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 
+import {runThenCleanUp} from './suite-outcome.mjs';
+
 // Leaving edit mode keeps your place: the text you were working on (the caret,
 // when it is on screen) or reading (the line about a third down the screen)
 // stays at the same height once the note renders for viewing, with no visible
@@ -41,6 +43,11 @@ async function deleteFixture(page, ids) {
   }, ids);
 }
 
+function describeLine(lineTop) {
+  if (lineTop === null) return 'none';
+  return String(Math.round(lineTop));
+}
+
 // Chrome can replace the page's frame during a reload; Puppeteer then briefly
 // reports the old one as detached. Look again on the new frame (only for that
 // error; anything else fails as usual).
@@ -48,11 +55,13 @@ async function waitForAppReady(page) {
   for (let attempt = 1; ; attempt += 1) {
     try {
       await page.waitForSelector('[data-app-ready="true"]');
-      return;
     } catch (error) {
+      if (!(error instanceof Error)) throw error;
       if (attempt >= 5 || !/detached Frame/.test(error.message)) throw error;
       await pause(300);
+      continue;
     }
+    return;
   }
 }
 
@@ -736,7 +745,7 @@ async function dragShortNoteUpCase(page) {
   const order = await page.evaluate(() => [...document.querySelectorAll('#notes-container p')]
     .map(p => p.textContent.trim().split(' paragraph')[0]).filter((label, index, all) => all.indexOf(label) === index).slice(0, 12).join(', '));
   assert.ok((await noteRectOf(page, source)).top < (await noteRectOf(page, target)).top,
-    `drag a short note up: "${source}" should have moved above "${target}" (line at ${lineTop === null ? 'none' : Math.round(lineTop)}, drop y=${Math.round(dropY)}; order: ${order})`);
+    `drag a short note up: "${source}" should have moved above "${target}" (line at ${describeLine(lineTop)}, drop y=${Math.round(dropY)}; order: ${order})`);
   assertNoScroll('drag a short note up', scrolls, scrollBefore);
   await assertLandedOnLine(page, 'drag a short note up', source, 'up', lineTop);
 }
@@ -838,7 +847,6 @@ export async function checkExitEditScroll(page) {
   const longId = ids[12];
   // Run every case and report all failures together.
   const failures = [];
-  let stepError = null;
   const check = async (name, body) => {
     try {
       await body();
@@ -851,7 +859,7 @@ export async function checkExitEditScroll(page) {
       }
     }
   };
-  try {
+  await runThenCleanUp('exit-edit', async () => {
     // Expanded note: the caret's text, then the reading line, stay put.
     await setCollapsed(page, longId, false);
     await check('expanded, caret', () => caretVisibleCase(page, longId, 'expanded note'));
@@ -971,18 +979,9 @@ export async function checkExitEditScroll(page) {
     await check('formatted notes', () => formattedClickCases(page, ids));
     await check('new note at top', () => newNoteAtTopCase(page, ids));
     assert.deepEqual(failures, [], `exit-edit scroll failures:\n${failures.join('\n')}`);
-  } catch (error) {
-    // Report the step's own error even if cleanup then fails too (e.g. a
-    // reload left in flight by the failed step).
-    stepError = error;
-  }
-  try {
+  }, async () => {
     await waitForAppReady(page);
     await deleteFixture(page, ids);
     await reload(page);
-  } catch (cleanupError) {
-    if (stepError === null) throw cleanupError;
-    console.error(`exit-edit cleanup also failed: ${cleanupError.message}`);
-  }
-  if (stepError !== null) throw stepError;
+  });
 }

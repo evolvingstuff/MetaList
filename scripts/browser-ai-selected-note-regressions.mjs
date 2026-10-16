@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 
+// Frames a moved button must hold still before it is clicked.
+const TOGGLE_SETTLED_FRAMES = 5;
+
 export async function checkAiSelectedNote(page) {
     const ids = await page.evaluate(async () => {
         const {NotesAPI} = await import('/static/js/modules/api-client.js');
@@ -125,6 +128,21 @@ export async function checkAiSelectedNote(page) {
     assert.deepEqual(outsideButtons, []);
     await page.click('#ai-chat-close');
     await checkSelected(ids[1]);
+    // Closing the chat moves its toggle button from beside the panel to the
+    // rail within a frame; a click aimed while it moves lands on the notes.
+    await page.waitForFunction(frames => new Promise(resolve => {
+        const button = document.getElementById('chat-toggle-button');
+        let last = button.getBoundingClientRect().left;
+        let still = 0;
+        const check = () => {
+            const left = button.getBoundingClientRect().left;
+            if (left === last) still += 1;
+            else { still = 0; last = left; }
+            if (still >= frames) resolve(true);
+            else requestAnimationFrame(check);
+        };
+        requestAnimationFrame(check);
+    }), {}, TOGGLE_SETTLED_FRAMES);
     await page.click('#chat-toggle-button');
     await checkSelected(ids[1]);
     // Explicitly leaving the note still clears selection for a later chat turn.

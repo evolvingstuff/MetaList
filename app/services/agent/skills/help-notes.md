@@ -28,26 +28,25 @@ Sources: docs/ui/controls.md
 | `⌘ + ↓` | Move current note down (one visible sibling) |
 | `⇧ + ⌘ + ↓` | Move the selected note to the bottom (a child after its last sibling; a root after the view's last root, or last match in a search). The view stays put; editing ends with the note saved. |
 | `⌘ + C` | Copy selection (default), or copy whole note when no selection |
-| `⌘ + R` | Paste embedded reference from the most recently copied note UUID |
+| `⌘ + R` | Paste a reference to the copied note as a sibling, like `⌘ + V` |
 | `⌘ + S` | Split note at selection/caret into sibling notes; selected segment becomes its own note |
 | `⌘ + U` | Remove formatting and inline imagery from the selected range or current note |
 | `⌘ + X` | Cut selection (default), or cut whole note when no selection |
-| `⌘ + V` | Paste note as sibling (when note clipboard active; scrolls new note into view). If the selected note has no visible content and no children, paste replaces it. |
-| `⇧ + ⌘ + V` | Paste note as child (when note clipboard active; scrolls new note into view) |
-| `⇧ + ⌘ + R` | Paste embedded reference from the most recently copied note UUID as a new child note |
+| `⌘ + V` | Paste note as sibling (when the clipboard holds a copied note; scrolls new note into view). If the selected note has no visible content and no children, paste replaces it. |
+| `⇧ + ⌘ + V` | Paste note as child (when the clipboard holds a copied note; scrolls new note into view) |
+| `⇧ + ⌘ + R` | Paste a reference to the copied note as a child, like `⇧ + ⌘ + V` |
 | `⌘ + Backspace/Delete` | Delete the selected note |
 | `⌘ + Z` | Undo text/tag edits locally, or undo the latest saved mutation when the active editor has no local edit history |
 | `⇧ + ⌘ + Z` or `⌘ + Y` | Redo text/tag edits locally, or redo the latest saved mutation when the active editor has no local edit history |
 
-- If note clipboard conditions are **not** met and edit mode is active, `⌘ + V` uses browser clipboard paste and runs external HTML sanitization before insertion.
+- What is pasted decides, never the last ⌘C: anything else (another app's text, dictated words) pastes as text, sanitizing external HTML.
 - Dictated text pasted into a note can end with tags: everything after the phrase "start tags" (set in `Dictation Settings`) is added to the note's tags. The full rules are in the dictation help topic.
 - When note paste replaces an empty target, the target keeps its search-context tags and merges in copied root tags with case-insensitive dedupe.
+- A pasted copy keeps each copied note collapsed or expanded as it was when copied (the root and every child); filling an empty note gives it the copied root's state.
 - A saved whole-note paste resets the local editor history baseline so the next Undo reaches application history.
 - If the clipboard value came from `Generate random password…`, pasting into an empty note also adds `@password` automatically when that tag is not already present.
 - See `docs/ui/paste-sanitization.md` for the full policy.
-- `⌘ + R` inserts the reference token on its own line; if the caret is mid-line, the line is split around the inserted token. `⇧ + ⌘ + R` creates a child note first, then inserts the reference token there.
-- `⌘ + R` avoids adding a synthetic extra blank line when caret is already on an empty line.
-- With no selected note, `⌘ + R` creates and saves a reference in a new top note, matching the destination used by `⌘ + V`. It retains the original note identity.
+- `⌘ + R` and `⇧ + ⌘ + R` paste a reference (`[[UUID]]`, a note that embeds it) to the last copied note where `⌘ + V` and `⇧ + ⌘ + V` paste the note: a sibling below (or into an empty note without children) or the first child, saved and selected with no caret, caret or not. With no selected note, `⌘ + R` makes a new top note.
 - See `docs/ui/references.md` for full reference behavior.
 - `⌘ + S` splits the current editing note at the caret or selection; a caret at the front creates a blank note above, and a caret at the end creates a blank note below.
 - `⌘ + S` no-ops when the entire note is selected or when split would produce no content segment.
@@ -76,55 +75,6 @@ On macOS, `⌘ + Y` normally opens Safari History rather than performing native 
 - When tabs are enabled, a white outline stacked-folder icon marks the black trigger region left of the search field. Its left inset matches the results count's right inset. Hovering that region or icon opens the tab/search-context overlay, which remains available while hovering over the dropdown itself. Creating a blank tab with `Enter` does not dismiss the overlay. Open search suggestions render above the tabs.
 - Left/right side lanes hide at narrower desktop widths before they can overlap the centered notes column.
 
-### Search Input Behavior
-- The search field keeps a muted search icon inside the input before and during typing; hovering the field shows a `Search` tooltip.
-- Pressing `Enter` while focused in the search input creates a new **root** note.
-- Pressing `Esc` while focused in the search input blurs the field and dismisses search suggestions, without clearing the current query or search results.
-- The right side of the black search header shows only the result's root-note count.
-  MetaList does not tokenize search results during startup, ordinary interaction,
-  or snapshot refresh merely to populate this UI. The existing `Show/Hide search
-  result count` preference controls the count.
-- If the search query contains required tag terms (unquoted tokens like `asdf`), the new root note is created with those tags in its tag bar.
-- When creating a child (`⇧ + ⌘ + Enter`) or sibling (`⌘ + Enter`) note under a note that already provides the required **non-meta** tags via inheritance, the new note is **not** redundantly tagged.
-- **Sorted tabs: adding and editing notes.** In any non-normal sort order a new or edited root note could land far from where you are, so:
-
-  | Sort | While you edit a note | New root note at the top (`Enter` outside edit mode, Add Note, pasting or dropping into a new note) | New root note below a root note (`⌘ + Enter`, Split, paste as sibling) |
-  |---|---|---|---|
-  | Normal | — | allowed | allowed |
-  | Datetime created | order frozen (editing never changes it anyway) | allowed: it lands at the top | blocked |
-  | Datetime last updated | order frozen | allowed: it lands at the top | blocked |
-  | Alphabetical | order frozen | blocked | blocked |
-  | Content volume | order frozen, also while editing a child note | blocked | blocked |
-
-  - Child notes (`⇧ + ⌘ + Enter`, paste as child, or a sibling of a child note) can always be added: the sort orders only root notes.
-  - A blocked action does nothing and shows a banner saying why (switch to Normal order, or add a child note). Pasting a copied note onto an empty note fills that note, so it is never blocked.
-  - **Order frozen while editing:** the note you are editing (or the root note containing it) stays where it was, even when saving changes its date, name or size. In the date orders it shows under its neighbour's date header meanwhile.
-  - **Leaving edit mode:** the note then moves to its sorted place, and the screen stays on the surrounding notes (like a mail app), so nothing you are looking at jumps. If the note keeps its place, your caret or reading line stays put as usual.
-- Sort modes do not change canonical insertion behavior. New roots are still inserted into the manual root order first, then rendered in the active sort order.
-
-### Search Suggestions
-- Suggestions are **tag-only** (no text suggestions).
-- For a blank search or the first tag prefix in a query, the first suggestion slots can be personalized from ordered activity windows. The default windows are 1, 7, and 30 calendar days.
-- Case-equivalent tags are collapsed in the suggestion list, and the most-used spelling is shown.
-- Search execution, typing, scrolling, hovering, rendering, collapsing, and programmatic tab switches do not earn credit.
-- Entering edit mode, manually expanding a note, entering full-screen note view, running a shell note, toggling todo/done, and successfully reordering/indenting/outdenting a note count as intentional note engagements. Structural no-ops do not count.
-- Each engagement increments every raw searchable tag on the note, including inherited tags and meta tags, before ontology inference. This lets an `@shell` child under `shortcut` credit both raw tags without rewarding unrelated inferred tags.
-- By default, each note can earn only one engagement credit in the same active tab and executed-search context, even when other notes are engaged between two interactions with it. The context limits repetition but does not filter the credited note tags. Leaving that context and later returning starts a fresh flow.
-- Successfully adding one or more explicit tags awards one credit to each newly added tag. It does not re-credit tags already present or inherited from ancestors; removals and case-only changes award nothing.
-- Accepting a search suggestion by click or `Enter` awards one credit to the selected tag every time. Clicking a search-context tab awards one credit to each known positive tag term in that tab's executed query; excluded tags and quoted text do not earn credit.
-- Counts are stored in sparse daily buckets. Days without activity have no bucket and do not consume retention capacity; the latest 365 populated days are retained.
-- Each configured window chooses its highest-count matching tag, excluding tags already chosen by earlier windows. The remaining suggestions retain normal namespace-frequency ordering.
-- `Cmd/Ctrl+/` → `Search suggestion stats & settings…` is the single place for suggestion activity controls. Changes to its ordered 1–365 day slots, default-on time-window labels, and default-on one-credit-per-note-per-search-context limit persist immediately. It also shows every retained populated date and tag-credit count and includes a confirmed `Reset activity` action. Disabling the credit limit makes every qualifying interaction count; removing every slot disables personalization.
-- Confirmations, errors, and completion notices use MetaList modals, login-state messaging, or banners; native browser `alert`, `confirm`, and `prompt` dialogs are forbidden by the development startup sanity gate.
-- While typing a partial tag token, suggestions are segment-aware for connector-separated tags: a prefix can match the start of the full tag or the start of any connector-separated segment (`-`, `_`, `.`, `/`).
-- Example: `wor` can suggest `workspaces` and `databricks-workspaces`; `orksp` suggests neither.
-- When the active prefix starts with `@`, matching meta-tag suggestions are ordered by notebook usage frequency (note count), with alphabetical tiebreaks for equal counts.
-- After completing a tag and adding a space, suggestions are ordered by tag co-occurrence with all existing tag tokens in the query (strict overlap count > Jaccard within overlap).
-- Suggestions appear only when the search input is focused.
-- Moving the pointer below the suggestion popup, or horizontally outside the centered notes column, hides open search suggestions while keeping focus in the search input. After that pointer dismissal, suggestions stay closed until the user resumes typing or clicks the search input again.
-- Arrow keys move selection; `Enter` accepts the selected suggestion without adding a trailing space.
-- Suggestion matching is broader than actual filtering: search results still match exact effective tag terms only.
-
 ### Tag Suggestions
 - Suggestions appear only when the tag bar is focused.
 - Prefix behavior mirrors search suggestions (segment-aware while typing, co-occurrence after a space).
@@ -143,50 +93,6 @@ On macOS, `⌘ + Y` normally opens Safari History rather than performing native 
 - Tags already present via explicit tags, inheritance, or ontology inference are suppressed unless they match the prefix (then they appear at the bottom).
 - Suggestions may render above the tag bar if space below is tight, but the list still keeps the same best-on-top ordering and initial scroll position.
 - Arrow keys move selection; `Enter` accepts the selected suggestion without adding a trailing space.
-
-### Mouse Controls
-| Action | Result |
-|--------|--------|
-| Click `+` button | Add new note at top |
-| Click menu (`≡`) button | Open command palette |
-| Click `↑` / `↓` button | Go to the top / bottom of the list (bottom: the last note's bottom at the window's bottom); dimmed at that end. While editing, first saves and leaves edit mode. Unloaded notes are loaded by rebuilding the view at that end. |
-| Click note arrow | Toggle collapse/expand note. If the arrow is within the current edited note subtree, that edit session remains active; outside that subtree, the current edit saves/exits first. |
-| Click `⋮` under the edited note's tag bar | Expand that collapsed parent note to reveal its hidden children. |
-| Click note or blank space inside its outer card | Edit/select that note. Parent-note whitespace still counts as the parent until you click into a child note/card. What you clicked stays under the pointer while the note switches to its editable source, and the caret goes there: on the clicked text when it appears in the source (also when the source adds markup around it, such as `- ` list markers or `#` heading marks); on a Mermaid diagram box, at that box's label in the diagram source, with that source line under the pointer; elsewhere on a Mermaid diagram, at the start of its ```` ```mermaid ```` source, which starts where the diagram did; on a rendered LaTeX formula, at the start of its TeX source, which goes where the formula was. CSV rows, JSON keys and Markdown table rows map through their text. Leaving edit mode with the caret inside a formula's source keeps the rendered formula where that source was. |
-| Click redacted note | Reveal the full redacted set in that note's subtree for the current tab; the revealed notes stay dimmed to show they are still excluded by the active search |
-| Click link-mode reference text | Open the referenced note in a temporary `Reference source` context; the UUID query remains hidden |
-| Click `×` on the `Reference source` indicator | Return to the originating context and close the temporary source tab |
-| Type in search while viewing a reference source | Dismiss reference-source mode and keep the current tab as a normal search context |
-| Right-click anywhere inside a rendered note reference | Choose **Go to Source** to open the same temporary reference-source context |
-| Press `@todo` / `@done` checkbox | Toggle the note status on mouse down. If another note is being edited, save + exit edit mode first and do not enter edit mode for the toggled note. |
-| Press note shell / blank space | Select/edit that note on mouse down. Note content waits until click so drag/drop can disambiguate click vs drag. |
-| Click the tag bar while editing | Focus the tag input without re-selecting the note shell. Mouse or keyboard focus adds a soft focus ring and, when Animated Transitions is enabled, a single subtle outward halo. |
-| Click a Grammarly suggestion card | Keep the current note in edit mode while the assistant applies the correction. A subsequent ordinary outside click or `Escape` saves and exits as usual. |
-| Double-click a tag in the search input or tag bar | Select the complete tag, including prefixes and internal punctuation (`foo-bar`, `@red`), without surrounding whitespace. Scoped groups select only the individual tag. Quoted search text and tag-bar comments keep native word selection. |
-| Drag note body (while not editing) | Reorder among visible siblings based on vertical drop position (overshooting below the lowest sibling moves the note to the end of its siblings, and above the first sibling to the start; it never leaves its parent), or indent/outdent on horizontal drags. Once movement crosses the drag threshold, releasing back over the source note does not count as a click. While dragging, a dashed grey ghost of the note and its visible children follows the pointer on the drag's axis (vertical for reordering, horizontal for indent/outdent) and only within legal moves: between the first and lowest sibling, one level in under the note above, or one level out to the parent. A grey line marks where the note will land, with a faint outline on the note it lands beside or under; when a release would change nothing the ghost turns lighter and no line shows. The mouse cursor itself changes to name the action: an up or down arrow (the Move to Top icon and its mirror) for reordering, or indent/outdent icons for horizontal drags. A move that is not possible from there (dragging the first note up, indenting with nothing above to nest under, outdenting a root note) shows no icon, only the plain grabbing hand. The note lands where the drop line showed: its top on the line when moved up, its bottom on it when moved down, and the page does not scroll, whether the note is short or taller than the window. Only when that edge would land behind the search bar does the page scroll, just enough to put the note right below the bar with no extra space. Each of the three (ghost, drop indicator, direction cursor) can be turned on or off in the command palette's `Visual Cues` window; all are on by default and none changes the notes themselves. |
-| Drag-select text in note | Available only in edit mode; releasing mouse outside note keeps edit mode + selection |
-| Right-click external link | Open a link-only context menu with `Copy Link` and `Open Link in New Tab`. Note actions are hidden for link targets. |
-| Right-click note | Open the note menu: what you clicked (image, diagram or reference actions) first; `Copy Note`; `Paste ▸` (sibling/child note and reference, once a note is copied); `Add ▸` (sibling, child, and `Add Note at Top` outside edit mode); `Move ▸` (`Move to Top`, `Move Up`, `Move Down`, `Move to Bottom`); `Outline ▸` (`Fully Expand`, `Fully Collapse` for notes with children; `Indent`, `Outdent`); `Focus ▸` (`Full Screen`, `Floating Window`); `Export ▸`/`Print ▸` (note or view); while editing `Add Style`, `Remove Formatting`, `Add Excalidraw Diagram`, `Suggest Tags with AI` (when an AI is set up and may see the note); `Delete Note` last; a footer with Created/Updated times. Actions that cannot happen from that note are hidden (root moves too while a sort order is active); a group with one action shows it in place. Shortcuts show on the right. Moves act on the clicked note, saving another edited note first. Full Screen shows the note and its whole subtree edge-to-edge (no ancestors); from edit mode it first leaves edit mode as `Esc` would; close with `×` or `Esc`. |
-| Focus ▸ Floating Window (note menu) | Open that note and its complete descendant subtree in a read-only floating window. The title shows a ↗ reference link that opens the source note in ML3; password titles stay masked. Open multiple windows, drag the title-bar grip or empty space, and resize using the bottom-right handle (or focus the handle and use arrow keys). Windows stay fixed while the background scrolls and survive searches and ML3 tab changes. Saved changes appear live. Links, password/username copying, copyable text, and file downloads remain interactive; note references open another floating window. Close with × or Escape while focused. Windows close on page reload, logout, or namespace navigation. |
-| Right-click selected note text | Open the note menu with `Copy` and `Add as Tag` for the selected text instead of `Copy Note`; while editing, `Add Style` scopes the chosen formatting tag to that range and `Remove Formatting` removes formatting only from that range. |
-| Right-click image in note | Adds image actions to the note context menu: `Copy Image`, `Save Image`, `Zoom Image`, `Open Image in New Tab` |
-| Right-click anywhere in a completed AI response bubble (including padding and links) | Choose `Copy Response` to place its raw Markdown on the MetaList note clipboard with `@markdown @llm`, while also writing rendered HTML and raw Markdown to the system clipboard. It can be pasted as a note but not as a reference until inserted. |
-| Right-click the tag bar past its tags | `Suggest Tags with AI` when an AI may be used; otherwise nothing. Right-click never shows the browser's own menu. |
-| Right-click notes view background | Open the view menu: outside edit mode `Add Note at Top`, `Paste Note at Top` (once a note is copied), `Undo`, `Redo`; `Go to Top`, `Go to Bottom` (unless at that end), `Fully Expand All`, `Fully Collapse All`; `View ▸` (All / Untagged notes), `Sort by ▸`, `Show ▸` (Chat, Tabs, Tags in List), `Theme ▸` (System, Light, Dark), each ticking the current choice; `New Tab`, `Open/Switch Namespace…`, `Reminders…`; `Export View as HTML`, `Print View`; `Log Out`. Shortcuts show on the right; items that do not apply are hidden. |
-| Right-click tag in search input, tag bar, or their suggestion lists | Open tag context menu (Edit Tag Relationships); below it a suggestion's menu (tag bar or search) says **Why suggested**, a tag already in the tag bar or search box **About this tag**. A suggestion list, the typed letters and edit mode stay as they were. Choosing Edit Tag Relationships saves an edited note first and completes the view refresh, restoring view-only rendering such as cached URL titles. |
-| Right-click left or right lane | Open the same view menu |
-| Hover left side of search bar | Show the tab/search-context overlay |
-| Hover/click search input | Hide the tab/search-context overlay |
-
-> Tip: You can right-click directly on a tag without selecting the full text first (selection still works).
-> In non-normal sort modes, drag/drop cannot reorder root notes, but it can still reorder children within a root.
-> Saved-file image actions are available in view mode on rendered image previews; edit mode only contains the raw UUID token for those files.
-> Collapse arrows reflect the server-provided `isCollapsible` flag, plus a browser-side promotion when rendered note content visibly wraps beyond one line. Overlapping inline fragments on the same visual line count as one line even when nested formatting uses different font sizes, such as a standalone link title followed by its smaller domain.
-> The arrow glyph and click target are slightly enlarged; the 27×27px control is offset to preserve the arrow's original visual center.
-> While editing, collapse arrows ignore content length and appear only for notes with children, because the edited note already shows its full content.
-> Collapsed notes receive compact server-rendered content that starts at the first non-blank text or image line.
-> Note expand/collapse transitions animate by default and are controlled by `Animated transitions` in the command palette.
-> Selecting a collapsed note for editing shows that note's full editable content but keeps its child subtree hidden until the note is explicitly expanded. If the collapsed note has hidden children, an inline `⋮` affordance appears under the tag bar and expands the note.
 
 ### Command Palette Utility Entries
 - Show/Hide tabs (label reflects current visibility)

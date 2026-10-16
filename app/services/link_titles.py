@@ -1180,6 +1180,61 @@ def fetch_link_title(normalized_url: str) -> _LinkTitleFetchResult:
     )
 
 
+@dataclass(frozen=True)
+class _FetchedPage:
+    content: bytes
+    encoding: str | None
+
+
+# The page's HTML (as much as the limit allows) with the response's encoding,
+# or the fetch result that ends the attempt (a redirect, a refusal, non-HTML);
+# transport failures propagate.
+def _fetch_page(url: str, target: _ResolvedHttpTarget) -> _LinkTitleFetchResult | _FetchedPage:
+    with httpx.Client(
+        timeout=_FETCH_TIMEOUT_SECONDS,
+        follow_redirects=False,
+        transport=_PinnedHTTPTransport(
+            target=target,
+            network_backend=httpcore.SyncBackend(),
+        ),
+        headers={
+            "User-Agent": _USER_AGENT,
+            "Accept": "text/html,application/xhtml+xml",
+            "Accept-Language": "en-US,en;q=0.9",
+        },
+    ) as client:
+        with client.stream("GET", url) as response:
+            redirect_result = _redirect_result_from_response(url=url, response=response)
+            if redirect_result is not None:
+                return redirect_result
+
+            if response.status_code == 429:
+                _host_pacer.cool_down(
+                    _pacing_host(url),
+                    _rate_limit_cooldown_seconds(response.headers.get("retry-after")),
+                )
+            if response.status_code >= 400:
+                return _LinkTitleFetchResult(
+                    url=url,
+                    title=None,
+                    status="failed",
+                    last_error_kind=f"http_{response.status_code}",
+                )
+
+            content_type = response.headers.get("content-type", "")
+            if content_type and "html" not in content_type.casefold():
+                return _LinkTitleFetchResult(url=url, title=None, status="unsupported", last_error_kind="non_html")
+
+            chunks: list[bytes] = []
+            total_bytes = 0
+            for chunk in response.iter_bytes():
+                chunks.append(chunk)
+                total_bytes += len(chunk)
+                if total_bytes >= _MAX_RESPONSE_BYTES:
+                    break
+            return _FetchedPage(content=b"".join(chunks), encoding=response.encoding)
+
+
 def _fetch_one_url(url: str, target: _ResolvedHttpTarget) -> _LinkTitleFetchResult:
     capture = CapturedExceptionContext(
         httpx.TimeoutException,
@@ -1189,54 +1244,9 @@ def _fetch_one_url(url: str, target: _ResolvedHttpTarget) -> _LinkTitleFetchResu
         httpcore.NetworkError,
         httpcore.ProtocolError,
     boundary='app/services/link_titles.py:_fetch_one_url:capture')
-    content = b""
-    response_encoding = None
+    fetched: _LinkTitleFetchResult | _FetchedPage | None = None
     with capture:
-        with httpx.Client(
-            timeout=_FETCH_TIMEOUT_SECONDS,
-            follow_redirects=False,
-            transport=_PinnedHTTPTransport(
-                target=target,
-                network_backend=httpcore.SyncBackend(),
-            ),
-            headers={
-                "User-Agent": _USER_AGENT,
-                "Accept": "text/html,application/xhtml+xml",
-                "Accept-Language": "en-US,en;q=0.9",
-            },
-        ) as client:
-            with client.stream("GET", url) as response:
-                redirect_result = _redirect_result_from_response(url=url, response=response)
-                if redirect_result is not None:
-                    return redirect_result
-
-                if response.status_code == 429:
-                    _host_pacer.cool_down(
-                        _pacing_host(url),
-                        _rate_limit_cooldown_seconds(response.headers.get("retry-after")),
-                    )
-                if response.status_code >= 400:
-                    return _LinkTitleFetchResult(
-                        url=url,
-                        title=None,
-                        status="failed",
-                        last_error_kind=f"http_{response.status_code}",
-                    )
-
-                content_type = response.headers.get("content-type", "")
-                if content_type and "html" not in content_type.casefold():
-                    return _LinkTitleFetchResult(url=url, title=None, status="unsupported", last_error_kind="non_html")
-
-                chunks: list[bytes] = []
-                total_bytes = 0
-                for chunk in response.iter_bytes():
-                    chunks.append(chunk)
-                    total_bytes += len(chunk)
-                    if total_bytes >= _MAX_RESPONSE_BYTES:
-                        break
-                content = b"".join(chunks)
-                response_encoding = response.encoding
-
+        fetched = _fetch_page(url, target)
     if capture.captured_exception is not None:
         if isinstance(
             capture.captured_exception,
@@ -1250,7 +1260,11 @@ def _fetch_one_url(url: str, target: _ResolvedHttpTarget) -> _LinkTitleFetchResu
             return _LinkTitleFetchResult(url=url, title=None, status="failed", last_error_kind="network_error")
         return _LinkTitleFetchResult(url=url, title=None, status="failed", last_error_kind="http_client_error")
 
-    title = _extract_title_from_html(content=content, encoding=response_encoding)
+    if isinstance(fetched, _LinkTitleFetchResult):
+        return fetched
+    if fetched is None:
+        raise RuntimeError("Link title fetch returned without a result or exception")
+    title = _extract_title_from_html(content=fetched.content, encoding=fetched.encoding)
     return _fetch_result_from_extracted_title(url=url, title=title)
 
 
@@ -1278,7 +1292,7 @@ def _fetch_oembed_title(*, page_url: str, oembed_url: str) -> _LinkTitleFetchRes
     json_capture = CapturedExceptionContext(json.JSONDecodeError, UnicodeDecodeError, boundary='app/services/link_titles.py:_fetch_oembed_title:json_capture')
     payload = None
     with json_capture:
-        payload = json.loads(content.decode("utf-8"))
+        payload = json.loads(content)
     if json_capture.captured_exception is not None or not isinstance(payload, dict):
         return None
     if "title" not in payload or not isinstance(payload["title"], str):
@@ -1287,6 +1301,34 @@ def _fetch_oembed_title(*, page_url: str, oembed_url: str) -> _LinkTitleFetchRes
     if title is None or _is_placeholder_title(title=title, url=page_url):
         return None
     return _LinkTitleFetchResult(url=page_url, title=title, status="ok", last_error_kind=None)
+
+
+# (status code, body) of the oEmbed request; None when the body runs past the limit.
+def _request_oembed(oembed_url: str, target: _ResolvedHttpTarget) -> tuple[int, bytes] | None:
+    with httpx.Client(
+        timeout=_FETCH_TIMEOUT_SECONDS,
+        follow_redirects=False,
+        transport=_PinnedHTTPTransport(target=target, network_backend=httpcore.SyncBackend()),
+        headers={"User-Agent": _USER_AGENT, "Accept": "application/json"},
+    ) as client:
+        with client.stream("GET", oembed_url) as response:
+            status_code = response.status_code
+            content = b""
+            if status_code == 429:
+                _host_pacer.cool_down(
+                    _pacing_host(oembed_url),
+                    _rate_limit_cooldown_seconds(response.headers.get("retry-after")),
+                )
+            if status_code == 200:
+                chunks: list[bytes] = []
+                total_bytes = 0
+                for chunk in response.iter_bytes():
+                    chunks.append(chunk)
+                    total_bytes += len(chunk)
+                    if total_bytes > _MAX_OEMBED_RESPONSE_BYTES:
+                        return None
+                content = b"".join(chunks)
+            return status_code, content
 
 
 def _download_oembed(oembed_url: str, target: _ResolvedHttpTarget) -> tuple[int, bytes] | None:
@@ -1299,34 +1341,12 @@ def _download_oembed(oembed_url: str, target: _ResolvedHttpTarget) -> tuple[int,
         httpcore.NetworkError,
         httpcore.ProtocolError,
     boundary='app/services/link_titles.py:_download_oembed:capture')
-    status_code = 0
-    content = b""
+    downloaded: tuple[int, bytes] | None = None
     with capture:
-        with httpx.Client(
-            timeout=_FETCH_TIMEOUT_SECONDS,
-            follow_redirects=False,
-            transport=_PinnedHTTPTransport(target=target, network_backend=httpcore.SyncBackend()),
-            headers={"User-Agent": _USER_AGENT, "Accept": "application/json"},
-        ) as client:
-            with client.stream("GET", oembed_url) as response:
-                status_code = response.status_code
-                if status_code == 429:
-                    _host_pacer.cool_down(
-                        _pacing_host(oembed_url),
-                        _rate_limit_cooldown_seconds(response.headers.get("retry-after")),
-                    )
-                if status_code == 200:
-                    chunks: list[bytes] = []
-                    total_bytes = 0
-                    for chunk in response.iter_bytes():
-                        chunks.append(chunk)
-                        total_bytes += len(chunk)
-                        if total_bytes > _MAX_OEMBED_RESPONSE_BYTES:
-                            return None
-                    content = b"".join(chunks)
+        downloaded = _request_oembed(oembed_url, target)
     if capture.captured_exception is not None:
         return None
-    return status_code, content
+    return downloaded
 
 
 def _redirect_result_from_response(*, url: str, response: httpx.Response) -> _LinkTitleFetchResult | None:

@@ -29,6 +29,8 @@ import {
     moveNoteUp,
     outdentNote,
     unformatCurrentNoteContent,
+    actionPasteReferenceSibling,
+    actionPasteReferenceChild,
 } from '../actions/note-actions.js';
 import { CommandGate } from '../services/command-gate-service.js';
 import {
@@ -36,7 +38,9 @@ import {
     prepareOutlineMoveContextAction,
 } from '../services/note-context-menu-action-service.js';
 import { writeRenderedNoteToSystemClipboard } from '../services/note-clipboard-write-service.js';
-import { downloadFileReference, insertReferenceTokenIntoActiveEditor } from '../services/file-reference-service.js';
+import { downloadFileReference, insertReferenceTokenAtRange } from '../services/file-reference-service.js';
+import { pasteReferenceHereRange, rememberSelectionAtRightPress } from '../services/paste-reference-here-service.js';
+import { confirmRemovingReferencedNote } from '../services/referenced-note-removal-service.js';
 import {
     copyImageFromContext,
     openImageInNewTabFromContext,
@@ -614,7 +618,7 @@ async function pasteReferenceFromContextMenu(noteId) {
     }
 
     await focusNoteForContextAction(noteId);
-    insertReferenceTokenIntoActiveEditor(`![[${referenceNoteId}]]`);
+    await actionPasteReferenceSibling(referenceNoteId);
 }
 
 async function pasteReferenceAsChildFromContextMenu(noteId) {
@@ -628,8 +632,7 @@ async function pasteReferenceAsChildFromContextMenu(noteId) {
     }
 
     await focusNoteForContextAction(noteId);
-    await createChildNote();
-    insertReferenceTokenIntoActiveEditor(`![[${referenceNoteId}]]`);
+    await actionPasteReferenceChild(referenceNoteId);
 }
 
 async function addNoteAtTopFromContextMenu() {
@@ -756,13 +759,14 @@ async function suggestTagsWithAi(noteId, includeChildren) {
         showAiTagStatus(noteId, 'asking', '');
     });
     const settings = CommandPalette.getAiSettings();
+    const request = {
+        noteId, includeChildren, scope: NotesAPI.viewScope(),
+        provider: settings.provider, model: settings.model, thinkingLevel: settings.thinkingLevel,
+        onProgress: (completed, total) => showAiTagStatus(noteId, 'asking', batchProgress(completed, total)),
+    };
     let tags = null;
     try {
-        tags = await requestNoteTagSuggestions({
-            noteId, includeChildren, scope: NotesAPI.viewScope(),
-            provider: settings.provider, model: settings.model, thinkingLevel: settings.thinkingLevel,
-            onProgress: (completed, total) => showAiTagStatus(noteId, 'asking', batchProgress(completed, total)),
-        });
+        tags = await requestNoteTagSuggestions(request);
     } catch (error) {
         if (!(error instanceof AiApiError)) {
             throw error;
@@ -901,6 +905,12 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
         && typeof ModeContext.clipboardNoteId === 'string'
         && ModeContext.clipboardNoteId.length > 0
     );
+    // Where Paste Reference Into Note would put the reference: in the edited note's
+    // text, at the right-click (or the text selected before it).
+    let pasteHereRange = null;
+    if (hasReferenceClipboard) {
+        pasteHereRange = pasteReferenceHereRange(noteElement, event.target, event.clientX, event.clientY);
+    }
     const outline = describeOutlinePosition(noteElement);
     const context = {
         kind: 'note',
@@ -915,6 +925,7 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
         hasSelectedText,
         hasNoteClipboard,
         hasReferenceClipboard,
+        canPasteReferenceHere: pasteHereRange !== null,
         canResizeImage: !ModeContext.isEditing,
         canAddStyle: ModeContext.isEditing && ModeContext.currentNoteId === noteId,
         canRemoveFormatting: ModeContext.isEditing && ModeContext.currentNoteId === noteId,
@@ -989,6 +1000,14 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
             onPasteReferenceChild: (targetNoteId) => {
                 void CommandGate.run('contextMenu.note.paste_reference_child', async () => {
                     await pasteReferenceAsChildFromContextMenu(targetNoteId);
+                });
+            },
+            onPasteReferenceHere: (targetNoteId) => {
+                void CommandGate.run('contextMenu.note.paste_reference_here', async () => {
+                    if (ModeContext.currentNoteId !== targetNoteId || pasteHereRange === null) {
+                        throw new Error('Paste Reference Into Note requires the right-clicked note to be edited');
+                    }
+                    insertReferenceTokenAtRange(`[[${ModeContext.clipboardNoteId}]]`, pasteHereRange);
                 });
             },
             onOpenReferenceSource: (referenceNoteId) => {
@@ -1099,21 +1118,27 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
                 });
             },
             onDeleteNote: (targetNoteId) => {
-                void CommandGate.run('contextMenu.note.delete', async () => {
-                    const deleteMode = await prepareDeleteNoteContextAction({
-                        targetNoteId,
-                        modeContext: ModeContext,
-                        exitSearchModeFn: actionExitSearchMode,
-                        saveAndExitEditingFn: actionSaveAndExitEditingWithoutRefreshing,
-                    });
-                    if (deleteMode === 'selected-edit') {
-                        await deleteNote(targetNoteId);
+                // Other notes referencing it: asked first; the dialog leaves edit mode.
+                void confirmRemovingReferencedNote(targetNoteId, 'delete').then((decision) => {
+                    if (decision === null || decision === 'cancelled') {
                         return;
                     }
-                    if (deleteMode !== 'outside-edit') {
-                        throw new Error(`Unknown context-menu delete mode: ${deleteMode}`);
-                    }
-                    await deleteNoteOutsideEdit(targetNoteId);
+                    void CommandGate.run('contextMenu.note.delete', async () => {
+                        const deleteMode = await prepareDeleteNoteContextAction({
+                            targetNoteId,
+                            modeContext: ModeContext,
+                            exitSearchModeFn: actionExitSearchMode,
+                            saveAndExitEditingFn: actionSaveAndExitEditingWithoutRefreshing,
+                        });
+                        if (deleteMode === 'selected-edit') {
+                            await deleteNote(targetNoteId);
+                            return;
+                        }
+                        if (deleteMode !== 'outside-edit') {
+                            throw new Error(`Unknown context-menu delete mode: ${deleteMode}`);
+                        }
+                        await deleteNoteOutsideEdit(targetNoteId);
+                    });
                 });
             },
             onMoveNoteToTop: (targetNoteId) => runOutlineMove('move_to_top', targetNoteId, moveNoteToTop),
@@ -1279,7 +1304,7 @@ function showViewContextMenu(event) {
             void CommandPalette.openOpenNamespace();
         },
         onOpenReminders: () => {
-            void CommandPalette.openReminders();
+            void CommandPalette.openReminders({ search: '' });
         },
         onLogOut: () => {
             void CommandPalette.logout();
@@ -1458,6 +1483,8 @@ function handleContextMenu(event) {
 
 export function initContextMenuEvents() {
     initContextMenuService();
+    // Before the browser may select the word under the pointer (macOS).
+    document.addEventListener('mousedown', rememberSelectionAtRightPress, { capture: true });
     document.addEventListener('contextmenu', unlessDiagramEditorOpen(handleContextMenu), { capture: true });
     // Right-click never shows the browser's own menu anywhere in MetaList (inputs,
     // the chat panel and overlays included): where MetaList has no menu, nothing opens.

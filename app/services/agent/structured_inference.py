@@ -518,6 +518,34 @@ async def _create_structured_completion(
         await client.client.close()
 
 
+# One attempt's structured output: the stream's last partial, validated as the
+# full model. InstructorRetryException from the stream, ValueError/ValidationError
+# from the model's JSON.
+async def _collect_structured_output(
+    *,
+    client: AsyncInstructor,
+    capture: _InstructorTraceCapture,
+    response_model: type[BaseModel],
+    attempt_messages: list[dict[str, str]],
+    request_options: dict[str, object],
+) -> tuple[BaseModel, object]:
+    last_partial: BaseModel | None = None
+    async for partial in client.create_partial(
+        response_model=response_model,
+        messages=attempt_messages,
+        max_retries=0,
+        **request_options,
+    ):
+        capture.record_partial(partial)
+        last_partial = partial
+    if last_partial is None:
+        raise ValueError("Instructor stream returned no structured output")
+    parsed = response_model.model_validate(
+        last_partial.model_dump(exclude_none=True)
+    )
+    return parsed, capture.current_response()
+
+
 async def _run_structured_attempt(
     *,
     client: AsyncInstructor,
@@ -528,23 +556,12 @@ async def _run_structured_attempt(
     request_options: dict[str, object],
     attempt_number: int,
 ) -> tuple[BaseModel, object]:
-    last_partial: BaseModel | None = None
     # lint: allow-PY001 rationale="Provider responses and model-produced structured JSON are external and receive one bounded retry"
     try:
-        async for partial in client.create_partial(
-            response_model=response_model,
-            messages=attempt_messages,
-            max_retries=0,
-            **request_options,
-        ):
-            capture.record_partial(partial)
-            last_partial = partial
-        if last_partial is None:
-            raise ValueError("Instructor stream returned no structured output")
-        parsed = response_model.model_validate(
-            last_partial.model_dump(exclude_none=True)
+        return await _collect_structured_output(
+            client=client, capture=capture, response_model=response_model,
+            attempt_messages=attempt_messages, request_options=request_options,
         )
-        return parsed, capture.current_response()
     # lint: allow-PY001 rationale="retry one external Instructor stream after preserving its exact failed attempt"
     except InstructorRetryException as exc:
         capture.record_attempt_failure(exc)

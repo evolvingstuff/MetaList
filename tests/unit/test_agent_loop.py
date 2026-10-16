@@ -326,7 +326,7 @@ def test_a_selected_note_tree_over_the_evidence_limit_is_never_sent() -> None:
     model = _ScriptedModel([_turn("Hello", [])])
     snapshot = replace(_snapshot(large_tail=False), selected_note=SelectedNoteContext(
         "available", "child-a", (SelectedTreeNote("parent", "", "PARENT", ""),
-            SelectedTreeNote("child-a", "parent", "LARGE " * 1000, ""))))
+            SelectedTreeNote("child-a", "parent", "LARGE " * 1000, "")), unavailable_reason=""))
 
     async def collect() -> None:
         async for _event in _runtime(model).stream_agent(earlier_actions=[], 

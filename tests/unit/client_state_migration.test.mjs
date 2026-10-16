@@ -268,7 +268,6 @@ test('migrateLegacyClientState persists merged legacy localStorage data and clea
 
     assert.deepEqual(migrated, {
         preferences: {
-            'pref.show_backlinks': 'false',
             'pref.show_note_tags': 'true',
             'pref.theme': 'dark',
         },

@@ -24,6 +24,10 @@ from app.utils.text_utils import strip_html
 
 
 _HTML_TOKEN_SPLIT_RE = re.compile(r"(<[^>]+>)")
+# An embedded note's arrow, by whether it is collapsed: (aria-expanded, label).
+_EMBED_ARROW_STATES = {True: ("false", "Expand note"), False: ("true", "Collapse note")}
+# An embedded note's classes, by whether it is the embed's root.
+_EMBED_NODE_CLASSES = {True: "note-embed-node note-embed-root", False: "note-embed-node"}
 # Editors write "first line<div>second line</div>", so a block's opening tag also ends a line.
 _FIRST_LINE_BOUNDARY_RE = re.compile(
     r"(?i)<br\s*/?>|</?(?:div|p|li|h[1-6]|pre|blockquote|ul|ol|table|tr|td|th|section|article|header|footer)\b[^>]*>\s*|\n"
@@ -287,6 +291,7 @@ def _render_note_content_with_embeds(
         static_export=static_export,
         redact_credentials=redact_credentials,
         render_note_embeds_as_links=render_note_embeds_as_links,
+        is_sole_reference=sole_reference_token(content_html) is not None,
     )
     rendered_content = format_note_content_for_view(
         content_html=content_with_embeds,
@@ -425,6 +430,62 @@ def preview_html_has_image_file_embed(*, preview_source_html: str, context: Embe
     return False
 
 
+# The editor's own wrappers around a line; they add nothing visible.
+_EDITOR_WRAPPER_TAG_RE = re.compile(r"</?(?:div|p|span|b|strong|i|em|u|s)\b[^>]*>", re.IGNORECASE)
+# A line break right after text, ending its block: the editor's placeholder,
+# not a new line.
+_TRAILING_BLOCK_BREAK_RE = re.compile(r"(?<=[^>\s])\s*<br\s*/?>(?=\s*</(?:div|p)>)", re.IGNORECASE)
+# Stands in for the reference while checking what else the note holds.
+_SOLE_REFERENCE_MARK = "\x00"
+
+
+def sole_reference_token(content_html: str) -> Optional[ReferenceToken]:
+    """The reference that is a note's whole content, or None.
+
+    A note reference that is its note's only content shows that note in place
+    (an embed); with anything else in the note, even an extra line, it is a
+    link (docs/ui/references.md). Its written form, [[...]] or ![[...]], does
+    not matter.
+    """
+    tokens = collect_active_reference_tokens(content_html)
+    if len(tokens) != 1:
+        return None
+    token = tokens[0]
+    marked = content_html[:token.start] + _SOLE_REFERENCE_MARK + content_html[token.end:]
+    unwrapped = _EDITOR_WRAPPER_TAG_RE.sub("", _TRAILING_BLOCK_BREAK_RE.sub("", marked))
+    if html.unescape(unwrapped).strip() != _SOLE_REFERENCE_MARK:
+        return None
+    return token
+
+
+def resolve_held_source(
+    note_id: str, *, has_note: Callable[[str], bool], content_of: Callable[[str], str],
+) -> str:
+    """The note whose collapse a note shows: for a note that is only a reference,
+    its source (followed through sources that are themselves only a reference);
+    otherwise the note itself."""
+    visited = [note_id]
+    current = note_id
+    while True:
+        token = sole_reference_token(content_of(current))
+        if token is None or not has_note(token.note_id) or token.note_id in visited:
+            return current
+        current = token.note_id
+        visited.append(current)
+
+
+def _context_content(context: EmbedRenderContext) -> Callable[[str], str]:
+    return lambda note_id: context.get_note(note_id).content
+
+
+def shows_note_embed(*, content_html: str, context: EmbedRenderContext) -> bool:
+    """Whether a note's content is one reference to a note, shown as an embed."""
+    token = sole_reference_token(content_html)
+    if token is None:
+        return False
+    return context.has_note(token.note_id)
+
+
 def collapsed_preview_source_has_note_embed(
     *,
     content_html: str,
@@ -438,8 +499,7 @@ def collapsed_preview_source_has_note_embed(
 def preview_html_has_note_embed(*, preview_source_html: str, context: EmbedRenderContext) -> bool:
     if preview_source_html == "":
         return False
-    tokens = collect_reference_tokens_from_html(preview_source_html)
-    return any(token.is_embed and context.has_note(token.note_id) for token in tokens)
+    return shows_note_embed(content_html=preview_source_html, context=context)
 
 
 def _replace_reference_tokens_in_html(
@@ -452,6 +512,7 @@ def _replace_reference_tokens_in_html(
     static_export: bool,
     redact_credentials: bool,
     render_note_embeds_as_links: bool,
+    is_sole_reference: bool,
 ) -> str:
     parts = _HTML_TOKEN_SPLIT_RE.split(content_html)
     output: List[str] = []
@@ -469,6 +530,7 @@ def _replace_reference_tokens_in_html(
             static_export=static_export,
             redact_credentials=redact_credentials,
             render_note_embeds_as_links=render_note_embeds_as_links,
+            is_sole_reference=is_sole_reference,
         )
         output.append(replaced_text)
         occurrence_index = next_occurrence_index
@@ -485,6 +547,7 @@ def _replace_reference_tokens_in_text(
     static_export: bool,
     redact_credentials: bool,
     render_note_embeds_as_links: bool,
+    is_sole_reference: bool,
 ) -> tuple[str, int]:
     if text == "":
         return "", occurrence_start
@@ -525,6 +588,7 @@ def _replace_reference_tokens_in_text(
                 static_export=static_export,
                 redact_credentials=redact_credentials,
                 render_note_embeds_as_links=render_note_embeds_as_links,
+                is_sole_reference=is_sole_reference,
             )
         )
         occurrence_index += 1
@@ -599,6 +663,7 @@ def _render_reference_block(
     static_export: bool,
     redact_credentials: bool,
     render_note_embeds_as_links: bool,
+    is_sole_reference: bool,
 ) -> str:
     mode = "link"
     if is_embed:
@@ -611,13 +676,21 @@ def _render_reference_block(
     if note_exists and file_exists:
         raise RuntimeError(f"Reference UUID {reference_note_id} resolves to both a note and a file")
 
-    display_note_embed_as_link = render_note_embeds_as_links and is_embed and note_exists
-    display_as_embed = is_embed and not display_note_embed_as_link
+    # A note reference is an embed when it is its note's whole content, a
+    # link otherwise; a file follows its written form (![[...]] or [[...]]).
+    display_as_embed = is_embed
+    shows_embed_first_line = False
+    if note_exists:
+        # A collapsed note shows its embed as one line, the source's preview.
+        shows_embed_first_line = is_sole_reference and render_note_embeds_as_links
+        display_as_embed = is_sole_reference and not shows_embed_first_line
     wrapper_classes = "note-reference-block"
     if display_as_embed:
         wrapper_classes = f"{wrapper_classes} note-reference-embed note-embed-block"
     else:
         wrapper_classes = f"{wrapper_classes} note-reference-link-mode"
+    if shows_embed_first_line:
+        wrapper_classes = f"{wrapper_classes} note-reference-embed-first-line"
 
     if note_exists:
         wrapper_classes = f"{wrapper_classes} note-reference-note"
@@ -886,20 +959,30 @@ def _resolve_note_reference_preview(
     redact_credentials: bool,
 ) -> tuple[str, str]:
     """The linked note's first line, and which credential it hides ('' for none):
-    a password or username is shown as the mask when credentials are redacted."""
-    record = context.get_note(reference_note_id)
-    record_content = record.content
-    record_tags = record.tags
-    if not isinstance(record_content, str):
-        raise TypeError("linked note content must be a string")
-    if not isinstance(record_tags, str):
-        raise TypeError("linked note tags must be a string")
+    a password or username is shown as the mask when credentials are redacted.
+    A note that is only a reference shows its source, so a link to it reads
+    as the source's first line (followed until a note with content of its own)."""
+    visited: List[str] = []
+    note_id = reference_note_id
+    while True:
+        record = context.get_note(note_id)
+        record_content = record.content
+        record_tags = record.tags
+        if not isinstance(record_content, str):
+            raise TypeError("linked note content must be a string")
+        if not isinstance(record_tags, str):
+            raise TypeError("linked note tags must be a string")
+        visited.append(note_id)
+        credential_tag = find_global_credential_tag(record_tags)
+        if redact_credentials and credential_tag is not None:
+            return CREDENTIAL_MASK, credential_tag
+        held = sole_reference_token(record_content)
+        if held is None or not context.has_note(held.note_id) or held.note_id in visited:
+            break
+        note_id = held.note_id
     preview = _extract_first_line_preview(record_content)
     if preview == "":
         preview = "(empty note)"
-    credential_tag = find_global_credential_tag(record_tags)
-    if redact_credentials and credential_tag is not None:
-        return CREDENTIAL_MASK, credential_tag
     return preview, ""
 
 
@@ -1152,54 +1235,153 @@ def _render_embedded_note_node(
     if not isinstance(record_tags, str):
         raise TypeError("embedded note tags must be a string")
 
-    annotated_content = record_content
-    if not static_export:
-        annotated_content = annotate_inline_image_occurrences(record_content)
-    rendered_content = _replace_reference_tokens_in_html(
-        host_note_id=note_id,
-        content_html=annotated_content,
-        tags=record_tags,
-        context=context,
-        ancestry=ancestry,
-        static_export=static_export,
-        redact_credentials=redact_credentials,
-        render_note_embeds_as_links=False,
-    )
-    rendered_content = format_note_content_for_view(
-        content_html=rendered_content,
-        tags=record_tags,
-        redact_credentials=redact_credentials,
-    )
-
+    annotated_content = _annotated_embedded_content(content_html=record_content, static_export=static_export)
     escaped_note_id = html.escape(note_id, quote=True)
-    classes = "note-embed-node"
-    if is_root:
-        classes = f"{classes} note-embed-root"
-    children_html = ""
+    classes = _EMBED_NODE_CLASSES[is_root]
+    if shows_note_embed(content_html=record_content, context=context):
+        # A note in the embed that is itself only a reference: a deeper embed.
+        classes = f"{classes} note-embed-holds-embed"
     child_ids = context.get_children(note_id)
-    if child_ids:
-        child_parts: List[str] = []
-        for child_id in child_ids:
-            child_parts.append(
-                _render_embedded_note_node(
-                    note_id=child_id,
-                    context=context,
-                    ancestry=ancestry + (child_id,),
-                    is_root=False,
-                    static_export=static_export,
-                    redact_credentials=redact_credentials,
-                )
-            )
-        children_html = f'<div class="note-embed-children">{"".join(child_parts)}</div>'
+    # Collapse is shared: an embedded note shows the state saved for it, as in
+    # the main tree, with an arrow where it can collapse. Exports show the
+    # whole subtree, as a document.
+    has_arrow = (not static_export) and _is_embedded_note_collapsible(
+        content_html=record_content, child_ids=child_ids, context=context
+    )
+    shown_state_id = resolve_held_source(note_id, has_note=context.has_note, content_of=_context_content(context))
+    is_collapsed = has_arrow and bool(context.get_note(shown_state_id).is_collapsed)
+    toggle_html = ""
+    if has_arrow:
+        toggle_html = _embed_arrow_html(escaped_note_id=escaped_note_id, is_collapsed=is_collapsed)
+    children_html = ""
+    if is_collapsed:
+        classes = f"{classes} note-embed-collapsed"
+        rendered_content = render_collapsed_note_content_with_embeds(
+            note_id=note_id,
+            content_html=annotated_content,
+            tags=record_tags,
+            context=context,
+            static_export=static_export,
+            redact_credentials=redact_credentials,
+        )
+    else:
+        rendered_content = _render_expanded_embedded_content(
+            note_id=note_id,
+            annotated_content=annotated_content,
+            tags=record_tags,
+            context=context,
+            ancestry=ancestry,
+            static_export=static_export,
+            redact_credentials=redact_credentials,
+        )
+        children_html = _render_embedded_children(
+            child_ids=child_ids,
+            context=context,
+            ancestry=ancestry,
+            static_export=static_export,
+            redact_credentials=redact_credentials,
+        )
 
     return (
         f'<div class="{classes}" data-embed-note-id="{escaped_note_id}">'
         '<div class="note-embed-body">'
+        f"{toggle_html}"
         f'<div class="note-embed-content">{rendered_content}</div>'
         f"{children_html}"
         "</div>"
         "</div>"
     )
+
+
+def _annotated_embedded_content(*, content_html: str, static_export: bool) -> str:
+    if static_export:
+        return content_html
+    return annotate_inline_image_occurrences(content_html)
+
+
+def _is_embedded_note_collapsible(*, content_html: str, child_ids: List[str], context: EmbedRenderContext) -> bool:
+    """Whether an embedded note can collapse, as in the main tree: it has
+    children, or more text than its first line."""
+    if len(child_ids) > 0:
+        return True
+    return is_content_collapsible(content_html=content_html, context=context)
+
+
+def _embed_arrow_html(*, escaped_note_id: str, is_collapsed: bool) -> str:
+    expanded, label = _EMBED_ARROW_STATES[is_collapsed]
+    return (
+        f'<button type="button" class="note-embed-collapse-toggle" data-embed-collapse-note-id="{escaped_note_id}" '
+        f'aria-expanded="{expanded}" aria-label="{label}"></button>'
+    )
+
+
+def _render_expanded_embedded_content(
+    *,
+    note_id: str,
+    annotated_content: str,
+    tags: str,
+    context: EmbedRenderContext,
+    ancestry: Tuple[str, ...],
+    static_export: bool,
+    redact_credentials: bool,
+) -> str:
+    rendered_content = _replace_reference_tokens_in_html(
+        host_note_id=note_id,
+        content_html=annotated_content,
+        tags=tags,
+        context=context,
+        ancestry=ancestry,
+        static_export=static_export,
+        redact_credentials=redact_credentials,
+        render_note_embeds_as_links=False,
+        is_sole_reference=sole_reference_token(annotated_content) is not None,
+    )
+    return format_note_content_for_view(
+        content_html=rendered_content,
+        tags=tags,
+        redact_credentials=redact_credentials,
+    )
+
+
+def _render_embedded_children(
+    *,
+    child_ids: List[str],
+    context: EmbedRenderContext,
+    ancestry: Tuple[str, ...],
+    static_export: bool,
+    redact_credentials: bool,
+) -> str:
+    if len(child_ids) == 0:
+        return ""
+    child_parts: List[str] = []
+    for child_id in child_ids:
+        child_parts.append(
+            _render_embedded_note_node(
+                note_id=child_id,
+                context=context,
+                ancestry=ancestry + (child_id,),
+                is_root=False,
+                static_export=static_export,
+                redact_credentials=redact_credentials,
+            )
+        )
+    return f'<div class="note-embed-children">{"".join(child_parts)}</div>'
+
+
+def is_content_collapsible(*, content_html: str, context: EmbedRenderContext) -> bool:
+    """Whether a note's text is more than its collapsed first line (so it gets a
+    collapse arrow even without children); exports decide the same way."""
+    # One preview-head lookup serves all four collapsibility checks.
+    collapsed_preview_source, preview_has_more = collapsed_preview_head(content_html)
+    if collapsed_preview_source == "":
+        return False
+    if preview_html_has_media(collapsed_preview_source):
+        return True
+    if preview_html_has_image_file_embed(preview_source_html=collapsed_preview_source, context=context):
+        return True
+    if preview_html_has_note_embed(preview_source_html=collapsed_preview_source, context=context):
+        return True
+    return preview_has_more
 
 
 def _extract_first_line_preview(content_html: str) -> str:

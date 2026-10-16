@@ -180,7 +180,7 @@ class ListTraversal:
 
 
 class _NoteProxy:
-    """Lightweight stand-in for DBNote when serving from the in-memory store."""
+    """Lightweight note row for serving from the in-memory store."""
 
     __slots__ = (
         'id',

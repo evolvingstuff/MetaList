@@ -202,7 +202,7 @@ class ChatTurnStream:
         task = register_current_task()
         # lint: allow-PY001 rationale="stream transport failures are delivered after headers; internal errors are re-raised"
         try:
-            async for event in source:
+            async for event in source:  # shockharness: ignore[EXC003] reason="each pull from the agent's stream is the external operation; the body forwards the event"
                 yield json.dumps(self.transform(event), separators=(',', ':')) + '\n'
         # lint: allow-PY001 rationale="expected provider/network failures must be delivered after response headers"
         except (AgentExecutionError, InferenceProviderError) as exc:

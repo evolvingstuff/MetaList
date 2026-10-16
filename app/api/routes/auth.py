@@ -15,7 +15,7 @@ import time
 from app.api.transactions import transactional_route
 from app.api.deps import get_db
 from app.config import ACTIVE_NAMESPACE
-from app.config import KDF_TIME_COST, KDF_MIN_TIME_COST, KDF_MAX_TIME_COST
+from app.config import KDF_TIME_COST
 from app.config import VERSION
 from app.db.migrations import CURRENT_DATABASE_VERSION
 from app.db.settings_sql import fetch_settings
@@ -167,7 +167,6 @@ class PasswordCreateRequest(BaseModel):
 class PasswordChangeRequest(BaseModel):
     current_password: SecretStr
     new_password: SecretStr
-    iterations: Annotated[int, Field(ge=KDF_MIN_TIME_COST, le=KDF_MAX_TIME_COST)] | None = None
 
 
 class PasswordRemoveRequest(BaseModel):
@@ -1122,14 +1121,10 @@ def change_password(
     token: Annotated[str, Depends(_require_auth)],
 ):
     auth = AuthService(db)
-    if payload.iterations is not None:
-        time_cost = payload.iterations
-    else:
-        time_cost = KDF_TIME_COST
     success, message = auth.change_password(
         payload.current_password.get_secret_value(),
         payload.new_password.get_secret_value(),
-        time_cost,
+        KDF_TIME_COST,
     )
     if not success:
         raise HTTPException(status_code=400, detail=message)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import app.usecases.collapse as collapse_module
 import app.usecases.paste_child as paste_child_module
 import app.usecases.paste_sibling as paste_sibling_module
 from app.services.note_store import NoteRecord
@@ -143,3 +144,46 @@ def test_paste_child_reports_expired_server_clipboard_without_crashing(monkeypat
     )
 
     assert command.execute() == {"status": "clipboard_empty"}
+
+
+def test_a_paste_keeps_each_copied_note_collapsed_or_expanded(monkeypatch) -> None:
+    # A copied note's collapse state, and every child's, comes back on paste.
+    inserted: dict[str, str] = {}
+    collapsed_writes: dict[str, bool] = {}
+    children: dict[str | None, list[str]] = {None: []}
+    records: dict[str, NoteRecord] = {}
+
+    def fake_insert(new_id, parent_id, prev_id, next_id, token, *, content, tags, proposed_tags) -> None:
+        inserted[content] = new_id
+        if parent_id not in children:
+            children[parent_id] = []
+        children[parent_id].append(new_id)
+        children[new_id] = []
+        records[new_id] = _record(note_id=new_id, parent_id=parent_id, prev_id=prev_id, next_id=next_id,
+                                  content=content, tags=tags, proposed_tags=proposed_tags)
+
+    fake_store = _FakeStore(records=records, children_by_parent=children)
+    monkeypatch.setattr(paste_sibling_module, "store", fake_store)
+    monkeypatch.setattr(paste_sibling_module, "apply_insert_note", fake_insert)
+    monkeypatch.setattr(collapse_module, "begin_writer", lambda: _NullWriter())
+    monkeypatch.setattr(collapse_module, "db_update_links_preserving_updated_at",
+                        lambda connection, note_id, **updates: collapsed_writes.update({note_id: updates["is_collapsed"]}))
+    monkeypatch.setattr(collapse_module.store, "set_collapsed", lambda note_id, value: None)
+
+    snapshot = [
+        {"id": "root", "parent_id": None, "is_collapsed": False, "content": "root", "tags": "", "proposed_tags": ""},
+        {"id": "folded", "parent_id": "root", "is_collapsed": True, "content": "folded", "tags": "", "proposed_tags": ""},
+        {"id": "inner", "parent_id": "folded", "is_collapsed": False, "content": "inner", "tags": "", "proposed_tags": ""},
+        {"id": "open", "parent_id": "root", "is_collapsed": False, "content": "open", "tags": "", "proposed_tags": ""},
+    ]
+    paste_sibling_module._insert_cloned_subtree_at(snapshot, None, None, "token", search_query=None)
+
+    assert collapsed_writes == {inserted["folded"]: True}
+
+
+class _NullWriter:
+    def __enter__(self):
+        return None
+
+    def __exit__(self, *exc_info) -> bool:
+        return False

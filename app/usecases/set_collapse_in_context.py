@@ -11,7 +11,7 @@ from app.services.store import store
 from app.services.sync import generate_new_uuid
 from app.services.undo_state import reset_undo_stack
 from app.usecases.base import QueryCommand
-from app.usecases.collapse import apply_set_collapse_bulk
+from app.usecases.collapse import apply_set_collapse_bulk, is_shown_collapsed
 
 
 def _include_ancestors(note_ids: Set[str], *, starting_ids: Set[str]) -> None:
@@ -126,7 +126,7 @@ def _set_collapse_state(
     reset_undo_stack(client_id, undo_context)
     note_ids_to_update: List[str] = []
     for note_id in note_ids:
-        before = bool(store.get(note_id).is_collapsed)
+        before = is_shown_collapsed(note_id)
         if before is bool(collapsed):
             continue
         note_ids_to_update.append(note_id)
@@ -135,7 +135,7 @@ def _set_collapse_state(
         apply_set_collapse_bulk(note_ids_to_update, bool(collapsed))
 
     for note_id in note_ids_to_update:
-        after = bool(store.get(note_id).is_collapsed)
+        after = is_shown_collapsed(note_id)
         if after is not bool(collapsed):
             print(f"FATAL: context collapse failed for {note_id}")
             os._exit(1)

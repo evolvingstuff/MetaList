@@ -10,6 +10,9 @@ export async function readPasswordOperationResponse(response) {
     }
 
     const payload = await response.json().catch((error) => {
+        if (!(error instanceof SyntaxError)) {
+            throw error;
+        }
         throw new Error(
             `Password request failed with HTTP ${response.status} and returned invalid JSON`,
             { cause: error },

@@ -9,7 +9,6 @@ import { clearTagBar, syncTagBar } from '../services/tag-bar-service.js';
 import { initializeEditSessionCollapseStateFromNoteElement } from '../services/edit-session-collapse-service.js';
 import { clearEditingStateForHiddenFilteredNote } from '../services/filtered-refresh-selection-service.js';
 import { attachEditorSurface, detachEditorSurface } from '../../editor-toolbar.js';
-import { refreshBacklinksPanel } from '../services/backlinks-panel-service.js';
 import { rebuildRootDateSeparators } from '../services/root-date-separator-service.js';
 import { updateRootSortIndicator } from '../services/root-sort-indicator-service.js';
 import { updateUntaggedViewIndicator } from '../services/untagged-view-indicator-service.js';
@@ -322,7 +321,6 @@ export async function actionRefreshAndMaybeSelect(options) {
             });
         }
 
-        await refreshBacklinksPanel({});
         if (startAtListEnd) {
             scrollWindowToListBottom();
         }

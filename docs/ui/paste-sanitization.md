@@ -15,6 +15,10 @@
   **Copy note** action. Ordinary copied note content—including selected URLs—is
   treated as external clipboard content even when its HTML contains the shared
   `note-content` CSS class.
+- `⌘V` always lets the browser paste, and MetaList decides from what was
+  pasted: only that marker pastes the copied note. Another app's `⌘V` (a
+  dictation app typing words, for example) pastes its text, even right after a
+  note was copied and with no window switch in between.
 - The structural note clipboard is process-local. If a server restart expires it,
   note paste reports that the note must be copied again instead of returning an
   internal-server error.

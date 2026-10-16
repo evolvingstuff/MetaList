@@ -3,7 +3,7 @@ import { rethrowUnexpectedError } from '../../expected-errors.js';
 import { navigateToFootnoteWithExpansion } from '../services/footnote-navigation-service.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import * as Logger from '../mode-logger.js';
-import { createNote, deleteNote, collapseNote, expandNote, getShellRun, moveNoteToSiblingPosition, indentNote, outdentNote, toggleTodoDone, runShellNote } from '../actions/note-actions.js';
+import { createNote, collapseNote, expandNote, getShellRun, moveNoteToSiblingPosition, indentNote, outdentNote, setEmbeddedNoteCollapse, toggleTodoDone, runShellNote } from '../actions/note-actions.js';
 import { actionSelectNote, actionDeselectNote, actionSwitchNotes } from '../actions/selection-actions.js';
 import { captureClickAnchor } from '../services/viewport-hold-service.js';
 import { actionEnterSearchMode, actionExitSearchMode } from '../actions/search-actions.js';
@@ -22,6 +22,7 @@ import {
     hideSearchContextsOverlayForPointerMove,
 } from '../services/search-contexts-overlay-service.js';
 import { CommandGate } from '../services/command-gate-service.js';
+import { deleteEditedNoteAskingIfReferenced } from '../services/referenced-note-removal-service.js';
 import { actionSaveNote } from '../actions/content-actions.js';
 import { CommandPalette } from '../../command-palette/command-palette-controller.js';
 import { NotesAPI } from '../../api-client.js';
@@ -47,7 +48,6 @@ import {
 } from '../services/shell-output-service.js';
 import {
     navigateBackFromReferenceContext,
-    openReferenceInCurrentTab,
     openReferenceInNewTab,
     openReferenceQueryInNewTab,
     openBacklinksInNewTab,
@@ -70,6 +70,8 @@ const DRAG_DIRECTION_ICONS = { up: 'up', down: 'down', right: 'indent', left: 'o
 const CREDENTIAL_VALUE_SELECTOR = '.meta-credential-value';
 const EMAIL_VALUE_SELECTOR = '.meta-email-value';
 const STATUS_TOGGLE_SELECTOR = '.meta-status-toggle';
+// The arrow of a note shown inside an embed (![[UUID]]).
+const EMBED_COLLAPSE_TOGGLE_SELECTOR = '.note-embed-collapse-toggle[data-embed-collapse-note-id]';
 const CREDENTIAL_COPY_CLASS = 'meta-credential-copied';
 const COPYABLE_SELECTOR = '.meta-copyable';
 const COPYABLE_COPY_CLASS = 'meta-copyable-copied';
@@ -214,7 +216,6 @@ function isMouseDownOutsideEditExclusion(target) {
             '#file-reference-input',
             '.note-tag-bar',
             '#search-contexts-list',
-            '#backlinks-panel',
             '#reference-source-indicator',
             '#root-sort-indicator',
             '#untagged-view-indicator',
@@ -229,13 +230,13 @@ function isMouseDownOutsideEditExclusion(target) {
             '.add-note',
             '#trash-can',
             '.note-collapse-toggle',
+            EMBED_COLLAPSE_TOGGLE_SELECTOR,
             COLLAPSED_CHILDREN_INDICATOR_SELECTOR,
             '.note-reference-link',
             '.note-backlinks-link',
             '.ai-chat-open-all-references',
             '.note-file-reference-link',
             '.note-file-image-download-link',
-            '.backlink-item',
             CREDENTIAL_VALUE_SELECTOR,
             EMAIL_VALUE_SELECTOR,
             COPYABLE_SELECTOR,
@@ -317,9 +318,10 @@ function handleNoteShellMouseDown(event, noteElement) {
     }
 
     // Captured now, before anything changes: the clicked spot stays under
-    // the pointer once the note shows its editable source.
+    // the pointer once the note shows its editable source, with the caret
+    // showing there (docs/ui/interaction-principles.md, "Click into a note").
     const enterEditOptions = {
-        initialCaretVisibility: 'hidden',
+        initialCaretVisibility: 'visible',
         clickAnchor: captureClickAnchor(noteElement, event.clientX, event.clientY),
     };
     if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
@@ -490,6 +492,13 @@ function handleImmediateMouseDown(event) {
     const todoToggle = event.target.closest(STATUS_TOGGLE_SELECTOR);
     if (todoToggle && handleTodoToggleClick(event)) {
         rememberMouseDownHandledClick(todoToggle, 'todo_toggle');
+        stopImmediatePropagationIfAvailable(event);
+        return;
+    }
+
+    const embedCollapseToggle = event.target.closest(EMBED_COLLAPSE_TOGGLE_SELECTOR);
+    if (embedCollapseToggle && handleEmbedCollapseToggle(event, embedCollapseToggle)) {
+        rememberMouseDownHandledClick(embedCollapseToggle, 'embed_collapse_toggle');
         stopImmediatePropagationIfAvailable(event);
         return;
     }
@@ -1343,15 +1352,6 @@ function handleClick(event) {
         return;
     }
 
-    if (handleBacklinkItemClick(event)) {
-        return;
-    }
-
-
-    if (event.target.closest('#backlinks-panel')) {
-        return;
-    }
-
     if (handleTodoToggleClick(event)) {
         return;
     }
@@ -1525,9 +1525,7 @@ function handleClick(event) {
                 coordinates 
             }, Logger.LogCategory.EVENT);
 
-            void CommandGate.run('mouse.delete', async () => {
-                await deleteNote(noteId);
-            });
+            void deleteEditedNoteAskingIfReferenced(noteId, 'mouse.delete');
         } else {
                         
             Logger.logNoop('Delete button clicked but no note is selected', { 
@@ -1597,9 +1595,9 @@ function handleClick(event) {
             }
 
             // Captured now, before anything changes: the clicked spot stays under
-            // the pointer once the note shows its editable source.
+            // the pointer once the note shows its editable source, with the caret showing there.
             const enterEditOptions = {
-                initialCaretVisibility: 'hidden',
+                initialCaretVisibility: 'visible',
                 clickAnchor: captureClickAnchor(noteElement, event.clientX, event.clientY),
             };
             if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
@@ -1623,7 +1621,7 @@ function handleClick(event) {
                     isEditing: true
                 }, Logger.LogCategory.EVENT);
             } else {
-                // Clicking again in the selected note should only reveal the caret once.
+                // A click in a note selected without a caret (a pasted note) shows it.
                 if (ModeContext.isCaretHidden && ModeContext.currentNoteId === noteId) {
                     DOMUtils.revealCaret(noteElement);
                     ModeContext.markCaretVisible();
@@ -1700,9 +1698,9 @@ function handleClick(event) {
         }
 
         // Captured now, before anything changes: the clicked spot stays under
-        // the pointer once the note shows its editable source.
+        // the pointer once the note shows its editable source, with the caret showing there.
         const enterEditOptions = {
-            initialCaretVisibility: 'hidden',
+            initialCaretVisibility: 'visible',
             clickAnchor: captureClickAnchor(noteElement, event.clientX, event.clientY),
         };
         if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
@@ -1722,7 +1720,7 @@ function handleClick(event) {
                 isEditing: true
             }, Logger.LogCategory.EVENT);
         } else {
-            // Clicking again in the selected note shell should only reveal the caret once.
+            // A click on a note selected without a caret (a pasted note) shows it.
             if (ModeContext.isCaretHidden && ModeContext.currentNoteId === noteId) {
                 DOMUtils.revealCaret(noteElement);
                 ModeContext.markCaretVisible();
@@ -1975,33 +1973,27 @@ function handleReferenceSourceIndicatorClick(event) {
     return true;
 }
 
-function handleBacklinkItemClick(event) {
-    if (!event.target) {
-        throw new Error('Backlink click missing target element');
-    }
-
-    const backlinkItem = event.target.closest('.backlink-item');
-    if (!backlinkItem) {
+// An embedded note's arrow: collapses or expands that note everywhere.
+function handleEmbedCollapseToggle(event, toggle) {
+    if (!ModeContext.isConnected) {
         return false;
     }
-
+    const hostElement = toggle.closest('.note');
+    if (!hostElement) {
+        throw new Error('Embed collapse arrow missing its host note element');
+    }
+    if (hostElement.classList.contains('locked') || hostElement.classList.contains('search-redacted')) {
+        return false;
+    }
+    const noteId = toggle.dataset.embedCollapseNoteId;
+    if (typeof noteId !== 'string' || noteId.length === 0) {
+        throw new Error('Embed collapse arrow missing its note id');
+    }
+    const collapse = toggle.getAttribute('aria-expanded') === 'true';
     event.preventDefault();
     event.stopPropagation();
-
-    if (!ModeContext.isConnected) {
-        Logger.logNoop('Backlink click ignored while disconnected', {
-            isConnected: false,
-        });
-        return true;
-    }
-
-    const noteId = backlinkItem.dataset.backlinkNoteId;
-    if (typeof noteId !== 'string' || noteId.length === 0) {
-        throw new Error('Backlink click missing data-backlink-note-id');
-    }
-
-    void CommandGate.run('mouse.open_backlink_in_new_tab', async () => {
-        await openReferenceInCurrentTab(noteId);
+    void CommandGate.run('mouse.toggle_embed_collapse', async () => {
+        await setEmbeddedNoteCollapse(noteId, collapse);
     });
     return true;
 }
@@ -2031,9 +2023,17 @@ function handleTodoToggleClick(event) {
         return false;
     }
 
+    // An embed shows its source but never changes it: its checkboxes show the
+    // status and a press on one does nothing (no toggle, no edit mode, and a
+    // note being edited keeps its focus).
+    if (toggleElement.closest('.note-embed-node') !== null) {
+        event.preventDefault();
+        event.stopPropagation();
+        return true;
+    }
     const noteId = noteElement.dataset.noteId;
     if (!noteId) {
-        throw new Error('Todo toggle note missing data-note-id attribute');
+        throw new Error('Todo toggle note missing its note id');
     }
 
     event.preventDefault();

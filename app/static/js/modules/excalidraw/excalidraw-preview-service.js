@@ -55,7 +55,7 @@ function fetchPreview(fileId, revision, variant) {
     if (previewState.previews.has(key)) {
         return previewState.previews.get(key);
     }
-    const request = FilesAPI.downloadFilePreview(fileId, variant).then((result) => {
+    const request = FilesAPI.downloadFilePreview(fileId, variant).then((result) => { // shockharness: ignore[EXC001] reason="the handler only resets state, then rethrows the error unchanged"
         if (result.status === 'missing') {
             return { status: 'missing' };
         }

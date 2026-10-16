@@ -110,6 +110,7 @@ def test_alphabetize_ascending_reorders_only_visible_roots_and_clears_undo(
             allowed_note_ids={"root-c", "root-a", "root-b"},
             search_root_ids_ordered=["root-c", "root-a", "root-b"],
             search_root_count_total=3,
+            matched_note_ids=None,
         ),
     )
 
@@ -169,6 +170,7 @@ def test_alphabetize_descending_reorders_current_search_context(
             allowed_note_ids={"root-a", "root-b", "root-c"},
             search_root_ids_ordered=["root-a", "root-b", "root-c"],
             search_root_count_total=3,
+            matched_note_ids=None,
         ),
     )
     monkeypatch.setattr(alphabetize_module, "reset_undo_stack", lambda *args, **kwargs: None)

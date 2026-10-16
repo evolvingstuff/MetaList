@@ -39,10 +39,11 @@ export function validateRelease(release) {
 export async function checkRelease() {
     let outcome;
     try {
-        outcome = { release: validateRelease(await updateRequest('/check')), error: '' };
+        const release = validateRelease(await updateRequest('/check'));
+        outcome = { release, message: release.message };
     } catch (error) {
         rethrowUnexpectedError(error);
-        outcome = { release: null, error: 'Could not check PyPI for updates. Try again from Version Info.' };
+        outcome = { release: null, message: 'Could not check PyPI for updates. Try again from Version Info.' };
     }
     return outcome;
 }

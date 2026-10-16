@@ -20,7 +20,7 @@ def test_capabilities_use_user_messages_not_assistant_claims() -> None:
             {"role": "assistant", "content": "Try https://invented.example/"},
             {"role": "user", "content": "Please continue."},
         ],
-        selected_note=SelectedNoteContext("none", "", ()),
+        selected_note=SelectedNoteContext("none", "", (), unavailable_reason=""),
         investigation_evidence=None,
         retained_web_urls=(),
     )
@@ -51,6 +51,7 @@ def test_selected_tree_and_retained_evidence_contribute_urls() -> None:
             SelectedTreeNote("root", "", "https://parent.example", "topic"),
             SelectedTreeNote("child", "root", "Child text", "https://tag.example/x"),
         ),
+        unavailable_reason="",
     )
     capabilities = build_web_url_capabilities(
         canonical_messages=[{"role": "user", "content": "Read these."}],
@@ -88,7 +89,7 @@ def test_only_retained_investigation_tree_content_authorizes_urls() -> None:
     )
     capabilities = build_web_url_capabilities(
         canonical_messages=[{"role": "user", "content": "Investigate."}],
-        selected_note=SelectedNoteContext("none", "", ()),
+        selected_note=SelectedNoteContext("none", "", (), unavailable_reason=""),
         investigation_evidence=evidence,
         retained_web_urls=(),
     )

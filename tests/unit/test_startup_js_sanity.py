@@ -151,3 +151,66 @@ def test_repository_passes_startup_js_sanity() -> None:
     repository_root = Path(__file__).resolve().parents[2]
 
     assert_startup_js_sanity(repository_root)
+
+
+def test_a_catch_may_narrow_to_an_expected_error_class_before_handling_it(tmp_path: Path) -> None:
+    # The guard shape: everything else is rethrown first; what remains is handled.
+    # SyntaxError is JSON.parse's error on external text, an expected failure.
+    _write_file(
+        tmp_path / "app" / "static" / "js" / "main.js",
+        """
+function parseScene(text) {
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    if (!(error instanceof SyntaxError)) {
+      throw error;
+    }
+    throw new Error('not a scene', { cause: error });
+  }
+}
+function parseOther(text) {
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    if (!(error instanceof RangeError)) {
+      throw error;
+    }
+    throw new Error('other');
+  }
+}
+""".strip()
+        + "\n",
+    )
+
+    _, violations = collect_startup_js_sanity_violations(tmp_path)
+    rows = [(violation.lineno, violation.message) for violation in violations if violation.rule_id == "JS001"]
+    assert rows == [(14, "catch must throw (no silent handling)")], "only the unlisted guard class is refused"
+
+
+def test_a_promise_handler_may_drop_only_a_session_that_ended(tmp_path: Path) -> None:
+    # A background save whose session ended: the login screen already shows.
+    _write_file(
+        tmp_path / "app" / "static" / "js" / "main.js",
+        """
+async function saveQuietly(save) {
+  await save().catch((error) => {
+    if (!(error instanceof AuthenticationRequiredError)) {
+      throw error;
+    }
+  });
+}
+async function saveTooQuietly(save) {
+  await save().catch((error) => {
+    if (!(error instanceof RangeError)) {
+      throw error;
+    }
+  });
+}
+""".strip()
+        + "\n",
+    )
+
+    _, violations = collect_startup_js_sanity_violations(tmp_path)
+    rows = [(violation.lineno, violation.message) for violation in violations if violation.rule_id == "JS001"]
+    assert rows == [(9, "promise rejection handler must propagate unapproved errors")], "only the unlisted guard class is refused"

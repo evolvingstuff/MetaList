@@ -352,6 +352,19 @@ function buildAuthHeaders() {
     return buildSessionHeaders(true);
 }
 
+// What a non-OK reply says went wrong: the server's JSON {detail} when it sent
+// one, else the status line (a proxy's HTML error page, say).
+async function failureMessage(response) {
+    const contentType = response.headers.get('content-type');
+    if (contentType !== null && contentType.includes('application/json')) {
+        const payload = await response.json();
+        if (typeof payload.detail === 'string') {
+            return payload.detail;
+        }
+    }
+    return `Request failed: ${response.status} ${response.statusText}`;
+}
+
 async function fetchJson(url, options) {
     if (typeof url !== 'string') {
         throw new Error('fetchJson requires url string');
@@ -365,11 +378,7 @@ async function fetchJson(url, options) {
         return response.json();
     }
 
-    const payload = await response.json().catch((error) => { rethrowUnexpectedError(error); return null; });
-    if (payload && typeof payload.detail === 'string') {
-        throw new Error(payload.detail);
-    }
-    throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+    throw new Error(await failureMessage(response));
 }
 
 export class OntologyModal extends BaseModal {
@@ -841,11 +850,7 @@ export class OntologyModal extends BaseModal {
             }
 
             if (!response.ok) {
-                const payload = await response.json().catch((error) => { rethrowUnexpectedError(error); return null; });
-                if (payload && typeof payload.detail === 'string') {
-                    throw new HttpRequestError(payload.detail);
-                }
-                throw new HttpRequestError(`Request failed: ${response.status} ${response.statusText}`);
+                throw new HttpRequestError(await failureMessage(response));
             }
 
             const payload = await response.json();
@@ -1725,11 +1730,7 @@ export class OntologyModal extends BaseModal {
             return null;
         }
         if (!response.ok) {
-            const payload = await response.json().catch((error) => { rethrowUnexpectedError(error); return null; });
-            if (payload && typeof payload.detail === 'string') {
-                throw new HttpRequestError(payload.detail);
-            }
-            throw new HttpRequestError(`Request failed: ${response.status} ${response.statusText}`);
+            throw new HttpRequestError(await failureMessage(response));
         }
 
         const payload = await response.json();
@@ -1875,11 +1876,7 @@ export class OntologyModal extends BaseModal {
             });
 
             if (!response.ok) {
-                const payload = await response.json().catch((error) => { rethrowUnexpectedError(error); return null; });
-                if (payload && typeof payload.detail === 'string') {
-                    throw new HttpRequestError(payload.detail);
-                }
-                throw new HttpRequestError(`Request failed: ${response.status} ${response.statusText}`);
+                throw new HttpRequestError(await failureMessage(response));
             }
 
             const payload = await response.json();
@@ -2237,11 +2234,7 @@ export class OntologyModal extends BaseModal {
             headers: buildAuthHeaders(),
         });
         if (!response.ok) {
-            const payload = await response.json().catch((error) => { rethrowUnexpectedError(error); return null; });
-            if (payload && typeof payload.detail === 'string') {
-                throw new HttpRequestError(payload.detail);
-            }
-            throw new HttpRequestError(`Request failed: ${response.status} ${response.statusText}`);
+            throw new HttpRequestError(await failureMessage(response));
         }
 
         const payload = await response.json();

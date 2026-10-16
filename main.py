@@ -719,6 +719,7 @@ def cli() -> None:
             current_pid=os.getpid(),
             platform_name=sys.platform,
             environ=os.environ,
+            expected_target_version=None,
         )
         print(result.message)
         return

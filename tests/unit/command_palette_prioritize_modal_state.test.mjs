@@ -55,7 +55,7 @@ test('command palette modal opens are guarded by shared modal preparation', () =
 
 test('openReminders updates an already-open reminder modal search', () => {
     const source = readFileSync(CONTROLLER_PATH, 'utf8');
-    const methodStart = source.indexOf('async openReminders(options = {}) {');
+    const methodStart = source.indexOf('async openReminders(options) {');
     assert.notEqual(methodStart, -1, 'openReminders should exist');
 
     const methodEnd = source.indexOf('\n    async ', methodStart + 1);

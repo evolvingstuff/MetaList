@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 
+import {runThenCleanUp} from './suite-outcome.mjs';
+
 // Right-clicking an entry in the tag bar's suggestion list (docs/ui/tag-bar.md,
 // docs/ui/interaction-principles.md): the tag menu opens for that entry, saying
 // why it is suggested, and the list, the typed letters, the cursor and the
@@ -388,7 +390,6 @@ export async function checkTagSuggestionMenu(page) {
   await idle(page);
   const ids = await createFixture(page);
   const failures = [];
-  let stepError = null;
   const check = async (name, body) => {
     try {
       await body();
@@ -400,7 +401,7 @@ export async function checkTagSuggestionMenu(page) {
       await leaveEditing(page);
     }
   };
-  try {
+  await runThenCleanUp('tag suggestion menu', async () => {
     await page.reload();
     await page.waitForSelector('[data-app-ready="true"]');
     await idle(page);
@@ -423,18 +424,11 @@ export async function checkTagSuggestionMenu(page) {
     await check('entered search tag', () => enteredSearchTagCase(page));
     await clearSearch(page);
     assert.deepEqual(failures, [], `tag suggestion menu failures:\n${failures.join('\n')}`);
-  } catch (error) {
-    stepError = error;
-  }
-  try {
+  }, async () => {
     await leaveEditing(page);
     await deleteFixture(page, ids);
     await page.reload();
     await page.waitForSelector('[data-app-ready="true"]');
     await idle(page);
-  } catch (cleanupError) {
-    if (stepError === null) throw cleanupError;
-    console.error(`tag suggestion menu cleanup also failed: ${cleanupError.message}`);
-  }
-  if (stepError !== null) throw stepError;
+  });
 }

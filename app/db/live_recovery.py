@@ -161,40 +161,49 @@ class LiveDatabaseRecovery:
 
     def begin(self) -> None:
         _lock.acquire()
-        file_lock_acquired = False
+        # lint: allow-PY001 rationale="release the transaction lock before propagating snapshot I/O failure"
         try:
-            if self.database_path in _active:
-                raise RuntimeError('Live database change already active')
-            self._file_lock.__enter__()
-            file_lock_acquired = True
-            _recover_locked(self.database_path)
-            directory = _directory(self.database_path)
-            directory.mkdir(mode=0o700)
-            entries = []
-            for index, target in enumerate(_targets(self.database_path)):
-                existed = target.exists()
-                digest = ''
-                if existed:
-                    image = directory / f'{index}.sqlite'
-                    with image.open('xb'):
-                        pass
-                    _copy_sqlite(target, image)
-                    digest = _digest(image)
-                entries.append({'name': target.name, 'existed': existed, 'sha256': digest})
-            with (directory / 'preparing.json').open('x') as handle:
-                json.dump({'version': 1, 'files': entries}, handle)
-                handle.flush()
-                os.fsync(handle.fileno())
-            (directory / 'preparing.json').rename(directory / 'ready.json')
-            _sync_directory(directory)
-            _sync_directory(directory.parent)
-            _active.add(self.database_path)
-        # lint: allow-PY001 rationale="release transaction locks before propagating snapshot I/O failure"
+            self._begin_locked()
+        # lint: allow-PY001 rationale="release the transaction lock before propagating snapshot I/O failure"
         except BaseException:
-            if file_lock_acquired:
-                self._file_lock.__exit__(None, None, None)
             _lock.release()
             raise
+
+    def _begin_locked(self) -> None:
+        if self.database_path in _active:
+            raise RuntimeError('Live database change already active')
+        self._file_lock.__enter__()
+        # lint: allow-PY001 rationale="release the file lock before propagating snapshot I/O failure"
+        try:
+            self._write_snapshot()
+        # lint: allow-PY001 rationale="release the file lock before propagating snapshot I/O failure"
+        except BaseException:
+            self._file_lock.__exit__(None, None, None)
+            raise
+
+    def _write_snapshot(self) -> None:
+        _recover_locked(self.database_path)
+        directory = _directory(self.database_path)
+        directory.mkdir(mode=0o700)
+        entries = []
+        for index, target in enumerate(_targets(self.database_path)):
+            existed = target.exists()
+            digest = ''
+            if existed:
+                image = directory / f'{index}.sqlite'
+                with image.open('xb'):
+                    pass
+                _copy_sqlite(target, image)
+                digest = _digest(image)
+            entries.append({'name': target.name, 'existed': existed, 'sha256': digest})
+        with (directory / 'preparing.json').open('x') as handle:
+            json.dump({'version': 1, 'files': entries}, handle)
+            handle.flush()
+            os.fsync(handle.fileno())
+        (directory / 'preparing.json').rename(directory / 'ready.json')
+        _sync_directory(directory)
+        _sync_directory(directory.parent)
+        _active.add(self.database_path)
 
     def commit(self) -> None:
         assert not self._finished

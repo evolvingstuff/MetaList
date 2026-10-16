@@ -273,21 +273,17 @@ async function loadPolicy() {
 }
 
 export async function initializeNoteHtmlSanitizer(options) {
-    let requestedPolicy = null;
-    let requestedPurifier = null;
-    if (options !== undefined) {
-        if (options === null || typeof options !== 'object') {
-            throw new Error('initializeNoteHtmlSanitizer options must be an object');
-        }
-        if (!Object.hasOwn(options, 'policy') || !Object.hasOwn(options, 'purifier')) {
-            throw new Error('initializeNoteHtmlSanitizer test options require policy and purifier');
-        }
-        requestedPolicy = options.policy;
-        requestedPurifier = options.purifier;
+    if (options === undefined) {
+        moduleState.sanitizeWithPolicy = buildSanitizer(await loadPolicy(), globalThis.DOMPurify);
+        return;
     }
-    const resolvedPolicy = requestedPolicy === null ? await loadPolicy() : requestedPolicy;
-    const resolvedPurifier = requestedPurifier === null ? globalThis.DOMPurify : requestedPurifier;
-    moduleState.sanitizeWithPolicy = buildSanitizer(resolvedPolicy, resolvedPurifier);
+    if (options === null || typeof options !== 'object') {
+        throw new Error('initializeNoteHtmlSanitizer options must be an object');
+    }
+    if (!Object.hasOwn(options, 'policy') || !Object.hasOwn(options, 'purifier')) {
+        throw new Error('initializeNoteHtmlSanitizer test options require policy and purifier');
+    }
+    moduleState.sanitizeWithPolicy = buildSanitizer(options.policy, options.purifier);
 }
 
 export function sanitizeNoteHtmlForStorage(content) {

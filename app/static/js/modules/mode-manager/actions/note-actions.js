@@ -26,7 +26,7 @@ import {
     restoreFormattingRemovalSelection,
 } from '../services/selected-formatting-removal-service.js';
 import { actionSaveNote } from './content-actions.js';
-import { actionSaveAndExitEditingWithoutRefreshing, actionSwitchNotes, actionSelectNote } from './selection-actions.js';
+import { actionDeselectNote, actionSaveAndExitEditingWithoutRefreshing, actionSwitchNotes, actionSelectNote } from './selection-actions.js';
 import { actionRefreshAndMaybeSelect } from './ui-actions.js';
 
 function hideCaretAfterProgrammaticEdit() {
@@ -971,6 +971,29 @@ async function setNoteCollapse(noteId, collapsed) {
     await actionRefreshAndMaybeSelect({ startedAt: startedAt, context: 'setNoteCollapse' });
 }
 
+// An arrow inside an embed (![[UUID]]): collapse is shared, so it collapses or
+// expands that note everywhere. A note being edited is saved and left first,
+// as for any arrow outside the edited note.
+export async function setEmbeddedNoteCollapse(noteId, collapsed) {
+    if (typeof noteId !== 'string' || noteId.length === 0) {
+        throw new Error('setEmbeddedNoteCollapse requires noteId');
+    }
+    if (typeof collapsed !== 'boolean') {
+        throw new Error('setEmbeddedNoteCollapse requires collapsed boolean');
+    }
+    const startedAt = performance.now();
+    Logger.logAction('setEmbeddedNoteCollapse', { noteId, collapsed, isEditing: ModeContext.isEditing });
+    if (ModeContext.isEditing) {
+        await actionDeselectNote();
+    }
+    if (collapsed) {
+        await NotesAPI.collapseNote(noteId);
+    } else {
+        await NotesAPI.expandNote(noteId);
+    }
+    await actionRefreshAndMaybeSelect({ startedAt, context: 'setEmbeddedNoteCollapse' });
+}
+
 export async function collapseNote(noteId) {
     await setNoteCollapse(noteId, true);
 }
@@ -1068,6 +1091,14 @@ export async function splitCurrentNoteFromSelection() {
     return true;
 }
 
+// The range to unformat: the one the menu was opened on, else the note's active selection.
+function selectionToUnformat(selectedTextRange, noteContent) {
+    if (selectedTextRange === null) {
+        return resolveActiveFormattingRemovalRange(noteContent);
+    }
+    return selectedTextRange;
+}
+
 export async function unformatCurrentNoteContent(selectedTextRange) {
     if (selectedTextRange !== null && !(selectedTextRange instanceof Range)) {
         throw new Error('unformatCurrentNoteContent selection must be Range or null');
@@ -1097,9 +1128,7 @@ export async function unformatCurrentNoteContent(selectedTextRange) {
     if (!(noteContent instanceof HTMLElement)) {
         throw new Error(`Unformat note content element missing: ${currentNoteId}`);
     }
-    const activeSelection = selectedTextRange === null
-        ? resolveActiveFormattingRemovalRange(noteContent)
-        : selectedTextRange;
+    const activeSelection = selectionToUnformat(selectedTextRange, noteContent);
     if (activeSelection instanceof Range && !activeSelection.collapsed) {
         const selectedResult = removeFormattingFromSelectedRange(
             noteElement,
@@ -1193,10 +1222,12 @@ export async function toggleReferenceModeForNote(hostNoteId, referenceNoteId, oc
     }
 }
 
-export async function actionPasteNoteSibling() {
+// Pastes below the edited note (or into it, when it is empty with no children)
+// what requestPaste(targetNoteId) puts there: the copied note, or its reference.
+async function pasteAsSibling(actionName, requestPaste) {
     const currentNoteId = ModeContext.currentNoteId;
 
-    Logger.logAction('actionPasteNoteSibling', {
+    Logger.logAction(actionName, {
         currentNoteId,
         isEditing: ModeContext.isEditing
     });
@@ -1217,7 +1248,7 @@ export async function actionPasteNoteSibling() {
         await actionSaveNote(currentNoteId);
     }
 
-	    const response = await NotesAPI.pasteNoteSibling(currentNoteId);
+	    const response = await requestPaste(currentNoteId);
 
     const newNoteId = resolveNotePasteResponse(response);
     if (newNoteId === null) {
@@ -1251,10 +1282,12 @@ export async function actionPasteNoteSibling() {
     return true;
 }
 
-export async function actionPasteNoteChild() {
+
+// Pastes as the edited note's first child what requestPaste(targetNoteId) puts there.
+async function pasteAsChild(actionName, requestPaste) {
     const currentNoteId = ModeContext.currentNoteId;
     
-    Logger.logAction('actionPasteNoteChild', { 
+    Logger.logAction(actionName, { 
         currentNoteId,
         isEditing: ModeContext.isEditing
     });
@@ -1267,7 +1300,7 @@ export async function actionPasteNoteChild() {
         await actionSaveNote(currentNoteId);
     }
 
-	    const response = await NotesAPI.pasteNoteChild(currentNoteId);
+	    const response = await requestPaste(currentNoteId);
 
     const newNoteId = resolveNotePasteResponse(response);
     if (newNoteId === null) {
@@ -1285,4 +1318,24 @@ export async function actionPasteNoteChild() {
         scrollNoteIntoView(newNoteId, {});
     });
     return true;
+}
+
+export async function actionPasteNoteSibling() {
+    return pasteAsSibling('actionPasteNoteSibling', (targetNoteId) => NotesAPI.pasteNoteSibling(targetNoteId));
+}
+
+export async function actionPasteNoteChild() {
+    return pasteAsChild('actionPasteNoteChild', (targetNoteId) => NotesAPI.pasteNoteChild(targetNoteId));
+}
+
+// ⌘R / Paste Sibling Reference: the copied note's reference, where ⌘V puts the note.
+export async function actionPasteReferenceSibling(referenceNoteId) {
+    return pasteAsSibling('actionPasteReferenceSibling',
+        (targetNoteId) => NotesAPI.pasteReferenceSibling(targetNoteId, referenceNoteId));
+}
+
+// ⇧⌘R / Paste Child Reference: the copied note's reference, where ⇧⌘V puts the note.
+export async function actionPasteReferenceChild(referenceNoteId) {
+    return pasteAsChild('actionPasteReferenceChild',
+        (targetNoteId) => NotesAPI.pasteReferenceChild(targetNoteId, referenceNoteId));
 }

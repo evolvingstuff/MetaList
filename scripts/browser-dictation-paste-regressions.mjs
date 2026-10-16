@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 // the tag bar becomes the user's existing tags; one undo brings back exactly
 // what was pasted (docs/ui/dictation-paste.md).
 
+// Long enough for a paste and the save it starts to finish.
+const PASTE_SETTLE_MS = 400;
 const DICTATED = 'Neural network, neural network. Neural-Dash Network.';
 
 async function idle(page) {
@@ -30,14 +32,16 @@ function valueOf(page, selector) {
   return page.evaluate(selector => document.querySelector(selector).value, selector);
 }
 
+const VALUE_WAIT_MS = 5000;
+const VALUE_POLL_MS = 50;
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+// Waits for the field to hold the value, then asserts it: a miss reports the
+// value the field actually has.
 async function waitForValue(page, selector, expected, label) {
-  try {
-    await page.waitForFunction(({selector, expected}) => document.querySelector(selector).value === expected,
-      {timeout: 5000}, {selector, expected});
-  } catch (error) {
-    assert.equal(await valueOf(page, selector), expected, label);
-    throw error;
-  }
+  const deadline = Date.now() + VALUE_WAIT_MS;
+  while (Date.now() < deadline && await valueOf(page, selector) !== expected) await pause(VALUE_POLL_MS);
+  assert.equal(await valueOf(page, selector), expected, label);
 }
 
 // The browser's own undo for the focused field (what Cmd/Ctrl+Z runs there;
@@ -88,6 +92,87 @@ function fatalText(page) {
     const overlay = document.getElementById('fatal-error-overlay');
     return overlay ? overlay.textContent : '';
   });
+}
+
+// The ids of the notes shown, in order.
+function shownNoteIds(page) {
+  return page.evaluate(() => [...document.querySelectorAll('.note[data-note-id]')].map(note => note.dataset.noteId));
+}
+
+async function startEditing(page, noteId) {
+  const box = await (await page.$(`.note[data-note-id="${noteId}"] > .note-content`)).boundingBox();
+  await page.mouse.click(box.x + box.width - 10, box.y + box.height / 2);  // shockharness: ignore[MAGIC001] reason="near the end of the line, at its middle"
+  await idle(page);
+  await page.keyboard.press('End');
+}
+
+// D7: a dictation app (Superwhisper) puts its words on the clipboard and sends
+// ⌘V, as if the user pressed it. After a note was copied with ⌘C, and with no
+// window switch in between, the paste is the dictated words: what is on the
+// clipboard decides, never MetaList's memory of the last copy.
+async function dictationAfterNoteCopyCase(page) {
+  const words = 'Words the dictation app typed';
+  await page.browserContext().overridePermissions(new URL(page.url()).origin,
+    ['clipboard-read', 'clipboard-write', 'clipboard-sanitized-write']);
+  const ids = await page.evaluate(async () => {
+    const {NotesAPI} = await import('/static/js/modules/api-client.js');
+    const target = await NotesAPI.createNote(null, '');
+    await NotesAPI.saveNote(target.id, '<div>Dictating into this note</div>', '');
+    const copied = await NotesAPI.createNote(null, '');
+    await NotesAPI.saveNote(copied.id, '<div>A note copied with Cmd+C</div>', '');
+    return {target: target.id, copied: copied.id};
+  });
+  await page.reload();
+  await page.waitForSelector('[data-app-ready="true"]');
+  await idle(page);
+  try {
+    await startEditing(page, ids.copied);
+    await page.keyboard.down('Meta');
+    await page.keyboard.press('c');
+    await page.keyboard.up('Meta');
+    await idle(page);
+    const clipboardMode = await page.evaluate(async () => (await import('/static/js/modules/mode-manager/mode-context.js')).ModeContextInstance.clipboardMode);
+    assert.equal(clipboardMode, 'note', 'D7: Cmd+C copied the note');
+    await page.keyboard.press('Escape');
+    await idle(page);
+
+    await startEditing(page, ids.target);
+    const notesBefore = await shownNoteIds(page);
+    // The dictation app writes its words to the clipboard, outside MetaList.
+    await page.evaluate(text => navigator.clipboard.writeText(text), words);
+    await page.keyboard.down('Meta');
+    await page.keyboard.press('v', {commands: ['paste']});
+    await page.keyboard.up('Meta');
+    await new Promise(resolve => setTimeout(resolve, PASTE_SETTLE_MS));
+    await idle(page);
+    assert.deepEqual(await shownNoteIds(page), notesBefore, 'D7: no copy of the copied note appears');
+    assert.equal(await noteText(page, ids.target), `Dictating into this note${words}`, 'D7: the dictated words go into the note being edited');
+
+    // The same in the tag bar: dictating "at heading" gives the tag, not a copy.
+    await page.keyboard.press('Tab');
+    const tagBar = `[data-note-id="${ids.target}"] .note-tag-bar-input`;
+    await page.waitForFunction(selector => document.activeElement === document.querySelector(selector), {}, tagBar);
+    await page.evaluate(text => navigator.clipboard.writeText(text), 'At heading.');
+    await page.keyboard.down('Meta');
+    await page.keyboard.press('v', {commands: ['paste']});
+    await page.keyboard.up('Meta');
+    await new Promise(resolve => setTimeout(resolve, PASTE_SETTLE_MS));
+    await idle(page);
+    assert.deepEqual(await shownNoteIds(page), notesBefore, 'D7 tag bar: no copy of the copied note appears');
+    await waitForValue(page, tagBar, '@heading', 'D7 tag bar: the dictated words become the tag');
+    await page.keyboard.press('Escape');
+    await idle(page);
+  } finally {
+    await page.evaluate(async ids => {
+      const {NotesAPI} = await import('/static/js/modules/api-client.js');
+      for (const note of [...document.querySelectorAll('.note[data-note-id]')]) {
+        const text = note.textContent;
+        if (text.includes('A note copied with Cmd+C') && note.dataset.noteId !== ids.copied) await NotesAPI.deleteNote(note.dataset.noteId);
+      }
+      await NotesAPI.deleteNote(ids.target);
+      await NotesAPI.deleteNote(ids.copied);
+    }, ids);
+  }
 }
 
 export async function checkDictationPaste(page) {
@@ -248,4 +333,5 @@ export async function checkDictationPaste(page) {
       for (const id of ids) await NotesAPI.deleteNote(id);
     }, [noteId, plainBoldNoteId]);
   }
+  await dictationAfterNoteCopyCase(page);
 }

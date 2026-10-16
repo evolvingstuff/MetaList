@@ -161,7 +161,7 @@ const SITE_RULES = Object.freeze([
 ]);
 
 // scheme, authority, path, query (with its ?), fragment (with its #)
-const URL_PARTS = '^(https?:\\/\\/)([^/?#]*)([^?#]*)(\\?[^#]*)?(#[\\s\\S]*)?$';
+const URL_PARTS = '^(https?:\\/\\/)([^/?#]*)([^?#]*)((?:\\?[^#]*)?)((?:#[\\s\\S]*)?)$';
 // A URL in running text: up to whitespace or a quote/bracket that cannot be part of it.
 const URL_IN_TEXT = 'https?:\\/\\/[^\\s<>"\'`]+';
 // Punctuation that ends a sentence, not a URL, when it trails one.
@@ -221,9 +221,7 @@ export function cleanTrackingFromUrl(url) {
     }
     const [, scheme, authority, path, query, fragment] = parts;
     const rules = siteRulesFor(hostnameOf(authority));
-    const cleanedQuery = cleanQuery(query === undefined ? '' : query, rules);
-    const cleanedFragment = fragment === undefined ? '' : fragment;
-    return `${scheme}${authority}${cleanPath(path, rules)}${cleanedQuery}${cleanedFragment}`;
+    return `${scheme}${authority}${cleanPath(path, rules)}${cleanQuery(query, rules)}${fragment}`;
 }
 
 // How many characters at the end of a URL match belong to the sentence around

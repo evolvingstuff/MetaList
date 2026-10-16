@@ -73,8 +73,10 @@ export async function checkWritingAssistantCorrections(page) {
         accepted:document.querySelector('#writing-assistant-fixture').dataset.accepted,
         text:document.querySelector(`[data-note-id="${noteId}"] > .note-content em`).textContent};
     }, noteId);
+    let hostLabel = `<${hostName}>`;
+    if (hostAttribute !== null) hostLabel = `<${hostName} ${hostAttribute}>`;
     assert.deepEqual(state, {editing:true, noteId, accepted:'true', text:'Chaos'},
-      `Accepting an assistant suggestion in <${hostName}${hostAttribute === null ? '' : ` ${hostAttribute}`}> must leave the corrected note in edit mode`);
+      `Accepting an assistant suggestion in ${hostLabel} must leave the corrected note in edit mode`);
     await page.evaluate(() => document.querySelector('#writing-assistant-fixture').remove());
     // Ordinary outside clicks must still save and exit editing.
     await page.mouse.click(5, 500);

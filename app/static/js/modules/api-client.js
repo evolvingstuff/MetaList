@@ -1237,6 +1237,43 @@ export const NotesAPI = {
         });
     },
 
+    // How many notes outside this note's subtree reference it or a note in it:
+    // the references deleting or cutting it would break.
+    async getOutsideReferrerCount(noteId) {
+        if (typeof noteId !== 'string' || noteId.length === 0) {
+            throw new Error('getOutsideReferrerCount requires noteId');
+        }
+        const response = await this._apiCall(CONFIG.API.NOTES.OUTSIDE_REFERRERS(noteId), { method: 'GET' });
+        if (response === null || typeof response !== 'object' || !Number.isInteger(response.count) || response.count < 0) {
+            throw new Error('Outside-referrers response must carry a count');
+        }
+        return response.count;
+    },
+
+    // The copied note's reference, pasted where ⌘V / ⇧⌘V would paste the note.
+    async pasteReferenceSibling(targetNoteId, referenceNoteId) {
+        return this._pasteReference(CONFIG.API.NOTES.PASTE_REFERENCE_SIBLING(targetNoteId), referenceNoteId);
+    },
+
+    async pasteReferenceChild(targetNoteId, referenceNoteId) {
+        return this._pasteReference(CONFIG.API.NOTES.PASTE_REFERENCE_CHILD(targetNoteId), referenceNoteId);
+    },
+
+    async _pasteReference(url, referenceNoteId) {
+        if (typeof referenceNoteId !== 'string' || referenceNoteId.length === 0) {
+            throw new Error('Reference paste requires the copied note id');
+        }
+        const body = {
+            reference_note_id: referenceNoteId,
+            search_query: ModeContext.searchQuery,
+        };
+        return this._apiCall(url, {
+            method: 'POST',
+            claimSession: true,
+            body: JSON.stringify(body),
+        });
+    },
+
     // Note locks removed: single-tab session ownership enforces exclusivity.
 };
 

@@ -4,6 +4,9 @@ import { ReminderSurface } from '../reminder-surface-service.js';
 
 import { BaseModal } from './base-modal.js';
 
+// What the pre-reminder fields show for a reminder without one.
+const PRE_REMINDER_FORM_DEFAULTS = Object.freeze({ amount: '1', unit: 'days' });
+
 const REMINDER_RENDER_ICON = '🔔';
 
 function escapeHtml(value) {
@@ -481,6 +484,10 @@ function stateFromReminder(reminder) {
         : {};
     const end = rule.end && typeof rule.end === 'object' ? rule.end : { type: 'never' };
     const preReminder = reminderPreReminder(reminder);
+    let preReminderForm = PRE_REMINDER_FORM_DEFAULTS;
+    if (preReminder !== null) {
+        preReminderForm = { amount: String(preReminder.amount), unit: preReminder.unit };
+    }
     return {
         id: reminder.id,
         title: reminder.title,
@@ -497,8 +504,8 @@ function stateFromReminder(reminder) {
         end_type: typeof end.type === 'string' ? end.type : 'never',
         end_value: end.value === undefined ? '' : String(end.value),
         pre_reminder_enabled: preReminder !== null,
-        pre_reminder_amount: preReminder === null ? '1' : String(preReminder.amount),
-        pre_reminder_unit: preReminder === null ? 'days' : preReminder.unit,
+        pre_reminder_amount: preReminderForm.amount,
+        pre_reminder_unit: preReminderForm.unit,
         persistence_mode: reminder.persistence_mode,
 
         status: reminder.status,
@@ -726,11 +733,11 @@ export class ReminderModal extends BaseModal {
         ApplicationState.own(this, 'ReminderModal', new.target === ReminderModal);
     }
 
-    open(options = {}) {
+    open(options) {
         if (!options || typeof options !== 'object') {
             throw new Error('ReminderModal.open options must be object');
         }
-        const search = Object.prototype.hasOwnProperty.call(options, 'search') ? options.search : '';
+        const search = options.search;
         if (typeof search !== 'string') {
             throw new Error('ReminderModal.open search must be string');
         }

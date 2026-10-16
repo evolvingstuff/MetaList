@@ -34,6 +34,11 @@ import {checkAiNoteTagSuggestions} from './browser-ai-note-tag-regressions.mjs';
 import {checkRobotProposals} from './browser-robot-proposal-regressions.mjs';
 import {checkExportAndPrint} from './browser-export-print-regressions.mjs';
 import {checkUrlCleaning} from './browser-url-cleaning-regressions.mjs';
+import {checkReferencePaste} from './browser-reference-paste-regressions.mjs';
+import {checkClickCaret} from './browser-click-caret-regressions.mjs';
+import {checkEditableEmbeds} from './browser-editable-embed-regressions.mjs';
+import {checkCollapseOutlines} from './browser-collapse-outline-regressions.mjs';
+import {checkDeleteWarning} from './browser-delete-warning-regressions.mjs';
 
 const directory = await mkdtemp(join(tmpdir(), 'metalist-browser-'));
 // Free ports for HTTP and HTTPS: the user's own MetaList keeps its usual ports (HTTPS 8443).
@@ -69,12 +74,17 @@ try {
   let ready = false;
   for (let count=0; count<300; count++) {
     if (server.exitCode !== null) throw new Error(`Server exited: ${logs}`);
-    try { const response = await fetch(`${origin}/api2/auth/status`, {headers:{"X-Metalist-Tab-Id":"smoke-readiness"}}); if (response.ok) {ready=true; break;} throw new Error(`Readiness failed: ${response.status} ${await response.text()}`); }
-    catch (error) { if (error.cause?.code !== 'ECONNREFUSED') throw error; }
+    let response = null;
+    try { response = await fetch(`${origin}/api2/auth/status`, {headers:{"X-Metalist-Tab-Id":"smoke-readiness"}}); }
+    catch (error) { if (!(error instanceof TypeError)) throw error; if (error.cause?.code !== 'ECONNREFUSED') throw error; }
+    if (response !== null) {
+      if (response.ok) {ready=true; break;}
+      throw new Error(`Readiness failed: ${response.status} ${await response.text()}`);
+    }
     await delay(100);
   }
   assert(ready, 'Server did not become ready');
-  const browserName = process.env.BROWSER_TEST_BROWSER ?? 'chrome';
+  const browserName = process.env.BROWSER_TEST_BROWSER;
   assert(['chrome', 'firefox'].includes(browserName), 'BROWSER_TEST_BROWSER must be chrome or firefox');
   const browserDriver = process.env.BROWSER_TEST_DRIVER_MODULE
     ? (await import(process.env.BROWSER_TEST_DRIVER_MODULE)).default : puppeteer;
@@ -96,7 +106,7 @@ try {
   browser.on('targetdestroyed', target => lifecycle(`target destroyed ${target.type()} ${target.url()}`));
   browser.on('targetcreated', target => lifecycle(`target created ${target.type()} ${target.url()}`));
   const updateFixture = await prepareUpdateFixture(page);
-  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'move-to-bottom', 'list-edges', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews', 'tag-suggestion-menu', 'paste-formats', 'ai-note-tags', 'robot-proposals', 'export-print', 'url-cleaning'].includes(process.env.BROWSER_TEST_SUITE)) {
+  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'move-to-bottom', 'list-edges', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews', 'tag-suggestion-menu', 'paste-formats', 'ai-note-tags', 'robot-proposals', 'export-print', 'url-cleaning', 'reference-paste', 'click-caret', 'editable-embeds', 'delete-warning', 'collapse-outlines'].includes(process.env.BROWSER_TEST_SUITE)) {
     // The focused suite does not run checkAppUpdates, which normally releases
     // this intentionally held request. Avoid an unrelated update notice too.
     updateFixture.outage = true;
@@ -171,6 +181,26 @@ try {
     await checkExportAndPrint(browser, page);
     assert.deepEqual(errors, []);
     console.log(`PASS export and print regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'delete-warning') {
+    await checkDeleteWarning(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS delete warning regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'collapse-outlines') {
+    await checkCollapseOutlines(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS collapse outline regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'editable-embeds') {
+    await checkEditableEmbeds(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS editable embed regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'click-caret') {
+    await checkClickCaret(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS click caret regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'reference-paste') {
+    await checkReferencePaste(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS reference paste regressions in ${await browser.version()}`);
   } else if (process.env.BROWSER_TEST_SUITE === 'url-cleaning') {
     await checkUrlCleaning(page);
     assert.deepEqual(errors, []);
@@ -198,6 +228,11 @@ try {
   await checkRobotProposals(page);
   await checkExportAndPrint(browser, page);
   await checkUrlCleaning(page);
+  await checkReferencePaste(page);
+  await checkClickCaret(page);
+  await checkEditableEmbeds(page);
+  await checkCollapseOutlines(page);
+  await checkDeleteWarning(page);
   await checkSortedTabs(page);
   await page.waitForNetworkIdle({idleTime:500});
   // Exercise initial document mouse movement, including stationary axes and
@@ -379,12 +414,12 @@ try {
   await page.keyboard.type('help');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Escape');
-  for (const method of ['openKeyboardShortcutsHelp', 'openVersionInfo', 'openVersionInfo', 'openOntologyEditor', 'openReminders', 'openCreateNamespace', 'openOpenNamespace', 'openManageNamespacePorts', 'openBackupRestore', 'openNoteLayoutAppearance', 'openSearchSuggestionStatistics', 'openReminders', 'openOntologyEditor']) {
+  for (const [method, args] of [['openKeyboardShortcutsHelp', []], ['openVersionInfo', []], ['openVersionInfo', []], ['openOntologyEditor', []], ['openReminders', [{search: ''}]], ['openCreateNamespace', []], ['openOpenNamespace', []], ['openManageNamespacePorts', []], ['openBackupRestore', []], ['openNoteLayoutAppearance', []], ['openSearchSuggestionStatistics', []], ['openReminders', [{search: ''}]], ['openOntologyEditor', []]]) {
     console.log(`Checking modal ${method}`);
-    await page.evaluate(async method => {
+    await page.evaluate(async ({method, args}) => {
       const {CommandPalette} = await import('/static/js/modules/command-palette/command-palette-controller.js');
-      await CommandPalette[method]();
-    }, method);
+      await CommandPalette[method](...args);
+    }, {method, args});
     await page.waitForNetworkIdle({idleTime:100});
     if (method === 'openVersionInfo') {
       await page.waitForSelector('#version-info-modal .version-info-table');
@@ -541,7 +576,7 @@ try {
   await writeFile(join(directory,'result.json'), JSON.stringify({passed:true,noteId,fileId}));
   console.log(`Browser smoke passed; disposable artifacts: ${directory}`);
   }
-} catch (error) {
+} catch (error) { // shockharness: ignore[EXC001] reason="the server and browser logs of the failed run are written, then the error is rethrown unchanged"
   await writeFile(join(directory,'server.log'), logs);
   await writeFile(join(directory,'browser.log'), browserDiagnostics.join('\n'));
   console.error(`Browser smoke failed; disposable logs: ${directory}`);

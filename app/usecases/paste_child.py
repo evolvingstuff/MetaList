@@ -27,20 +27,40 @@ class CmdPasteChild(QueryCommand):
         snapshot = get_clipboard(self.client_id)
         if not snapshot:
             return {"status": "clipboard_empty"}
-
-        target = store.get(self.target_note_id)
-        children = store.children(target.id)
-        prev_id = None
-        new_root_id = _insert_cloned_subtree_at(
-            snapshot,
-            target.id,
-            prev_id,
-            self.token,
+        return paste_snapshot_as_child(
+            snapshot=snapshot,
+            target_note_id=self.target_note_id,
             search_query=self.search_query,
+            token=self.token,
+            client_id=self.client_id,
+            undo_context=self.undo_context,
+            viewport=self.viewport,
         )
 
-        new_ids = _collect_subtree_ids(new_root_id)
-        records: List[NodeRecord] = [store.get(nid) for nid in new_ids]
-        record_paste(self.client_id, self.undo_context, records, viewport=self.viewport)
 
-        return {"status": "pasted", "id": new_root_id, "updateUUID": generate_new_uuid()}
+def paste_snapshot_as_child(
+    *,
+    snapshot: List[dict],
+    target_note_id: str,
+    search_query: str | None,
+    token: str,
+    client_id: str,
+    undo_context: str,
+    viewport: Dict[str, object],
+) -> Dict[str, str]:
+    """Pastes the notes as the target note's first child."""
+    assert snapshot, "paste_snapshot_as_child requires notes to paste"
+    target = store.get(target_note_id)
+    new_root_id = _insert_cloned_subtree_at(
+        snapshot,
+        target.id,
+        None,
+        token,
+        search_query=search_query,
+    )
+
+    new_ids = _collect_subtree_ids(new_root_id)
+    records: List[NodeRecord] = [store.get(nid) for nid in new_ids]
+    record_paste(client_id, undo_context, records, viewport=viewport)
+
+    return {"status": "pasted", "id": new_root_id, "updateUUID": generate_new_uuid()}

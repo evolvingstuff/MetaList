@@ -10,7 +10,6 @@ include = ["app/**/*.py", "app/**/*.js", "/main.py", "scripts/**/*.py", "tests/*
 exclude = ["**/.git/**", "**/node_modules/**", "**/.venv/**", "**/.venv*/**", "**/venv/**", "**/dist/**", "**/build/**", "**/generated/**", "**/__pycache__/**", "app/static/js/vendor/**", "scripts/vendor/**"]
 parse_errors = "fail"
 follow_symlinks = false
-overrides = []
 
 [tool.shockharness.rules.magic_numbers]
 enabled = true
@@ -58,7 +57,6 @@ mode = "boundary_whitelist"
 transparent_rethrow = false
 # Each boundary approves catching exactly one qualified exception in files that
 # match `path` for one language. Every entry is reported as a policy deviation.
-boundaries = []
 
 [tool.shockharness.rules.defaults]
 enabled = true
@@ -111,6 +109,486 @@ complexity_regressions = "warn"
 
 # Per-file results keyed by content hash (0.3.0): a warm run skips unchanged
 # files. The directory is ignored by git.
+# Approved catch sites. Python: the except sites with a lint rationale and the capture
+# boundaries registered in app/exception_boundaries.py, with their reasons. JavaScript:
+# handlers that open with an instanceof guard. Every entry is a reported deviation.
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/api/routes/ai.py"
+language = "python"
+exception = "ValueError"
+reason = "invalid or stale user answers are expected request failures"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/api/routes/ai.py"
+language = "python"
+exception = "ValueError"
+reason = "reject invalid external menu acknowledgment with a conflict response"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/api/routes/ai.py"
+language = "python"
+exception = "app.services.openai_credentials.OpenAICredentialInputError"
+reason = "return a concise validation error without echoing the secret"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/api/routes/ai.py"
+language = "python"
+exception = "app.services.agent.inference.InferenceProviderError"
+reason = "the AI provider failed or answered without a title: the dialog shows why"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/api/routes/ai.py"
+language = "python"
+exception = "app.services.agent.inference.InferenceProviderError"
+reason = "the AI provider failed or kept answering unusably: the client shows why"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/api/routes/ai.py"
+language = "python"
+exception = "app.services.ai_setup.AiNotSetUp"
+reason = "the user removed or never added the AI's key: an expected 409, not a defect"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/api/routes/app_updates.py"
+language = "python"
+exceptions = ["FileNotFoundError", "app.services.app_updates.AppUpdateRejected", "httpx.HTTPError"]
+reason = "In-app updates translate only external transport, installation eligibility and job lookup errors."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/api/routes/auth.py"
+language = "python"
+exceptions = ["FileNotFoundError", "app.services.input_errors.NamespaceInputRejected"]
+reason = "Translate explicitly validated domain input/resource rejection."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/api/routes/notes.py"
+language = "python"
+exceptions = ["app.services.input_errors.InputRejected", "app.services.selected_text_tag.SelectedTextTagValidationError"]
+reason = "Translate explicitly validated domain input/resource rejection."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/api/routes/reminders.py"
+language = "python"
+exception = "ValueError"
+reason = "Parse external host, URL, IP or date input at the named boundary."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/api/routes/reminders.py"
+language = "python"
+exceptions = ["app.services.input_errors.InputRejected", "app.services.input_errors.ResourceNotFound"]
+reason = "Translate explicitly validated domain input/resource rejection."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/api/routes/remote_images.py"
+language = "python"
+exception = "app.services.remote_image_proxy.RemoteImageFetchError"
+reason = "Handle expected external I/O, provider, image or LaTeX parsing failure."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/api/routes/remote_images.py"
+language = "python"
+exceptions = ["app.services.input_errors.InputRejected", "app.services.input_errors.ResourceNotFound"]
+reason = "Translate explicitly validated domain input/resource rejection."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/api/transactions.py"
+language = "python"
+exception = "app.services.bulk_operation.BulkOperationBusy"
+reason = "translate expected request-admission contention to HTTP 409"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/db/live_recovery.py"
+language = "python"
+exception = "BaseException"
+reason = "release transaction locks before propagating snapshot I/O failure"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/https_proxy.py"
+language = "python"
+exceptions = ["OSError", "http.client.HTTPException"]
+reason = "retry once, then re-raise the expected upstream transport failure"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/https_proxy.py"
+language = "python"
+exceptions = ["OSError", "http.client.HTTPException"]
+reason = "return a sanitized gateway error after retrying an expected upstream transport failure"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/https_proxy.py"
+language = "python"
+exceptions = ["OSError", "http.client.HTTPException"]
+reason = "terminate a disconnected or failed external HTTP transport; emit only a sanitized upstream error"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/main.py"
+language = "python"
+exceptions = ["FileNotFoundError", "app.services.input_errors.NamespaceInputRejected"]
+reason = "Translate explicitly validated domain input/resource rejection."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/security/request_boundary.py"
+language = "python"
+exception = "ValueError"
+reason = "Parse external host, URL, IP or date input at the named boundary."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/security/request_hosts.py"
+language = "python"
+exception = "ValueError"
+reason = "Parse external host, URL, IP or date input at the named boundary."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/server_runtime.py"
+language = "python"
+exception = "OSError"
+reason = "Handle expected external I/O, provider, image or LaTeX parsing failure."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/server_runtime.py"
+language = "python"
+exception = "ValueError"
+reason = "Parse external host, URL, IP or date input at the named boundary."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/server_runtime.py"
+language = "python"
+exception = "app.services.input_errors.NamespaceInputRejected"
+reason = "Translate explicitly validated domain input/resource rejection."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/agent_tools.py"
+language = "python"
+exception = "pydantic.ValidationError"
+reason = "A model's tool call is untrusted input; rejected arguments are explained back to the model."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/export_title_suggestions.py"
+language = "python"
+exception = "app.services.agent.inference.StructuredInferenceError"
+reason = "the model's replies were rejected on every attempt: say why, in plain words"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/history.py"
+language = "python"
+exceptions = ["GeneratorExit", "asyncio.CancelledError"]
+reason = "preserve cancellation while recording the interrupted call"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/history.py"
+language = "python"
+exception = "Exception"
+reason = "record internal and external errors without suppressing either"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/menu_actions.py"
+language = "python"
+exception = "asyncio.TimeoutError"
+reason = "record a missing browser acknowledgment as unavailable, never success"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/openai_inference.py"
+language = "python"
+exception = "openai.APITimeoutError"
+reason = "a request OpenAI never answers is a network failure, explained plainly"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/openai_inference.py"
+language = "python"
+exception = "openai.APIError"
+reason = "translate external OpenAI API failures into the provider-neutral contract"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/openai_inference.py"
+language = "python"
+exception = "openai.APIError"
+reason = "translate external OpenAI stream failures into the provider-neutral contract"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/runtime.py"
+language = "python"
+exception = "ValueError"
+reason = "an atomic root can legitimately exceed the user-configured summary batch limit"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/runtime.py"
+language = "python"
+exception = "app.services.agent.execution_errors.AgentExecutionError"
+reason = "an explained summary failure says how many finished batches were kept, then re-raises"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/runtime.py"
+language = "python"
+exception = "ValueError"
+reason = "an external intermediate summary can legitimately exceed the configured reduction limit"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/runtime.py"
+language = "python"
+exception = "Exception"
+reason = "record internal failure details and immediately re-raise"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/runtime.py"
+language = "python"
+exception = "asyncio.CancelledError"
+reason = "record interrupted external inference before preserving cancellation"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/runtime.py"
+language = "python"
+exception = "app.services.agent.inference.InferenceProviderError"
+reason = "retry one external model-provider failure only before output"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/runtime.py"
+language = "python"
+exception = "app.services.agent.inference.StructuredInferenceError"
+reason = "the model's structured replies were rejected on every attempt: recorded, then explained in plain words"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/structured_inference.py"
+language = "python"
+exception = "instructor.v2.core.errors.InstructorRetryException"
+reason = "retry one external Instructor stream after preserving its exact failed attempt"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/structured_inference.py"
+language = "python"
+exceptions = ["ValueError", "pydantic.ValidationError"]
+reason = "retry one model-produced JSON validation failure through Instructor partial parsing"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/tagging_run.py"
+language = "python"
+exception = "ValueError"
+reason = "evidence budget can legitimately be insufficient for user-selected scope"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/tagging_run.py"
+language = "python"
+exception = "ValueError"
+reason = "external model errors are corrected once, never silently accepted"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/tagging_run.py"
+language = "python"
+exception = "app.services.agent.inference.StructuredInferenceError"
+reason = "the model's replies were rejected on every attempt: say why, in plain words"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/tagging_run.py"
+language = "python"
+exception = "ValueError"
+reason = "the tagging batch window can legitimately be too small for one root"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/web_actions.py"
+language = "python"
+exception = "app.services.agent.web_evidence.WebEvidenceCapacityError"
+reason = "Web retrieval translates only expected failures from untrusted remote targets."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/agent/web_fetch.py"
+language = "python"
+exceptions = ["LookupError", "ValueError", "app.services.public_http.PublicHttpTargetRejected", "httpcore.NetworkError", "httpcore.ProtocolError", "httpcore.TimeoutException", "httpx.HTTPError", "httpx.NetworkError", "httpx.TimeoutException", "pypdf.errors.PyPdfError"]
+reason = "Web retrieval translates only expected failures from untrusted remote targets."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/ai_chat_stream.py"
+language = "python"
+exceptions = ["app.services.agent.inference.InferenceProviderError", "app.services.agent.runtime.AgentExecutionError"]
+reason = "expected provider/network failures must be delivered after response headers"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/ai_chat_stream.py"
+language = "python"
+exception = "Exception"
+reason = "record the turn failure and re-raise the original internal defect"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/ai_chat_stream.py"
+language = "python"
+exception = "asyncio.CancelledError"
+reason = "the user cancelled the stream: noted as an activity, then the cancellation goes on"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/app_updates.py"
+language = "python"
+exceptions = ["OSError", "ValueError", "app.services.app_updates.AppUpdateRejected"]
+reason = "In-app updates translate only external transport, installation eligibility and job lookup errors."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/file_storage.py"
+language = "python"
+exception = "json.JSONDecodeError"
+reason = "an uploaded Excalidraw scene is user input: invalid JSON is rejected as invalid file content"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/link_titles.py"
+language = "python"
+exceptions = ["UnicodeDecodeError", "app.services.public_http.PublicHttpTargetRejected", "httpcore.NetworkError", "httpcore.ProtocolError", "httpcore.TimeoutException", "httpx.HTTPError", "httpx.NetworkError", "httpx.TimeoutException", "json.JSONDecodeError"]
+reason = "Handle expected external I/O, provider, image or LaTeX parsing failure."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/namespace_deletion_worker.py"
+language = "python"
+exceptions = ["PermissionError", "ProcessLookupError"]
+reason = "Handle expected external I/O, provider, image or LaTeX parsing failure."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/namespace_deletion_worker.py"
+language = "python"
+exception = "Exception"
+reason = "Record operation failure and re-raise; never resume the failed operation."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/namespace_rename_worker.py"
+language = "python"
+exception = "Exception"
+reason = "Record operation failure and re-raise; never resume the failed operation."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/namespace_runtime_guard.py"
+language = "python"
+exceptions = ["OSError", "sqlite3.Error"]
+reason = "Handle expected external I/O, provider, image or LaTeX parsing failure."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/namespace_switcher.py"
+language = "python"
+exceptions = ["ProcessLookupError", "subprocess.TimeoutExpired"]
+reason = "A child can exit between poll and terminate; hung children must be killed and reaped."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/namespace_switcher.py"
+language = "python"
+exceptions = ["OSError", "PermissionError", "ProcessLookupError", "UnicodeDecodeError", "json.JSONDecodeError"]
+reason = "Handle expected external I/O, provider, image or LaTeX parsing failure."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/namespace_switcher.py"
+language = "python"
+exception = "app.services.input_errors.NamespaceInputRejected"
+reason = "Translate explicitly validated domain input/resource rejection."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/public_http.py"
+language = "python"
+exceptions = ["ValueError", "httpcore.ConnectError", "httpcore.ConnectTimeout", "socket.gaierror"]
+reason = "Handle expected external I/O, provider, image or LaTeX parsing failure."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/remote_image_proxy.py"
+language = "python"
+exceptions = ["OSError", "PIL.Image.DecompressionBombError", "PIL.UnidentifiedImageError", "SyntaxError", "ValueError", "app.services.public_http.PublicHttpTargetRejected", "httpcore.NetworkError", "httpcore.ProtocolError", "httpcore.TimeoutException", "httpx.HTTPError", "httpx.NetworkError", "httpx.TimeoutException"]
+reason = "Handle expected external I/O, provider, image or LaTeX parsing failure."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/self_update.py"
+language = "python"
+exceptions = ["OSError", "RuntimeError", "ValueError", "sqlite3.Error", "tarfile.TarError"]
+reason = "Record operation failure and re-raise; never resume the failed operation."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/services/shell_session_service.py"
+language = "python"
+exceptions = ["ProcessLookupError", "subprocess.TimeoutExpired"]
+reason = "Handle expected external I/O, provider, image or LaTeX parsing failure."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/startup_shockharness.py"
+language = "python"
+exception = "shockharness.errors.ShockHarnessError"
+reason = "Handle expected external I/O, provider, image or LaTeX parsing failure."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "main.py"
+language = "python"
+exception = "ProcessLookupError"
+reason = "Handle expected external I/O, provider, image or LaTeX parsing failure."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "main.py"
+language = "python"
+exceptions = ["PermissionError", "ProcessLookupError"]
+reason = "a probed process may be gone, or belong to another user"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "main.py"
+language = "python"
+exception = "OSError"
+reason = "the port of a process stopped just before is released by the OS a moment later"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "scripts/smoke_installed_package.py"
+language = "python"
+exceptions = ["PermissionError", "ProcessLookupError"]
+reason = "Release smoke cleanup: on Windows an exiting process refuses termination; the wait then checks it stopped."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "scripts/smoke_installed_package.py"
+language = "python"
+exception = "ProcessLookupError"
+reason = "a smoke-owned process may already have exited when it is signalled"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "scripts/smoke_self_update.py"
+language = "python"
+exception = "httpx.HTTPError"
+reason = "Release smoke polls only its own disposable HTTP listeners during an actual update."
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/static/js/modules/mode-manager/events/context-menu-events.js"
+language = "javascript"
+exception = "AiApiError"
+reason = "the AI could not answer: the user is told why, in a banner"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/static/js/modules/excalidraw/excalidraw-scene.js"
+language = "javascript"
+exception = "SyntaxError"
+reason = "an uploaded diagram is user input: text that is not JSON is rejected as such, with the parse error as its cause"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/static/js/modules/password-operation-response.js"
+language = "javascript"
+exception = "SyntaxError"
+reason = "a password request's reply that is not JSON is reported with its HTTP status, the parse error as its cause"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/static/js/modules/mode-manager/services/tab-state-service.js"
+language = "javascript"
+exception = "AuthenticationRequiredError"
+reason = "a background scroll save can find the session ended (expired, or ended by a backup restore or a password change): the login screen already shows, and the save is dropped"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "scripts/browser-*-regressions.mjs"
+language = "javascript"
+exception = "assert.AssertionError"
+reason = "a suite runs every case and collects their assertion failures, so one run reports all of them; any other error ends the run at once"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "scripts/browser-scroll-regressions.mjs"
+language = "javascript"
+exception = "Error"
+reason = "Puppeteer briefly reports the old frame as detached while Chrome replaces it during a reload; the wait looks again on the new frame, for that error only"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "scripts/browser-smoke.mjs"
+language = "javascript"
+exception = "TypeError"
+reason = "fetch rejects with a TypeError whose cause is ECONNREFUSED while the server is still starting; the readiness probe tries again"
+
+# Tests and the browser test harness: fixtures encode literal expected values, test
+# doubles take defaults, and harness catches add diagnostics (a screenshot, the
+# step) before rethrowing. MetaList's own startup gates still apply their rules there.
+[[tool.shockharness.overrides]]
+paths = ["tests/**"]
+disable = ["MAGIC001"]
+reason = "Assertions and fixtures spell out the literal values they expect"
+
 [tool.shockharness.cache]
 enabled = true
 directory = ".shockharness-cache"

@@ -350,6 +350,75 @@ async def fetch_web_pages(urls: list[str], *, allows_target: Callable[[str], boo
     return _apply_batch_text_limit(tuple(ordered))
 
 
+# The page as the server sent it, a redirect, or the error kind; transport failures propagate.
+def _exchange_web_request(url: str, target: ResolvedPublicHttpTarget) -> _DownloadedWebResponse:
+    with httpx.Client(
+        timeout=WEB_FETCH_TIMEOUT_SECONDS,
+        follow_redirects=False,
+        transport=PinnedPublicHTTPTransport(
+            target=target,
+            network_backend=httpcore.SyncBackend(),
+        ),
+        headers={
+            "User-Agent": _WEB_USER_AGENT,
+            "Accept": "text/html,application/xhtml+xml,text/plain,application/pdf",
+            "Accept-Language": "en-US,en;q=0.9",
+        },
+    ) as client:
+        with client.stream("GET", url) as response:
+            if 300 <= response.status_code < 400:
+                location = response.headers.get("location")
+                if location is None or location.strip() == "":
+                    return _download_error(url, "redirect_without_location")
+                next_url = normalize_public_http_url(str(httpx.URL(url).join(location)))
+                if next_url is None:
+                    return _download_error(url, "unsupported_redirect")
+                return _DownloadedWebResponse(
+                    kind="redirect",
+                    final_url=next_url,
+                    content=b"",
+                    content_type="",
+                    encoding="",
+                    truncated=False,
+                    error_kind="",
+                )
+            if response.status_code >= 400:
+                return _download_error(url, f"http_{response.status_code}")
+            media_type = response.headers.get("content-type", "").split(";", 1)[0].strip().casefold()
+            content_length = response.headers.get("content-length")
+            if content_length is not None and content_length.isdecimal():
+                if int(content_length) > MAX_WEB_RESPONSE_BYTES:
+                    return _download_error(url, "response_too_large")
+            chunks: list[bytes] = []
+            total_bytes = 0
+            truncated = False
+            for chunk in response.iter_bytes():
+                remaining = MAX_WEB_RESPONSE_BYTES - total_bytes
+                if len(chunk) > remaining:
+                    chunks.append(chunk[:remaining])
+                    truncated = True
+                    break
+                chunks.append(chunk)
+                total_bytes += len(chunk)
+            content = b"".join(chunks)
+            if media_type == "":
+                media_type = _sniff_content_type(content)
+            if media_type not in _SUPPORTED_CONTENT_TYPES:
+                return _download_error(url, "unsupported_content_type")
+            response_encoding = response.encoding
+            if response_encoding is None:
+                response_encoding = "utf-8"
+            return _DownloadedWebResponse(
+                kind="content",
+                final_url=url,
+                content=content,
+                content_type=media_type,
+                encoding=response_encoding,
+                truncated=truncated,
+                error_kind="",
+            )
+
+
 def _download_one_url(url: str, target: ResolvedPublicHttpTarget) -> _DownloadedWebResponse:
     transport_capture = CapturedExceptionContext(
         httpx.TimeoutException,
@@ -360,72 +429,9 @@ def _download_one_url(url: str, target: ResolvedPublicHttpTarget) -> _Downloaded
         httpcore.ProtocolError,
         boundary='app/services/agent/web_fetch.py:_download_one_url:transport_capture',
     )
+    downloaded: _DownloadedWebResponse | None = None
     with transport_capture:
-        with httpx.Client(
-            timeout=WEB_FETCH_TIMEOUT_SECONDS,
-            follow_redirects=False,
-            transport=PinnedPublicHTTPTransport(
-                target=target,
-                network_backend=httpcore.SyncBackend(),
-            ),
-            headers={
-                "User-Agent": _WEB_USER_AGENT,
-                "Accept": "text/html,application/xhtml+xml,text/plain,application/pdf",
-                "Accept-Language": "en-US,en;q=0.9",
-            },
-        ) as client:
-            with client.stream("GET", url) as response:
-                if 300 <= response.status_code < 400:
-                    location = response.headers.get("location")
-                    if location is None or location.strip() == "":
-                        return _download_error(url, "redirect_without_location")
-                    next_url = normalize_public_http_url(str(httpx.URL(url).join(location)))
-                    if next_url is None:
-                        return _download_error(url, "unsupported_redirect")
-                    return _DownloadedWebResponse(
-                        kind="redirect",
-                        final_url=next_url,
-                        content=b"",
-                        content_type="",
-                        encoding="",
-                        truncated=False,
-                        error_kind="",
-                    )
-                if response.status_code >= 400:
-                    return _download_error(url, f"http_{response.status_code}")
-                media_type = response.headers.get("content-type", "").split(";", 1)[0].strip().casefold()
-                content_length = response.headers.get("content-length")
-                if content_length is not None and content_length.isdecimal():
-                    if int(content_length) > MAX_WEB_RESPONSE_BYTES:
-                        return _download_error(url, "response_too_large")
-                chunks: list[bytes] = []
-                total_bytes = 0
-                truncated = False
-                for chunk in response.iter_bytes():
-                    remaining = MAX_WEB_RESPONSE_BYTES - total_bytes
-                    if len(chunk) > remaining:
-                        chunks.append(chunk[:remaining])
-                        truncated = True
-                        break
-                    chunks.append(chunk)
-                    total_bytes += len(chunk)
-                content = b"".join(chunks)
-                if media_type == "":
-                    media_type = _sniff_content_type(content)
-                if media_type not in _SUPPORTED_CONTENT_TYPES:
-                    return _download_error(url, "unsupported_content_type")
-                response_encoding = response.encoding
-                if response_encoding is None:
-                    response_encoding = "utf-8"
-                return _DownloadedWebResponse(
-                    kind="content",
-                    final_url=url,
-                    content=content,
-                    content_type=media_type,
-                    encoding=response_encoding,
-                    truncated=truncated,
-                    error_kind="",
-                )
+        downloaded = _exchange_web_request(url, target)
     captured = transport_capture.captured_exception
     if isinstance(captured, (httpx.TimeoutException, httpcore.TimeoutException)):
         return _download_error(url, "timeout")
@@ -433,7 +439,9 @@ def _download_one_url(url: str, target: ResolvedPublicHttpTarget) -> _Downloaded
         return _download_error(url, "network_error")
     if captured is not None:
         return _download_error(url, "http_client_error")
-    raise RuntimeError("Web transport returned without a result or exception")
+    if downloaded is None:
+        raise RuntimeError("Web transport returned without a result or exception")
+    return downloaded
 
 
 def _extract_web_content(
@@ -477,32 +485,40 @@ def _decode_web_text(content: bytes, encoding: str) -> str:
     return content.decode(codec.name, errors="replace")
 
 
+# Title, readable text, whether it was cut short, and the error kind of a PDF; PyPdfError for a malformed one.
+def _read_pdf(content: bytes) -> tuple[str, str, bool, str]:
+    reader = PdfReader(BytesIO(content), strict=True)
+    if reader.is_encrypted:
+        return "", "", False, "encrypted_pdf"
+    title = ""
+    if reader.metadata is not None and isinstance(reader.metadata.title, str):
+        title = _clean_single_line(reader.metadata.title, maximum=300)
+    page_text: list[str] = []
+    truncated_pages = len(reader.pages) > MAX_WEB_PDF_PAGES
+    for page in reader.pages[:MAX_WEB_PDF_PAGES]:
+        extracted = page.extract_text()
+        if extracted:
+            page_text.append(extracted)
+    bounded_title, bounded_text, truncated_text, error = _bounded_extracted_text(
+        title=title,
+        text=_normalize_readable_text("\n\n".join(page_text)),
+    )
+    return bounded_title, bounded_text, any((truncated_pages, truncated_text)), error
+
+
 def _extract_pdf_content(content: bytes) -> tuple[str, str, bool, str]:
     pdf_capture = CapturedExceptionContext(
         PyPdfError,
         boundary='app/services/agent/web_fetch.py:_extract_pdf_content:pdf_capture',
     )
+    extracted: tuple[str, str, bool, str] | None = None
     with pdf_capture:
-        reader = PdfReader(BytesIO(content), strict=True)
-        if reader.is_encrypted:
-            return "", "", False, "encrypted_pdf"
-        title = ""
-        if reader.metadata is not None and isinstance(reader.metadata.title, str):
-            title = _clean_single_line(reader.metadata.title, maximum=300)
-        page_text: list[str] = []
-        truncated_pages = len(reader.pages) > MAX_WEB_PDF_PAGES
-        for page in reader.pages[:MAX_WEB_PDF_PAGES]:
-            extracted = page.extract_text()
-            if extracted:
-                page_text.append(extracted)
-        bounded_title, bounded_text, truncated_text, error = _bounded_extracted_text(
-            title=title,
-            text=_normalize_readable_text("\n\n".join(page_text)),
-        )
-        return bounded_title, bounded_text, any((truncated_pages, truncated_text)), error
+        extracted = _read_pdf(content)
     if pdf_capture.captured_exception is not None:
         return "", "", False, "malformed_pdf"
-    raise RuntimeError("PDF extraction returned without a result or exception")
+    if extracted is None:
+        raise RuntimeError("PDF extraction returned without a result or exception")
+    return extracted
 
 
 def _bounded_extracted_text(

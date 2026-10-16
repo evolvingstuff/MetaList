@@ -9,6 +9,10 @@ function anchorAt(text, offset) {
         before: text.slice(Math.max(0, offset - 30), offset),
         after: text.slice(offset, offset + 30),
         affinity: 'backward',
+        atRunEnd: false,
+        // No run of its own unless a test gives one (see the short list item test).
+        runText: '',
+        runOffset: 0,
     };
 }
 
@@ -63,6 +67,16 @@ test('findTextPosition matches a clicked list item although the source adds list
     }
 });
 
+test('findTextPosition finds a short list item by its own text when too little surrounds it', () => {
+    // "item two" leaves under eight matching characters either side once the
+    // source adds "- ": the clicked run, whole, still finds its line.
+    const viewText = 'HeadingA paragraph of Markdown textitem oneitem two';
+    const sourceText = '# HeadingA paragraph of Markdown text- item one- item two';
+    const clicked = viewText.indexOf('item two') + 'item'.length;
+    const anchor = { ...anchorAt(viewText, clicked), runText: 'item two', runOffset: 'item'.length };
+    assert.deepEqual(match(sourceText, anchor), { position: sourceText.indexOf('item two') + 'item'.length, exact: true });
+});
+
 test('findTextPosition keeps the side of a line boundary', () => {
     // Line breaks add no text: "end of line one" and "start of line two" are one position.
     const text = 'First line of the note.Second line of the note.';
@@ -74,4 +88,19 @@ test('findTextPosition keeps the side of a line boundary', () => {
     // Matched only by the text after it: that text's line.
     const changedBefore = { ...anchorAt(text, boundary), before: '- something else entirely here' };
     assert.equal(findTextPosition(text, changedBefore).affinity, 'forward');
+});
+
+test('findTextPosition keeps a point past a line end on that line when the source adds markers', () => {
+    // Rendered Markdown runs list items together: the end of one item is the
+    // start of the next. The source's "- " markers break the exact match, and
+    // the click was past the first item's end (the end of its text run).
+    const viewText = 'A paragraph.A short list itemAnother list itemThe last paragraph.';
+    const sourceText = 'A paragraph.- A short list item- Another list itemThe last paragraph.';
+    const end = viewText.indexOf('Another');
+    const pastEnd = { ...anchorAt(viewText, end), atRunEnd: true };
+    assert.deepEqual(findTextPosition(sourceText, pastEnd),
+        { position: sourceText.indexOf('- Another'), exact: true, affinity: 'backward' });
+    // At the start of the next item instead: that item.
+    const atStart = { ...anchorAt(viewText, end), affinity: 'forward' };
+    assert.equal(findTextPosition(sourceText, atStart).position, sourceText.indexOf('Another'));
 });

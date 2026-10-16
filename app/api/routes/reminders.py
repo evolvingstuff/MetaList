@@ -147,39 +147,42 @@ def delete_reminder(reminder_id: str, request: Request) -> dict[str, object]:
     return {"ok": True}
 
 
+def _apply_reminder_action(*, action: str, reminder_id: str, token: str, body: dict[str, object]) -> dict[str, object]:
+    if action == "acknowledge":
+        return reminder_store.acknowledge_reminder(
+            reminder_id=reminder_id,
+            token=token,
+            now=_parse_datetime_field(body, "now"),
+            local_date=_parse_date_field(body, "local_date"),
+            activity_kind=_require_string(body, "activity_kind"),
+        )
+    if action == "dismiss":
+        return reminder_store.dismiss_reminder(reminder_id=reminder_id, token=token)
+    if action == "done":
+        return reminder_store.mark_done(reminder_id=reminder_id, token=token)
+    if action == "pre-acknowledge":
+        return reminder_store.acknowledge_pre_reminder(
+            reminder_id=reminder_id,
+            token=token,
+            pre_reminder_key=_require_string(body, "pre_reminder_key"),
+            now=_parse_datetime_field(body, "now"),
+        )
+    if action == "pause":
+        return reminder_store.pause_reminder(reminder_id=reminder_id, token=token)
+    if action == "resume":
+        return reminder_store.resume_reminder(reminder_id=reminder_id, token=token)
+    if action == "skip-next":
+        return reminder_store.skip_next(reminder_id=reminder_id, token=token)
+    raise RuntimeError(f"Unsupported reminder action: {action}")
+
+
 def _run_action(*, reminder_id: str, request: Request, payload: dict[str, object], action: str) -> dict[str, object]:
     body = _require_body_object(payload)
     token = _request_token(request)
     capture = CapturedExceptionContext(ResourceNotFound, InputRejected, boundary='app/api/routes/reminders.py:_run_action:capture')
     reminder: dict[str, object] = {}
     with capture:
-        if action == "acknowledge":
-            reminder = reminder_store.acknowledge_reminder(
-                reminder_id=reminder_id,
-                token=token,
-                now=_parse_datetime_field(body, "now"),
-                local_date=_parse_date_field(body, "local_date"),
-                activity_kind=_require_string(body, "activity_kind"),
-            )
-        elif action == "dismiss":
-            reminder = reminder_store.dismiss_reminder(reminder_id=reminder_id, token=token)
-        elif action == "done":
-            reminder = reminder_store.mark_done(reminder_id=reminder_id, token=token)
-        elif action == "pre-acknowledge":
-            reminder = reminder_store.acknowledge_pre_reminder(
-                reminder_id=reminder_id,
-                token=token,
-                pre_reminder_key=_require_string(body, "pre_reminder_key"),
-                now=_parse_datetime_field(body, "now"),
-            )
-        elif action == "pause":
-            reminder = reminder_store.pause_reminder(reminder_id=reminder_id, token=token)
-        elif action == "resume":
-            reminder = reminder_store.resume_reminder(reminder_id=reminder_id, token=token)
-        elif action == "skip-next":
-            reminder = reminder_store.skip_next(reminder_id=reminder_id, token=token)
-        else:
-            raise RuntimeError(f"Unsupported reminder action: {action}")
+        reminder = _apply_reminder_action(action=action, reminder_id=reminder_id, token=token, body=body)
     _captured_result(capture, reminder)
     return {"reminder": _decorate_reminder(reminder)}
 

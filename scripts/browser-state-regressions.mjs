@@ -64,7 +64,7 @@ export async function checkAdditionalStateTransitions(page) {
     const originalModels = panel._models;
     const completed = [];
     let scenario = 'stream';
-    window.fetch = async (url, options = {}) => {
+    window.fetch = async (url, options) => {
       if (url === CONFIG.API.AI.CHAT) {
         const final = {type:'done', content:'Local simulated answer ', rendered_content:'<p>Local simulated answer</p>', reference_note_ids:[], reference_web_ids:[]};
         const events = scenario === 'bulk'
@@ -112,7 +112,7 @@ export async function checkAdditionalStateTransitions(page) {
       'Attempt 1: the reply was cut off at the 512-token output limit; all 512 tokens went to thinking, so no answer was written.',
       'Setup: state-smoke-model, Low thinking, web access off.',
     ].join('\n');
-    window.fetch = async (url, options = {}) => {
+    window.fetch = async (url, options) => {
       if (url === CONFIG.API.AI.CHAT) {
         return new Response(JSON.stringify({type:'error', message:explanation})+'\n', {headers:{'Content-Type':'application/x-ndjson'}});
       }
@@ -156,7 +156,7 @@ export async function checkAdditionalStateTransitions(page) {
     let deliverAnswer;
     const answered = new Promise((resolve) => { deliverAnswer = resolve; });
     const line = (event) => new TextEncoder().encode(JSON.stringify(event) + '\n');
-    window.fetch = async (url, options = {}) => {
+    window.fetch = async (url, options) => {
       if (url === CONFIG.API.AI.CHAT) {
         const body = new ReadableStream({
           async start(controller) {
@@ -240,7 +240,7 @@ export async function checkEditingShortcutSequences(page) {
   await page.waitForSelector('[data-app-ready="true"]');
   await page.click(`[data-note-id="${rootId}"] > .note-content`);
   await waitForIdle(page);
-  await pressModified(page, 'Enter');
+  await pressModified(page, 'Enter', ['Meta']);
   await page.waitForFunction(rootId => {
     const note = document.querySelector('.note.editing');
     return note !== null && note.dataset.noteId !== rootId;
@@ -252,23 +252,23 @@ export async function checkEditingShortcutSequences(page) {
   await page.waitForFunction(() => document.activeElement.classList.contains('note-tag-bar-input'));
   await page.keyboard.type('keyboard-audit');
   await page.keyboard.press('Tab');
-  await pressModified(page, 'ArrowRight');
+  await pressModified(page, 'ArrowRight', ['Meta']);
   await page.waitForFunction((id, parentId) => document.querySelector(`[data-note-id="${id}"]`).dataset.parentId === parentId, {}, siblingId, rootId);
   await waitForIdle(page);
-  await pressModified(page, 'ArrowLeft');
+  await pressModified(page, 'ArrowLeft', ['Meta']);
   await page.waitForFunction(id => document.querySelector(`[data-note-id="${id}"]`).dataset.parentId === '', {}, siblingId);
   await waitForIdle(page);
-  await pressModified(page, 'ArrowLeft'); // Already at the root boundary.
+  await pressModified(page, 'ArrowLeft', ['Meta']); // Already at the root boundary.
   await waitForIdle(page);
   await pressModified(page, 'Enter', ['Meta', 'Shift']);
   await page.waitForFunction(id => document.querySelector('.note.editing')?.dataset.parentId === id, {}, siblingId);
   await waitForIdle(page);
   const childId = await page.$eval('.note.editing', note => note.dataset.noteId);
   await page.keyboard.type('Keyboard child');
-  await pressModified(page, 'Backspace');
+  await pressModified(page, 'Backspace', ['Meta']);
   await page.waitForFunction(id => document.querySelector(`[data-note-id="${id}"]`) === null, {}, childId);
   await waitForIdle(page);
-  await pressModified(page, 'z');
+  await pressModified(page, 'z', ['Meta']);
   await page.waitForSelector(`[data-note-id="${childId}"]`);
   await waitForIdle(page);
   await page.keyboard.press('Escape');
@@ -283,7 +283,7 @@ async function waitForIdle(page) {
   });
 }
 
-async function pressModified(page, key, modifiers = ['Meta']) {
+async function pressModified(page, key, modifiers) {
   for (const modifier of modifiers) await page.keyboard.down(modifier);
   await page.keyboard.press(key);
   for (const modifier of [...modifiers].reverse()) await page.keyboard.up(modifier);

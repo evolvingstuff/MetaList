@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 
+import {runThenCleanUp} from './suite-outcome.mjs';
+
 // The up and down arrows (docs/ui/interaction-principles.md, docs/ui/controls.md):
 // each goes to its end of the list, the last note's bottom at the bottom of the
 // window for the down arrow; with notes unloaded beyond the loaded band the view
@@ -229,7 +231,6 @@ async function menuGoToBottomCase(page) {
 export async function checkListEdges(page) {
   const ids = await createFixture(page);
   const failures = [];
-  let stepError = null;
   const check = async (name, body) => {
     try {
       await body();
@@ -240,23 +241,16 @@ export async function checkListEdges(page) {
       await pause(500);
     }
   };
-  try {
+  await runThenCleanUp('list edge', async () => {
     await check('unloaded ends', () => unloadedEndsCase(page));
     await check('loaded end', () => loadedEndCase(page));
     await check('short list', () => shortListCase(page));
     await check('editing', () => editingCases(page));
     await check('menu Go to Bottom', () => menuGoToBottomCase(page));
     assert.deepEqual(failures, [], `list edge failures:\n${failures.join('\n')}`);
-  } catch (error) {
-    stepError = error;
-  }
-  try {
+  }, async () => {
     await search(page, '');
     await deleteFixture(page, ids);
     await reload(page);
-  } catch (cleanupError) {
-    if (stepError === null) throw cleanupError;
-    console.error(`list edge cleanup also failed: ${cleanupError.message}`);
-  }
-  if (stepError !== null) throw stepError;
+  });
 }
