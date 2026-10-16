@@ -130,7 +130,7 @@ def _fuzzy_match(needle: str, haystack: str) -> bool:
     return True
 
 
-@router.get("/rules")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
+@router.get("/rules")
 def list_rules() -> dict:
     rules = [{"id": rule_id, "text": text} for rule_id, text in list_rule_lines()]
     return {"rules": rules}
@@ -252,7 +252,7 @@ def delete_tag(request: Request, payload: DeleteTagRequest) -> dict:
     return apply_delete_tag_everywhere(tag=tag, token=token)
 
 
-@router.get("/focus")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
+@router.get("/focus")
 def focus_view(tag: str) -> dict:
     ontology = get_ontology()
     left, middle, right = ontology.focus_view(tag=tag)
@@ -431,7 +431,7 @@ def focus_view(tag: str) -> dict:
     }
 
 
-@router.get("/tags")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
+@router.get("/tags")
 def list_tags(q: str, limit: int) -> dict:
     if not isinstance(q, str):
         raise TypeError("q must be a string")

@@ -20,7 +20,7 @@ class AppUpdateRequest(BaseModel):
     target_version: str = Field(pattern=r'^[0-9]+\.[0-9]+\.[0-9]+$')
 
 
-@router.get('/check')  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
+@router.get('/check')
 def check_update():
     release = CapturedExceptionContext(httpx.HTTPError,
         boundary='app/api/routes/app_updates.py:check_update:release')
@@ -44,7 +44,7 @@ def start_update(body: AppUpdateRequest):
                         background=BackgroundTask(app_updates.launch_update_job, record['job_id']))
 
 
-@router.get('/jobs/{job_id}')  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
+@router.get('/jobs/{job_id}')
 def update_status(job_id: str):
     lookup = CapturedExceptionContext(AppUpdateRejected, FileNotFoundError,
         boundary='app/api/routes/app_updates.py:update_status:lookup')

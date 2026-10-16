@@ -206,7 +206,7 @@ def test_protected_middleware_does_not_open_database_connections(monkeypatch):
     monkeypatch.setattr(SafeSession, '_create_connection', lambda: pytest.fail('Ordinary auth opened SQLite'))
     app = FastAPI()
     app.add_middleware(auth_middleware.AuthMiddleware)
-    @app.get('/api2/fixture')  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
+    @app.get('/api2/fixture')
     def endpoint():
         return {'ok': True}
     client = TestClient(app)

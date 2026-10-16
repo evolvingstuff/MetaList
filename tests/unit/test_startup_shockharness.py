@@ -43,7 +43,7 @@ _STRICT = '[tool.shockharness]\nprofile = "strict"\ninclude = ["src/**/*.py"]\n'
 def test_without_the_tool_startup_says_how_to_install_it_and_goes_on(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(startup_shockharness.importlib.util, "find_spec", lambda name: None)
     assert shockharness_report_lines(tmp_path) == (f"not installed: {SHOCKHARNESS_INSTALL_HINT}", ())
-    assert "shockharness==0.3.0" in SHOCKHARNESS_INSTALL_HINT and "3.11" in SHOCKHARNESS_INSTALL_HINT
+    assert "shockharness==0.5.0" in SHOCKHARNESS_INSTALL_HINT and "3.11" in SHOCKHARNESS_INSTALL_HINT
 
 
 @_NEEDS_THE_ANALYZER
@@ -71,6 +71,19 @@ def test_the_overview_counts_the_findings_and_writes_the_full_report(tmp_path: P
 
 
 @_NEEDS_THE_ANALYZER
+def test_suppressed_findings_are_counted_apart_from_open_ones(tmp_path: Path) -> None:
+    root = _repository(tmp_path, config=_STRICT, sources={
+        "src/ok.py": 'def f(x=3):  # shockharness: ignore[DEF001] reason="a fixture default"\n    return x + 2\n',
+    })
+    overview = collect_shockharness_overview(root)
+    assert dict(overview.findings_by_severity) == {"error": 2, "review": 0, "warning": 0}, "only the open ones"
+    assert overview.findings_by_rule == (("MAGIC001", 2),)
+    assert overview.top_files == (("src/ok.py", 2),)
+    assert overview.suppressed == 1
+    assert overview_lines(overview)[0].startswith("1 files · 2 errors · 0 review · 0 warnings · 1 suppressed · ")
+
+
+@_NEEDS_THE_ANALYZER
 def test_a_broken_configuration_is_reported_not_raised(tmp_path: Path) -> None:
     root = _repository(tmp_path, config='[tool.shockharness]\nprofile = "strict"\nno_such_key = 1\n', sources={})
     headline, lines = shockharness_report_lines(root)
@@ -81,7 +94,7 @@ def test_a_broken_configuration_is_reported_not_raised(tmp_path: Path) -> None:
 def test_the_overview_lines_name_the_counts_the_rules_and_the_files() -> None:
     overview = ShockHarnessOverview(
         tool_version="0.2.0", files=906, files_failed=0,
-        findings_by_severity=(("error", 7028), ("review", 236), ("warning", 1341)),
+        findings_by_severity=(("error", 7028), ("review", 236), ("warning", 1341)), suppressed=0,
         findings_by_rule=(("MAGIC001", 6486), ("DEF002", 385), ("EXC001", 150)),
         complexity_by_rule=(("CPLX004", 599), ("CPLX002", 371)),
         import_cycles=3,
@@ -104,7 +117,7 @@ def test_the_overview_lines_name_the_counts_the_rules_and_the_files() -> None:
     assert overview_lines(replace(overview, cache_status="disabled"))[1][-1] == "time: 12.5s (cache disabled)"
     parse_failures = ShockHarnessOverview(
         tool_version="0.3.0", files=2, files_failed=1,
-        findings_by_severity=(("error", 0), ("review", 0), ("warning", 0)),
+        findings_by_severity=(("error", 0), ("review", 0), ("warning", 0)), suppressed=0,
         findings_by_rule=(), complexity_by_rule=(), import_cycles=0, top_files=(), elapsed_seconds=0.0,
         cache_status="enabled", cache_hits=0, cache_misses=1,
     )

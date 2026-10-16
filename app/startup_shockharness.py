@@ -23,7 +23,7 @@ from pathlib import Path
 from app.services.exception_capture import CapturedExceptionContext
 
 
-SHOCKHARNESS_REQUIREMENT = "shockharness==0.3.0"
+SHOCKHARNESS_REQUIREMENT = "shockharness==0.5.0"
 SHOCKHARNESS_INSTALL_HINT = f'.venv/bin/pip install "{SHOCKHARNESS_REQUIREMENT}" (needs Python 3.11+)'
 SHOCKHARNESS_REPORT_RELATIVE_PATH = Path("logs") / "shockharness" / "latest.json"
 # The overview names the rules and files with the most findings, this many of each.
@@ -36,8 +36,10 @@ class ShockHarnessOverview:
     tool_version: str
     files: int
     files_failed: int
-    # error / review / warning, as the report classes them.
+    # Open findings (not suppressed): error / review / warning, as the report classes them.
     findings_by_severity: tuple[tuple[str, int], ...]
+    # Findings an inline suppression silences, with its reason; counted apart.
+    suppressed: int
     # Policy rules (MAGIC, EXC, DEF, SUPP), most findings first.
     findings_by_rule: tuple[tuple[str, int], ...]
     # Advisory complexity rules (CPLX), most findings first.
@@ -46,7 +48,7 @@ class ShockHarnessOverview:
     # Files with the most policy findings.
     top_files: tuple[tuple[str, int], ...]
     elapsed_seconds: float
-    # The per-file cache (0.3.0): enabled, disabled or bypassed; files reused and analyzed.
+    # The per-file cache: enabled, disabled or bypassed; files reused and analyzed.
     cache_status: str
     cache_hits: int
     cache_misses: int
@@ -80,7 +82,11 @@ def collect_shockharness_overview(repo_root: Path) -> ShockHarnessOverview:
     by_severity: Counter[str] = Counter()
     by_rule: Counter[str] = Counter()
     by_file: Counter[str] = Counter()
+    suppressed = 0
     for finding in report.findings:
+        if finding.is_suppressed:
+            suppressed += 1
+            continue
         by_severity[finding.severity] += 1
         by_rule[finding.rule_id] += 1
         if not finding.rule_id.startswith("CPLX"):
@@ -94,6 +100,7 @@ def collect_shockharness_overview(repo_root: Path) -> ShockHarnessOverview:
         files=len(report.files),
         files_failed=files_failed,
         findings_by_severity=tuple((severity, by_severity[severity]) for severity in ("error", "review", "warning")),
+        suppressed=suppressed,
         findings_by_rule=tuple((rule, count) for rule, count in by_rule.most_common() if not rule.startswith("CPLX")),
         complexity_by_rule=tuple((rule, count) for rule, count in by_rule.most_common() if rule.startswith("CPLX")),
         import_cycles=len(report.metrics["graph"]["cycles"]),
@@ -114,8 +121,11 @@ def overview_lines(overview: ShockHarnessOverview) -> tuple[str, tuple[str, ...]
     severities = dict(overview.findings_by_severity)
     headline = (
         f"{overview.files:,} files · {severities['error']:,} errors · {severities['review']:,} review"
-        f" · {severities['warning']:,} warnings · {SHOCKHARNESS_REPORT_RELATIVE_PATH.as_posix()}"
+        f" · {severities['warning']:,} warnings"
     )
+    if overview.suppressed > 0:
+        headline = f"{headline} · {overview.suppressed:,} suppressed"
+    headline = f"{headline} · {SHOCKHARNESS_REPORT_RELATIVE_PATH.as_posix()}"
     if overview.files_failed > 0:
         headline = f"{headline} · {overview.files_failed:,} could not be parsed"
     lines = []

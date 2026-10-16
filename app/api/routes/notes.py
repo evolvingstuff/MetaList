@@ -181,7 +181,7 @@ def prefetch_link_titles(request: Request, draft: LinkTitlePrefetchRequest) -> d
     return CmdPrefetchLinkTitles(content=draft.content, tags=draft.tags).execute()
 
 
-@router.get("/notes/link-titles/retry")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
+@router.get("/notes/link-titles/retry")
 def link_title_retry_progress(request: Request) -> dict[str, object]:
     require_request_auth_token(request)
     return link_title_retry_snapshot()
@@ -404,7 +404,7 @@ def view_diff(payload: ViewDiffRequest):
     return {"snapshot": response_snapshot, "updateUUID": update_uuid}
 
 
-@router.get("/notes/tab-state")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
+@router.get("/notes/tab-state")
 def get_tab_state() -> Dict[str, object]:
     return tab_state_store.snapshot()
 
@@ -617,7 +617,7 @@ def tab_search_interaction(request: Request, payload: TabSearchInteractionReques
     return {"credited": credited}
 
 
-@router.get("/notes/tag-interactions")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
+@router.get("/notes/tag-interactions")
 def get_tag_interactions(request: Request) -> Dict[str, object]:
     token = _require_bearer_token(request)
     return list_search_suggestion_statistics(token=token)
@@ -711,7 +711,7 @@ def search_tag_details(request: Request, payload: SearchTagDetailsRequest) -> Di
     return {"lines": list(lines)}
 
 
-@router.get("/notes/export-summary")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
+@router.get("/notes/export-summary")
 def export_summary(request: Request) -> Dict[str, object]:
     """What an export or print of a note (with its children) or of the view holds,
     for its dialog: the title it starts with, and how many passwords and usernames it shows."""
@@ -740,7 +740,7 @@ def export_summary(request: Request) -> Dict[str, object]:
     }
 
 
-@router.get("/notes/export-html")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
+@router.get("/notes/export-html")
 def export_notes_html(request: Request) -> Response:
     token = _require_bearer_token(request)
     search_query = _required_query_param(request, "search_query")
@@ -808,13 +808,13 @@ def export_notes_html(request: Request) -> Response:
     )
 
 
-@router.get("/notes/{note_id}/fullscreen")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
+@router.get("/notes/{note_id}/fullscreen")
 def note_fullscreen(note_id: str) -> Dict[str, str]:
     _require_note_present(note_id, context="notes.fullscreen")
     return {"html": build_note_fullscreen_markup(note_id)}
 
 
-@router.get("/notes/{note_id}/floating")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
+@router.get("/notes/{note_id}/floating")
 def note_floating_window(note_id: str, revision: str) -> dict[str, str]:
     current_revision = f"{get_current_sync_uuid()}:{link_title_store.get_revision()}"
     if not note_store.has_note(note_id):
@@ -828,7 +828,7 @@ def note_floating_window(note_id: str, revision: str) -> dict[str, str]:
     }
 
 
-@router.get("/notes/{note_id}/backlinks")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
+@router.get("/notes/{note_id}/backlinks")
 def backlinks(request: Request, note_id: str) -> Dict[str, object]:
     _require_note_present(note_id, context="notes.backlinks")
 
@@ -858,7 +858,7 @@ def backlinks(request: Request, note_id: str) -> Dict[str, object]:
     }
 
 
-@router.get("/notes/{note_id}/outside-referrers")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
+@router.get("/notes/{note_id}/outside-referrers")
 def outside_referrers(note_id: str) -> Dict[str, object]:
     """How many notes outside this note's subtree reference it or a note in it:
     the references deleting (or cutting) the subtree would break."""
@@ -1225,7 +1225,7 @@ def run_shell_endpoint(request: Request, note_id: str, body: RunShellEndpointReq
     return cmd.execute()
 
 
-@router.get("/notes/{note_id}/run-shell/{run_id}")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
+@router.get("/notes/{note_id}/run-shell/{run_id}")
 def run_shell_status_endpoint(request: Request, note_id: str, run_id: str) -> Dict[str, object]:
     _require_loopback_shell_request(request)
     cmd = CmdRunShellStatus(note_id=note_id, run_id=run_id)
