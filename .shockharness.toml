@@ -589,6 +589,13 @@ paths = ["tests/**"]
 disable = ["MAGIC001", "DEF001", "DEF002"]
 reason = "Assertions and fixtures spell out the literal values they expect; test doubles and fixture builders take defaults, and answer a missing key with a default as the stores they stand in for do"
 
+# The browser test suites are tests too; their numbers are click offsets,
+# waits and expected positions.
+[[tool.shockharness.overrides]]
+paths = ["scripts/browser-*.mjs", "scripts/browser-validation/**", "scripts/suite-outcome.mjs"]
+disable = ["MAGIC001"]
+reason = "Browser test suites spell out the positions, offsets and waits they check, like the unit tests"
+
 [tool.shockharness.cache]
 enabled = true
 directory = ".shockharness-cache"

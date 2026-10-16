@@ -65,7 +65,7 @@ async function deleteNotes(page, ids) {
 }
 
 function middleY(box) {
-  return box.y + box.height / 2;  // shockharness: ignore[MAGIC001] reason="halving: the vertical middle of the box"
+  return box.y + box.height / 2;
 }
 
 async function startEditing(page, noteId) {
@@ -393,7 +393,7 @@ function boundaryPoint(page, noteId, lineStart, index) {
       range.setStart(node, index);
       range.setEnd(node, index + 1);
       const rect = range.getBoundingClientRect();
-      return {x: rect.left + 1, y: rect.top + rect.height / 2};  // shockharness: ignore[MAGIC001] reason="just inside the boundary, at the line's vertical middle"
+      return {x: rect.left + 1, y: rect.top + rect.height / 2};
     }
     throw new Error(`no text starting with "${lineStart}"`);
   }, {noteId, lineStart, index});
@@ -404,7 +404,7 @@ function emptyLinePoint(page, noteId) {
     const line = [...document.querySelectorAll(`.note[data-note-id="${noteId}"] > .note-content > *`)]
       .find(element => element.textContent.trim() === '');
     const rect = line.getBoundingClientRect();
-    return {x: rect.left + 1, y: rect.top + rect.height / 2};  // shockharness: ignore[MAGIC001] reason="just inside the line, at its vertical middle"
+    return {x: rect.left + 1, y: rect.top + rect.height / 2};
   }, noteId);
 }
 
@@ -579,7 +579,7 @@ async function pasteHereHiddenCases(page) {
   assert.notEqual(tagBar, null, 'the edited note shows its tag bar');
   {
     const box = await tagBar.boundingBox();
-    const offered = await offeredAt(page, {x: box.x + box.width - PADDING_PX, y: box.y + box.height / 2});  // shockharness: ignore[MAGIC001] reason="the tag bar's vertical middle"
+    const offered = await offeredAt(page, {x: box.x + box.width - PADDING_PX, y: box.y + box.height / 2});
     assert(!offered.includes(HERE_LABEL), `right-click on the tag bar: no ${HERE_LABEL} (${JSON.stringify(offered)})`);
   }
   // Nothing copied (a reload forgets it): not offered in the text either.

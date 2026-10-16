@@ -60,7 +60,7 @@ async function pointAtArrow(page, noteId) {
   await page.evaluate(id => document.querySelector(`.note[data-note-id="${id}"]`).scrollIntoView({block: 'center'}), noteId);
   await idle(page);
   const box = await (await page.$(`.note[data-note-id="${noteId}"] > .note-collapse-toggle`)).boundingBox();
-  const point = {x: box.x + box.width / 2, y: box.y + box.height / 2};  // shockharness: ignore[MAGIC001] reason="the middle of the arrow"
+  const point = {x: box.x + box.width / 2, y: box.y + box.height / 2};
   await page.mouse.move(point.x, point.y);
   await pause(SETTLE_MS);
   return point;

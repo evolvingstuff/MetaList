@@ -139,8 +139,10 @@ export function captureEditingFocus(noteElement) {
     };
 }
 
+// The node, while it is still in the content; else the text position (a focus
+// recorded as positions only has no node).
 function restoredPoint(content, node, offset, position) {
-    if (node.isConnected && content.contains(node)) {
+    if (node !== null && node.isConnected && content.contains(node)) {
         return { node, offset };
     }
     const point = textPositionToNodePoint(content, position, 'backward');

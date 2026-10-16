@@ -28,6 +28,7 @@ import {checkSortedTabs} from './browser-sorted-tab-regressions.mjs';
 import {checkSearchInputRejected} from './browser-search-input-regressions.mjs';
 import {checkDictationPaste} from './browser-dictation-paste-regressions.mjs';
 import {checkFileDropPreviews} from './browser-file-drop-preview-regressions.mjs';
+import {checkImageMenu} from './browser-image-menu-regressions.mjs';
 import {checkTagSuggestionMenu} from './browser-tag-suggestion-menu-regressions.mjs';
 import {checkPasteFormats} from './browser-paste-format-regressions.mjs';
 import {checkAiNoteTagSuggestions} from './browser-ai-note-tag-regressions.mjs';
@@ -106,7 +107,7 @@ try {
   browser.on('targetdestroyed', target => lifecycle(`target destroyed ${target.type()} ${target.url()}`));
   browser.on('targetcreated', target => lifecycle(`target created ${target.type()} ${target.url()}`));
   const updateFixture = await prepareUpdateFixture(page);
-  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'move-to-bottom', 'list-edges', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews', 'tag-suggestion-menu', 'paste-formats', 'ai-note-tags', 'robot-proposals', 'export-print', 'url-cleaning', 'reference-paste', 'click-caret', 'editable-embeds', 'delete-warning', 'collapse-outlines'].includes(process.env.BROWSER_TEST_SUITE)) {
+  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'move-to-bottom', 'list-edges', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews', 'image-menu', 'tag-suggestion-menu', 'paste-formats', 'ai-note-tags', 'robot-proposals', 'export-print', 'url-cleaning', 'reference-paste', 'click-caret', 'editable-embeds', 'delete-warning', 'collapse-outlines'].includes(process.env.BROWSER_TEST_SUITE)) {
     // The focused suite does not run checkAppUpdates, which normally releases
     // this intentionally held request. Avoid an unrelated update notice too.
     updateFixture.outage = true;
@@ -169,6 +170,10 @@ try {
     await checkFileDropPreviews(page);
     assert.deepEqual(errors, []);
     console.log(`PASS file drop preview regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'image-menu') {
+    await checkImageMenu(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS image menu regressions in ${await browser.version()}`);
   } else if (process.env.BROWSER_TEST_SUITE === 'tag-suggestion-menu') {
     await checkTagSuggestionMenu(page);
     assert.deepEqual(errors, []);

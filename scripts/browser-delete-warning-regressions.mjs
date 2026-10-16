@@ -90,7 +90,7 @@ async function answer(page, button) {
 async function startEditing(page, noteId) {
   await page.evaluate(id => document.querySelector(`.note[data-note-id="${id}"]`).scrollIntoView({block: 'center'}), noteId);
   const box = await (await page.$(`.note[data-note-id="${noteId}"] > .note-content`)).boundingBox();
-  await page.mouse.click(box.x + box.width - 10, box.y + box.height / 2);  // shockharness: ignore[MAGIC001] reason="near the end of the line, at its middle"
+  await page.mouse.click(box.x + box.width - 10, box.y + box.height / 2);
   await idle(page);
   const state = await modeState(page);
   assert.deepEqual([state.editing, state.current], [true, noteId], `editing ${noteId}`);
@@ -106,7 +106,7 @@ async function shortcut(page, key) {
 
 async function menuDelete(page, noteId) {
   const box = await (await page.$(`.note[data-note-id="${noteId}"] > .note-content`)).boundingBox();
-  await page.mouse.click(box.x + box.width - 10, box.y + box.height / 2, {button: 'right'});  // shockharness: ignore[MAGIC001] reason="near the end of the line, at its middle"
+  await page.mouse.click(box.x + box.width - 10, box.y + box.height / 2, {button: 'right'});
   await page.waitForSelector('#context-menu.is-visible');
   const item = await page.evaluateHandle(() => [...document.querySelectorAll('.context-menu-item')]
     .filter(node => node.offsetParent !== null).find(node => node.textContent.trim().startsWith('Delete Note')));
@@ -274,7 +274,7 @@ async function searchFor(page, query) {
   await page.evaluate(() => document.getElementById('search-input').select());
   await page.keyboard.press('Backspace');
   if (query.length > 0) await page.keyboard.type(query);
-  await pause(1200);  // shockharness: ignore[MAGIC001] reason="the search runs as you type, after its pause"
+  await pause(1200);
   await idle(page);
   await page.keyboard.press('Escape');
   await pause(SETTLE_MS);

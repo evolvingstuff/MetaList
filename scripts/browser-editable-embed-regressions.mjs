@@ -100,7 +100,7 @@ async function pressEmbeddedCheckbox(page, hostId, path) {
   await idle(page);
   const before = await checkbox.evaluate(node => ({top: node.getBoundingClientRect().top, scrollY: window.scrollY}));
   const box = await checkbox.boundingBox();
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);  // shockharness: ignore[MAGIC001] reason="the middle of the checkbox"
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await pause(SETTLE_MS);
   await idle(page);
   return before;
@@ -138,7 +138,7 @@ async function checkboxCases(page) {
 
   const checkbox = (await embeddedCheckbox(page, ids.host, [ids.task])).asElement();
   const box = await checkbox.boundingBox();
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);  // shockharness: ignore[MAGIC001] reason="the middle of the checkbox"
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   const look = await checkbox.evaluate(node => ({cursor: getComputedStyle(node).cursor, background: getComputedStyle(node).backgroundColor}));
   assert.deepEqual(look, {cursor: 'default', background: 'rgba(0, 0, 0, 0)'}, 'N4: under the pointer it does not look pressable');
 
@@ -153,7 +153,7 @@ async function checkboxCases(page) {
 
   const own = await page.$(ownCheckboxSelector(ids.host));
   const ownBox = await own.boundingBox();
-  await page.mouse.click(ownBox.x + ownBox.width / 2, ownBox.y + ownBox.height / 2);  // shockharness: ignore[MAGIC001] reason="the middle of the checkbox"
+  await page.mouse.click(ownBox.x + ownBox.width / 2, ownBox.y + ownBox.height / 2);
   await pause(SETTLE_MS);
   await idle(page);
   assert.equal(await ownStatus(page, ids.host), 'done', "N5: the host's own checkbox toggles the host");
@@ -171,7 +171,7 @@ async function whileEditingCase(page) {
   await reloadApp(page);
   const content = await page.$(`.note[data-note-id="${ids.other}"] > .note-content`);
   const box = await content.boundingBox();
-  await page.mouse.click(box.x + box.width - 10, box.y + box.height / 2);  // shockharness: ignore[MAGIC001] reason="near the end of the line, at its middle"
+  await page.mouse.click(box.x + box.width - 10, box.y + box.height / 2);
   await idle(page);
   await page.keyboard.press('End');
   await page.keyboard.type(' edited');
@@ -224,7 +224,7 @@ async function redactedCase(page) {
   if (checkbox !== null) {
     const box = await checkbox.boundingBox();
     if (box !== null) {
-      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);  // shockharness: ignore[MAGIC001] reason="the middle of the checkbox"
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
       await pause(SETTLE_MS);
       await idle(page);
     }
@@ -306,7 +306,7 @@ async function pressArrow(page, findArrow) {
   await idle(page);
   const before = await arrow.evaluate(node => ({top: node.getBoundingClientRect().top, scrollY: window.scrollY}));
   const box = await arrow.boundingBox();
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);  // shockharness: ignore[MAGIC001] reason="the middle of the arrow"
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await pause(SETTLE_MS);
   await idle(page);
   const after = await (await findArrow()).asElement()
@@ -436,7 +436,7 @@ async function arrowWhileEditingCase(page) {
   await reloadApp(page);
   const content = await page.$(`.note[data-note-id="${other.other}"] > .note-content`);
   const box = await content.boundingBox();
-  await page.mouse.click(box.x + box.width - 10, box.y + box.height / 2);  // shockharness: ignore[MAGIC001] reason="near the end of the line, at its middle"
+  await page.mouse.click(box.x + box.width - 10, box.y + box.height / 2);
   await idle(page);
   await page.keyboard.press('End');
   await page.keyboard.type(' edited');

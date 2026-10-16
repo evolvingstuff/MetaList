@@ -56,7 +56,7 @@ function plainNote(page) {
 }
 
 function middleY(rect) {
-  return rect.top + rect.height / 2;  // shockharness: ignore[MAGIC001] reason="halving: the vertical middle of the box"
+  return rect.top + rect.height / 2;
 }
 
 // A point in the note: a padding corner, or LINE_INSET_PX into one of its lines.
@@ -71,7 +71,7 @@ function pointIn(page, noteId, spot) {
       .find(element => element.textContent.trim().startsWith(spot));
     const rect = line.getBoundingClientRect();
     const x = rect.left + inset;
-    const y = rect.top + rect.height / 2;  // shockharness: ignore[MAGIC001] reason="halving: the vertical middle of the line"
+    const y = rect.top + rect.height / 2;
     // The character boundary under the point, as the browser places a caret there.
     const caret = document.caretRangeFromPoint(x, y);
     return {x, y, line: line.textContent, offset: caret.startOffset};
@@ -230,7 +230,7 @@ function borderPoint(page, noteId, side, beside) {
     const line = [...note.querySelectorAll(':scope > .note-content :is(p, li)')]
       .find(element => element.textContent.trim().startsWith(beside));
     const rect = line.getBoundingClientRect();
-    const middle = rect.top + rect.height / 2;  // shockharness: ignore[MAGIC001] reason="halving: the vertical middle of the line"
+    const middle = rect.top + rect.height / 2;
     if (side === 'left') return {x: box.left + padding, y: middle};
     if (side === 'right') return {x: box.right - padding, y: middle};
     if (side === 'top') return {x: rect.left + inset, y: box.top + padding};
@@ -385,7 +385,7 @@ function hostTextPoint(page, noteId, text, occurrence, index) {
       range.setStart(node, start);
       range.setEnd(node, start + 1);
       const rect = range.getBoundingClientRect();
-      return {x: rect.left + 1, y: rect.top + rect.height / 2};  // shockharness: ignore[MAGIC001] reason="just inside the boundary, at the line's vertical middle"
+      return {x: rect.left + 1, y: rect.top + rect.height / 2};
     }
     throw new Error(`no host text "${text}"`);
   }, {noteId, text, occurrence, index});
@@ -453,7 +453,7 @@ async function referenceCases(page) {
       const embed = document.querySelector(`.note[data-note-id="${id}"] .note-reference-block .note-reference-content`);
       const text = [...embed.querySelectorAll('*')].find(element => element.children.length === 0 && element.textContent.includes('baz content'));
       const rect = text.getBoundingClientRect();
-      return {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2};  // shockharness: ignore[MAGIC001] reason="the middle of the embedded note's text"
+      return {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2};
     }, host),
     expected: source => [`X${source[0]}`]});
 }
