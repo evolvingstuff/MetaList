@@ -144,12 +144,6 @@
     "presentation": "dialog"
   },
   {
-    "id": "pref.show_backlinks",
-    "label": "show backlinks",
-    "selector": "#command-palette-modal",
-    "presentation": "palette"
-  },
-  {
     "id": "pref.show_note_tags",
     "label": "show note tags",
     "selector": "#command-palette-modal",

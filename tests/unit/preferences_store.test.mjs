@@ -181,13 +181,13 @@ test('a toggle pressed twice quickly turns back off, reading the value the first
     const server = slowPreferenceServer();
     try {
         const store = new PreferencesStore();
-        store.replaceAll({ 'pref.show_backlinks': 'false' });
-        const toggle = () => store.setRaw('pref.show_backlinks', store.getRaw('pref.show_backlinks') === 'true' ? 'false' : 'true');
+        store.replaceAll({ 'pref.show_note_tags': 'false' });
+        const toggle = () => store.setRaw('pref.show_note_tags', store.getRaw('pref.show_note_tags') === 'true' ? 'false' : 'true');
 
         await Promise.all([toggle(), toggle()]);
 
-        assert.equal(store.getRaw('pref.show_backlinks'), 'false');
-        assert.deepEqual(server.persisted, [{ 'pref.show_backlinks': 'true' }, { 'pref.show_backlinks': 'false' }]);
+        assert.equal(store.getRaw('pref.show_note_tags'), 'false');
+        assert.deepEqual(server.persisted, [{ 'pref.show_note_tags': 'true' }, { 'pref.show_note_tags': 'false' }]);
     } finally {
         server.restore();
     }

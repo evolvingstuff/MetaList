@@ -26,6 +26,11 @@
     --note-vertical-spacing: 2px;
     --note-corner-radius: 12px;
     --note-corner-radius-nested: 10px;
+    /* Embeds: the first level, then each embed inside an embed a shade deeper. */
+    --embed-tint-1: #afd7fb;
+    --embed-tint-2: #96c8f7;
+    --embed-tint-3: #7db8f2;
+    --embed-edge: rgba(23, 92, 170, 0.28);
     /* The light theme's header bar (search, tabs icon, result count): black,
        with white on it, as it long was. */
     --search-shell-surface: #000000;
@@ -3826,9 +3831,12 @@ html[data-theme="dark"] .ai-chat-header-actions #ai-chat-spend-toggle[aria-press
     content: '▸';
 }
 
+/* The height animates; what lies past it is clipped, but not the gutter on
+   the left where the arrow sits (29px out): the arrow stays visible under
+   the pointer, so the hover, and every note's outline, stays as it was. */
 .note.is-collapse-transitioning {
     box-sizing: border-box;
-    overflow: hidden;
+    clip-path: polygon(-40px 0, 100% 0, 100% 100%, -40px 100%);
     transition: height 140ms ease;
 }
 
@@ -4821,24 +4829,224 @@ html[data-theme="dark"] .note.collapsed:not(.editing) .note-content img.note-fil
     display: block;
 }
 
-.note-embed-children {
-    margin-top: 6px;
-    margin-left: 10px;
-    padding-left: 10px;
-    border-left: 2px solid rgba(0, 0, 0, 0.12);
+/* Embeds (docs/ui/references.md): a note whose only content is a reference
+   shows that note in place, tinted, drawn exactly as the main tree draws
+   notes: the same boxes, indent, spacing and arrows. */
+.note:not(.editing):has(> .note-content > .note-reference-only) {
+    background-color: var(--embed-tint-1);
+    border-color: var(--embed-edge);
 }
 
+/* The note's only reference is the note: no panel of its own. */
+.note-reference-only .note-reference-block:not(.note-reference-block .note-reference-block) {
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
+}
+
+.note-embed-node {
+    position: relative;
+}
+
+.note-embed-children > .note-embed-node {
+    margin: var(--note-vertical-spacing) 0;
+    padding: 4px;
+    border: 1px solid var(--embed-edge);
+    border-radius: var(--note-corner-radius-nested);
+}
+
+.note-embed-children > .note-embed-node > .note-embed-body > .note-embed-content {
+    padding: 0 15px;
+}
+
+/* Children sit where the main tree puts them: the indent past their parent's
+   padding. The embed's first note fills its holder's text area (15px in). */
+.note-embed-children {
+    margin-left: var(--note-child-indentation);
+}
+
+.note-embed-root > .note-embed-body > .note-embed-children {
+    margin-left: calc(var(--note-child-indentation) - 15px);
+}
+
+/* A note in an embed that is itself only a reference: a shade deeper. Its
+   reference is the note, as for the holder. */
+.note-embed-holds-embed {
+    background: var(--embed-tint-2);
+}
+
+.note-embed-holds-embed .note-embed-holds-embed {
+    background: var(--embed-tint-3);
+}
+
+/* A holder's own children belong to the level around it, not to what it
+   embeds: they take that level's tint (white in the main tree). */
+.note-embed-holds-embed > .note-embed-body > .note-embed-children > .note-embed-node:not(.note-embed-holds-embed) {
+    background: var(--embed-tint-1);
+}
+
+.note-embed-holds-embed .note-embed-holds-embed > .note-embed-body > .note-embed-children > .note-embed-node:not(.note-embed-holds-embed) {
+    background: var(--embed-tint-2);
+}
+
+.note-embed-holds-embed .note-reference-block.note-embed-block,
+.note-reference-block.note-reference-embed-first-line {
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
+}
+
+/* The arrows of the notes in an embed, where the main tree has them. */
+.note-embed-collapse-toggle {
+    position: absolute;
+    top: 3px;
+    left: -29px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 27px;
+    height: 27px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+    user-select: none;
+}
+
+.note-embed-collapse-toggle::before {
+    content: '\25BE';
+    font-size: 23px;
+    line-height: 1;
+}
+
+.note-embed-collapse-toggle[aria-expanded="false"]::before {
+    content: '\25B8';
+}
+
+.note-embed-collapse-toggle:hover {
+    color: #000000;
+}
+
+/* The embed's first note is its holder, whose own arrow folds it. */
+.note-embed-root > .note-embed-body > .note-embed-collapse-toggle {
+    display: none;
+}
+
+/* Full screen and floating windows are read-only views: no embed arrows. */
+.note-fullscreen-overlay .note-embed-collapse-toggle {
+    display: none;
+}
+
+/* Links: link text with its arrow, in the line, no panel. */
+.note-reference-note.note-reference-link-mode:not(.note-reference-embed-first-line) {
+    display: inline;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.note-reference-note.note-reference-link-mode:not(.note-reference-embed-first-line) > .note-reference-content {
+    display: inline;
+}
+
+.note-reference-note.note-reference-link-mode:not(.note-reference-embed-first-line) .note-reference-link {
+    display: inline;
+    color: #1d5fb8;
+}
+
+.note-reference-note.note-reference-link-mode:not(.note-reference-embed-first-line) .note-reference-link-icon {
+    display: inline-block;
+    text-decoration: none;
+}
+
+.note-reference-note.note-reference-link-mode:not(.note-reference-embed-first-line) .note-reference-link {
+    display: inline-flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+}
+
+.note-reference-note.note-reference-link-mode .note-reference-link-icon {
+    order: 2;
+    margin: 0 0 0 0.2em;
+}
+
+/* A collapsed embed looks like any collapsed note: its first line as plain
+   text, the ↗ at the top right. A press on the text edits the note, as
+   anywhere in an embed; only the ↗ goes to the source. */
+.note-reference-embed-first-line {
+    position: relative;
+}
+
+.note-reference-embed-first-line .note-reference-link {
+    width: 100%;
+    padding-right: 1.6em;
+    color: inherit;
+    text-decoration: none;
+    pointer-events: none;
+}
+
+.note-reference-embed-first-line .note-reference-link-title {
+    text-decoration: none;
+}
+
+.note-reference-embed-first-line .note-reference-link-icon {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 1em;
+    text-align: right;
+    color: #64748b;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.note-reference-embed-first-line .note-reference-link-icon:hover {
+    color: #2563eb;
+}
+
+html[data-theme="dark"] .note-reference-embed-first-line .note-reference-link-icon {
+    color: #a9bbd3;
+}
+
+html[data-theme="dark"] .note-reference-block.note-reference-embed-first-line,
+html[data-theme="dark"] .note-embed-holds-embed .note-reference-block.note-embed-block {
+    border: 0;
+    background: transparent;
+}
+
+/* The go-to arrows (↗ source, ↖ backlinks) sit at the top right; only the
+   first line makes room for them. A link's ↗ follows its text. */
 .note-embed-with-source,
 .note:not(.editing) > .note-content .note-with-backlinks,
 .note.collapsed:not(.editing) > .note-content .note-with-backlinks {
     position: relative;
-    padding-left: 1.2em;
+}
+
+.note-embed-with-source > .note-embed-root > .note-embed-body > .note-embed-content,
+.note-with-backlinks:not(.note-reference-only) > :not(.note-backlinks-link):first-of-type {
+    padding-right: 1.6em;
+}
+
+/* An embed's holder with backlinks: ↖ beside the embed's ↗. (No :has()
+   here: Chrome crashed on it while a tall note collapsed.) */
+.note-with-backlinks.note-reference-only .note-embed-root > .note-embed-body > .note-embed-content {
+    padding-right: 3em;
+}
+
+.note-with-backlinks.note-reference-only > .note-backlinks-link {
+    right: 1.4em;
 }
 
 .note-source-arrow {
     position: absolute;
     top: 0;
-    left: 0;
+    right: 0;
     width: 1em;
     margin: 0;
     padding: 0;
@@ -4848,7 +5056,7 @@ html[data-theme="dark"] .note.collapsed:not(.editing) .note-content img.note-fil
     font: inherit;
     font-weight: 400;
     line-height: inherit;
-    text-align: left;
+    text-align: right;
     text-decoration: none;
     cursor: pointer;
 }
@@ -4857,22 +5065,15 @@ html[data-theme="dark"] .note.collapsed:not(.editing) .note-content img.note-fil
     color: #2563eb;
 }
 
+/* Above the embedded note drawn after it, so it takes the pointer. */
+.note-embed-with-source > .note-source-arrow {
+    z-index: 1;
+}
+
 .note-source-arrow:focus-visible {
     outline: 2px solid #2563eb;
     outline-offset: 1px;
     border-radius: 2px;
-}
-
-.note:not(.editing):has(> .note-content > .note-reference-only) {
-    background-color: #f1f3f5;
-}
-
-/* Flatten only the host's sole reference; nested references keep their panels. */
-.note-reference-only .note-reference-block:not(.note-reference-block .note-reference-block) {
-    border: 0;
-    border-radius: 0;
-    padding: 0;
-    background: transparent;
 }
 
 .note-reference-marker {
@@ -6263,68 +6464,6 @@ body.loading::after {
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
 }
 
-#backlinks-panel {
-    position: fixed;
-    top: calc(1.5rem - 6px);
-    left: var(--side-rail-edge);
-    z-index: 9998;
-    background: rgba(0, 0, 0, 0.7);
-    color: #ccc;
-    padding: 8px 12px;
-    width: var(--side-rail-width);
-    max-width: var(--side-rail-width);
-    box-sizing: border-box;
-    border-radius: 3px;
-    font-family: monospace;
-    font-size: 12px;
-    line-height: 1.4;
-    display: none;
-}
-
-.backlinks-title {
-    color: #fff;
-    margin-bottom: 6px;
-}
-
-.backlinks-empty {
-    color: rgba(255, 255, 255, 0.72);
-}
-
-.backlinks-list {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.backlink-item {
-    display: block;
-    width: 100%;
-    text-align: left;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.04);
-    color: #ccc;
-    padding: 4px 6px;
-    cursor: pointer;
-    font: inherit;
-    line-height: 1.35;
-}
-
-.backlink-item:hover,
-.backlink-item:focus-visible {
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
-    border-color: rgba(255, 255, 255, 0.25);
-    outline: none;
-}
-
-.backlink-item-preview {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
 .tab-context-item {
     display: grid;
     grid-template-columns: 2.4em 1fr auto;
@@ -6406,12 +6545,6 @@ body.tab-drag-active * {
 .tab-context-action.is-hidden {
     visibility: hidden;
     pointer-events: none;
-}
-
-@media (max-width: 960px) {
-    #backlinks-panel {
-        display: none !important;
-    }
 }
 
 @media (max-width: 760px), (max-height: 300px) {
@@ -6709,6 +6842,17 @@ body.tab-drag-active * {
 
 .meta-status-toggle:hover {
     background-color: rgba(0, 0, 0, 0.06);
+}
+
+/* An embed shows its source's status but never changes it: an embedded
+   checkbox is not a control. A press on it does nothing (mouse-events.js). */
+.note-embed-node .meta-status-toggle {
+    cursor: default;
+}
+
+.note-embed-node .meta-status-toggle:hover,
+html[data-theme="dark"] .note-embed-node .meta-status-toggle:hover {
+    background-color: transparent;
 }
 
 .meta-status-toggle svg {
@@ -7830,16 +7974,28 @@ html[data-theme="dark"] .note-file-reference-badge {
     color: #cfe0ff;
 }
 
-html[data-theme="dark"] .note-embed-children {
-    border-left-color: rgba(235, 235, 235, 0.14);
+html[data-theme="dark"] .note-embed-collapse-toggle {
+    color: rgba(235, 235, 235, 0.4);
+}
+
+html[data-theme="dark"] .note-embed-collapse-toggle:hover {
+    color: rgba(235, 235, 235, 0.8);
+}
+
+html[data-theme="dark"] {
+    --embed-tint-1: #173350;
+    --embed-tint-2: #1d3f63;
+    --embed-tint-3: #244b76;
+    --embed-edge: rgba(147, 197, 253, 0.22);
 }
 
 html[data-theme="dark"] .note:not(.editing):has(> .note-content > .note-reference-only) {
-    background-color: var(--app-surface-0) !important;
+    background-color: var(--embed-tint-1) !important;
+    border-color: var(--embed-edge);
 }
 
-html[data-theme="dark"] .note-reference-only .note-reference-block:not(.note-reference-block .note-reference-block) {
-    background: transparent;
+html[data-theme="dark"] .note-reference-note.note-reference-link-mode:not(.note-reference-embed-first-line) .note-reference-link {
+    color: #8fbcf0;
 }
 
 html[data-theme="dark"] .note-source-arrow {

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 // Pasting a copied note's reference (docs/ui/controls.md, docs/ui/references.md):
 // ⌘C while editing a note (no text selected) remembers that note. A reference
 // then pastes where the note itself would (⌘V, ⇧⌘V): ⌘R adds a sibling below
-// holding ![[UUID]] (or fills an empty note), ⇧⌘R adds a child, and the menu's
+// holding [[UUID]], an embed (or fills an empty note), ⇧⌘R adds a child, and the menu's
 // Paste Sibling Reference / Paste Child Reference do the same. Control works
 // like ⌘. Keys are sent as a keyboard reports them: with Shift held the letter
 // arrives in upper case (Control+Shift+R is 'R').
@@ -122,6 +122,13 @@ function childrenOf(page, noteId) {
 }
 
 // The note's saved text, as a reload shows it: the reference renders embedded.
+// The notes a note links to (references among other content), after a reload.
+async function savedLinks(page, noteId) {
+  await reloadApp(page);
+  return page.evaluate(id => [...document.querySelectorAll(`.note[data-note-id="${id}"] > .note-content .note-reference-link-mode[data-ref-host-note-id="${id}"]`)]
+    .map(block => block.dataset.refNoteId), noteId);
+}
+
 async function savedEmbeds(page, noteId) {
   await reloadApp(page);
   return page.evaluate(id => [...document.querySelectorAll(`.note[data-note-id="${id}"] > .note-content .note-embed-node[data-embed-note-id]`)]
@@ -205,7 +212,7 @@ async function siblingCase(page, {modifier, withCaret, viaMenu}) {
   assert.equal(roots.length, rootsBefore.length + 1, `${label}: one note is added`);
   const newId = roots[roots.indexOf(targetId) + 1];
   assert(!rootsBefore.includes(newId), `${label}: the new note sits right below the note`);
-  assert.equal(await noteText(page, newId), `![[${sourceId}]]`, `${label}: the new note holds the reference`);
+  assert.equal(await noteText(page, newId), `[[${sourceId}]]`, `${label}: the new note holds the reference`);
   const state = await modeState(page);
   assert.deepEqual([state.editing, state.current, state.caretHidden], [true, newId, true], `${label}: the new note is selected, with no caret`);
 
@@ -239,7 +246,7 @@ async function emptyNoteCase(page, modifier) {
   assert.equal(paste.text, 'The referenced note', `${modifier}+V fills an empty note (the rule ⌘R follows)`);
   const reference = await emptyNoteFill(page, modifier, 'r');
   assert.deepEqual(reference.roots, reference.rootsBefore, `${label}: no note is added`);
-  assert.equal(reference.text, `![[${reference.sourceId}]]`, `${label}: the reference fills the note`);
+  assert.equal(reference.text, `[[${reference.sourceId}]]`, `${label}: the reference fills the note`);
   const left = state => [state.editing, state.current === null, state.caretHidden];
   assert.deepEqual([reference.state.current, ...left(reference.state)], [reference.emptyId, ...left(paste.state)],
     `${label}: the note is left as ${modifier}+V leaves it (V: ${JSON.stringify(paste.state)})`);
@@ -258,7 +265,7 @@ async function topNoteCase(page, modifier) {
   const roots = await rootOrder(page);
   assert.equal(roots.length, rootsBefore.length + 1, `${label}: one note is added`);
   const newId = roots[0];
-  assert.equal(await noteText(page, newId), `![[${sourceId}]]`, `${label}: the new top note holds the reference`);
+  assert.equal(await noteText(page, newId), `[[${sourceId}]]`, `${label}: the new top note holds the reference`);
   assert.deepEqual(await savedEmbeds(page, newId), [sourceId], `${label}: saved`);
   await deleteNotes(page, [newId, sourceId]);
 }
@@ -281,7 +288,7 @@ async function childCase(page, {modifier, withCaret, viaMenu}) {
   assert.deepEqual(children.slice(1), [existingChildId], `${label}: one child is added`);
   assert.equal(children[1], existingChildId, `${label}: the new child comes first, as with ⇧⌘V`);
   const newId = children[0];
-  assert.equal(await noteText(page, newId), `![[${sourceId}]]`, `${label}: the child holds the reference`);
+  assert.equal(await noteText(page, newId), `[[${sourceId}]]`, `${label}: the child holds the reference`);
   const state = await modeState(page);
   assert.deepEqual([state.editing, state.current, state.caretHidden], [true, newId, true], `${label}: the child is selected, with no caret`);
   assert.deepEqual(await savedEmbeds(page, newId), [sourceId], `${label}: saved`);
@@ -502,7 +509,7 @@ async function pasteHereCase(page, {label, html, point, select, expected}) {
   assert.deepEqual(labels.paste.slice(-2), ['Paste Child Reference⇧⌘R', HERE_LABEL], `${label}: ${HERE_LABEL} comes last in the Paste group, after the other references (${JSON.stringify(labels)})`);
   await chooseOpenMenuItem(page, HERE_LABEL);
 
-  const token = `![[${sourceId}]]`;
+  const token = `[[${sourceId}]]`;
   const lines = expected(token);
   assert.deepEqual(await contentLines(page, targetId), lines, `${label}: the reference goes where the right-click was, on its own line`);
   const state = await modeState(page);
@@ -515,7 +522,7 @@ async function pasteHereCase(page, {label, html, point, select, expected}) {
   await editorHistory(page, 'redo');
   assert.deepEqual(await contentLines(page, targetId), lines, `${label}: redo puts it back`);
   await leaveEditing(page);
-  assert.deepEqual(await savedEmbeds(page, targetId), [sourceId], `${label}: saved with the note and shown embedded`);
+  assert.deepEqual(await savedLinks(page, targetId), [sourceId], `${label}: saved with the note and shown as a link, among its text`);
   await deleteNotes(page, [targetId, sourceId]);
 }
 

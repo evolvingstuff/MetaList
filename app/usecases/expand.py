@@ -7,7 +7,7 @@ import os
 from app.usecases.base import QueryCommand
 from app.services.store import store
 from app.services.sync import generate_new_uuid
-from app.usecases.collapse import apply_set_collapse
+from app.usecases.collapse import apply_set_collapse, is_shown_collapsed
 from app.services import undo_state
 
 
@@ -22,11 +22,11 @@ class CmdExpand(QueryCommand):
         return f"CmdExpand(note={self.note_id}, client={self.client_id})"
 
     def execute(self) -> Dict[str, str]:
-        before = bool(store.get(self.note_id).is_collapsed)
+        before = is_shown_collapsed(self.note_id)
         if before is False:
             return {"status": "unchanged", "updateUUID": generate_new_uuid()}
         apply_set_collapse(self.note_id, False)
-        after = bool(store.get(self.note_id).is_collapsed)
+        after = is_shown_collapsed(self.note_id)
         if after is not False:
             print(f"FATAL: expand failed for {self.note_id}")
             os._exit(1)

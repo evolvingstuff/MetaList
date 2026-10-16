@@ -21,6 +21,8 @@ def test_set_collapse_preserves_updated_at(monkeypatch: pytest.MonkeyPatch) -> N
     collapsed: dict[str, bool] = {}
     monkeypatch.setattr(collapse_module, "begin_writer", fake_begin_writer)
     monkeypatch.setattr(collapse_module, "db_update_links_preserving_updated_at", fake_update_links)
+    # Neither note is only a reference: each folds itself.
+    monkeypatch.setattr(collapse_module, "shown_collapse_note_id", lambda note_id: note_id)
     monkeypatch.setattr(
         collapse_module.store,
         "set_collapsed",

@@ -631,7 +631,8 @@ test('diff refresh animates note collapse from pre-diff height', async (t) => {
     assert.equal(parentElement.classList.contains('is-collapse-transitioning'), true);
     assert.equal(parentElement.style.height, '80px');
     assert.equal(parentElement.style.boxSizing, 'border-box');
-    assert.equal(parentElement.style.overflow, 'hidden');
+    // Clipping comes from the class (clip-path, sparing the arrow's gutter), never inline overflow.
+    assert.equal(parentElement.style.overflow, undefined);
 
     env.runAnimationFrame();
 
@@ -644,7 +645,7 @@ test('diff refresh animates note collapse from pre-diff height', async (t) => {
     assert.equal(parentElement.classList.contains('is-collapse-transitioning'), false);
     assert.equal(parentElement.style.height, '');
     assert.equal(parentElement.style.boxSizing, '');
-    assert.equal(parentElement.style.overflow, '');
+    assert.equal(parentElement.style.overflow, undefined);
 
     env.runTimeout();
 });

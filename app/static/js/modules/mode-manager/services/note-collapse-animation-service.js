@@ -164,7 +164,8 @@ function animateNoteHeightChange(capture, targetHeight, deferredRemovalElements)
     const previousBoxSizing = typeof noteElement.style.boxSizing === 'string' ? noteElement.style.boxSizing : '';
     noteElement.style.height = `${capture.startHeight}px`;
     noteElement.style.boxSizing = 'border-box';
-    noteElement.style.overflow = 'hidden';
+    // The class clips past the animated height (clip-path in main.css), not
+    // the gutter where the arrow sits, so the pointer stays on the arrow.
     noteElement.classList.add(NOTE_COLLAPSE_ANIMATION_CLASS);
     noteElement.getBoundingClientRect();
 
@@ -183,7 +184,6 @@ function animateNoteHeightChange(capture, targetHeight, deferredRemovalElements)
         noteElement.classList.remove(NOTE_COLLAPSE_ANIMATION_CLASS);
         noteElement.style.height = '';
         noteElement.style.boxSizing = previousBoxSizing;
-        noteElement.style.overflow = '';
     };
 
     noteElement.addEventListener('transitionend', (event) => {

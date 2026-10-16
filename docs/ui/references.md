@@ -1,9 +1,11 @@
 # UUID References
 
 ## Status
-- Implemented reference syntaxes:
-  - `![[UUID]]` = embedded mode
-  - `[[UUID]]` = link mode
+- One syntax for note references: `[[UUID]]`. How it shows depends on where it is:
+  - **Embed**: a note whose only content is the reference shows the source in place (its whole note is the embed).
+  - **Link**: with any other content in the note, even an extra line, the reference is a link.
+  - An older `![[UUID]]` to a note reads the same as `[[UUID]]`; the `!` changes nothing. MetaList writes `[[UUID]]` (⌘R, ⇧⌘R, Paste Reference Into Note).
+- File references keep two forms: `![[UUID]]` shows the picture or diagram, `[[UUID]]` a file card.
 - `[[...]]` containing exactly a note or file UUID is always a link, even when the note has a matching `[[...]]` scoped wrapper tag (for example `[[@LaTeX]]`); other `[[...]]` text is formatted by that wrapper, and links nested inside it still render.
 - A UUID can resolve to:
   - a note
@@ -12,17 +14,19 @@
 ## Rendering Rules
 - **View mode**:
   - Note targets:
-    - `![[UUID]]` renders the referenced note as an embedded block with its complete descendant subtree whenever the host note is expanded. Saved collapse states on the referenced root or any descendant are ignored inside the embed.
-    - `[[UUID]]` renders a compact link-style block showing only the referenced note's first line.
-    - when the host note is collapsed, both note-reference modes render as a single compact link row showing the referenced note's first line; an embed never expands inside a collapsed host.
-    - when the referenced note's first visible line is an image or Excalidraw diagram, the compact row shows the same thumbnail the collapsed source shows (plus any text on that line) instead of `(empty note)`. AI chat citations stay text-only.
-    - compact source previews retain first-line footnote superscripts, including markers attached from standalone footnote lines, without showing the reference bodies. The preview and its superscripts share the existing source-navigation link.
-    - an expanded embed begins with an arrow-only `↗` link (tooltip: `Go to reference source`) that opens the source note in a temporary reference-source context. All embedded content shares a small left inset for that arrow; there is no footer link. Compact references retain their `↗ title` link.
-    - when a note contains only one note reference (including ordinary editor wrappers/whitespace), the entire note uses the reference background and the reference has no separate inner panel. References mixed with other content keep their panels. Nested references retain their own panels.
-    - a source note with incoming note references has a `↖` button (tooltip: `Show backlinks — notes referencing this source`). It opens a temporary **Referenced by** view containing every referring note once, across the namespace, with normal ancestor/descendant context. Both link and embedded references count; formatting scopes and self-references do not. The arrow remains available while collapsed and disappears when the last incoming reference is removed.
+    - **Embeds.** The note holding the reference shows the source in place, tinted blue (light `#afd7fb`; dark `#173350`), drawn exactly as the main tree draws notes: the same boxes, indent, spacing and ▾/▸ arrows. An embed inside an embed (a note in the source that is itself only a reference) is a shade deeper (`#96c8f7`, then `#7db8f2`; dark `#1d3f63`, `#244b76`).
+    - The holder folds as its source: its ▾/▸ collapses or expands the source everywhere (the original in the tree and every other embed of it), and its own children with it. When the source is folded anywhere, the holder shows folded. Undo reverts both. A folded embed shows the source's first line as plain text, still tinted.
+    - Each note inside an embed shows the collapse saved for it, with its own ▾/▸ where it can collapse; pressing it folds that note everywhere. A note being edited is saved and left first. Full screen and floating windows show no embed arrows.
+    - The holder's own children (indented under it in the tree) show after the source's children, as notes of the level around the holder (white in the main tree). They belong to the holder, not the source: the source knows nothing of them, and they cannot be moved in among the source's children.
+    - An embed's `↗` (tooltip: `Go to reference source`) sits at its top right and opens the source note in a temporary reference-source context.
+    - **Links.** A link is underlined link text, the referenced note's first line, followed by `↗`, in the line where it is written; no panel. A link to a note that holds an embed reads as that embed's source's first line. Clicking it opens the source in a temporary reference-source context.
+    - when the referenced note's first visible line is an image or Excalidraw diagram, a link shows the same thumbnail the collapsed source shows (plus any text on that line) instead of `(empty note)`. AI chat citations stay text-only.
+    - link previews retain first-line footnote superscripts, including markers attached from standalone footnote lines, without showing the reference bodies.
+    - a source note with incoming note references has a `↖` button at its top right (tooltip: `Show backlinks — notes referencing this source`). It opens a temporary **Referenced by** view containing every referring note once, across the namespace, with normal ancestor/descendant context. Links and embeds both count; formatting scopes and self-references do not. The arrow remains available while collapsed and disappears when the last incoming reference is removed. A holder with backlinks shows `↖ ↗` side by side.
     - Backlink membership and occurrence counts are cached in server memory alongside the note store. Hydration builds the index; content/accepted-tag changes, additions, deletions, and bulk-tag updates maintain affected entries. Collapse/expand and view refreshes reuse it without rescanning the namespace. Lock/reset clears it; restore/reload rebuilds it. Lists preserve current tree order and derive previews only for referring notes.
-    - when that compact source preview is a standalone URL with a cached link title, it displays the same `title · domain` treatment as the source note instead of the raw URL. Inline/prose URLs remain raw. Quoted-text search also matches cached titles of URLs in a note (`docs/ui/search-semantics.md`).
+    - when a link's preview is a standalone URL with a cached link title, it displays the same `title · domain` treatment as the source note instead of the raw URL. Inline/prose URLs remain raw. Quoted-text search also matches cached titles of URLs in a note (`docs/ui/search-semantics.md`).
     - right-click anywhere inside a rendered reference and choose **Go to Source** to open that source note with the same navigation behavior.
+    - An embed is a window onto its source: it can change how the source is shown (collapse), never what it says. Text, tags, to-do status and children are changed in the source (↗). Clicking anywhere in an embed edits the holder (its `[[UUID]]` shows). A `@todo` / `@done` checkbox inside an embed shows the status but is not a control: pressing it does nothing (it neither toggles nor edits the holder; a note being edited stays edited).
   - File targets:
     - non-image files render a file card/link row with a deterministic type badge (`PDF`, `IMG`, `VID`, `TXT`, etc.) and the file title. `.txt`, `.md`/`.markdown`, `.csv` and `.json` files are labelled by extension (`.TXT`, `.MD`, `.CSV`, `.JSON`) whatever MIME type the browser sent; other files by their kind.
     - embedded image files (`![[UUID]]`) render an authenticated image preview with a `download image` control beneath it.
@@ -32,14 +36,10 @@
     - clicking the rendered file reference downloads the decrypted file from the server; hovering it shows the tooltip "Click to download <file name>".
     - when the host note is collapsed, non-image file references stay visible as a single compact row showing the badge and a truncated title.
     - when the host note is collapsed and the first visible line is an embedded image file or diagram, the note collapses to a compact thumbnail-only version of that preview.
-  - Rendered references have no internal expand/collapse or embed/link controls; edit the raw token to change between `![[...]]` and `[[...]]`.
-  - The embed always renders on its own visual line (block), even when written inline.
-  - The referenced note's child subtree is included.
-  - A `@todo` / `@done` checkbox inside an embed toggles that embedded note (the innermost embed around it), never the host; every copy shows the new status.
-  - Embedded notes have no inner collapse controls; the host note owns the only collapse behavior for the rendered reference.
-  - Clicking a link-mode reference opens a temporary reference-source context for that note (it does not enter edit mode on the target note). The internal UUID query stays hidden from the search input; the `Reference source` indicator identifies the context, and its `×` returns to the originating context.
+  - Rendered references have no embed/link controls: a reference is an embed or a link by where it is (alone in its note, or with other content).
+  - Opening a source (`↗` or a link) uses a temporary reference-source context; the internal UUID query stays hidden from the search input; the `Reference source` indicator identifies the context, and its `×` returns to the originating context.
 - **Edit mode**:
-  - Note/file tokens remain literal raw text (`![[UUID]]` or `[[UUID]]`).
+  - Note/file tokens remain literal raw text (`[[UUID]]`, or `![[UUID]]` for a file shown as its picture).
   - Saved-file image actions are not available from the raw token; they are available once the token renders as an image preview in view mode.
 
 ## File Attachment Workflow

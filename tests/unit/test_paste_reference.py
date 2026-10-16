@@ -48,7 +48,7 @@ def _child_command(*, target: str, reference: str):
 
 def test_the_reference_is_one_note_holding_the_embed_token() -> None:
     assert paste_reference_module.reference_snapshot("copied") == [{
-        "id": "copied", "parent_id": None, "content": "<div>![[copied]]</div>", "tags": "", "proposed_tags": "",
+        "id": "copied", "parent_id": None, "content": "<div>[[copied]]</div>", "tags": "", "proposed_tags": "",
     }]
 
 
@@ -64,9 +64,9 @@ def test_a_reference_fills_an_empty_note_keeping_its_tags(monkeypatch) -> None:
 
     assert result == {"status": "pasted", "id": "target", "updateUUID": "uuid-pasted"}
     assert captured["updated"] == {
-        "note_id": "target", "content": "<div>![[copied]]</div>", "tags": "today", "proposed_tags": "", "token": "token",
+        "note_id": "target", "content": "<div>[[copied]]</div>", "tags": "today", "proposed_tags": "", "token": "token",
     }
-    assert captured["undo"]["after_content"] == "<div>![[copied]]</div>"
+    assert captured["undo"]["after_content"] == "<div>[[copied]]</div>"
 
 
 def test_a_reference_goes_below_a_note_with_text(monkeypatch) -> None:

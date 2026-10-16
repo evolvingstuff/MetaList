@@ -37,6 +37,7 @@ import {checkUrlCleaning} from './browser-url-cleaning-regressions.mjs';
 import {checkReferencePaste} from './browser-reference-paste-regressions.mjs';
 import {checkClickCaret} from './browser-click-caret-regressions.mjs';
 import {checkEditableEmbeds} from './browser-editable-embed-regressions.mjs';
+import {checkCollapseOutlines} from './browser-collapse-outline-regressions.mjs';
 import {checkDeleteWarning} from './browser-delete-warning-regressions.mjs';
 
 const directory = await mkdtemp(join(tmpdir(), 'metalist-browser-'));
@@ -105,7 +106,7 @@ try {
   browser.on('targetdestroyed', target => lifecycle(`target destroyed ${target.type()} ${target.url()}`));
   browser.on('targetcreated', target => lifecycle(`target created ${target.type()} ${target.url()}`));
   const updateFixture = await prepareUpdateFixture(page);
-  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'move-to-bottom', 'list-edges', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews', 'tag-suggestion-menu', 'paste-formats', 'ai-note-tags', 'robot-proposals', 'export-print', 'url-cleaning', 'reference-paste', 'click-caret', 'editable-embeds', 'delete-warning'].includes(process.env.BROWSER_TEST_SUITE)) {
+  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'move-to-bottom', 'list-edges', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews', 'tag-suggestion-menu', 'paste-formats', 'ai-note-tags', 'robot-proposals', 'export-print', 'url-cleaning', 'reference-paste', 'click-caret', 'editable-embeds', 'delete-warning', 'collapse-outlines'].includes(process.env.BROWSER_TEST_SUITE)) {
     // The focused suite does not run checkAppUpdates, which normally releases
     // this intentionally held request. Avoid an unrelated update notice too.
     updateFixture.outage = true;
@@ -184,6 +185,10 @@ try {
     await checkDeleteWarning(page);
     assert.deepEqual(errors, []);
     console.log(`PASS delete warning regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'collapse-outlines') {
+    await checkCollapseOutlines(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS collapse outline regressions in ${await browser.version()}`);
   } else if (process.env.BROWSER_TEST_SUITE === 'editable-embeds') {
     await checkEditableEmbeds(page);
     assert.deepEqual(errors, []);
@@ -226,6 +231,7 @@ try {
   await checkReferencePaste(page);
   await checkClickCaret(page);
   await checkEditableEmbeds(page);
+  await checkCollapseOutlines(page);
   await checkDeleteWarning(page);
   await checkSortedTabs(page);
   await page.waitForNetworkIdle({idleTime:500});

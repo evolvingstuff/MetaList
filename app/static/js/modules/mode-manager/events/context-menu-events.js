@@ -1007,7 +1007,7 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
                     if (ModeContext.currentNoteId !== targetNoteId || pasteHereRange === null) {
                         throw new Error('Paste Reference Into Note requires the right-clicked note to be edited');
                     }
-                    insertReferenceTokenAtRange(`![[${ModeContext.clipboardNoteId}]]`, pasteHereRange);
+                    insertReferenceTokenAtRange(`[[${ModeContext.clipboardNoteId}]]`, pasteHereRange);
                 });
             },
             onOpenReferenceSource: (referenceNoteId) => {

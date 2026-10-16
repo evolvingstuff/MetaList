@@ -1,14 +1,8 @@
 """View-only reference chrome; no saved content or persistent caches."""
 
 import html
-import re
 
-from app.services.embedded_references import EmbedRenderContext, collect_active_reference_tokens
-
-
-_EMPTY_EDITOR_WRAPPER_RE = re.compile(
-    r"</?(?:div|p|br|span|b|strong|i|em|u|s)\b[^>]*>", re.IGNORECASE
-)
+from app.services.embedded_references import EmbedRenderContext, shows_note_embed
 
 
 def decorate_note_references(
@@ -18,12 +12,8 @@ def decorate_note_references(
     assert context.has_note(note_id)
     assert isinstance(has_backlinks, bool)
     classes = []
-    tokens = collect_active_reference_tokens(content_html)
-    if len(tokens) == 1 and context.has_note(tokens[0].note_id):
-        token = tokens[0]
-        remaining = content_html[:token.start] + content_html[token.end:]
-        if html.unescape(_EMPTY_EDITOR_WRAPPER_RE.sub("", remaining)).strip() == "":
-            classes.append("note-reference-only")
+    if shows_note_embed(content_html=content_html, context=context):
+        classes.append("note-reference-only")
     source_arrow = ""
     if has_backlinks:
         classes.append("note-with-backlinks")

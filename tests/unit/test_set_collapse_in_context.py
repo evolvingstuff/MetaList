@@ -72,6 +72,8 @@ def test_set_collapse_in_context_updates_roots_only(
 
     monkeypatch.setattr(collapse_context_module, "note_store", fake_note_store)
     monkeypatch.setattr(collapse_context_module, "store", fake_store)
+    # None of these notes is only a reference: each shows its own collapse.
+    monkeypatch.setattr(collapse_context_module, "is_shown_collapsed", lambda note_id: fake_store.get(note_id).is_collapsed)
     monkeypatch.setattr(
         collapse_context_module,
         "apply_set_collapse_bulk",
@@ -125,6 +127,8 @@ def test_set_collapse_in_context_recursively_updates_every_descendant(
 
     monkeypatch.setattr(collapse_context_module, "note_store", fake_note_store)
     monkeypatch.setattr(collapse_context_module, "store", fake_store)
+    # None of these notes is only a reference: each shows its own collapse.
+    monkeypatch.setattr(collapse_context_module, "is_shown_collapsed", lambda note_id: fake_store.get(note_id).is_collapsed)
     monkeypatch.setattr(
         collapse_context_module,
         "apply_set_collapse_bulk",
@@ -172,6 +176,8 @@ def test_set_collapse_subtree_updates_only_selected_note_and_descendants(
 
     monkeypatch.setattr(collapse_context_module, "note_store", fake_note_store)
     monkeypatch.setattr(collapse_context_module, "store", fake_store)
+    # None of these notes is only a reference: each shows its own collapse.
+    monkeypatch.setattr(collapse_context_module, "is_shown_collapsed", lambda note_id: fake_store.get(note_id).is_collapsed)
     monkeypatch.setattr(
         collapse_context_module,
         "apply_set_collapse_bulk",

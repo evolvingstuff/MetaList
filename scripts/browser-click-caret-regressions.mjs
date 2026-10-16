@@ -419,15 +419,16 @@ async function referenceCases(page) {
       click: host => hostTextPoint(page, host, 'here', 0, 'he'.length),
       expected: source => [source[0].replace(' here', ' heXre')]});
   }
-  // L3: a click on the embedded note itself: the start of its ![[UUID]] source.
-  await referenceClickCase(page, {label: 'L3: on the embedded note', lines: ['foo', 'REF:baz', 'bar'], referenced: ['baz'], mode: 'embed',
+  // L3: a click on the embedded note itself (a note that is only the
+  // reference embeds it): the start of its [[UUID]] source.
+  await referenceClickCase(page, {label: 'L3: on the embedded note', lines: ['REF:baz'], referenced: ['baz'], mode: 'link',
     click: host => page.evaluate(id => {
       const embed = document.querySelector(`.note[data-note-id="${id}"] .note-reference-block .note-reference-content`);
       const text = [...embed.querySelectorAll('*')].find(element => element.children.length === 0 && element.textContent.includes('baz content'));
       const rect = text.getBoundingClientRect();
       return {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2};  // shockharness: ignore[MAGIC001] reason="the middle of the embedded note's text"
     }, host),
-    expected: source => source.map(line => (line.startsWith('![[') ? `X${line}` : line))});
+    expected: source => [`X${source[0]}`]});
 }
 
 export async function checkClickCaret(page) {

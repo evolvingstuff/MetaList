@@ -116,7 +116,7 @@ rules as the tag bar:
 - `/* ... */` comment regions are ignored.
 
 In addition, notes implicitly inherit **non-meta** tag terms from parents and referenced notes:
-- A note’s effective tags include its own tags plus non-meta tags inherited through its parents and note references (`[[UUID]]` and `![[UUID]]`). A reference contributes tags from its source and that source's complete descendant subtree, including further references within the subtree. It excludes tags inherited from ancestors above the source. Children of the referencing note inherit its effective tags normally. Accepted and proposed tag contributions remain separate until combined for search.
+- A note’s effective tags include its own tags plus non-meta tags inherited through its parents and note references (`[[UUID]]`, links and embeds). A reference contributes tags from its source and that source's complete descendant subtree, including further references within the subtree. It excludes tags inherited from ancestors above the source. Children of the referencing note inherit its effective tags normally. Accepted and proposed tag contributions remain separate until combined for search.
 - Tags starting with `@` (meta tags like `@monospace`) are **not** inherited.
 - Tag-bar `/* ... */` comments are **not** inherited (they only affect text search for the note that contains them).
 
@@ -227,7 +227,7 @@ Results are still **windowed by root notes**:
 
 ## Embedded References and Search
 
-Both embedded (`![[UUID]]`) and linked (`[[UUID]]`) note references participate in tag inheritance:
+Note references (`[[UUID]]`), links and embeds alike, participate in tag inheritance:
 - Non-meta tags on the source or its descendants supply required/forbidden tag hits for the host and its children, including through chains of references. For `foo → bar → baz`, a reference to `bar` matches tags on `bar` and `baz`, but excludes tags inherited from `foo`. Searching for a tag on `baz` includes the reference host; an expanded embed displays the full `bar → baz` subtree. Link-mode references retain their compact rendering.
 - Canonical notes still inherit their own ancestors' tags. The referencing host also retains inheritance from its own parents. Source text does not supply required/forbidden quoted-text hits; source meta tags and comments do not pass through references.
 - Subtree/reference cycles converge from direct tags, without importing parent inheritance. Removing a tag/reference clears stale contributions, including within cycles. An explicit reference to an ancestor still contributes that referenced subtree's tags.

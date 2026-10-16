@@ -35,7 +35,7 @@ What happens on screen after each action (where things stay, when the page may s
 - If the clipboard value came from `Generate random password…`, pasting into an empty note also adds `@password` automatically when that tag is not already present.
 - Pasted and dropped URLs lose their tracking parameters (`utm_*`, click ids, per-site junk such as Amazon's `/ref=` or YouTube's `si=`), in pasted text, prose and links alike; typed URLs are never touched, and `⌘Z` restores the paste as copied. See `docs/ui/paste-sanitization.md`.
 - See `docs/ui/paste-sanitization.md` for the full policy.
-- `⌘ + R` and `⇧ + ⌘ + R` paste a reference (`![[UUID]]`) to the last copied note where `⌘ + V` and `⇧ + ⌘ + V` paste the note: a sibling below (or into an empty note without children) or the first child, saved and selected with no caret, caret or not. With no selected note, `⌘ + R` makes a new top note.
+- `⌘ + R` and `⇧ + ⌘ + R` paste a reference (`[[UUID]]`, a note that embeds it) to the last copied note where `⌘ + V` and `⇧ + ⌘ + V` paste the note: a sibling below (or into an empty note without children) or the first child, saved and selected with no caret, caret or not. With no selected note, `⌘ + R` makes a new top note.
 - See `docs/ui/references.md` for full reference behavior.
 - `⌘ + S` splits the current editing note at the caret or selection; a caret at the front creates a blank note above, and a caret at the end creates a blank note below.
 - `⌘ + S` no-ops when the entire note is selected or when split would produce no content segment.
@@ -151,7 +151,7 @@ On macOS, `⌘ + Y` normally opens Safari History rather than performing native 
 | Reload the page while a `Reference source` / `Referenced by` tab is open | The indicator and hidden query survive (kept per browser tab in `sessionStorage` and re-validated against the reloaded tab's search); raw note IDs never appear in the search field |
 | Type in search while viewing a reference source | Dismiss reference-source mode and keep the current tab as a normal search context |
 | Right-click anywhere inside a rendered note reference | Choose **Go to Source** to open the same temporary reference-source context |
-| Press `@todo` / `@done` checkbox | Toggle the note status on mouse down. If another note is being edited, save + exit edit mode first and do not enter edit mode for the toggled note. Inside an embed, it toggles that embedded note. |
+| Press `@todo` / `@done` checkbox | Toggle the note status on mouse down. If another note is being edited, save + exit edit mode first and do not enter edit mode for the toggled note. Inside an embed it only shows the status: a press does nothing (no toggle, no edit mode; a note being edited stays edited). |
 | Press note shell / blank space | Select/edit that note on mouse down. Note content waits until click so drag/drop can disambiguate click vs drag. |
 | Click the tag bar while editing | Focus the tag input without re-selecting the note shell. Mouse or keyboard focus adds a soft focus ring and, when Animated Transitions is enabled, a single subtle outward halo. |
 | Click a Grammarly suggestion card | Keep the current note in edit mode while the assistant applies the correction. A subsequent ordinary outside click or `Escape` saves and exits as usual. |

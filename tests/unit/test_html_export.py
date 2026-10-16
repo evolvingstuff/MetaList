@@ -574,19 +574,22 @@ def test_the_credential_counts_are_what_the_export_would_show(monkeypatch: pytes
     embedded_child_id = "55555555-5555-5555-5555-555555555555"
     excluded_id = "66666666-6666-6666-6666-666666666666"
     other_id = "77777777-7777-7777-7777-777777777777"
+    holder_id = "88888888-8888-8888-8888-888888888888"
     notes = {
-        # A password child, an embedded note whose child is a password, and a link
-        # to a password note (its preview shows it, masked or not).
-        ROOT_ID: _Note(ROOT_ID, None, None, other_id, False, f"<div>![[{embedded_id}]] [[{LINKED_ID}]]</div>", "keep"),
+        # A password child, a child that embeds a note whose child is a password
+        # (a note that is only the reference), and a link to a password note (its
+        # preview shows it, masked or not).
+        ROOT_ID: _Note(ROOT_ID, None, None, other_id, False, f"<div>Accounts [[{LINKED_ID}]]</div>", "keep"),
         CHILD_ID: _Note(CHILD_ID, ROOT_ID, None, None, False, "<div>one</div>", "@password keep"),
-        excluded_id: _Note(excluded_id, ROOT_ID, CHILD_ID, None, False, "<div>gray bar</div>", "@password"),
+        excluded_id: _Note(excluded_id, ROOT_ID, CHILD_ID, holder_id, False, "<div>gray bar</div>", "@password"),
+        holder_id: _Note(holder_id, ROOT_ID, excluded_id, None, False, f"<div>![[{embedded_id}]]</div>", "keep"),
         embedded_id: _Note(embedded_id, other_id, None, None, False, "<div>Embedded</div>", ""),
         embedded_child_id: _Note(embedded_child_id, embedded_id, None, None, False, "<div>two</div>", "@password"),
         LINKED_ID: _Note(LINKED_ID, other_id, embedded_id, None, False, "<div>three</div>", "@password"),
         other_id: _Note(other_id, None, ROOT_ID, None, False, f"<div>[[{LINKED_ID}]]</div>", "keep"),
     }
     children = {
-        None: [ROOT_ID, other_id], ROOT_ID: [CHILD_ID, excluded_id],
+        None: [ROOT_ID, other_id], ROOT_ID: [CHILD_ID, excluded_id, holder_id],
         other_id: [embedded_id, LINKED_ID], embedded_id: [embedded_child_id],
     }
     monkeypatch.setattr(export_module, "note_store", _FakeNoteStore(notes=notes, children_by_parent=children))
@@ -599,7 +602,7 @@ def test_the_credential_counts_are_what_the_export_would_show(monkeypatch: pytes
     # A view: notes its search leaves out (gray bars) are not exported, so not
     # counted; a password shown twice counts once.
     def resolve(*, search, sort_mode, is_untagged_view):
-        allowed = frozenset({ROOT_ID, CHILD_ID, other_id})
+        allowed = frozenset({ROOT_ID, CHILD_ID, holder_id, other_id})
         return snapshot_module.ResolvedViewScope(
             filter_active=True, allowed_note_ids=allowed, matched_note_ids=allowed,
             ordered_root_ids=(ROOT_ID, other_id), total_root_count=2,
@@ -611,6 +614,7 @@ def test_the_credential_counts_are_what_the_export_would_show(monkeypatch: pytes
     notes[ROOT_ID] = _Note(ROOT_ID, None, None, other_id, False, "<div>Accounts</div>", "keep")
     notes[other_id] = _Note(other_id, None, ROOT_ID, None, False, "<div>Other</div>", "keep")
     notes[CHILD_ID] = _Note(CHILD_ID, ROOT_ID, None, None, False, "<div>one</div>", "keep")
+    notes[holder_id] = _Note(holder_id, ROOT_ID, excluded_id, None, False, "<div>Holder</div>", "keep")
     assert count(search="keep", sort_mode="normal", is_untagged_view=False, root_note_id=None) == 0
 
 

@@ -110,7 +110,7 @@ test('reference paste with no selected note creates and saves a top note', async
     const { run, event, events, pending } = referenceHarness({ isEditing: false, clipboardNoteId: 'original-note', sortBlocksTopNote: false });
     run(event);
     await Promise.all(pending);
-    assert.deepEqual(events, ['prevent', 'block-check:top', 'top', '![[original-note]]', 'save:new-top', 'reset']);
+    assert.deepEqual(events, ['prevent', 'block-check:top', 'top', '[[original-note]]', 'save:new-top', 'reset']);
 });
 
 test('reference paste without a copied note does not create an empty note', async () => {

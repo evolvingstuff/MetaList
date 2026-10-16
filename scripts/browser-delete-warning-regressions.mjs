@@ -29,7 +29,7 @@ async function reloadApp(page) {
 }
 
 // Notes from a spec: [name, html, parentName | null]; HTML may name other
-// notes as ![[name]] or [[name]].
+// notes as [[name]] (a note that is only a reference embeds it).
 async function createNotes(page, spec) {
   return page.evaluate(async spec => {
     const {NotesAPI} = await import('/static/js/modules/api-client.js');
@@ -131,7 +131,8 @@ function expectedWarning(count, verb) {
 async function menuDeleteCase(page) {
   const ids = await createNotes(page, [
     ['source', '<p>The source note</p>', null],
-    ['embedding', '<div>Embeds it</div><div>![[source]]</div>', null],
+    // A note that is only the reference embeds it.
+    ['embedding', '<div>[[source]]</div>', null],
     ['linking', '<div>Links it: [[source]]</div>', null],
   ]);
   await reloadApp(page);
@@ -212,7 +213,7 @@ async function cutCase(page) {
 // D2: a reference to a child counts; one from inside the subtree does not.
 async function childReferencedCase(page) {
   const ids = await createNotes(page, [
-    ['parent', '<div>The parent</div><div>![[child]]</div>', null],
+    ['parent', '<div>The parent</div><div>[[child]]</div>', null],
     ['child', '<p>Its child</p>', 'parent'],
     ['outside', '<div>Links the child: [[child]]</div>', null],
   ]);

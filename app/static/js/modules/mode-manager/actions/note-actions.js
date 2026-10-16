@@ -26,7 +26,7 @@ import {
     restoreFormattingRemovalSelection,
 } from '../services/selected-formatting-removal-service.js';
 import { actionSaveNote } from './content-actions.js';
-import { actionSaveAndExitEditingWithoutRefreshing, actionSwitchNotes, actionSelectNote } from './selection-actions.js';
+import { actionDeselectNote, actionSaveAndExitEditingWithoutRefreshing, actionSwitchNotes, actionSelectNote } from './selection-actions.js';
 import { actionRefreshAndMaybeSelect } from './ui-actions.js';
 
 function hideCaretAfterProgrammaticEdit() {
@@ -969,6 +969,29 @@ async function setNoteCollapse(noteId, collapsed) {
         }
     }
     await actionRefreshAndMaybeSelect({ startedAt: startedAt, context: 'setNoteCollapse' });
+}
+
+// An arrow inside an embed (![[UUID]]): collapse is shared, so it collapses or
+// expands that note everywhere. A note being edited is saved and left first,
+// as for any arrow outside the edited note.
+export async function setEmbeddedNoteCollapse(noteId, collapsed) {
+    if (typeof noteId !== 'string' || noteId.length === 0) {
+        throw new Error('setEmbeddedNoteCollapse requires noteId');
+    }
+    if (typeof collapsed !== 'boolean') {
+        throw new Error('setEmbeddedNoteCollapse requires collapsed boolean');
+    }
+    const startedAt = performance.now();
+    Logger.logAction('setEmbeddedNoteCollapse', { noteId, collapsed, isEditing: ModeContext.isEditing });
+    if (ModeContext.isEditing) {
+        await actionDeselectNote();
+    }
+    if (collapsed) {
+        await NotesAPI.collapseNote(noteId);
+    } else {
+        await NotesAPI.expandNote(noteId);
+    }
+    await actionRefreshAndMaybeSelect({ startedAt, context: 'setEmbeddedNoteCollapse' });
 }
 
 export async function collapseNote(noteId) {

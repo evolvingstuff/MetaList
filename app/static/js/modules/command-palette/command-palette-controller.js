@@ -101,7 +101,6 @@ import {
 import { isViewingReferenceSource } from '../mode-manager/services/reference-source-navigation-service.js';
 import { CommandGate } from '../mode-manager/services/command-gate-service.js';
 import { cancelDebouncedSearchExecution } from '../mode-manager/services/search-debounce-service.js';
-import { refreshBacklinksPanel, invalidateBacklinksPanelCache, syncBacklinksPanelPlacement } from '../mode-manager/services/backlinks-panel-service.js';
 import { attachPickedFileToCurrentNote, pickFileForAttachment } from '../mode-manager/services/file-reference-service.js';
 import { isRootReorderLocked, normalizeRootSortMode } from '../mode-manager/services/root-sort-service.js';
 import { blockRootNoteCreation } from '../mode-manager/services/root-note-creation-service.js';
@@ -535,9 +534,6 @@ class CommandPaletteController {
     }
 
     _applyPreferenceEffectsFromStorage() {
-        const showBacklinks = this._getBoolean('pref.show_backlinks', true);
-        document.body.classList.toggle('pref-show-backlinks', showBacklinks);
-
         const showTags = this._getBoolean('pref.show_note_tags', false);
         document.body.classList.toggle('pref-show-note-tags', showTags);
 
@@ -605,9 +601,6 @@ class CommandPaletteController {
             updateSearchContextsOverlayPlacement();
         }
 
-        syncBacklinksPanelPlacement();
-        invalidateBacklinksPanelCache();
-        void refreshBacklinksPanel({ force: true });
     }
 
     _getBoolean(key, defaultValue) {

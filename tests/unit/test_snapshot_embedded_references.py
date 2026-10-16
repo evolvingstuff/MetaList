@@ -173,15 +173,16 @@ def test_view_state_renders_note_with_bare_at_tag_without_blocking_other_notes(
 
 
 def test_embed_reference_renders_as_block_and_includes_descendants(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A note whose only content is the reference embeds it.
     notes = {
-        HOST_ID: _Note(HOST_ID, None, None, TARGET_ID, False, f"<div>blah ![[{TARGET_ID}]] yada</div>", ""),
+        HOST_ID: _Note(HOST_ID, None, None, TARGET_ID, False, f"<div>![[{TARGET_ID}]]</div>", ""),
         TARGET_ID: _Note(TARGET_ID, None, HOST_ID, None, False, "<div>embedded root</div>", ""),
         CHILD_ID: _Note(
             CHILD_ID,
             TARGET_ID,
             None,
             None,
-            True,
+            False,
             "<div>embedded child</div><div>embedded child hidden line</div>",
             "",
         ),
@@ -212,14 +213,32 @@ def test_embed_reference_renders_as_block_and_includes_descendants(monkeypatch: 
     assert 'title="Go to reference source" aria-label="Go to reference source"' in rendered
     assert "note-reference-link-kind" not in rendered
     assert "Open referenced note:" not in rendered
-    assert rendered.index("blah") < rendered.index("note-embed-block")
-    assert rendered.index("note-embed-block") < rendered.index("yada")
     assert rendered.index("note-source-arrow") < rendered.index("embedded root")
+
+
+@pytest.mark.parametrize("written", ["![[{id}]]", "[[{id}]]"])
+def test_reference_with_other_content_is_a_link_however_written(monkeypatch: pytest.MonkeyPatch, written: str) -> None:
+    # Any other content in the note makes a note reference a link; the "!" changes nothing.
+    token = written.format(id=TARGET_ID)
+    notes = {
+        HOST_ID: _Note(HOST_ID, None, None, TARGET_ID, False, f"<div>blah {token} yada</div>", ""),
+        TARGET_ID: _Note(TARGET_ID, None, HOST_ID, None, False, "<div>embedded root</div>", ""),
+    }
+    state = _state_for(monkeypatch=monkeypatch, notes=notes, children_by_parent={None: [HOST_ID, TARGET_ID]})
+
+    rendered = state.payloads[HOST_ID]["content"]
+    assert "note-embed-block" not in rendered
+    assert "note-reference-link-mode" in rendered
+    assert '<span class="note-reference-link-title">embedded root</span>' in rendered
+    assert rendered.index("blah") < rendered.index("note-reference-link-mode") < rendered.index("yada")
 
 
 @pytest.mark.parametrize("content,standalone", [
     (f"![[{TARGET_ID}]]", True),
-    (f"<div><span>![[{TARGET_ID}]]</span></div><div><br></div>", True),
+    # An extra line is content: the reference is a link.
+    (f"<div><span>![[{TARGET_ID}]]</span></div><div><br></div>", False),
+    # A line break ending the reference's own line is the editor's placeholder.
+    (f"<div>![[{TARGET_ID}]]<br></div>", True),
     (f"<p>[[{TARGET_ID}]]</p>", True),
     (f"text<div>![[{TARGET_ID}]]</div>", False),
     (f'![[{TARGET_ID}]]<img src="data:image/png;base64,aA==">', False),
@@ -326,17 +345,20 @@ def test_view_rendering_never_exposes_remote_image_source_to_browser(
     assert re.search(r"<img[^>]+\ssrc=", rendered) is None
 
 
-def test_embed_reference_ignores_collapsed_source_state_and_has_no_inner_toggle(
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.parametrize("collapsed", [True, False])
+def test_a_note_that_is_only_a_reference_folds_as_its_source(
+    monkeypatch: pytest.MonkeyPatch, collapsed: bool,
 ) -> None:
+    # The note shows its source's collapse, whatever its own saved state: folded
+    # to the source's first line, or the whole source with its children.
     notes = {
-        HOST_ID: _Note(HOST_ID, None, None, TARGET_ID, False, f"<div>![[{TARGET_ID}]]</div>", ""),
+        HOST_ID: _Note(HOST_ID, None, None, TARGET_ID, not collapsed, f"<div>![[{TARGET_ID}]]</div>", ""),
         TARGET_ID: _Note(
             TARGET_ID,
             None,
             HOST_ID,
             None,
-            True,
+            collapsed,
             "<div>embedded first line</div><div>embedded hidden line</div>",
             "",
         ),
@@ -349,15 +371,38 @@ def test_embed_reference_ignores_collapsed_source_state_and_has_no_inner_toggle(
     )
 
     rendered = state.payloads[HOST_ID]["content"]
-    assert f'data-embed-note-id="{TARGET_ID}"' in rendered
-    assert "data-is-collapsed" not in rendered
-    assert "data-can-collapse" not in rendered
-    assert "note-embed-collapse-toggle" not in rendered
-    assert "Expand referenced note" not in rendered
-    assert "Collapse referenced note" not in rendered
+    assert state.payloads[HOST_ID]["flags"]["isCollapsed"] is collapsed
     assert "embedded first line" in rendered
-    assert "embedded hidden line" in rendered
-    assert "embedded child" in rendered
+    assert ("embedded hidden line" in rendered) is not collapsed
+    assert ("embedded child" in rendered) is not collapsed
+    assert ("note-reference-embed-first-line" in rendered) is collapsed
+
+
+@pytest.mark.parametrize("collapsed", [True, False])
+def test_an_embedded_child_shows_its_saved_collapse_with_an_arrow(
+    monkeypatch: pytest.MonkeyPatch, collapsed: bool,
+) -> None:
+    # Collapse is shared: a note inside an embed shows the state saved for it,
+    # with an arrow that toggles that same state.
+    notes = {
+        HOST_ID: _Note(HOST_ID, None, None, TARGET_ID, False, f"<div>![[{TARGET_ID}]]</div>", ""),
+        TARGET_ID: _Note(TARGET_ID, None, HOST_ID, None, False, "<div>embedded root</div>", ""),
+        CHILD_ID: _Note(CHILD_ID, TARGET_ID, None, None, collapsed, "<div>embedded child</div>", ""),
+        OTHER_ID: _Note(OTHER_ID, CHILD_ID, None, None, False, "<div>embedded grandchild</div>", ""),
+    }
+    state = _state_for(
+        monkeypatch=monkeypatch,
+        notes=notes,
+        children_by_parent={None: [HOST_ID, TARGET_ID], TARGET_ID: [CHILD_ID], CHILD_ID: [OTHER_ID]},
+    )
+
+    rendered = state.payloads[HOST_ID]["content"]
+    expanded, label = {True: ("false", "Expand note"), False: ("true", "Collapse note")}[collapsed]
+    assert (
+        f'<button type="button" class="note-embed-collapse-toggle" data-embed-collapse-note-id="{CHILD_ID}" '
+        f'aria-expanded="{expanded}" aria-label="{label}"></button>'
+    ) in rendered
+    assert ("embedded grandchild" in rendered) is not collapsed
 
 
 def test_collapsed_host_renders_note_embed_as_link_only(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -531,7 +576,7 @@ def test_link_reference_renders_cached_standalone_url_title(monkeypatch: pytest.
     connection = _bootstrap_cached_link_title(url=url, title="A Useful Video")
     try:
         notes = {
-            HOST_ID: _Note(HOST_ID, None, None, None, False, f"<div>[[{TARGET_ID}]]</div>", ""),
+            HOST_ID: _Note(HOST_ID, None, None, None, False, f"<div>See [[{TARGET_ID}]]</div>", ""),
             TARGET_ID: _Note(TARGET_ID, None, None, None, False, f"<div>{url}</div>", ""),
         }
         state = _state_for(
@@ -555,7 +600,7 @@ def test_link_reference_keeps_inline_url_preview_raw(monkeypatch: pytest.MonkeyP
     connection = _bootstrap_cached_link_title(url=url, title="A Useful Video")
     try:
         notes = {
-            HOST_ID: _Note(HOST_ID, None, None, None, False, f"<div>[[{TARGET_ID}]]</div>", ""),
+            HOST_ID: _Note(HOST_ID, None, None, None, False, f"<div>See [[{TARGET_ID}]]</div>", ""),
             TARGET_ID: _Note(TARGET_ID, None, None, None, False, f"<div>Watch {url}</div>", ""),
         }
         state = _state_for(
@@ -576,7 +621,7 @@ def test_link_reference_keeps_inline_url_preview_raw(monkeypatch: pytest.MonkeyP
 def test_link_mode_preview_strips_nested_reference_tokens(monkeypatch: pytest.MonkeyPatch) -> None:
     nested_ref_id = "69dc0ad7-6ad6-4be9-8ad8-7c30704e5c1a"
     notes = {
-        HOST_ID: _Note(HOST_ID, None, None, None, False, f"<div>[[{TARGET_ID}]]</div>", ""),
+        HOST_ID: _Note(HOST_ID, None, None, None, False, f"<div>See [[{TARGET_ID}]]</div>", ""),
         TARGET_ID: _Note(
             TARGET_ID,
             None,
@@ -730,7 +775,8 @@ def test_footnote_view_transform_leaves_edit_content_raw(monkeypatch, is_editing
 def test_collapsed_embed_preview_preserves_source_footnote_numbers(monkeypatch, content):
     notes = {
         HOST_ID: _Note(HOST_ID, None, None, TARGET_ID, True, f"![[{TARGET_ID}]]", ""),
-        TARGET_ID: _Note(TARGET_ID, None, HOST_ID, None, False, content, "{{@footnote}}"),
+        # The note folds as its source: the source is collapsed.
+        TARGET_ID: _Note(TARGET_ID, None, HOST_ID, None, True, content, "{{@footnote}}"),
     }
     state = _state_for(monkeypatch=monkeypatch, notes=notes, children_by_parent={None: list(notes)})
     preview = state.payloads[HOST_ID]["content"]

@@ -13,11 +13,9 @@ from loguru import logger
 from app.services.content_formatting import find_list_style
 from app.services.content_formatting import recording_link_title_fetches
 from app.services.content_formatting import replay_link_title_fetches
-from app.services.embedded_references import collapsed_preview_head
 from app.services.embedded_references import EmbedRenderContext
-from app.services.embedded_references import preview_html_has_image_file_embed
-from app.services.embedded_references import preview_html_has_media
-from app.services.embedded_references import preview_html_has_note_embed
+from app.services.embedded_references import is_content_collapsible
+from app.services.embedded_references import resolve_held_source
 from app.services.embedded_references import render_collapsed_note_content_with_embeds
 from app.services.embedded_references import render_note_content_with_embeds
 from app.services.file_registry import file_registry
@@ -811,22 +809,6 @@ def _sort_key_before_window(selection: _ViewSelection) -> str:
     return buckets[selection.root_before_window]["key"]
 
 
-def is_content_collapsible(*, content_html: str, context: EmbedRenderContext) -> bool:
-    """Whether a note's text is more than its collapsed first line (so it gets a
-    collapse arrow even without children); exports decide the same way."""
-    # One preview-head lookup serves all four collapsibility checks.
-    collapsed_preview_source, preview_has_more = collapsed_preview_head(content_html)
-    if collapsed_preview_source == "":
-        return False
-    if preview_html_has_media(collapsed_preview_source):
-        return True
-    if preview_html_has_image_file_embed(preview_source_html=collapsed_preview_source, context=context):
-        return True
-    if preview_html_has_note_embed(preview_source_html=collapsed_preview_source, context=context):
-        return True
-    return preview_has_more
-
-
 def _render_view_note(
     rec: NoteRecord, *, editing_note_id: str | None, is_search_redacted: bool,
     force_uncollapsed_ids: Set[str], filter_active: bool,
@@ -841,8 +823,17 @@ def _render_view_note(
     is_collapsible = has_children
     if content_is_collapsible:
         is_collapsible = True
+    # A note that is only a reference shows its source's collapse (it folds as
+    # the source does, wherever that is folded).
+    shown_state_id = resolve_held_source(
+        rec.id, has_note=embed_render_context.has_note,
+        content_of=lambda note_id: embed_render_context.get_note(note_id).content,
+    )
+    shown_collapsed = bool(rec.is_collapsed)
+    if shown_state_id != rec.id:
+        shown_collapsed = bool(embed_render_context.get_note(shown_state_id).is_collapsed)
     flags = {
-        "isCollapsed": bool(rec.is_collapsed),
+        "isCollapsed": shown_collapsed,
         "isEditing": bool(editing_note_id == rec.id),
         "hasChildren": has_children,
         "isCollapsible": is_collapsible,

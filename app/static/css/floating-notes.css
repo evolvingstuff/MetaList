@@ -42,3 +42,5 @@
     border: 0; background: linear-gradient(135deg, transparent 50%, #999 50%, #999 55%, transparent 55%, transparent 65%, #999 65%, #999 70%, transparent 70%);
     cursor: nwse-resize; touch-action: none;
 }
+/* Floating windows are read-only views: no embed collapse arrows. */
+.note-embed-collapse-toggle { display: none; }

@@ -164,7 +164,8 @@ test('animateNoteCollapseChanges collapses the real expanded note', async (t) =>
     assert.equal(note.classList.contains('is-collapse-transitioning'), true);
     assert.equal(note.style.height, '80px');
     assert.equal(note.style.boxSizing, 'border-box');
-    assert.equal(note.style.overflow, 'hidden');
+    // Clipping comes from the class (clip-path, sparing the arrow's gutter), never inline overflow.
+    assert.equal(note.style.overflow, undefined);
 
     env.runAnimationFrame();
 
@@ -176,7 +177,7 @@ test('animateNoteCollapseChanges collapses the real expanded note', async (t) =>
     assert.equal(note.classList.contains('is-collapse-transitioning'), false);
     assert.equal(note.style.height, '');
     assert.equal(note.style.boxSizing, '');
-    assert.equal(note.style.overflow, '');
+    assert.equal(note.style.overflow, undefined);
 
     env.runTimeout();
 });
@@ -202,7 +203,8 @@ test('animateNoteCollapseChanges expands the real collapsed note', async (t) => 
     assert.equal(note.classList.contains('is-collapse-transitioning'), true);
     assert.equal(note.style.height, '20px');
     assert.equal(note.style.boxSizing, 'border-box');
-    assert.equal(note.style.overflow, 'hidden');
+    // Clipping comes from the class (clip-path, sparing the arrow's gutter), never inline overflow.
+    assert.equal(note.style.overflow, undefined);
 
     env.runAnimationFrame();
 
@@ -213,7 +215,7 @@ test('animateNoteCollapseChanges expands the real collapsed note', async (t) => 
     assert.equal(note.classList.contains('is-collapse-transitioning'), false);
     assert.equal(note.style.height, '');
     assert.equal(note.style.boxSizing, '');
-    assert.equal(note.style.overflow, '');
+    assert.equal(note.style.overflow, undefined);
 
     env.runTimeout();
 });

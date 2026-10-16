@@ -18,22 +18,18 @@ Sources: docs/ui/content-formatting.md
 - **Editing vs viewing:**
   - When a note is being edited by the current client, the server sends **raw content** so all delimiters remain visible.
   - Otherwise the server sends **rendered view HTML**, which may consume delimiters and wrap regions in styling spans.
-  - Embedded note references use `![[UUID]]` and are rendered only in view mode.
+  - Note references (`[[UUID]]`) are rendered only in view mode.
 - `⌘ + U` removes formatting and inline imagery from the selected range, or from the entire active note when no text is selected. The editing context menu's **Remove Formatting** uses the same selection behavior. Range removal deletes intersecting inline images and splits scoped delimiters around the selection so the surrounding text keeps its styles. Fully selected headings and other presentational blocks become neutral blocks; their line boundaries and links remain intact, and unselected blocks retain their formatting. Leading/trailing whitespace inside a copied heading does not need to be selected. Partial block selections use plain-text spans to override inherited heading/block typography only on the selected words; surrounding text keeps its formatting and no extra line breaks are introduced. Those spans survive saving and follow the note-size preference. Whole-note removal strips rich-text HTML and all inline images while preserving links, and removes the visual and renderer meta tags offered by Add Style. It trims blank lines from both ends and reduces internal blank-line runs to at most one empty line (two line breaks); ordinary single line breaks remain unchanged. Visible line and paragraph breaks remain intact, including literal newlines previously rendered by `white-space: pre-wrap` formatting.
 - A delimiter remains when another surviving wrapped tag still uses the same bracket type and depth. Semantic tags such as `@todo`, credential tags, comments, and ordinary tags are preserved.
 - The actively edited note's context menu exposes the same selection-aware operation as **Remove Formatting**, directly beneath **Add Style**.
 
 ## Embedded Note References
-- Syntax: `![[UUID]]`
-- In **view mode**, the token renders as an embedded note block:
-  - It always renders as a block on its own visual line, even when written inline (for example `blah ![[UUID]] yada`).
-  - The referenced note's full child subtree is rendered inside the embed.
-  - Embedded rendering ignores the referenced note's collapsed/expanded state.
-  - A collapsed host shows the embed as a compact source-note link instead of rendering its contents.
-  - An expanded embed ends with a `↗ title` link to the source note; compact references use the same visual language, and the arrow tooltip reads `Link to reference source`.
+- Syntax: `[[UUID]]` (an older `![[UUID]]` to a note reads the same).
+- In **view mode**, a note whose only content is the reference is an embed: it shows the referenced note and its subtree in place, tinted, drawn as the main tree draws notes. With other content in the note, the reference is a link (`title ↗`) in its line.
+  - Each note in an embed shows its saved collapsed/expanded state, with its own arrow where it can collapse; the holder folds as its source (see `docs/ui/references.md`). Exports show the whole subtree.
   - Missing UUIDs render a "missing reference" marker.
   - Circular reference chains render a "circular reference" marker and stop at that point.
-- In **edit mode**, the token remains literal text (`![[UUID]]`).
+- In **edit mode**, the token remains literal text (`[[UUID]]`).
 - Full reference behavior and shortcut workflow: `docs/ui/references.md`.
 
 ## Links In View Mode

@@ -58,7 +58,8 @@ def test_every_agent_case_is_valid_reviewed_and_buildable(path):
 def test_the_migrated_suite_keeps_every_legacy_case():
     migrated = [json.loads(path.read_text()) for path in AGENT_CASES]
     sources = {case["provenance"]["migrated_from"] for case in migrated if "migrated_from" in case["provenance"]}
-    assert len(sources) == 168
+    # 168 migrated; the Show backlinks menu case went with the Backlinks panel.
+    assert len(sources) == 167
 
 
 def test_snapshot_keeps_the_tree_and_view():

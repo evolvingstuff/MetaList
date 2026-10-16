@@ -31,7 +31,6 @@ from app.services.agent.openai_inference import validate_openai_model
 _ALLOWED_CLIENT_PREFERENCES = {
     "pref.ai.tagging.vocabulary": {"existing", "new"},
     "pref.ai.tagging.focus": {"existing", "new", "both"},
-    "pref.show_backlinks": {"true", "false"},
     "pref.show_note_tags": {"true", "false"},
     "pref.show_tab_ui": {"true", "false"},
     "pref.show_search_results_count": {"true", "false"},
@@ -92,6 +91,8 @@ _OBSOLETE_CLIENT_PREFERENCES = frozenset(
         "pref.search_suggestion_falloff",
         "pref.show_note_timestamps",
         "pref.show_rhs_panel",
+        # The Backlinks panel shown while editing; replaced by ↖ / Referenced by.
+        "pref.show_backlinks",
         "pref.ai.retrieval.max_note_characters",
         "pref.ai.retrieval.max_page_characters",
         "pref.ai.retrieval.max_notes_per_page",

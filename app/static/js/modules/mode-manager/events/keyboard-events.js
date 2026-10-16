@@ -105,7 +105,6 @@ import { promptForImageFileInsertMode } from '../services/image-file-insert-choi
 import { attachPickedFileToCurrentNote, insertReferenceTokenIntoActiveEditor } from '../services/file-reference-service.js';
 import { shouldCreateTopNoteForFileDrop } from '../services/file-drop-policy-service.js';
 import { shouldDeleteSelectedNoteFromKeyboard } from '../services/note-delete-shortcut-policy-service.js';
-import { syncBacklinksPanelPlacement } from '../services/backlinks-panel-service.js';
 import {
     hideSearchContextsOverlay,
     initializeSearchContextsHover,
@@ -203,7 +202,6 @@ export function initKeyboardEvents() {
 
 function handleSearchContextsViewportChange() {
     updateSearchContextsOverlayPlacement();
-    syncBacklinksPanelPlacement();
 }
 
 function markSystemClipboardAsTrusted() {
@@ -1389,7 +1387,7 @@ function handleInsertEmbedReferenceShortcut(event) {
         }
         void CommandGate.run('keyboard.paste_reference_new_top_note', async () => {
             const newNoteId = requireCreatedNoteId(await createNoteAtTop(), 'pasteReferenceNewTopNote');
-            insertReferenceTokenIntoActiveEditor(`![[${referenceNoteId}]]`);
+            insertReferenceTokenIntoActiveEditor(`[[${referenceNoteId}]]`);
             await actionSaveNote(newNoteId);
             ModeContext.resetEditSessionState({ startedCollapsed: false });
         });
@@ -3501,7 +3499,6 @@ export function updateSearchContextsList() {
         updateSearchContextsOverlayPlacement();
     }
 
-    syncBacklinksPanelPlacement();
     updateReferenceSourceIndicator();
 }
 
@@ -3891,13 +3888,6 @@ async function runReferenceSearchInActiveTab(referenceQuery, context) {
             normalizedReferenceQuery.length,
         );
     }
-}
-
-export async function openReferenceInCurrentTab(referenceNoteId) {
-    if (typeof referenceNoteId !== 'string' || referenceNoteId.length === 0) {
-        throw new Error('openReferenceInCurrentTab requires referenceNoteId');
-    }
-    await runReferenceSearchInActiveTab(referenceNoteId, 'reference.link_open_current_tab');
 }
 
 async function moveTabContext(tabId, hoveredTabId) {

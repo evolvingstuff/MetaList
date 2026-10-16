@@ -1,6 +1,6 @@
 """Pasting a copied note's reference where the note itself would paste.
 
-The reference is a new note holding ![[UUID]]: below the target (or filling it
+The reference is a new note holding [[UUID]] (an embed: its only content): below the target (or filling it
 when it is empty with no children), or as its first child, exactly as
 CmdPasteSibling and CmdPasteChild place a copy.
 """
@@ -22,7 +22,7 @@ def reference_snapshot(reference_note_id: str) -> List[dict]:
     return [{
         "id": reference_note_id,
         "parent_id": None,
-        "content": f"<div>![[{reference_note_id}]]</div>",
+        "content": f"<div>[[{reference_note_id}]]</div>",
         "tags": "",
         "proposed_tags": "",
     }]

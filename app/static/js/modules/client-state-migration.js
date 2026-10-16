@@ -3,7 +3,6 @@ const LEGACY_AUTH_OWNER_KEY = 'auth_owner';
 const LEGACY_COMMAND_PALETTE_USAGE_KEY = 'metalist.command_palette.usage.v1';
 const LEGACY_PREFERENCE_PREFIX = 'metalist.command_palette.pref.';
 const LEGACY_CLIENT_PREFERENCE_KEYS = [
-    'pref.show_backlinks',
     'pref.show_note_tags',
     'pref.show_tab_ui',
     'pref.theme',
@@ -11,6 +10,7 @@ const LEGACY_CLIENT_PREFERENCE_KEYS = [
 const LEGACY_OBSOLETE_CLIENT_PREFERENCE_KEYS = [
     'pref.show_rhs_panel',
     'pref.show_perf_overlay',
+    'pref.show_backlinks',
 ];
 
 
