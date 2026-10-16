@@ -8,6 +8,7 @@ from app.db.notes_sql import update_links_preserving_updated_at as db_update_lin
 from app.db.session import begin_writer
 from app.services.search_index import extract_tags_for_search
 from app.services.search_index import search_index
+from app.services.note_store import NotePosition
 from app.services.store import store
 from app.services.tag_term_matching import tag_term_matches_prefix
 from app.services.sync import generate_new_uuid
@@ -134,7 +135,10 @@ def _apply_root_order_updates(updates: List[SimpleNamespace]) -> None:
                 next_id=update.next_id,
             )
 
-    store.bulk_update_metadata(updates, rebuild=True)
+    store.move_notes([
+        NotePosition(note_id=update.id, parent_id=update.parent_id, prev_id=update.prev_id, next_id=update.next_id)
+        for update in updates
+    ])
     for update in updates:
         _assert_neighbors(update.id, update.parent_id, update.prev_id, update.next_id)
 

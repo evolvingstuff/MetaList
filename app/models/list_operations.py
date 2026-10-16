@@ -5,6 +5,7 @@ from app.db.notes_sql import fetch_children_ordered, fetch_note, update_links_pr
 from app.models.database import SafeSession
 from .enums import MovePosition
 from ..services.note_store import store as note_store
+from ..services.note_store import NotePosition
 
 
 class ListOperations:
@@ -203,12 +204,12 @@ def _move_note_with_store(db: SafeSession, note_id: str, new_parent_id: Optional
     else:
         updates = _persist_order(db, old_parent, old_order)
         updates.extend(_persist_order(db, new_parent_id, new_order))
-    note_store.bulk_update_metadata(updates, rebuild=True)
+    note_store.move_notes(updates)
     note_store.debug_validate_links(note_id, sibling_id, new_parent_id, old_parent)
 
 
-def _persist_order(db: SafeSession, parent_id: Optional[str], order: list[str]) -> list[SimpleNamespace]:
-    updates: list[SimpleNamespace] = []
+def _persist_order(db: SafeSession, parent_id: Optional[str], order: list[str]) -> list[NotePosition]:
+    updates: list[NotePosition] = []
 
     for index, current_id in enumerate(order):
         if index > 0:
@@ -239,15 +240,7 @@ def _persist_order(db: SafeSession, parent_id: Optional[str], order: list[str]) 
 
         update_links_preserving_updated_at(db.connection(), current_id, **kwargs)
 
-        updates.append(
-            SimpleNamespace(
-                id=current_id,
-                parent_id=parent_id,
-                prev_id=prev_id,
-                next_id=next_id,
-                updated_at=record.updated_at,
-            )
-        )
+        updates.append(NotePosition(note_id=current_id, parent_id=parent_id, prev_id=prev_id, next_id=next_id))
 
     return updates
 

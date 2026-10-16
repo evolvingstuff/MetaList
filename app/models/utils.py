@@ -16,6 +16,7 @@ from ..services.content_cache import (
     cache_note_text,
 )
 from ..services.note_store import store as note_store
+from ..services.note_store import NotePosition
 from app.presentation.render.note_renderer import render_read_only_mode
 from app.services.markdown_rendering import strip_latex_source_attributes
 from app.db.notes_sql import (
@@ -202,30 +203,12 @@ def _deserialize_note_recursive(db: SafeSession, note_data: Dict[str, Any], new_
                 if note_store.loaded:
                     new_child_record = note_store.get_note(new_child_id)
                     prev_record = note_store.get_note(previous_child_id)
-                    note_store.update_metadata_from_db(
-                        SimpleNamespace(
-                            id=new_child_record.id,
-                            parent_id=new_child_record.parent_id,
-                            prev_id=previous_child_id,
-                            next_id=new_child_record.next_id,
-                            created_at=new_child_record.created_at,
-                            updated_at=new_child_record.updated_at,
-                            is_collapsed=new_child_record.is_collapsed,
-                        ),
-                        rebuild=True,
-                    )
-                    note_store.update_metadata_from_db(
-                        SimpleNamespace(
-                            id=prev_record.id,
-                            parent_id=prev_record.parent_id,
-                            prev_id=prev_record.prev_id,
-                            next_id=new_child_id,
-                            created_at=prev_record.created_at,
-                            updated_at=prev_record.updated_at,
-                            is_collapsed=prev_record.is_collapsed,
-                        ),
-                        rebuild=True,
-                    )
+                    note_store.move_notes([
+                        NotePosition(note_id=new_child_record.id, parent_id=new_child_record.parent_id,
+                                     prev_id=previous_child_id, next_id=new_child_record.next_id),
+                        NotePosition(note_id=prev_record.id, parent_id=prev_record.parent_id,
+                                     prev_id=prev_record.prev_id, next_id=new_child_id),
+                    ])
             
             previous_child_id = new_child_id
     
@@ -336,30 +319,12 @@ def _copy_note_recursive(
             if note_store.loaded:
                 new_child_record = note_store.get_note(new_child_id)
                 prev_record = note_store.get_note(previous_child_id)
-                note_store.update_metadata_from_db(
-                    SimpleNamespace(
-                        id=new_child_record.id,
-                        parent_id=new_child_record.parent_id,
-                        prev_id=previous_child_id,
-                        next_id=new_child_record.next_id,
-                        created_at=new_child_record.created_at,
-                        updated_at=new_child_record.updated_at,
-                        is_collapsed=new_child_record.is_collapsed,
-                    ),
-                    rebuild=True,
-                )
-                note_store.update_metadata_from_db(
-                    SimpleNamespace(
-                        id=prev_record.id,
-                        parent_id=prev_record.parent_id,
-                        prev_id=prev_record.prev_id,
-                        next_id=new_child_id,
-                        created_at=prev_record.created_at,
-                        updated_at=prev_record.updated_at,
-                        is_collapsed=prev_record.is_collapsed,
-                    ),
-                    rebuild=True,
-                )
+                note_store.move_notes([
+                    NotePosition(note_id=new_child_record.id, parent_id=new_child_record.parent_id,
+                                 prev_id=previous_child_id, next_id=new_child_record.next_id),
+                    NotePosition(note_id=prev_record.id, parent_id=prev_record.parent_id,
+                                 prev_id=prev_record.prev_id, next_id=new_child_id),
+                ])
 
         previous_child_id = new_child_id
 

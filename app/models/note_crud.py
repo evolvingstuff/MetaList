@@ -22,6 +22,7 @@ from ..services.content_cache import (
 )
 from app.utils.text_utils import strip_html
 from ..services.note_store import store as note_store
+from ..services.note_store import NotePosition
 from app.security.note_html import sanitize_note_html
 
 
@@ -108,18 +109,9 @@ class NoteCRUD:
             )
             if next_id:
                 sibling_record = note_store.get_note(next_id)
-                note_store.update_metadata_from_db(
-                    SimpleNamespace(
-                        id=next_id,
-                        parent_id=sibling_record.parent_id,
-                        prev_id=note_id,
-                        next_id=sibling_record.next_id,
-                        created_at=sibling_record.created_at,
-                        updated_at=sibling_record.updated_at,
-                        is_collapsed=sibling_record.is_collapsed,
-                    ),
-                    rebuild=True,
-                )
+                note_store.move_notes([NotePosition(
+                    note_id=next_id, parent_id=sibling_record.parent_id, prev_id=note_id, next_id=sibling_record.next_id,
+                )])
 
     @staticmethod
     def get_note(db: SafeSession, note_id: str) -> SimpleNamespace:
@@ -180,19 +172,9 @@ class NoteCRUD:
         cache_note_text(note_id, strip_html(sanitized_content))
 
         if note_store.loaded:
-            note_store.update_note_from_db(
-                SimpleNamespace(
-                    id=record.id,
-                    parent_id=record.parent_id,
-                    prev_id=record.prev_id,
-                    next_id=record.next_id,
-                    is_collapsed=record.is_collapsed,
-                    created_at=record.created_at,
-                    updated_at=timestamp,
-                ),
-                sanitized_content,
-                record.tags,
-                record.proposed_tags,
+            note_store.update_note_content(
+                note_id=record.id, plaintext=sanitized_content, tags=record.tags,
+                proposed_tags=record.proposed_tags, updated_at=timestamp,
             )
 
     @staticmethod

@@ -170,6 +170,17 @@ def _collect_matcher_generated_tags(ontology) -> FrozenSet[str]:
 
 
 @dataclass(frozen=True)
+class NotePosition:
+    """Where a note sits in the tree: its parent and siblings (None where it has
+    none: a top note has no parent, the first sibling no previous one)."""
+
+    note_id: str
+    parent_id: Optional[str]
+    prev_id: Optional[str]
+    next_id: Optional[str]
+
+
+@dataclass(frozen=True)
 class NoteRecord:
     id: str
     parent_id: Optional[str]
@@ -577,7 +588,7 @@ class NoteStore:
                 parent_id=note.parent_id,
                 prev_id=note.prev_id,
                 next_id=note.next_id,
-                is_collapsed=bool(getattr(note, "is_collapsed", False)),
+                is_collapsed=bool(note.is_collapsed),
                 content=plaintext,
                 tags=tags,
                 proposed_tags=proposed_tags,
@@ -585,8 +596,8 @@ class NoteStore:
                 non_meta_tag_terms=non_meta_tag_terms,
                 proposed_tag_terms=proposed_tag_terms,
                 proposed_non_meta_tag_terms=proposed_non_meta_tag_terms,
-                created_at=getattr(note, "created_at", None),
-                updated_at=getattr(note, "updated_at", None),
+                created_at=note.created_at,
+                updated_at=note.updated_at,
             )
 
             processed += 1
@@ -753,7 +764,7 @@ class NoteStore:
                 parent_id=note.parent_id,
                 prev_id=note.prev_id,
                 next_id=note.next_id,
-                is_collapsed=bool(getattr(note, "is_collapsed", False)),
+                is_collapsed=bool(note.is_collapsed),
                 content=plaintext,
                 tags=tags,
                 proposed_tags=proposed_tags,
@@ -761,8 +772,8 @@ class NoteStore:
                 non_meta_tag_terms=non_meta_tag_terms,
                 proposed_tag_terms=proposed_tag_terms,
                 proposed_non_meta_tag_terms=proposed_non_meta_tag_terms,
-                created_at=getattr(note, "created_at", None),
-                updated_at=getattr(note, "updated_at", None),
+                created_at=note.created_at,
+                updated_at=note.updated_at,
             )
             self._note_map[note.id] = record
             self._backlink_index.upsert(record.id, record.content, record.tags)
@@ -817,7 +828,7 @@ class NoteStore:
                     parent_id=note.parent_id,
                     prev_id=note.prev_id,
                     next_id=note.next_id,
-                    is_collapsed=bool(getattr(note, "is_collapsed", False)),
+                    is_collapsed=bool(note.is_collapsed),
                     content=plaintext,
                     tags=tags,
                     proposed_tags=proposed_tags,
@@ -825,8 +836,8 @@ class NoteStore:
                     non_meta_tag_terms=non_meta_tag_terms,
                     proposed_tag_terms=proposed_tag_terms,
                     proposed_non_meta_tag_terms=proposed_non_meta_tag_terms,
-                    created_at=getattr(note, "created_at", None),
-                    updated_at=getattr(note, "updated_at", None),
+                    created_at=note.created_at,
+                    updated_at=note.updated_at,
                 )
                 self._note_map[note.id] = record
                 self._backlink_index.upsert(record.id, record.content, record.tags)
@@ -851,13 +862,16 @@ class NoteStore:
             )
         self._publish_tag_updates(tag_updates)
 
-    def update_note_from_db(
+    def update_note_content(
         self,
-        note: SimpleNamespace,
+        *,
+        note_id: str,
         plaintext: str,
         tags: str,
         proposed_tags: str,
+        updated_at: Optional[datetime],
     ) -> None:
+        """A saved note's text and tags, and when it was saved."""
         if not self._loaded:
             return
         updated: NoteRecord | None = None
@@ -865,9 +879,9 @@ class NoteStore:
         effective_tag_terms_by_id: Dict[str, FrozenSet[str]] = {}
         with self._lock:
             self._revision += 1
-            current = self._note_map.get(note.id)
-            if not current:
+            if note_id not in self._note_map:
                 return
+            current = self._note_map[note_id]
             tag_sources_changed = current.tags != tags
             if current.proposed_tags != proposed_tags:
                 tag_sources_changed = True
@@ -878,12 +892,8 @@ class NoteStore:
             proposed_tag_terms, proposed_non_meta_tag_terms = _parse_tag_string_terms(
                 proposed_tags
             )
-            updated = NoteRecord(
-                id=note.id,
-                parent_id=current.parent_id,
-                prev_id=current.prev_id,
-                next_id=current.next_id,
-                is_collapsed=current.is_collapsed,
+            updated = replace(
+                current,
                 content=plaintext,
                 tags=tags,
                 proposed_tags=proposed_tags,
@@ -891,10 +901,9 @@ class NoteStore:
                 non_meta_tag_terms=non_meta_tag_terms,
                 proposed_tag_terms=proposed_tag_terms,
                 proposed_non_meta_tag_terms=proposed_non_meta_tag_terms,
-                created_at=getattr(note, "created_at", current.created_at),
-                updated_at=getattr(note, "updated_at", current.updated_at),
+                updated_at=updated_at,
             )
-            self._note_map[note.id] = updated
+            self._note_map[note_id] = updated
 
             if current.content != plaintext or current.tags != tags:
                 old_targets = self._backlink_index.get_target_ids(updated.id)
@@ -904,7 +913,7 @@ class NoteStore:
 
             if tag_sources_changed:
                 effective_tag_terms_by_id = self._recompute_effective_tag_terms_locked(
-                    {note.id}, subtree_root_ids=())
+                    {note_id}, subtree_root_ids=())
             else:
                 effective_tag_terms = self._raw_tag_terms_locked(updated.id)
 
@@ -935,88 +944,71 @@ class NoteStore:
         if tag_sources_changed:
             self._publish_tag_updates(effective_tag_terms_by_id)
 
-    def update_metadata_from_db(self, note: SimpleNamespace, *, rebuild: bool) -> None:
+    def move_note(self, position: NotePosition) -> None:
+        """One note's new place, relinked in place (no full ordering rebuild)."""
         if not self._loaded:
             return
-        if rebuild:
-            self.bulk_update_metadata([note], rebuild=True)
-            return
+        note_id = position.note_id
         with self._lock:
             self._revision += 1
-            record = self._note_map[note.id]
+            record = self._note_map[note_id]
             self._remove_link(record.parent_id, record.id)
-            updated = replace(record, parent_id=note.parent_id,
-                              created_at=getattr(note, 'created_at', record.created_at),
-                              updated_at=getattr(note, 'updated_at', record.updated_at))
-            self._note_map[note.id] = updated
-            next_id = note.next_id
-            if next_id == note.id:
+            self._note_map[note_id] = replace(record, parent_id=position.parent_id)
+            next_id = position.next_id
+            if next_id == note_id:
                 # Moving after an adjacent predecessor is an unchanged placement.
                 next_id = record.next_id
-            self._insert_link(note.parent_id, note.id, note.prev_id, next_id)
+            self._insert_link(position.parent_id, note_id, position.prev_id, next_id)
             tag_updates = {}
-            if record.parent_id != note.parent_id:
+            if record.parent_id != position.parent_id:
                 former_parents = set()
                 if record.parent_id is not None:
                     former_parents.add(record.parent_id)
                 tag_updates = self._recompute_effective_tag_terms_locked(
-                    {note.id}, subtree_root_ids=former_parents)
+                    {note_id}, subtree_root_ids=former_parents)
         self._publish_tag_updates(tag_updates)
 
-    def bulk_update_metadata(self, notes: Iterable[SimpleNamespace], *, rebuild: bool) -> None:
-        """Apply pointer metadata for multiple notes without repeated rebuilds."""
+    def move_notes(self, positions: Iterable[NotePosition]) -> None:
+        """Several notes' new places at once, with one ordering rebuild."""
         if not self._loaded:
             return
-
-        payload = list(notes)
+        payload = list(positions)
         if not payload:
             return
-
         tag_updates: Dict[str, FrozenSet[str]] = {}
         with self._lock:
             self._revision += 1
             replacements = {}
             moved_ids: Set[str] = set()
             former_parents: Set[str] = set()
-
-            for note in payload:
-                record = self._note_map[note.id]
-
-                updated = NoteRecord(
-                    id=record.id,
-                    parent_id=getattr(note, "parent_id", record.parent_id),
-                    prev_id=getattr(note, "prev_id", record.prev_id),
-                    next_id=getattr(note, "next_id", record.next_id),
-                    is_collapsed=record.is_collapsed,
-                    content=record.content,
-                    tags=record.tags,
-                    proposed_tags=record.proposed_tags,
-                    tag_terms=record.tag_terms,
-                    non_meta_tag_terms=record.non_meta_tag_terms,
-                    proposed_tag_terms=record.proposed_tag_terms,
-                    proposed_non_meta_tag_terms=record.proposed_non_meta_tag_terms,
-                    created_at=record.created_at,
-                    updated_at=getattr(note, "updated_at", record.updated_at),
+            for position in payload:
+                record = self._note_map[position.note_id]
+                replacements[position.note_id] = replace(
+                    record, parent_id=position.parent_id, prev_id=position.prev_id, next_id=position.next_id,
                 )
-
-                replacements[note.id] = updated
-                if record.parent_id != updated.parent_id:
-                    moved_ids.add(note.id)
+                if record.parent_id != position.parent_id:
+                    moved_ids.add(position.note_id)
                     if record.parent_id is not None:
                         former_parents.add(record.parent_id)
             next_records = dict(self._note_map)
             next_records.update(replacements)
             if moved_ids:
                 hierarchy_depths({note_id: record.parent_id for note_id, record in next_records.items()})
-            next_ordering = NoteOrdering.from_records(next_records)
+            self._ordering = NoteOrdering.from_records(next_records)
             self._note_map = next_records
-            self._ordering = next_ordering
-
             if moved_ids:
                 tag_updates = self._recompute_effective_tag_terms_locked(
                     moved_ids, subtree_root_ids=former_parents)
-
         self._publish_tag_updates(tag_updates)
+
+    def set_updated_ats(self, updated_ats: Mapping[str, Optional[datetime]]) -> None:
+        """Notes' updated times (Reset Updated to Created), and nothing else."""
+        if not self._loaded:
+            return
+        with self._lock:
+            self._revision += 1
+            for note_id, updated_at in updated_ats.items():
+                self._note_map[note_id] = replace(self._note_map[note_id], updated_at=updated_at)
 
     def remove_note(self, note_id: str) -> None:
         if not self._loaded:

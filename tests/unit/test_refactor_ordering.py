@@ -9,6 +9,7 @@ from app.usecases.move import apply_move
 import pytest
 
 from app.services import note_store as module
+from app.services.note_store import NotePosition
 from app.services.note_store import NoteStore
 from app.services.hierarchy import HierarchyError
 from app.services.search_index import SearchIndex
@@ -26,8 +27,8 @@ def store(monkeypatch):
     store = NoteStore()
     store._timing_enabled = False
     store.load_from_db(None, prefetched_rows=[
-        dict(id='a', parent_id=None, prev_id=None, next_id='b', is_collapsed=False),
-        dict(id='b', parent_id=None, prev_id='a', next_id=None, is_collapsed=False),
+        dict(id='a', parent_id=None, prev_id=None, next_id='b', is_collapsed=False, created_at=None, updated_at=None),
+        dict(id='b', parent_id=None, prev_id='a', next_id=None, is_collapsed=False, created_at=None, updated_at=None),
     ])
     return store
 
@@ -41,9 +42,9 @@ def test_record_pointers_are_authoritative_without_a_duplicate_link_map(store):
 
 def test_insert_collapse_and_metadata_refresh_preserve_order_and_old_snapshots(store):
     before = store.get_note('a')
-    store.add_note_from_db(SimpleNamespace(id='new',parent_id=None,prev_id=None,next_id='a',is_collapsed=False), 'new', '', '')
+    store.add_note_from_db(SimpleNamespace(id='new',parent_id=None,prev_id=None,next_id='a',is_collapsed=False, created_at=None, updated_at=None), 'new', '', '')
     store.set_collapsed('b', True)
-    store.bulk_update_metadata([SimpleNamespace(id='a', updated_at=None)], rebuild=True)
+    store.set_updated_ats({'a': None})
     assert store.get_children(None) == ['new','a','b']
     assert before.prev_id is None
     assert store.get_note('a').prev_id == 'new'
@@ -54,8 +55,8 @@ def test_insert_collapse_and_metadata_refresh_preserve_order_and_old_snapshots(s
 
 def test_corrupt_sibling_cycle_is_rejected_instead_of_reordered(store):
     original = store.snapshot()
-    rows = [dict(id='a',parent_id=None,prev_id='b',next_id='b',is_collapsed=False),
-            dict(id='b',parent_id=None,prev_id='a',next_id='a',is_collapsed=False)]
+    rows = [dict(id='a',parent_id=None,prev_id='b',next_id='b',is_collapsed=False, created_at=None, updated_at=None),
+            dict(id='b',parent_id=None,prev_id='a',next_id='a',is_collapsed=False, created_at=None, updated_at=None)]
     with pytest.raises(RuntimeError, match='[Oo]rder|[Ll]ink|[Cc]ycle'):
         store.load_from_db(None, prefetched_rows=rows)
     assert store.snapshot() == original
@@ -65,17 +66,19 @@ def test_corrupt_sibling_cycle_is_rejected_instead_of_reordered(store):
 def test_bulk_metadata_validates_hierarchy_before_publishing(store):
     original = store.snapshot()
     with pytest.raises(HierarchyError, match='[Cc]ycle'):
-        store.bulk_update_metadata([
-            SimpleNamespace(id='a', parent_id='b', prev_id=None, next_id=None),
-            SimpleNamespace(id='b', parent_id='a', prev_id=None, next_id=None),
-        ], rebuild=True)
+        store.move_notes([
+            NotePosition(note_id='a', parent_id='b', prev_id=None, next_id=None),
+            NotePosition(note_id='b', parent_id='a', prev_id=None, next_id=None),
+        ])
     assert store.snapshot() == original
     assert store.get_children(None) == ['a', 'b']
 
 
 def test_bulk_metadata_rejects_missing_records(store):
     with pytest.raises(KeyError, match='missing'):
-        store.bulk_update_metadata([SimpleNamespace(id='missing', updated_at=None)], rebuild=True)
+        store.move_notes([NotePosition(note_id='missing', parent_id=None, prev_id=None, next_id=None)])
+    with pytest.raises(KeyError, match='missing'):
+        store.set_updated_ats({'missing': None})
 
 
 @pytest.fixture

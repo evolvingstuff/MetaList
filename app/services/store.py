@@ -6,6 +6,7 @@ from typing import Iterable, Mapping, Optional, List
 
 from app.services.note_store import store as _note_store
 from app.services.note_store import NoteRecord as NodeRecord
+from app.services.note_store import NotePosition
 
 
 class _AdapterStore:
@@ -82,8 +83,9 @@ class _AdapterStore:
         *,
         updated_at: datetime,
     ) -> None:
-        row = SimpleNamespace(id=note_id, updated_at=updated_at)
-        _note_store.update_note_from_db(row, new_content, tags, proposed_tags)
+        _note_store.update_note_content(
+            note_id=note_id, plaintext=new_content, tags=tags, proposed_tags=proposed_tags, updated_at=updated_at,
+        )
 
     def update_tag_sources(
         self,
@@ -141,16 +143,13 @@ class _AdapterStore:
             assert previous.parent_id == new_parent_id
             next_id = previous.next_id
 
-        row = SimpleNamespace(
-            id=note_id,
-            parent_id=new_parent_id,
-            prev_id=prev_id,
-            next_id=next_id,
-        )
-        _note_store.update_metadata_from_db(row, rebuild=False)
+        _note_store.move_note(NotePosition(note_id=note_id, parent_id=new_parent_id, prev_id=prev_id, next_id=next_id))
 
-    def bulk_update_metadata(self, notes: Iterable[SimpleNamespace], *, rebuild: bool) -> None:
-        _note_store.bulk_update_metadata(notes, rebuild=rebuild)
+    def move_notes(self, positions: Iterable[NotePosition]) -> None:
+        _note_store.move_notes(positions)
+
+    def set_updated_ats(self, updated_ats: Mapping[str, Optional[datetime]]) -> None:
+        _note_store.set_updated_ats(updated_ats)
 
     def set_collapsed(self, note_id: str, collapsed: bool) -> None:
         _note_store.set_collapsed(note_id, bool(collapsed))

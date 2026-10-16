@@ -41,10 +41,9 @@ class _FakeStore:
             return []
         return list(self.root_ids)
 
-    def bulk_update_metadata(self, notes, *, rebuild: bool) -> None:
-        assert rebuild is True
-        payload = list(notes)
-        self.root_ids = [note.id for note in payload]
+    def move_notes(self, positions) -> None:
+        payload = list(positions)
+        self.root_ids = [position.note_id for position in payload]
 
 
 def _install_root_reorder_fakes(
