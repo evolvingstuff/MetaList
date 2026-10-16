@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime, timezone
 from types import SimpleNamespace
 from typing import Dict, List, Optional
 
@@ -9,21 +7,7 @@ import app.services.snapshot as snapshot_module
 import pytest
 
 from app.services.snapshot import build_view_state
-
-
-@dataclass
-class _Note:
-    id: str
-    parent_id: Optional[str]
-    prev_id: Optional[str]
-    next_id: Optional[str]
-    is_collapsed: bool
-    content: str
-    tags: str
-    created_at: datetime = datetime(2026, 1, 1, tzinfo=timezone.utc)
-    updated_at: datetime = datetime(2026, 1, 2, tzinfo=timezone.utc)
-    proposed_tags: str = ""
-    proposed_tag_terms: frozenset[str] = frozenset()
+from tests.unit.snapshot_note_fixture import SnapshotTestNote as _Note
 
 
 class _FakeNoteStore:
