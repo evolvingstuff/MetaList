@@ -6,8 +6,9 @@ from typing import Literal
 
 
 HELP_TOPICS = {
-    'notes': ('Notes and editing', 'Hierarchy, editing, moving, copying, undo and keyboard/mouse controls.'),
-    'search': ('Search and views', 'Tag/text queries, OR, exclusions, matching, sorting and untagged view.'),
+    'notes': ('Notes and editing', 'Hierarchy, editing, moving, copying and pasting, undo, keyboard shortcuts, tag bar typing and tag suggestions, and command palette utilities. Mouse actions belong to mouse.'),
+    'mouse': ('Mouse controls', 'What clicking, double-clicking, dragging, right-clicking (context menus), hovering and scrolling do on notes, arrows, references, tabs and other on-screen controls.'),
+    'search': ('Search and views', 'Tag/text queries, OR, exclusions, matching, sorting, untagged view, and typing in the search bar with its suggestions.'),
     'tags': ('Tags and ontology', 'Manual tag assignment, inheritance, autocomplete, ontology and tag relationship rules. AI proposal workflows belong to ai.'),
     'formatting': ('Formatting and attachments', 'Markdown, LaTeX, Mermaid, formatting scopes and files.'),
     'references': ('References and floating notes', 'Links, transclusions, backlinks, floating windows and Excalidraw diagrams.'),
