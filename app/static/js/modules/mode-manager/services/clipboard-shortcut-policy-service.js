@@ -13,37 +13,6 @@ export function clipboardHtmlContainsNoteContent(clipboardHtml) {
     return clipboardHtml.includes(NOTE_CLIPBOARD_HTML_MARKER);
 }
 
-export function shouldAllowBrowserPasteForShortcut({
-    clipboardMode,
-    noteClipboardRequiresBrowserValidation,
-    isEditing,
-    currentNoteId,
-}) {
-    assertClipboardMode(clipboardMode);
-    if (typeof noteClipboardRequiresBrowserValidation !== 'boolean') {
-        throw new Error('noteClipboardRequiresBrowserValidation must be a boolean');
-    }
-    if (typeof isEditing !== 'boolean') {
-        throw new Error('isEditing must be a boolean');
-    }
-
-    const hasCurrentNoteId = typeof currentNoteId === 'string' && currentNoteId.length > 0;
-
-    if (clipboardMode === 'system') {
-        return true;
-    }
-    if (noteClipboardRequiresBrowserValidation) {
-        return true;
-    }
-    if (!isEditing) {
-        return true;
-    }
-    if (!hasCurrentNoteId) {
-        return true;
-    }
-    return false;
-}
-
 export function shouldCreateTopNoteForPaste({
     isEditing,
     currentNoteId,

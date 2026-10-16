@@ -32,14 +32,14 @@ Sources: docs/ui/controls.md
 | `⌘ + S` | Split note at selection/caret into sibling notes; selected segment becomes its own note |
 | `⌘ + U` | Remove formatting and inline imagery from the selected range or current note |
 | `⌘ + X` | Cut selection (default), or cut whole note when no selection |
-| `⌘ + V` | Paste note as sibling (when note clipboard active; scrolls new note into view). If the selected note has no visible content and no children, paste replaces it. |
-| `⇧ + ⌘ + V` | Paste note as child (when note clipboard active; scrolls new note into view) |
+| `⌘ + V` | Paste note as sibling (when the clipboard holds a copied note; scrolls new note into view). If the selected note has no visible content and no children, paste replaces it. |
+| `⇧ + ⌘ + V` | Paste note as child (when the clipboard holds a copied note; scrolls new note into view) |
 | `⇧ + ⌘ + R` | Paste a reference to the copied note as a child, like `⇧ + ⌘ + V` |
 | `⌘ + Backspace/Delete` | Delete the selected note |
 | `⌘ + Z` | Undo text/tag edits locally, or undo the latest saved mutation when the active editor has no local edit history |
 | `⇧ + ⌘ + Z` or `⌘ + Y` | Redo text/tag edits locally, or redo the latest saved mutation when the active editor has no local edit history |
 
-- If note clipboard conditions are **not** met and edit mode is active, `⌘ + V` uses browser clipboard paste and runs external HTML sanitization before insertion.
+- What is pasted decides, never the last ⌘C: anything else (another app's text, dictated words) pastes as text, sanitizing external HTML.
 - Dictated text pasted into a note can end with tags: everything after the phrase "start tags" (set in `Dictation Settings`) is added to the note's tags. The full rules are in the dictation help topic.
 - When note paste replaces an empty target, the target keeps its search-context tags and merges in copied root tags with case-insensitive dedupe.
 - A saved whole-note paste resets the local editor history baseline so the next Undo reaches application history.

@@ -83,7 +83,6 @@ import { sanitizeAndInsertExternalPaste } from '../services/html-paste-sanitizer
 import { cleanTrackingInText } from '../../url-tracking-cleaner.js';
 import {
     resolveClipboardTrackingAfterPasteEvent,
-    shouldAllowBrowserPasteForShortcut,
     shouldCreateTopNoteForPaste,
 } from '../services/clipboard-shortcut-policy-service.js';
 import {
@@ -521,15 +520,9 @@ function handleKeyDown(event) {
 	                handleIndentNoteShortcut(event);
 	            }
 	            break;
-        case 'v':
-            if (event.metaKey || event.ctrlKey) {
-                if (event.shiftKey) {
-                    handlePasteNoteChildShortcut(event);
-                } else {
-                    handlePasteNoteSiblingShortcut(event);
-                }
-            }
-            break;
+        // ⌘V / ⇧⌘V: the browser pastes, and handlePasteEvent decides from what
+        // was pasted. Only MetaList's note marker in the pasted HTML pastes the
+        // copied note; another app's ⌘V (a dictation app typing words) is text.
         case 'z':
             if (event.metaKey || event.ctrlKey) {
                 if (event.shiftKey) {
@@ -1532,91 +1525,6 @@ async function handleCutNoteShortcut(event) {
     markNoteClipboardAsTrusted();
 }
 
-function handlePasteNoteSiblingShortcut(event) {
-    if (!event) {
-        throw new Error('handlePasteNoteSiblingShortcut called without an event object');
-    }
-
-    Logger.logDebug('Paste sibling shortcut triggered', {
-        isEditing: ModeContext.isEditing,
-        currentNoteId: ModeContext.currentNoteId,
-        clipboardMode: ModeContext.clipboardMode,
-        noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
-    }, Logger.LogCategory.EVENT);
-
-    const shouldAllowBrowserPaste = shouldAllowBrowserPasteForShortcut({
-        clipboardMode: ModeContext.clipboardMode,
-        noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
-        isEditing: ModeContext.isEditing,
-        currentNoteId: ModeContext.currentNoteId,
-    });
-    if (shouldAllowBrowserPaste) {
-        if (ModeContext.clipboardMode === 'system') {
-            Logger.logDebug('System clipboard mode - allowing default paste behavior', {}, Logger.LogCategory.EVENT);
-            return; // NO preventDefault - let browser handle text paste
-        }
-        if (moduleState.noteClipboardRequiresBrowserValidation) {
-            Logger.logDebug('Note clipboard requires browser validation - allowing paste event inspection', {}, Logger.LogCategory.EVENT);
-            return;
-        }
-        Logger.logNoop('Note paste shortcut conditions not met', {
-            isEditing: ModeContext.isEditing,
-            currentNoteId: ModeContext.currentNoteId,
-            clipboardMode: ModeContext.clipboardMode,
-            noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
-        });
-        return;
-    }
-
-    // YES preventDefault - prevent browser, do note paste
-    event.preventDefault();
-    void CommandGate.run('keyboard.paste_sibling', async () => {
-        await actionPasteNoteSibling();
-    });
-}
-
-function handlePasteNoteChildShortcut(event) {
-    if (!event) {
-        throw new Error('handlePasteNoteChildShortcut called without an event object');
-    }
-
-    Logger.logDebug('Paste child shortcut triggered', {
-        isEditing: ModeContext.isEditing,
-        currentNoteId: ModeContext.currentNoteId,
-        clipboardMode: ModeContext.clipboardMode,
-        noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
-    }, Logger.LogCategory.EVENT);
-
-    const shouldAllowBrowserPaste = shouldAllowBrowserPasteForShortcut({
-        clipboardMode: ModeContext.clipboardMode,
-        noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
-        isEditing: ModeContext.isEditing,
-        currentNoteId: ModeContext.currentNoteId,
-    });
-    if (shouldAllowBrowserPaste) {
-        if (ModeContext.clipboardMode === 'system') {
-            Logger.logDebug('System clipboard mode - allowing default paste behavior', {}, Logger.LogCategory.EVENT);
-            return; // NO preventDefault - let browser handle text paste
-        }
-        if (moduleState.noteClipboardRequiresBrowserValidation) {
-            Logger.logDebug('Note clipboard requires browser validation - allowing paste event inspection', {}, Logger.LogCategory.EVENT);
-            return;
-        }
-        Logger.logNoop('Note paste child shortcut conditions not met', {
-            isEditing: ModeContext.isEditing,
-            currentNoteId: ModeContext.currentNoteId,
-            clipboardMode: ModeContext.clipboardMode,
-            noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
-        });
-        return;
-    }
-    
-    // YES preventDefault - prevent browser, do note paste
-    event.preventDefault();
-    void CommandGate.run('keyboard.paste_child', async () => {
-        await actionPasteNoteChild();
-    });
-}
 
 function handleHelpModalShortcut(event) {
     if (!event) {
@@ -3090,8 +2998,8 @@ function handlePasteEvent(event) {
         if (hasActiveNote) {
             event.preventDefault();
             
-			// Determine if shift is held for child paste
-			if (event.shiftKey) {
+			// ⇧⌘V (its keystroke asked for a plain paste) pastes the note as a child.
+			if (isPlainPaste) {
 				void CommandGate.run('paste_event.child', async () => {
 					await actionPasteNoteChild();
 				});
