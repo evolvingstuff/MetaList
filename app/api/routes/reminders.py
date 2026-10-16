@@ -92,7 +92,7 @@ def _captured_result(capture: CapturedExceptionContext, result: object) -> objec
     return result
 
 
-@router.get("")
+@router.get("")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def list_reminders() -> dict[str, object]:
     capture = CapturedExceptionContext(ResourceNotFound, InputRejected, boundary='app/api/routes/reminders.py:list_reminders:capture')
     reminders: list[dict[str, object]] = []

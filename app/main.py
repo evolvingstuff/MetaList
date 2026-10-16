@@ -606,7 +606,7 @@ def _open_catalog_namespace(*, namespace: str) -> NamespaceOpenResult:
     )
 
 
-@app.get("/namespace-deleted/open")
+@app.get("/namespace-deleted/open")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 async def namespace_deleted_open_page(request: Request):
     job_id = request.query_params.get("job")
     namespace = request.query_params.get("namespace")
@@ -681,7 +681,7 @@ async def namespace_renamed_page(request: Request):
     )
 
 
-@app.get("/namespace-renamed/open")
+@app.get("/namespace-renamed/open")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 async def namespace_renamed_open_page(request: Request):
     job_id = request.query_params.get("job")
     if not isinstance(job_id, str) or job_id.strip() == "":

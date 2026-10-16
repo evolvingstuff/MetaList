@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 
-// Export and Print (docs/ui/controls.md): an exported file starts fully
-// expanded and its arrows collapse a note to its first line, hiding its
-// children, as in MetaList; printing shows no arrows. Print opens a title step
+// Export and Print (docs/ui/controls.md): an exported file starts collapsed
+// and expanded as MetaList shows its notes, embeds too, and its arrows collapse
+// a note to its first line, hiding its children, as in MetaList; printing
+// shows every note, without arrows. Print opens a title step
 // (a smart default, selected), then the browser's print dialog on the same
 // document, light and without arrows, carrying the title. Passwords are
 // hidden unless the user includes them in that dialog (an export asks only
@@ -29,8 +30,8 @@ async function reloadApp(page) {
   await idle(page);
 }
 
-// A trip with two days, a password and a username; collapsed in MetaList,
-// which an export ignores.
+// A trip with two days, a password and a username; collapsed in MetaList, as
+// an exported file starts.
 async function createTrip(page) {
   return page.evaluate(async () => {
     const {NotesAPI} = await import('/static/js/modules/api-client.js');
@@ -77,21 +78,20 @@ async function exportedFileCase(browser, page, ids) {
 
     const start = await state();
     assert.deepEqual({...start, text: start.text.length}, {
-      day1: true, day2: true, text: 1, expanded: 'true', toggleShown: true, leafHasToggle: false,
-    }, 'starts fully expanded, though collapsed in MetaList; a short note without children has no arrow');
-    assert(start.text[0].includes('Second line'), 'the whole text shows');
-
-    await file.click(`#note-${ids.trip} > .note-collapse-toggle`);
-    const collapsed = await state();
-    assert.equal(collapsed.expanded, 'false');
-    assert.equal(collapsed.day1, false, 'collapsing hides the children');
-    assert.equal(collapsed.day2, false);
-    assert.equal(collapsed.text.length, 1);
-    assert(collapsed.text[0].includes('Kyoto trip') && !collapsed.text[0].includes('Second line'), `only the first line: ${collapsed.text[0]}`);
+      day1: false, day2: false, text: 1, expanded: 'false', toggleShown: true, leafHasToggle: false,
+    }, 'starts collapsed, as in MetaList; a short note without children has no arrow');
+    assert(start.text[0].includes('Kyoto trip') && !start.text[0].includes('Second line'), `only the first line: ${start.text[0]}`);
 
     await file.click(`#note-${ids.trip} > .note-collapse-toggle`);
     const expanded = await state();
-    assert.deepEqual([expanded.expanded, expanded.day1, expanded.day2], ['true', true, true], 'clicking again expands it');
+    assert.deepEqual([expanded.expanded, expanded.day1, expanded.day2], ['true', true, true], 'clicking expands it');
+    assert.equal(expanded.text.length, 1);
+    assert(expanded.text[0].includes('Second line'), 'the whole text shows');
+
+    await file.click(`#note-${ids.trip} > .note-collapse-toggle`);
+    const collapsed = await state();
+    assert.deepEqual([collapsed.expanded, collapsed.day1, collapsed.day2], ['false', false, false], 'clicking again collapses it');
+    await file.click(`#note-${ids.trip} > .note-collapse-toggle`);
 
     // Collapsing or expanding moves nothing sideways, though the page stops or
     // starts scrolling (the scrollbar's place is kept, as in MetaList). Only
@@ -280,6 +280,8 @@ async function copyCase(browser, includedFile, hiddenFile) {
           writeText: text => { window.copied.push(text); return Promise.resolve(); },
         }});
       });
+      // The trip starts collapsed, as in MetaList: open it to reach its credentials.
+      await file.click('#notes-container > .note > .note-collapse-toggle');
       await file.click(selector);
       await pause(50);
       return file.evaluate(selector => ({
@@ -699,11 +701,83 @@ async function imageBoundsCase(browser, page) {
   assert.deepEqual(table, Object.fromEntries(IMAGE_PLACES.map(name => [name, [0, 0]])), 'image overflow past its box (in MetaList, in the export)');
 }
 
+// A holder showing a source whose collapsed child has a child of its own: in
+// the file, the embedded child starts collapsed and its arrow folds it.
+async function exportedEmbedCase(browser, page) {
+  const ids = await page.evaluate(async () => {
+    const {NotesAPI} = await import('/static/js/modules/api-client.js');
+    const source = await NotesAPI.createNote(null, '');
+    await NotesAPI.saveNote(source.id, '<p>Packing list</p>', '');
+    const kid = await NotesAPI.createChild(source.id, '');
+    await NotesAPI.saveNote(kid.id, '<p>Clothes</p>', '');
+    const grandkid = await NotesAPI.createChild(kid.id, '');
+    await NotesAPI.saveNote(grandkid.id, '<p>Rain jacket</p>', '');
+    await NotesAPI.setCollapsedBulk([kid.id], true);
+    const holder = await NotesAPI.createNote(null, '');
+    await NotesAPI.saveNote(holder.id, `<p>[[${source.id}]]</p>`, '');
+    return {source: source.id, kid: kid.id, grandkid: grandkid.id, holder: holder.id};
+  });
+  await reloadApp(page);
+  const htmlText = await page.evaluate(async id => {
+    const {NotesAPI} = await import('/static/js/modules/api-client.js');
+    const {blob} = await NotesAPI.exportCurrentViewAsHtml('light', {noteId: id, includeCredentials: false, title: ''});
+    return blob.text();
+  }, ids.holder);
+  const file = await browser.newPage();
+  try {
+    await file.setContent(htmlText, {waitUntil: 'load'});
+    // Drawn as in MetaList: the holder takes the embed tint, and its embed has no panel of its own.
+    const colours = await file.evaluate(id => {
+      const tint = document.createElement('div');
+      tint.style.background = 'var(--embed-tint-1)';
+      document.body.appendChild(tint);
+      const expected = getComputedStyle(tint).backgroundColor;
+      tint.remove();
+      const holder = document.getElementById(`note-${id}`);
+      const block = holder.querySelector(':scope > .note-content .note-reference-block');
+      const style = getComputedStyle(holder);
+      return {
+        holder: style.backgroundColor === expected, panel: getComputedStyle(block).backgroundColor,
+        // Paper keeps them: browsers drop backgrounds when printing unless asked not to.
+        onPaper: [style.printColorAdjust, style.webkitPrintColorAdjust].includes('exact'),
+      };
+    }, ids.holder);
+    assert.deepEqual(colours, {holder: true, panel: 'rgba(0, 0, 0, 0)', onPaper: true},
+      'the holder is tinted, its embed has no panel, and paper keeps the tint');
+    const state = () => file.evaluate(ids => {
+      const kid = document.querySelector(`#note-${ids.holder} [data-embed-note-id="${ids.kid}"]`);
+      const toggle = kid.querySelector(':scope > .note-embed-body > .note-embed-collapse-toggle');
+      const shownText = [...document.querySelectorAll(`#note-${ids.holder} .note-embed-content`)]
+        .filter(content => content.getBoundingClientRect().height > 0).map(content => content.textContent.trim());
+      return {
+        expanded: toggle.getAttribute('aria-expanded'),
+        arrowShown: toggle.getBoundingClientRect().width > 0,
+        clothes: shownText.filter(text => text === 'Clothes').length,
+        rainJacket: shownText.includes('Rain jacket'),
+      };
+    }, ids);
+    assert.deepEqual(await state(), {expanded: 'false', arrowShown: true, clothes: 1, rainJacket: false},
+      'the embedded note starts collapsed, as in MetaList: its first line, no children');
+    await file.click(`#note-${ids.holder} [data-embed-note-id="${ids.kid}"] > .note-embed-body > .note-embed-collapse-toggle`);
+    assert.deepEqual(await state(), {expanded: 'true', arrowShown: true, clothes: 1, rainJacket: true}, 'its arrow expands it');
+    await file.click(`#note-${ids.holder} [data-embed-note-id="${ids.kid}"] > .note-embed-body > .note-embed-collapse-toggle`);
+    assert.deepEqual(await state(), {expanded: 'false', arrowShown: true, clothes: 1, rainJacket: false}, 'and collapses it again');
+  } finally {
+    await file.close();
+  }
+  await page.evaluate(async ids => {
+    const {NotesAPI} = await import('/static/js/modules/api-client.js');
+    await NotesAPI.deleteNote(ids.holder);
+    await NotesAPI.deleteNote(ids.source);
+  }, ids);
+}
+
 export async function checkExportAndPrint(browser, page) {
   await reloadApp(page);
   const ids = await createTrip(page);
   await reloadApp(page);
   await exportedFileCase(browser, page, ids);
+  await exportedEmbedCase(browser, page);
   await exportPasswordsCase(browser, page, ids);
   // Stands in for the browser's print dialog, in the print frame only.
   const printDialog = await page.evaluateOnNewDocument(() => {

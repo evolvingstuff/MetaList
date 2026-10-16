@@ -29,8 +29,10 @@ as an HTML export.
 Export as HTML exports the current view for viewing/sharing, not a full restorable
 database backup. It and Print (note menu, view menu, palette `Print view`) show
 the view as it is shown (search, sort, Untagged; notes a search leaves out are
-absent), fully expanded, after a dialog setting the title (it heads the file and
-names it; Suggest with AI can propose one); a print is light, without arrows.
+absent), after a dialog setting the title (it heads the file and names it;
+Suggest with AI can propose one). An exported file starts collapsed and expanded
+as MetaList shows the notes (embeds too), its arrows working; a print is light,
+fully expanded, without arrows, keeping MetaList's colours.
 When @password or @username notes would show, an Include Unredacted Passwords
 (Usernames, or Usernames and Passwords) checkbox appears (unchecked: shown as
 ••••••••; checked: readable, and the file or print is not encrypted).

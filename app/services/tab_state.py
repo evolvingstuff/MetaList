@@ -368,10 +368,7 @@ class TabStateStore:
             if require_success:
                 raise RuntimeError("tab-state decryption requires an active DEK")
             return
-        decrypt_fn = getattr(service, "decrypt_from_storage", None)
-        if not callable(decrypt_fn):
-            raise TypeError("encryption service must expose decrypt_from_storage")
-        plaintext = decrypt_fn(
+        plaintext = service.decrypt_from_storage(
             self._encrypted_state_json,
             self._encrypted_state_nonce,
             self._encrypted_state_tag,
@@ -402,10 +399,7 @@ class TabStateStore:
                 explicit_service=encryption_service,
             )
             if service is not None:
-                encrypt_fn = getattr(service, "encrypt_for_storage", None)
-                if not callable(encrypt_fn):
-                    raise TypeError("encryption service must expose encrypt_for_storage")
-                stored_json, nonce, tag = encrypt_fn(snapshot_json)
+                stored_json, nonce, tag = service.encrypt_for_storage(snapshot_json)
             elif is_encryption_required():
                 raise RuntimeError("tab-state persistence requires an active DEK")
 
@@ -430,8 +424,7 @@ class TabStateStore:
 
     def _resolve_encryption_service(self, *, token: str, explicit_service: object | None):
         if explicit_service is not None:
-            dek = getattr(explicit_service, "dek", None)
-            if dek is None:
+            if explicit_service.dek is None:
                 raise RuntimeError("explicit encryption service must have an active DEK")
             return explicit_service
         if token:

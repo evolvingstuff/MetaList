@@ -173,7 +173,7 @@ def test_deep_chain_hydrates_views_copies_exports_and_serializes(monkeypatch, de
     assert len(state.structure) == 256
     assert len(copy_note.snapshot_subtree_preorder('0')) == 256
     assert 'level-255' in json.dumps(copy_note._build_serialized_tree('0'))
-    assert 'level-255' in html_export.build_notes_export_document(search=None, sort_mode='normal', is_untagged_view=False, theme='light', token='fixture-token', root_note_id=None, purpose='download', title='', include_credentials=False)
+    assert 'level-255' in html_export.build_notes_export_document(search=None, sort_mode='normal', is_untagged_view=False, theme='light', token='fixture-token', root_note_id=None, purpose='download', title='', include_credentials=False, editing_note_id=None)
     parents = {row['id']: row['parent_id'] or '' for row in rows}  # shockharness: ignore[DEF003] reason="a root row has no parent"
     children = {row['id']: tuple(store.get_children(row['id'])) for row in rows}
     payload = serialize_evidence_result_trees(root_ids=('0',), evidence_payloads_by_id={'255': {'note_id':'255','content_text':'deep evidence'}}, parent_id_by_id=parents, child_ids_by_id=children)
@@ -206,7 +206,7 @@ def test_protected_middleware_does_not_open_database_connections(monkeypatch):
     monkeypatch.setattr(SafeSession, '_create_connection', lambda: pytest.fail('Ordinary auth opened SQLite'))
     app = FastAPI()
     app.add_middleware(auth_middleware.AuthMiddleware)
-    @app.get('/api2/fixture')
+    @app.get('/api2/fixture')  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
     def endpoint():
         return {'ok': True}
     client = TestClient(app)
@@ -271,7 +271,7 @@ def test_cycles_fail_in_view_copy_and_export(monkeypatch, deep_store):
     with pytest.raises(RuntimeError, match='[Cc]ycle'):
         copy_note.snapshot_subtree_preorder('0')
     with pytest.raises(RuntimeError, match='[Cc]ycle'):
-        html_export._render_exported_note(note_id='0', allowed_note_ids=None, embed_render_context=None, collapsible=True, redact_credentials=True)
+        html_export._render_exported_note(note_id='0', allowed_note_ids=None, embed_render_context=None, collapsible=True, open_note_ids=frozenset(), redact_credentials=True)
 
 
 def test_sort_aggregates_follow_edits_moves_deletes_and_hydration(monkeypatch, deep_store):

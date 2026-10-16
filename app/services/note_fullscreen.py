@@ -28,6 +28,7 @@ def build_note_fullscreen_markup(note_id: str) -> str:
         get_children=note_store.get_children,
         has_file=file_registry.has_file,
         get_file=_get_file_record,
+        static_collapse_arrows=False,
     )
     return _render_fullscreen_note(
         note_id=note_id,

@@ -48,9 +48,9 @@ class _AdapterStore:
             parent_id=parent_id,
             prev_id=prev_id,
             next_id=next_id,
-            is_collapsed=bool(getattr(note, 'is_collapsed', False)),
-            created_at=getattr(note, 'created_at', None),
-            updated_at=getattr(note, 'updated_at', None),
+            is_collapsed=note.is_collapsed,
+            created_at=note.created_at,
+            updated_at=note.updated_at,
         )
         assert isinstance(note.content, str)
         assert isinstance(note.tags, str)

@@ -97,6 +97,7 @@ def render_ai_chat_markdown_to_html(
         get_children=lambda _parent_id: [],
         has_file=lambda _file_id: False,
         get_file=_reject_file_reference,
+        static_collapse_arrows=False,
     )
     body_html, cited_note_ids = _replace_note_citations(
         rendered_html=rendered_html,

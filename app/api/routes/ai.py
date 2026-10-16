@@ -753,7 +753,7 @@ def get_ai_debug_snapshot(
     )
 
 
-@router.get("/history")
+@router.get("/history")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def get_ai_history(
     response: Response,
     token: Annotated[str, Depends(require_request_auth_token)],
@@ -1034,7 +1034,7 @@ def manage_bulk_proposals(payload: BulkManageRequest, token: Annotated[str, Depe
     return StreamingResponse(execute(), media_type="application/json")
 
 
-@router.get("/proposals/settings")
+@router.get("/proposals/settings")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def get_tagging_settings(token: Annotated[str, Depends(require_request_auth_token)]):
     preferences = load_client_preferences(token=token)
     return {"policy": preferences.get(TAGGING_POLICY_KEY, "")}

@@ -14,7 +14,7 @@
 ## Embedded Note References
 - Syntax: `[[UUID]]` (an older `![[UUID]]` to a note reads the same).
 - In **view mode**, a note whose only content is the reference is an embed: it shows the referenced note and its subtree in place, tinted, drawn as the main tree draws notes. With other content in the note, the reference is a link (`title ↗`) in its line.
-  - Each note in an embed shows its saved collapsed/expanded state, with its own arrow where it can collapse; the holder folds as its source (see `docs/ui/references.md`). Exports show the whole subtree.
+  - Each note in an embed shows its saved collapsed/expanded state, with its own arrow where it can collapse; the holder folds as its source (see `docs/ui/references.md`). An exported file starts the same way, with working arrows; a print shows the whole subtree.
   - Missing UUIDs render a "missing reference" marker.
   - Circular reference chains render a "circular reference" marker and stop at that point.
 - In **edit mode**, the token remains literal text (`[[UUID]]`).

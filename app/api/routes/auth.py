@@ -699,7 +699,7 @@ def create_passwordless_session(
     return SessionResponse(message="Session established")
 
 
-@router.get("/status")
+@router.get("/status")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def auth_status(
     db: Annotated[SafeSession, Depends(get_db)],
     token: Annotated[Optional[str], Depends(_verify_token)],
@@ -800,7 +800,7 @@ def open_login_namespace_route(payload: LoginNamespaceOpenRequest):
     )
 
 
-@router.get("/namespaces")
+@router.get("/namespaces")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def namespace_catalog(token: Annotated[str, Depends(_require_auth)]):
     return build_namespace_catalog(
         environ=os.environ,
@@ -1032,7 +1032,7 @@ def rename_active_namespace(
     }
 
 
-@router.get("/namespaces/delete-jobs/{job_id}")
+@router.get("/namespaces/delete-jobs/{job_id}")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def namespace_delete_job_status(
     job_id: str,
 ):
@@ -1048,7 +1048,7 @@ def namespace_delete_job_status(
     return job_record
 
 
-@router.get("/namespaces/rename-jobs/{job_id}")
+@router.get("/namespaces/rename-jobs/{job_id}")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def namespace_rename_job_status(job_id: str):
     job_record_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/api/routes/auth.py:namespace_rename_job_status:job_record_capture')
     job_record: dict[str, object] | None = None
@@ -1191,6 +1191,6 @@ def put_session_timeout_settings(
     )
 
 
-@router.get("/sessions")
+@router.get("/sessions")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def sessions(token: Annotated[str, Depends(_require_auth)]):
     return {"sessions": token_service.list_active_sessions()}

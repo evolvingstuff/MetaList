@@ -16,12 +16,14 @@ from app.services.embedded_references import collect_active_reference_tokens
 from app.services.embedded_references import extract_collapsed_preview_source_html
 from app.services.embedded_references import render_collapsed_note_content_with_embeds
 from app.services.embedded_references import render_note_content_with_embeds
+from app.services.embedded_references import resolve_held_source
 from app.services.embedded_references import sole_reference_token
 from app.services.markdown_rendering import strip_latex_source_attributes
 from app.services.file_registry import file_registry
 from app.services.file_storage import download_file, find_file_preview
 from app.services.file_storage import get_file_reference_record
 from app.services.note_store import store as note_store
+from app.services.reference_presentation import decorate_note_references
 from app.services.snapshot import is_content_collapsible
 from app.services.snapshot import resolve_view_scope_membership
 from app.services.content_formatting import extract_note_text_for_agent
@@ -38,6 +40,10 @@ html {
 
 body.html-export-body {
     max-width: 800px;
+    /* Paper keeps the colours too (embed tints, code, tags): browsers drop
+       backgrounds when printing unless the page asks to keep them. */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
 }
 
 .html-export-body #notes-container {
@@ -94,6 +100,20 @@ html[data-theme="dark"] .html-export-body .note:not(.editing):not(.locked):hover
     display: -webkit-box !important;
 }
 
+/* The notes in an embed fold the same way, each with its own arrow. */
+.html-export-body .note-embed-body > .note-embed-content-collapsed {
+    display: none !important;
+}
+
+.html-export-body .note-embed-collapsed > .note-embed-body > .note-embed-content:not(.note-embed-content-collapsed),
+.html-export-body .note-embed-collapsed > .note-embed-body > .note-embed-children {
+    display: none !important;
+}
+
+.html-export-body .note-embed-collapsed > .note-embed-body > .note-embed-content-collapsed {
+    display: block !important;
+}
+
 /* Passwords an export or print includes are there to be read; hidden ones
    are not there to copy. */
 .html-export-body .meta-credential-password .meta-credential-value:not([data-redacted]) {
@@ -135,7 +155,8 @@ html[data-theme="dark"] .html-export-body .note:not(.editing):not(.locked):hover
         margin-left: 0;
     }
 
-    .html-export-body .note-collapse-toggle {
+    .html-export-body .note-collapse-toggle,
+    .html-export-body .note-embed-collapse-toggle {
         display: none !important;
     }
 
@@ -174,14 +195,17 @@ def _indent_block(text: str, spaces: int) -> str:
 
 
 EXPORT_PURPOSES = frozenset({"download", "print"})
+# A download's arrow, by whether its note starts collapsed: aria-expanded and label.
+_ARROW_STATES = {True: ("false", "Expand note"), False: ("true", "Collapse note")}
 _DEFAULT_TITLE = "MetaList"
 _MAX_TITLE_CHARACTERS = 120
 _EMBED_TOKEN = re.compile(r"!?\[\[[^\]]+\]\]")
 
-# Exported files (downloads) work like MetaList where a file can: a click on a
-# note's arrow shows only its first line and hides its children, and a click on
-# a username, an included password or a copyable value copies it. Printing keeps
-# what is shown and drops the arrows.
+# Exported files (downloads) work like MetaList where a file can: they start
+# collapsed and expanded as MetaList shows the notes, a click on a note's arrow
+# (in an embed too) shows only its first line and hides its children, and a
+# click on a username, an included password or a copyable value copies it.
+# Printing shows everything and drops the arrows.
 _EXPORT_SCRIPT = r"""
 function flashCopied(element, className) {
   element.classList.remove(className);
@@ -231,12 +255,20 @@ function copyableText(element) {
   return lines.map(function (line) { return line.slice(Math.min(indent, line.match(/^[ \t]*/)[0].length)); }).join('\n');
 }
 
+function showFolded(toggle, collapsed) {
+  toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  toggle.setAttribute('aria-label', collapsed ? 'Expand note' : 'Collapse note');
+}
+
 document.addEventListener('click', function (event) {
   var toggle = event.target.closest('.note-collapse-toggle');
   if (toggle) {
-    var collapsed = toggle.parentElement.classList.toggle('collapsed');
-    toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-    toggle.setAttribute('aria-label', collapsed ? 'Expand note' : 'Collapse note');
+    showFolded(toggle, toggle.parentElement.classList.toggle('collapsed'));
+    return;
+  }
+  var embedToggle = event.target.closest('.note-embed-collapse-toggle');
+  if (embedToggle) {
+    showFolded(embedToggle, embedToggle.closest('.note-embed-node').classList.toggle('note-embed-collapsed'));
     return;
   }
   var credential = event.target.closest('.meta-credential-value');
@@ -269,12 +301,14 @@ def build_notes_export_document(
     purpose: str,
     title: str,
     include_credentials: bool,
+    editing_note_id: str | None,
 ) -> str:
     """A note with its children, or the view as it is shown (its search, sort order
-    and kind), every note expanded, with the user's title as its heading and page
-    title (blank: no heading, and "MetaList"). A download has collapse arrows; a
-    print has none. Passwords and usernames show only when the user chose to
-    include them."""
+    and kind), with the user's title as its heading and page title (blank: no
+    heading, and "MetaList"). A download has collapse arrows and starts collapsed
+    and expanded as MetaList shows it (the note being edited open, with its
+    ancestors); a print has no arrows and shows every note expanded. Passwords
+    and usernames show only when the user chose to include them."""
     if purpose not in EXPORT_PURPOSES:
         raise ValueError(f"Unknown export purpose: {purpose}")
     if not isinstance(title, str):
@@ -291,6 +325,8 @@ def build_notes_export_document(
         raise TypeError("token must be a non-empty string")
     if root_note_id is not None and (not isinstance(root_note_id, str) or root_note_id == ""):
         raise TypeError("root_note_id must be a non-empty string or null")
+    if editing_note_id is not None and (not isinstance(editing_note_id, str) or editing_note_id == ""):
+        raise TypeError("editing_note_id must be a non-empty string or null")
 
     normalized_theme = theme.strip().lower()
     if normalized_theme not in _VALID_EXPORT_THEMES:
@@ -305,6 +341,7 @@ def build_notes_export_document(
         allowed_note_ids=allowed_note_ids,
         token=token,
         collapsible=is_download,
+        open_note_ids=_open_while_editing(editing_note_id),
         redact_credentials=not include_credentials,
     )
     stylesheet = _load_export_stylesheet()
@@ -473,8 +510,24 @@ def exported_credential_counts(
     return CredentialCounts(passwords=len(passwords), usernames=len(usernames))
 
 
+def _open_while_editing(editing_note_id: str | None) -> frozenset[str]:
+    """The notes MetaList shows open whatever their saved state: the note being
+    edited and its ancestors."""
+    if editing_note_id is None:
+        return frozenset()
+    open_ids = [editing_note_id]
+    current = note_store.get_note(editing_note_id)
+    while current.parent_id is not None:
+        if current.parent_id in open_ids:
+            raise RuntimeError("Cycle in editing note ancestry")
+        open_ids.append(current.parent_id)
+        current = note_store.get_note(current.parent_id)
+    return frozenset(open_ids)
+
+
 def _render_exported_notes_markup(
-    *, root_ids: list[str], allowed_note_ids: set[str] | None, token: str, collapsible: bool, redact_credentials: bool,
+    *, root_ids: list[str], allowed_note_ids: set[str] | None, token: str, collapsible: bool,
+    open_note_ids: frozenset[str], redact_credentials: bool,
 ) -> str:
     if not isinstance(token, str) or token == "":
         raise TypeError("token must be a non-empty string")
@@ -521,6 +574,7 @@ def _render_exported_notes_markup(
         get_children=note_store.get_children,
         has_file=file_registry.has_file,
         get_file=_get_file_record,
+        static_collapse_arrows=collapsible,
     )
 
     parts: list[str] = []
@@ -531,6 +585,7 @@ def _render_exported_notes_markup(
                 allowed_note_ids=allowed_note_ids,
                 embed_render_context=embed_render_context,
                 collapsible=collapsible,
+                open_note_ids=open_note_ids,
                 redact_credentials=redact_credentials,
             )
         )
@@ -547,7 +602,7 @@ def _build_file_data_url(*, mime_type: str, content_bytes: bytes) -> str:
     return f"data:{mime_type};base64,{encoded}"
 
 
-def _render_exported_note(*, note_id, allowed_note_ids, embed_render_context, collapsible, redact_credentials):
+def _render_exported_note(*, note_id, allowed_note_ids, embed_render_context, collapsible, open_note_ids, redact_credentials):
     pending = [(note_id, False)]
     visiting = set()
     rendered = {}
@@ -562,7 +617,7 @@ def _render_exported_note(*, note_id, allowed_note_ids, embed_render_context, co
             pending.extend((child, False) for child in reversed(children))
             continue
         visiting.remove(current)
-        rendered[current] = _render_exported_note_node(note_id=current, allowed_note_ids=allowed_note_ids, embed_render_context=embed_render_context, children_html_parts=[rendered.pop(child) for child in children], collapsible=collapsible, redact_credentials=redact_credentials)
+        rendered[current] = _render_exported_note_node(note_id=current, allowed_note_ids=allowed_note_ids, embed_render_context=embed_render_context, children_html_parts=[rendered.pop(child) for child in children], collapsible=collapsible, open_note_ids=open_note_ids, redact_credentials=redact_credentials)
     return rendered[note_id]
 
 
@@ -573,6 +628,7 @@ def _render_exported_note_node(
     allowed_note_ids: set[str] | None,
     embed_render_context: EmbedRenderContext,
     collapsible: bool,
+    open_note_ids: frozenset[str],
     redact_credentials: bool,
 ) -> str:
     record = note_store.get_note(note_id)
@@ -583,14 +639,14 @@ def _render_exported_note_node(
     if not isinstance(record_tags, str):
         raise TypeError("note tags must be a string")
 
-    rendered_content = strip_latex_source_attributes(render_note_content_with_embeds(
+    rendered_content = _as_drawn_in_metalist(note_id=note_id, record=record, context=embed_render_context, rendered_content=strip_latex_source_attributes(render_note_content_with_embeds(
         note_id=note_id,
         content_html=record_content,
         tags=record_tags,
         context=embed_render_context,
         static_export=True,
         redact_credentials=redact_credentials,
-    ))
+    )))
 
     classes = ["note"]
     list_style = find_list_style(record_tags)
@@ -624,17 +680,28 @@ def _render_exported_note_node(
             "  </div>",
         ]
     else:
-        collapsed_content = strip_latex_source_attributes(render_collapsed_note_content_with_embeds(
+        collapsed_content = _as_drawn_in_metalist(note_id=note_id, record=record, context=embed_render_context, rendered_content=strip_latex_source_attributes(render_collapsed_note_content_with_embeds(
             note_id=note_id,
             content_html=record_content,
             tags=record_tags,
             context=embed_render_context,
             static_export=True,
             redact_credentials=redact_credentials,
-        ))
+        )))
+        # It starts as MetaList shows it: a note that is only a reference folds as its source.
+        shown_state_id = resolve_held_source(
+            note_id, has_note=embed_render_context.has_note,
+            content_of=lambda held_id: embed_render_context.get_note(held_id).content,
+        )
+        starts_collapsed = (
+            note_id not in open_note_ids and bool(embed_render_context.get_note(shown_state_id).is_collapsed)
+        )
+        expanded_attr, toggle_label = _ARROW_STATES[starts_collapsed]
+        if starts_collapsed:
+            class_attr = f"{class_attr} collapsed"
         lines = [
             f'<article class="{class_attr}" id="note-{escaped_note_id}" data-can-collapse="true">',
-            '  <button type="button" class="note-collapse-toggle" aria-expanded="true" aria-label="Collapse note"></button>',
+            f'  <button type="button" class="note-collapse-toggle" aria-expanded="{expanded_attr}" aria-label="{toggle_label}"></button>',
             '  <div class="note-content">',
             _indent_block(rendered_content, 4),
             "  </div>",
@@ -646,6 +713,16 @@ def _render_exported_note_node(
         lines.append(_indent_block(children_html, 2))
     lines.append("</article>")
     return "\n".join(lines)
+
+
+def _as_drawn_in_metalist(*, note_id: str, record, context: EmbedRenderContext, rendered_content: str) -> str:
+    """A note's content with the wrapper MetaList's view gives it: a holder (a note
+    that is only a reference) is tinted and its embed has no panel of its own.
+    There is no backlinks button: a file has no backlinks view to open."""
+    return decorate_note_references(
+        note_id=note_id, content_html=record.content, tags=record.tags,
+        rendered_content=rendered_content, context=context, has_backlinks=False,
+    )
 
 
 @lru_cache(maxsize=1)

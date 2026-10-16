@@ -100,7 +100,7 @@ async def upload_file_endpoint(
     )
 
 
-@router.get("/{file_id}/download")
+@router.get("/{file_id}/download")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def download_file_endpoint(request: Request, file_id: str):
     token = _require_bearer_token(request)
     if not file_registry.has_file(file_id):
@@ -166,7 +166,7 @@ async def store_file_previews_endpoint(
     return FilePreviewsStoredResponse(file_id=record.id, content_revision=record.content_revision)
 
 
-@router.get("/{file_id}/previews/{variant}")
+@router.get("/{file_id}/previews/{variant}")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def download_file_preview_endpoint(request: Request, file_id: str, variant: str):
     token = _require_bearer_token(request)
     _require_known_file(file_id)

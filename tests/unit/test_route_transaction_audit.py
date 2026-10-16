@@ -33,7 +33,7 @@ def test_transaction_audit_rejects_undecorated_mutation_routes() -> None:
 def test_transaction_audit_ignores_read_only_routes() -> None:
     app = FastAPI()
 
-    @app.get("/read")
+    @app.get("/read")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
     def read() -> dict[str, bool]:
         return {"ok": True}
 

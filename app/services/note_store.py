@@ -1028,18 +1028,21 @@ class NoteStore:
             self._ordering.remove(self._note_map, root)
             for removed_id in removed_ids:
                 del self._note_map[removed_id]
-                self._ordering.heads.pop(removed_id, None)
-                self._ordering.tails.pop(removed_id, None)
+                # Only a note with children heads and tails a sibling list.
+                if removed_id in self._ordering.heads:
+                    del self._ordering.heads[removed_id]
+                    del self._ordering.tails[removed_id]
 
             referrer_ids = set()
             for removed_id in removed_ids:
                 referrer_ids.update(self._backlink_index.get_counts(removed_id))
             for removed_id in removed_ids:
                 self._backlink_index.remove(removed_id)
-                self._effective_non_meta_tag_terms.pop(removed_id, None)
-                self._effective_proposed_non_meta_tag_terms.pop(removed_id, None)
-                self._subtree_non_meta_tag_terms.pop(removed_id, None)
-                self._subtree_proposed_non_meta_tag_terms.pop(removed_id, None)
+                # Every note has its tag terms computed, so every removed note has entries.
+                del self._effective_non_meta_tag_terms[removed_id]
+                del self._effective_proposed_non_meta_tag_terms[removed_id]
+                del self._subtree_non_meta_tag_terms[removed_id]
+                del self._subtree_proposed_non_meta_tag_terms[removed_id]
 
             former_parents = set()
             if root.parent_id is not None:
@@ -1055,8 +1058,8 @@ class NoteStore:
         if not self._loaded:
             return
         with self._lock:
-            record = self._note_map.get(note_id)
-            if not record or record.is_collapsed == collapsed:
+            record = self._note_map[note_id]
+            if record.is_collapsed == collapsed:
                 return
             self._revision += 1
             self._note_map[note_id] = NoteRecord(
@@ -1123,12 +1126,9 @@ class NoteStore:
 
     def get_note(self, note_id: str) -> NoteRecord:
         with self._lock:
-            record = self._note_map.get(note_id)
-
-        if record is None:
-            raise KeyError(f"Note {note_id} not present in NoteStore")
-
-        return record
+            if note_id not in self._note_map:
+                raise KeyError(f"Note {note_id} not present in NoteStore")
+            return self._note_map[note_id]
 
     def list_local_effective_tag_terms(
         self,
@@ -1185,8 +1185,7 @@ class NoteStore:
             if not self._loaded:
                 raise RuntimeError("NoteStore is not loaded")
 
-            record = self._note_map.get(note_id)
-            if record is None:
+            if note_id not in self._note_map:
                 raise KeyError(f"Note {note_id} not present in NoteStore")
 
             return self._inherited_tag_terms_locked(
@@ -1281,26 +1280,15 @@ class NoteStore:
             base_terms_by_id: Dict[str, FrozenSet[str]] = {}
             content_by_id: Dict[str, str] = {}
             for note_id in note_id_list:
-                record = self._note_map.get(note_id)
-                if record is None:
+                if note_id not in self._note_map:
+                    # Candidates come from rule text matches and may include deleted notes.
                     continue
-                inherited = self._effective_non_meta_tag_terms.get(note_id)
-                if inherited is None:
-                    raise RuntimeError(
-                        "Integrity failure: missing inherited tag terms for "
-                        f"note {note_id}"
-                    )
-                proposed = self._effective_proposed_non_meta_tag_terms.get(note_id)
-                if proposed is None:
-                    raise RuntimeError(
-                        "Integrity failure: missing effective proposed tag terms for "
-                        f"note {note_id}"
-                    )
+                record = self._note_map[note_id]
                 base_terms_by_id[note_id] = (
                     record.tag_terms
-                    | inherited
+                    | self._effective_non_meta_tag_terms[note_id]
                     | record.proposed_tag_terms
-                    | proposed
+                    | self._effective_proposed_non_meta_tag_terms[note_id]
                 )
                 content_by_id[note_id] = record.content
 

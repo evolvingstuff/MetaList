@@ -59,7 +59,7 @@ def register_remote_images(
     return RemoteImageRegistrationResponse(images=images)
 
 
-@router.get("/{proxy_token}")
+@router.get("/{proxy_token}")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def proxy_remote_image(request: Request, proxy_token: str) -> Response:
     require_request_auth_token(request)
     resolve_capture = CapturedExceptionContext(ResourceNotFound, boundary='app/api/routes/remote_images.py:proxy_remote_image:resolve_capture')

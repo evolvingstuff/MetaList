@@ -1180,6 +1180,12 @@ export const NotesAPI = {
         if (noteId !== null) {
             params.set('note_id', noteId);
         }
+        // A download starts as the view shows it, with the note being edited open.
+        let editingNoteId = '';
+        if (ModeContext.currentNoteId !== null) {
+            editingNoteId = ModeContext.currentNoteId;
+        }
+        params.set('editing_note_id', editingNoteId);
 
         const response = await fetch(`${CONFIG.API.NOTES.EXPORT_HTML}?${params.toString()}`, {
             method: 'GET',

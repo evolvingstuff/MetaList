@@ -372,6 +372,7 @@ def test_redacted_password_and_ai_chat_references_stay_text_only() -> None:
             get_children=lambda parent_id: [],
             has_file=lambda file_id: file_id == _DIAGRAM_ID,
             get_file=lambda file_id: _diagram_record(),
+            static_collapse_arrows=False,
         )
 
     password_source = _Note(_SOURCE_ID, None, None, None, False, f"<div>![[{_DIAGRAM_ID}]] hunter2</div>", "@password")
@@ -413,6 +414,7 @@ def test_exported_compact_reference_embeds_the_diagram_preview() -> None:
                 get_children=lambda parent_id: [],
                 has_file=lambda file_id: file_id == _DIAGRAM_ID,
                 get_file=lambda file_id: SimpleNamespace(**vars(record), export_data_url=data_url),
+                static_collapse_arrows=False,
             ),
             static_export=True,
             redact_credentials=True,

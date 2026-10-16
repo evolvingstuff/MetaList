@@ -5,6 +5,13 @@ from typing import Dict, List, Optional, Sequence
 from app.services.view_state import ViewState
 
 
+def _children_in(view: ViewState, parent_id: Optional[str]) -> List[str]:
+    """A note's children in a view; a note without children there has no entry."""
+    if parent_id not in view.children_by_parent:
+        return []
+    return view.children_by_parent[parent_id]
+
+
 def generate_diff_ops(previous: ViewState, current: ViewState) -> List[Dict[str, object]]:
     if previous.children_by_parent == current.children_by_parent:
         return []
@@ -12,8 +19,8 @@ def generate_diff_ops(previous: ViewState, current: ViewState) -> List[Dict[str,
     operations: List[Dict[str, object]] = []
 
     def diff_branch(parent_id: Optional[str]) -> None:
-        prev_children = previous.children_by_parent.get(parent_id, [])
-        curr_children = current.children_by_parent.get(parent_id, [])
+        prev_children = _children_in(previous, parent_id)
+        curr_children = _children_in(current, parent_id)
         sibling_ops = _diff_sibling_order(prev_children, curr_children)
         for op in sibling_ops:
             op['parentId'] = parent_id
@@ -26,7 +33,7 @@ def generate_diff_ops(previous: ViewState, current: ViewState) -> List[Dict[str,
                 _diff_new_subtree(child_id)
 
     def _diff_new_subtree(node_id: str) -> None:
-        curr_children = current.children_by_parent.get(node_id, [])
+        curr_children = _children_in(current, node_id)
         if not curr_children:
             return
         sibling_ops = _diff_sibling_order([], curr_children)

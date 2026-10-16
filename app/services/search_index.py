@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from threading import RLock
 import time
-from typing import Callable, Dict, FrozenSet, Iterable, List, Optional, Set, Tuple
+from typing import Callable, Dict, FrozenSet, Iterable, List, Mapping, Optional, Set, Tuple
 
 from loguru import logger
 
@@ -37,6 +37,13 @@ def _add_posting(postings: Dict[str, Set[int]], key: str, note_int_id: int) -> N
     if key not in postings:
         postings[key] = set()
     postings[key].add(note_int_id)
+
+
+def _posting_or_empty(postings: Mapping[str, Set[int]], key: str) -> Set[int]:
+    """The notes with this term; a term no note has has no posting."""
+    if key not in postings:
+        return set()
+    return postings[key]
 
 
 def _parse_search_suggestion_context(raw_input: str) -> _SearchSuggestionContext:
@@ -376,9 +383,10 @@ class SearchIndex:
         touched = 0
         with self._lock:
             for note_id, new_tag_terms in updates.items():
-                note_int_id = self._uuid_to_id.get(note_id)
-                if note_int_id is None:
+                # Updates may name notes deleted meanwhile.
+                if note_id not in self._uuid_to_id:
                     continue
+                note_int_id = self._uuid_to_id[note_id]
                 if note_int_id not in self._alive:
                     continue
 
@@ -388,17 +396,13 @@ class SearchIndex:
 
                 # Touch only the terms that changed: inherited term sets are
                 # large and mostly stable, so remove-all/add-all dominated.
+                # Postings are never deleted, so a term the note had has one.
                 for term in old_tag_terms - new_tag_terms:
-                    bucket = self._tag_notes.get(term)
-                    if bucket is None:
-                        continue
-                    bucket.discard(note_int_id)
+                    self._tag_notes[term].discard(note_int_id)
                 new_casefold = frozenset(term.casefold() for term in new_tag_terms)
                 old_casefold = self._note_tag_terms_casefold[note_int_id]
                 for term_casefold in old_casefold - new_casefold:
-                    folded_bucket = self._tag_notes_casefold.get(term_casefold)
-                    if folded_bucket is not None:
-                        folded_bucket.discard(note_int_id)
+                    self._tag_notes_casefold[term_casefold].discard(note_int_id)
                 for term in new_tag_terms - old_tag_terms:
                     _add_posting(self._tag_notes, term, note_int_id)
                 for term_casefold in new_casefold - old_casefold:
@@ -429,9 +433,10 @@ class SearchIndex:
         touched = 0
         with self._lock:
             for note_id, new_raw_tag_terms in updates.items():
-                note_int_id = self._uuid_to_id.get(note_id)
-                if note_int_id is None or note_int_id not in self._alive:
+                # Updates may name notes deleted meanwhile.
+                if note_id not in self._uuid_to_id or self._uuid_to_id[note_id] not in self._alive:
                     continue
+                note_int_id = self._uuid_to_id[note_id]
 
                 old_raw_tag_terms = self._note_raw_tag_terms[note_int_id]
                 if old_raw_tag_terms == new_raw_tag_terms:
@@ -440,9 +445,7 @@ class SearchIndex:
                 old_raw_casefold = {term.casefold() for term in old_raw_tag_terms}
                 new_raw_casefold = {term.casefold() for term in new_raw_tag_terms}
                 for term_casefold in old_raw_casefold - new_raw_casefold:
-                    bucket = self._raw_tag_notes_casefold.get(term_casefold)
-                    if bucket is not None:
-                        bucket.discard(note_int_id)
+                    self._raw_tag_notes_casefold[term_casefold].discard(note_int_id)
                 for term_casefold in new_raw_casefold - old_raw_casefold:
                     _add_posting(self._raw_tag_notes_casefold, term_casefold, note_int_id)
 
@@ -578,7 +581,9 @@ class SearchIndex:
                     if anchor_casefold == term_casefold or anchor_casefold not in self._tag_notes_casefold:
                         continue
                     for note_id in term_notes & self._tag_notes_casefold[anchor_casefold]:
-                        anchors_by_note.setdefault(note_id, set()).add(anchor_casefold)
+                        if note_id not in anchors_by_note:
+                            anchors_by_note[note_id] = set()
+                        anchors_by_note[note_id].add(anchor_casefold)
                 if not anchors_by_note:
                     continue
                 most_anchors = max(len(note_anchors) for note_anchors in anchors_by_note.values())
@@ -822,7 +827,7 @@ class SearchIndex:
                 return []
             completions: List[str] = []
             for term in suggestions:
-                posting = self._tag_notes_casefold.get(term.casefold(), frozenset())
+                posting = _posting_or_empty(self._tag_notes_casefold, term.casefold())
                 if context.is_exclusion:
                     has_matches = not matching_ids.issubset(posting)
                 else:
@@ -836,9 +841,8 @@ class SearchIndex:
             raise TypeError(f"search must be a string, got {type(search)}")
 
         with self._lock:
-            cached = self._result_cache.get(search)
-            if cached is not None:
-                cached_revision, cached_results = cached
+            if search in self._result_cache:
+                cached_revision, cached_results = self._result_cache[search]
                 if cached_revision == self._revision:
                     total_ms = (time.perf_counter() - t0) * 1000
                     logger.bind(
@@ -1011,12 +1015,9 @@ class SearchIndex:
         self._note_tag_terms_casefold.append(frozenset(tag_terms_casefold))
 
     def _discard_explicit_posting_locked(self, term: str, note_int_id: int) -> None:
-        bucket = self._explicit_tag_notes.get(term)
-        if bucket is not None:
-            bucket.discard(note_int_id)
-        folded_bucket = self._explicit_tag_notes_casefold.get(term.casefold())
-        if folded_bucket is not None:
-            folded_bucket.discard(note_int_id)
+        # Postings are never deleted, so a term the note had has one.
+        self._explicit_tag_notes[term].discard(note_int_id)
+        self._explicit_tag_notes_casefold[term.casefold()].discard(note_int_id)
 
     def _update_existing_locked(
         self,
@@ -1044,22 +1045,15 @@ class SearchIndex:
 
         if old_raw_tag_terms != new_raw_tag_terms:
             for term in old_raw_tag_terms:
-                bucket = self._raw_tag_notes_casefold.get(term.casefold())
-                if bucket is not None:
-                    bucket.discard(note_int_id)
+                self._raw_tag_notes_casefold[term.casefold()].discard(note_int_id)
             for term in new_raw_tag_terms:
                 _add_posting(self._raw_tag_notes_casefold, term.casefold(), note_int_id)
             self._note_raw_tag_terms[note_int_id] = new_raw_tag_terms
 
         if old_tag_terms != new_tag_terms:
             for term in old_tag_terms:
-                bucket = self._tag_notes.get(term)
-                if bucket is None:
-                    continue
-                bucket.discard(note_int_id)
-                folded_bucket = self._tag_notes_casefold.get(term.casefold())
-                if folded_bucket is not None:
-                    folded_bucket.discard(note_int_id)
+                self._tag_notes[term].discard(note_int_id)
+                self._tag_notes_casefold[term.casefold()].discard(note_int_id)
             for term in new_tag_terms:
                 _add_posting(self._tag_notes, term, note_int_id)
                 _add_posting(self._tag_notes_casefold, term.casefold(), note_int_id)
@@ -1076,19 +1070,12 @@ class SearchIndex:
         self._alive.remove(note_int_id)
 
         for term in self._note_tag_terms[note_int_id]:
-            bucket = self._tag_notes.get(term)
-            if bucket is None:
-                continue
-            bucket.discard(note_int_id)
-            folded_bucket = self._tag_notes_casefold.get(term.casefold())
-            if folded_bucket is not None:
-                folded_bucket.discard(note_int_id)
+            self._tag_notes[term].discard(note_int_id)
+            self._tag_notes_casefold[term.casefold()].discard(note_int_id)
         for term in self._note_explicit_tag_terms[note_int_id]:
             self._discard_explicit_posting_locked(term, note_int_id)
         for term in self._note_raw_tag_terms[note_int_id]:
-            bucket = self._raw_tag_notes_casefold.get(term.casefold())
-            if bucket is not None:
-                bucket.discard(note_int_id)
+            self._raw_tag_notes_casefold[term.casefold()].discard(note_int_id)
         self._note_text_casefold[note_int_id] = ""
         self._set_link_title_urls_locked(note_int_id, frozenset())
         if note_int_id in self._note_base_text_casefold:
@@ -1173,7 +1160,7 @@ class SearchIndex:
                 continue
             if partial_prefix != "" and not term.casefold().startswith(partial_prefix_casefold):
                 continue
-            usage_count = len(self._tag_notes_casefold.get(term.casefold(), set()))
+            usage_count = len(_posting_or_empty(self._tag_notes_casefold, term.casefold()))
             lower_case_penalty, term_tiebreak = self._suggestion_term_tiebreak_locked(term)
             candidates.append((-usage_count, lower_case_penalty, term_tiebreak, term))
         candidates.sort()
@@ -1183,10 +1170,9 @@ class SearchIndex:
         constraints: List[Set[int]] = []
 
         for tag in clause.required_tags:
-            posting = self._tag_notes_casefold.get(tag.casefold())
-            if posting is None:
+            if tag.casefold() not in self._tag_notes_casefold:
                 return set()
-            constraints.append(posting)
+            constraints.append(self._tag_notes_casefold[tag.casefold()])
 
         candidate_ids: Optional[Set[int]] = None
         if constraints:
@@ -1202,10 +1188,7 @@ class SearchIndex:
 
         if clause.forbidden_tags:
             for tag in clause.forbidden_tags:
-                posting = self._tag_notes_casefold.get(tag.casefold())
-                if posting is None:
-                    continue
-                candidate_ids.difference_update(posting)
+                candidate_ids.difference_update(_posting_or_empty(self._tag_notes_casefold, tag.casefold()))
 
         return candidate_ids
 

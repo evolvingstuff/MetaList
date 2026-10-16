@@ -159,6 +159,7 @@ class _LiveWorld:
             get_children=get_children,
             has_file=lambda file_id: file_id in self.files,
             get_file=lambda file_id: self.files[file_id],
+            static_collapse_arrows=False,
         )
 
 

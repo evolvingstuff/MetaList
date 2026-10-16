@@ -107,9 +107,11 @@ class _MarkdownRenderer:
 
     def _render_fence_block(self) -> str:
         opening_line = self._lines[self._index]
-        match = _FENCE_RE.match(opening_line)
+        # A fence may be indented (under a list item); its code loses that indent.
+        match = _FENCE_RE.match(opening_line.strip())
         assert match is not None
         language = match.group(1)
+        fence_indent = opening_line[: len(opening_line) - len(opening_line.lstrip())]
         self._index += 1
 
         content_lines: List[str] = []
@@ -118,6 +120,8 @@ class _MarkdownRenderer:
             if line.strip() == "```":
                 self._index += 1
                 break
+            if line.startswith(fence_indent):
+                line = line[len(fence_indent):]
             content_lines.append(line)
             self._index += 1
 
@@ -140,7 +144,7 @@ class _MarkdownRenderer:
 
     def _render_heading_block(self) -> str:
         line = self._lines[self._index]
-        match = _ATX_HEADING_RE.match(line)
+        match = _ATX_HEADING_RE.match(line.strip())
         assert match is not None
         level = len(match.group(1))
         content = match.group(2).strip()

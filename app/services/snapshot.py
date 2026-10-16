@@ -679,7 +679,7 @@ class _DependencyRecorder:
     def context(self) -> EmbedRenderContext:
         return EmbedRenderContext(
             has_note=self._has_note, get_note=self._get_note, get_children=self._get_children,
-            has_file=self._has_file, get_file=self._get_file,
+            has_file=self._has_file, get_file=self._get_file, static_collapse_arrows=False,
         )
 
     def _has_note(self, note_id: str) -> bool:
@@ -923,6 +923,7 @@ def build_view_state(
         get_children=traversal_cache.get_children,
         has_file=file_registry.has_file,
         get_file=_get_file_record,
+        static_collapse_arrows=False,
     )
 
     selection = _select_view(

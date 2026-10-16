@@ -96,3 +96,14 @@ def test_highlighted_fence_code_is_escaped() -> None:
     rendered = render_markdown_to_html(_FENCE.format(language="html", code='<script>alert("x")</script>'))
     assert "<script>" not in rendered
     assert "&lt;" in rendered
+
+
+def test_an_indented_fence_renders_its_code_without_the_indent() -> None:
+    # A fence under a list item, as pasted from an AI answer.
+    rendered = render_markdown_to_html("1. Point\n\n   ```\n   record = lookup(key)\n     nested\n   ```\n\nAfter.")
+    assert "<pre><code>record = lookup(key)\n  nested</code></pre>" in rendered
+    assert rendered.endswith("<p>After.</p>")
+
+
+def test_an_indented_heading_renders_as_a_heading() -> None:
+    assert render_markdown_to_html("  ## Title") == "<h2>Title</h2>"

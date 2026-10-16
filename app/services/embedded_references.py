@@ -90,6 +90,11 @@ class EmbedRenderContext:
     get_children: Callable[[Optional[str]], List[str]]
     has_file: Callable[[str], bool]
     get_file: Callable[[str], object]
+    # A downloaded export: the notes in an embed get MetaList's arrows and start
+    # as saved, and carry their first line and their full content, so the file
+    # can fold them. False for the live view (it folds through the server) and
+    # for prints (always fully expanded, no arrows).
+    static_collapse_arrows: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -1242,17 +1247,26 @@ def _render_embedded_note_node(
         # A note in the embed that is itself only a reference: a deeper embed.
         classes = f"{classes} note-embed-holds-embed"
     child_ids = context.get_children(note_id)
+    assert static_export or not context.static_collapse_arrows, "only a static export folds in the file"
     # Collapse is shared: an embedded note shows the state saved for it, as in
-    # the main tree, with an arrow where it can collapse. Exports show the
-    # whole subtree, as a document.
-    has_arrow = (not static_export) and _is_embedded_note_collapsible(
-        content_html=record_content, child_ids=child_ids, context=context
-    )
+    # the main tree, with an arrow where it can collapse. A print shows the
+    # whole subtree, as a document; a download starts as MetaList shows it.
+    can_collapse = _is_embedded_note_collapsible(content_html=record_content, child_ids=child_ids, context=context)
+    has_arrow = can_collapse and not static_export
+    if context.static_collapse_arrows:
+        # The embed's first note folds with its holder, whose own arrow does it.
+        has_arrow = can_collapse and not is_root
     shown_state_id = resolve_held_source(note_id, has_note=context.has_note, content_of=_context_content(context))
     is_collapsed = has_arrow and bool(context.get_note(shown_state_id).is_collapsed)
     toggle_html = ""
     if has_arrow:
         toggle_html = _embed_arrow_html(escaped_note_id=escaped_note_id, is_collapsed=is_collapsed)
+    if has_arrow and context.static_collapse_arrows:
+        return _render_foldable_static_embedded_note_node(
+            note_id=note_id, record_tags=record_tags, annotated_content=annotated_content, classes=classes,
+            escaped_note_id=escaped_note_id, toggle_html=toggle_html, is_collapsed=is_collapsed, child_ids=child_ids,
+            context=context, ancestry=ancestry, redact_credentials=redact_credentials,
+        )
     children_html = ""
     if is_collapsed:
         classes = f"{classes} note-embed-collapsed"
@@ -1287,6 +1301,60 @@ def _render_embedded_note_node(
         '<div class="note-embed-body">'
         f"{toggle_html}"
         f'<div class="note-embed-content">{rendered_content}</div>'
+        f"{children_html}"
+        "</div>"
+        "</div>"
+    )
+
+
+def _render_foldable_static_embedded_note_node(
+    *,
+    note_id: str,
+    record_tags: str,
+    annotated_content: str,
+    classes: str,
+    escaped_note_id: str,
+    toggle_html: str,
+    is_collapsed: bool,
+    child_ids: List[str],
+    context: EmbedRenderContext,
+    ancestry: Tuple[str, ...],
+    redact_credentials: bool,
+) -> str:
+    """An embedded note in a downloaded export: its first line and its full
+    content with its children, the file's arrow showing one or the other."""
+    if is_collapsed:
+        classes = f"{classes} note-embed-collapsed"
+    collapsed_content = render_collapsed_note_content_with_embeds(
+        note_id=note_id,
+        content_html=annotated_content,
+        tags=record_tags,
+        context=context,
+        static_export=True,
+        redact_credentials=redact_credentials,
+    )
+    expanded_content = _render_expanded_embedded_content(
+        note_id=note_id,
+        annotated_content=annotated_content,
+        tags=record_tags,
+        context=context,
+        ancestry=ancestry,
+        static_export=True,
+        redact_credentials=redact_credentials,
+    )
+    children_html = _render_embedded_children(
+        child_ids=child_ids,
+        context=context,
+        ancestry=ancestry,
+        static_export=True,
+        redact_credentials=redact_credentials,
+    )
+    return (
+        f'<div class="{classes}" data-embed-note-id="{escaped_note_id}">'
+        '<div class="note-embed-body">'
+        f"{toggle_html}"
+        f'<div class="note-embed-content">{expanded_content}</div>'
+        f'<div class="note-embed-content note-embed-content-collapsed">{collapsed_content}</div>'
         f"{children_html}"
         "</div>"
         "</div>"

@@ -124,10 +124,9 @@ class TokenService:
             return False
 
         token_hash = self._hash_token(token)
-        token_info = self.tokens.get(token_hash)
-        if not token_info:
+        if token_hash not in self.tokens:
             return False
-        return token_info["owner_tab_id"] == owner_tab_id
+        return self.tokens[token_hash]["owner_tab_id"] == owner_tab_id
 
     @_synchronized
     def claim_token_for_tab(self, token: str, owner_tab_id: str) -> bool:
@@ -137,9 +136,9 @@ class TokenService:
             return False
 
         token_hash = self._hash_token(token)
-        token_info = self.tokens.get(token_hash)
-        if not token_info:
+        if token_hash not in self.tokens:
             return False
+        token_info = self.tokens[token_hash]
 
         token_info["owner_tab_id"] = owner_tab_id
         token_info["last_activity"] = datetime.now(timezone.utc)
@@ -281,12 +280,9 @@ class TokenService:
             return None
 
         token_hash = self._hash_token(token)
-        token_info = self.tokens.get(token_hash)
-
-        if not token_info:
+        if token_hash not in self.tokens:
             return None
-
-        return token_info["dek"]
+        return self.tokens[token_hash]["dek"]
 
     @_synchronized
     def list_active_sessions(self) -> list:

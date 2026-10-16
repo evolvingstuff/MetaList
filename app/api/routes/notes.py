@@ -181,7 +181,7 @@ def prefetch_link_titles(request: Request, draft: LinkTitlePrefetchRequest) -> d
     return CmdPrefetchLinkTitles(content=draft.content, tags=draft.tags).execute()
 
 
-@router.get("/notes/link-titles/retry")
+@router.get("/notes/link-titles/retry")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def link_title_retry_progress(request: Request) -> dict[str, object]:
     require_request_auth_token(request)
     return link_title_retry_snapshot()
@@ -199,6 +199,20 @@ def start_link_title_retry_route(request: Request) -> dict[str, object]:
 def stop_link_title_retry_route(request: Request) -> dict[str, object]:
     require_request_auth_token(request)
     return stop_link_title_retry()
+
+
+def _required_query_param(request: Request, name: str) -> str:
+    """A query parameter the route needs: a request without it is rejected, never defaulted."""
+    if name not in request.query_params:
+        raise HTTPException(status_code=400, detail=f"{name} query parameter is required")
+    return request.query_params[name]
+
+
+def _optional_note_id_param(request: Request) -> str | None:
+    """The note an export covers, with its children; absent means the whole view."""
+    if "note_id" not in request.query_params:
+        return None
+    return request.query_params["note_id"]
 
 
 def _require_note_present(note_id: str, *, context: str) -> None:
@@ -352,7 +366,10 @@ def view_diff(payload: ViewDiffRequest):
         start_at_list_end=start_at_list_end,
     )
     update_uuid = get_current_sync_uuid()
-    root_ids = list(state.children_by_parent.get(None, []))
+    # An empty view has no root entry.
+    root_ids: list[str] = []
+    if None in state.children_by_parent:
+        root_ids = list(state.children_by_parent[None])
     view_cache.set(client_id=client_id, tab_id=tab_id, state=state)
     response_snapshot = {
         "notes": {},
@@ -387,7 +404,7 @@ def view_diff(payload: ViewDiffRequest):
     return {"snapshot": response_snapshot, "updateUUID": update_uuid}
 
 
-@router.get("/notes/tab-state")
+@router.get("/notes/tab-state")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def get_tab_state() -> Dict[str, object]:
     return tab_state_store.snapshot()
 
@@ -600,7 +617,7 @@ def tab_search_interaction(request: Request, payload: TabSearchInteractionReques
     return {"credited": credited}
 
 
-@router.get("/notes/tag-interactions")
+@router.get("/notes/tag-interactions")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def get_tag_interactions(request: Request) -> Dict[str, object]:
     token = _require_bearer_token(request)
     return list_search_suggestion_statistics(token=token)
@@ -694,17 +711,17 @@ def search_tag_details(request: Request, payload: SearchTagDetailsRequest) -> Di
     return {"lines": list(lines)}
 
 
-@router.get("/notes/export-summary")
+@router.get("/notes/export-summary")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def export_summary(request: Request) -> Dict[str, object]:
     """What an export or print of a note (with its children) or of the view holds,
     for its dialog: the title it starts with, and how many passwords and usernames it shows."""
     _require_bearer_token(request)
-    search_query = request.query_params.get("search_query")
-    tab_id = request.query_params.get("tab_id")
-    is_untagged_view = request.query_params.get("is_untagged_view")
-    if search_query is None or tab_id is None or tab_id == "" or is_untagged_view not in {"true", "false"}:
+    search_query = _required_query_param(request, "search_query")
+    tab_id = _required_query_param(request, "tab_id")
+    is_untagged_view = _required_query_param(request, "is_untagged_view")
+    if tab_id == "" or is_untagged_view not in {"true", "false"}:
         raise HTTPException(status_code=400, detail="search_query, tab_id and is_untagged_view are required")
-    note_id = request.query_params.get("note_id")
+    note_id = _optional_note_id_param(request)
     if note_id is not None:
         _require_note_present(note_id, context="notes.export-summary")
     normalized_search = search_query
@@ -723,27 +740,18 @@ def export_summary(request: Request) -> Dict[str, object]:
     }
 
 
-@router.get("/notes/export-html")
+@router.get("/notes/export-html")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def export_notes_html(request: Request) -> Response:
     token = _require_bearer_token(request)
-    search_query = request.query_params.get("search_query")
-    if search_query is None:
-        raise HTTPException(status_code=400, detail="search_query query parameter is required")
-    theme = request.query_params.get("theme")
-    if theme is None:
-        raise HTTPException(status_code=400, detail="theme query parameter is required")
-
-    if not isinstance(search_query, str):
-        raise TypeError("search_query query parameter must be a string")
-    if not isinstance(theme, str):
-        raise TypeError("theme query parameter must be a string")
+    search_query = _required_query_param(request, "search_query")
+    theme = _required_query_param(request, "theme")
 
     normalized_search = search_query
     if normalized_search == "":
         normalized_search = None
-    note_id = request.query_params.get("note_id")
+    note_id = _optional_note_id_param(request)
     if note_id is not None:
-        if not isinstance(note_id, str) or note_id == "":
+        if note_id == "":
             raise HTTPException(status_code=400, detail="note_id query parameter must be non-empty")
         _require_note_present(note_id, context="notes.export-html")
 
@@ -751,26 +759,30 @@ def export_notes_html(request: Request) -> Response:
     if normalized_theme not in {"dark", "light"}:
         raise HTTPException(status_code=400, detail="theme must be 'light' or 'dark'")
     # The view as the tab shows it: its sort order and kind (All or Untagged notes).
-    tab_id = request.query_params.get("tab_id")
-    if tab_id is None or tab_id == "":
+    tab_id = _required_query_param(request, "tab_id")
+    if tab_id == "":
         raise HTTPException(status_code=400, detail="tab_id query parameter is required")
-    is_untagged_view = request.query_params.get("is_untagged_view")
+    is_untagged_view = _required_query_param(request, "is_untagged_view")
     if is_untagged_view not in {"true", "false"}:
         raise HTTPException(status_code=400, detail="is_untagged_view query parameter must be 'true' or 'false'")
 
     # Both carry the user's title; a download collapses and expands, a print is always light.
-    purpose = request.query_params.get("purpose")
+    purpose = _required_query_param(request, "purpose")
     if purpose not in EXPORT_PURPOSES:
         raise HTTPException(status_code=400, detail="purpose query parameter must be 'download' or 'print'")
-    title = request.query_params.get("title")
-    if title is None:
-        raise HTTPException(status_code=400, detail="title query parameter is required")
+    title = _required_query_param(request, "title")
     if purpose == "print":
         normalized_theme = "light"
     # Passwords and usernames show only when the user chose to include them in this export.
-    include_credentials = request.query_params.get("include_credentials")
+    include_credentials = _required_query_param(request, "include_credentials")
     if include_credentials not in {"true", "false"}:
         raise HTTPException(status_code=400, detail="include_credentials query parameter must be 'true' or 'false'")
+    # A download starts as MetaList shows it, the note being edited open ("" when none is).
+    editing_note_id: str | None = _required_query_param(request, "editing_note_id")
+    if editing_note_id == "":
+        editing_note_id = None
+    else:
+        _require_note_present(editing_note_id, context="notes.export-html")
 
     document = build_notes_export_document(
         search=normalized_search,
@@ -782,6 +794,7 @@ def export_notes_html(request: Request) -> Response:
         purpose=purpose,
         title=title,
         include_credentials=include_credentials == "true",
+        editing_note_id=editing_note_id,
     )
     filename = build_notes_export_filename(title)
     quoted_filename = urllib.parse.quote(filename)
@@ -795,13 +808,13 @@ def export_notes_html(request: Request) -> Response:
     )
 
 
-@router.get("/notes/{note_id}/fullscreen")
+@router.get("/notes/{note_id}/fullscreen")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def note_fullscreen(note_id: str) -> Dict[str, str]:
     _require_note_present(note_id, context="notes.fullscreen")
     return {"html": build_note_fullscreen_markup(note_id)}
 
 
-@router.get("/notes/{note_id}/floating")
+@router.get("/notes/{note_id}/floating")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def note_floating_window(note_id: str, revision: str) -> dict[str, str]:
     current_revision = f"{get_current_sync_uuid()}:{link_title_store.get_revision()}"
     if not note_store.has_note(note_id):
@@ -815,7 +828,7 @@ def note_floating_window(note_id: str, revision: str) -> dict[str, str]:
     }
 
 
-@router.get("/notes/{note_id}/backlinks")
+@router.get("/notes/{note_id}/backlinks")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def backlinks(request: Request, note_id: str) -> Dict[str, object]:
     _require_note_present(note_id, context="notes.backlinks")
 
@@ -845,7 +858,7 @@ def backlinks(request: Request, note_id: str) -> Dict[str, object]:
     }
 
 
-@router.get("/notes/{note_id}/outside-referrers")
+@router.get("/notes/{note_id}/outside-referrers")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def outside_referrers(note_id: str) -> Dict[str, object]:
     """How many notes outside this note's subtree reference it or a note in it:
     the references deleting (or cutting) the subtree would break."""
@@ -856,7 +869,7 @@ def outside_referrers(note_id: str) -> Dict[str, object]:
 def _compute_lock_diff(previous: Dict[str, str], current: Dict[str, str]) -> Dict[str, str]:
     diff: Dict[str, str] = {}
     for note_id, owner in current.items():
-        if previous.get(note_id) != owner:
+        if note_id not in previous or previous[note_id] != owner:
             diff[note_id] = owner
     for note_id in previous:
         if note_id not in current:
@@ -1212,7 +1225,7 @@ def run_shell_endpoint(request: Request, note_id: str, body: RunShellEndpointReq
     return cmd.execute()
 
 
-@router.get("/notes/{note_id}/run-shell/{run_id}")
+@router.get("/notes/{note_id}/run-shell/{run_id}")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def run_shell_status_endpoint(request: Request, note_id: str, run_id: str) -> Dict[str, object]:
     _require_loopback_shell_request(request)
     cmd = CmdRunShellStatus(note_id=note_id, run_id=run_id)
