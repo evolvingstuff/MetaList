@@ -71,7 +71,7 @@ class OpenAICredentialStore:
                     tag=tag,
                 )
             with self._lock:
-                self._session_keys.pop(session_key, None)
+                self._forget_session_key_locked(session_key)
             return OpenAICredentialStatus(configured=True, persistent=True)
 
         self._assert_no_plaintext_persisted_key()
@@ -105,7 +105,7 @@ class OpenAICredentialStore:
     def clear(self, *, session_key: str) -> OpenAICredentialStatus:
         self._validate_session_key(session_key)
         with self._lock:
-            self._session_keys.pop(session_key, None)
+            self._forget_session_key_locked(session_key)
         if is_encryption_required():
             with begin_writer() as connection:
                 insert_default_settings(connection)
@@ -117,7 +117,12 @@ class OpenAICredentialStore:
     def clear_session(self, *, session_key: str) -> None:
         self._validate_session_key(session_key)
         with self._lock:
-            self._session_keys.pop(session_key, None)
+            self._forget_session_key_locked(session_key)
+
+    def _forget_session_key_locked(self, session_key: str) -> None:
+        """A session that never set a key has none to forget."""
+        if session_key in self._session_keys:
+            del self._session_keys[session_key]
 
     def reset(self) -> None:
         with self._lock:

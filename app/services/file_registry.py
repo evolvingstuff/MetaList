@@ -61,7 +61,9 @@ class FileRegistry:
         with self._lock:
             self._ids.difference_update(file_ids)
             for file_id in file_ids:
-                self._thumbnail_kinds_by_id.pop(file_id, None)
+                # Removing files may name some the registry never had.
+                if file_id in self._thumbnail_kinds_by_id:
+                    del self._thumbnail_kinds_by_id[file_id]
 
     def has_file(self, file_id: str) -> bool:
         if not isinstance(file_id, str) or file_id == "":
@@ -78,13 +80,13 @@ class FileRegistry:
         if not isinstance(file_id, str) or file_id == "":
             raise TypeError("file_id must be a non-empty string")
         with self._lock:
-            return self._thumbnail_kinds_by_id.get(file_id) in {"image", "excalidraw"}
+            return file_id in self._thumbnail_kinds_by_id and self._thumbnail_kinds_by_id[file_id] in {"image", "excalidraw"}
 
     def has_image_file(self, file_id: str) -> bool:
         if not isinstance(file_id, str) or file_id == "":
             raise TypeError("file_id must be a non-empty string")
         with self._lock:
-            return self._thumbnail_kinds_by_id.get(file_id) == "image"
+            return file_id in self._thumbnail_kinds_by_id and self._thumbnail_kinds_by_id[file_id] == "image"
 
 
 file_registry = FileRegistry()

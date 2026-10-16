@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import base64
 from dataclasses import dataclass
 from pathlib import Path
@@ -147,7 +148,7 @@ class _AuditState:
         self.namespace = namespace
         self.database_path = database_path
         self.checked_payload_count = 0
-        self._finding_counts: dict[tuple[Path, str, str, str, bool], int] = {}
+        self._finding_counts: Counter[tuple[Path, str, str, str, bool]] = Counter()
         self._used_nonces: dict[bytes, tuple[Path, str, str]] = {}
 
     def add_finding(
@@ -159,7 +160,7 @@ class _AuditState:
         message: str,
     ) -> None:
         key = (database_path, table, field, message, False)
-        self._finding_counts[key] = self._finding_counts.get(key, 0) + 1
+        self._finding_counts[key] += 1
 
     def add_migration_finding(
         self,
@@ -170,7 +171,7 @@ class _AuditState:
         message: str,
     ) -> None:
         key = (database_path, table, field, message, True)
-        self._finding_counts[key] = self._finding_counts.get(key, 0) + 1
+        self._finding_counts[key] += 1
 
     def record_nonce(
         self,
@@ -180,11 +181,10 @@ class _AuditState:
         table: str,
         field: str,
     ) -> None:
-        previous = self._used_nonces.get(nonce)
-        if previous is None:
+        if nonce not in self._used_nonces:
             self._used_nonces[nonce] = (database_path, table, field)
             return
-        previous_database_path, previous_table, previous_field = previous
+        previous_database_path, previous_table, previous_field = self._used_nonces[nonce]
         self.add_finding(
             database_path=database_path,
             table=table,

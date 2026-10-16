@@ -88,11 +88,12 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Authentication required"}
             )
 
-        tab_id = request.headers.get("x-metalist-tab-id")
-        if not tab_id:
+        if "x-metalist-tab-id" not in request.headers or request.headers["x-metalist-tab-id"] == "":
             return JSONResponse(status_code=400, content={"detail": "X-Metalist-Tab-Id header required"})
+        tab_id = request.headers["x-metalist-tab-id"]
 
-        claim = request.headers.get("x-metalist-claim") == "1"
+        # A tab claims the session once, after login; other requests leave the header out.
+        claim = "x-metalist-claim" in request.headers and request.headers["x-metalist-claim"] == "1"
         if claim:
             token_service.claim_token_for_tab(token, tab_id)
 

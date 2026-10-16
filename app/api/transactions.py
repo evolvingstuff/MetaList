@@ -43,13 +43,15 @@ def _resolved_signature(func: Callable[..., Any]) -> inspect.Signature:
         include_extras=True,
     )
 
-    parameters = [
-        parameter.replace(
-            annotation=resolved_hints.get(parameter.name, parameter.annotation),
-        )
-        for parameter in signature.parameters.values()
-    ]
-    return_annotation = resolved_hints.get("return", signature.return_annotation)
+    # get_type_hints leaves out what has no annotation; those keep the signature's own.
+    parameters = []
+    for parameter in signature.parameters.values():
+        if parameter.name in resolved_hints:
+            parameter = parameter.replace(annotation=resolved_hints[parameter.name])
+        parameters.append(parameter)
+    return_annotation = signature.return_annotation
+    if "return" in resolved_hints:
+        return_annotation = resolved_hints["return"]
     return signature.replace(
         parameters=parameters,
         return_annotation=return_annotation,
@@ -108,7 +110,8 @@ def assert_mutation_routes_wrapped(app: FastAPI) -> None:
             continue
 
         endpoint = route.endpoint
-        if getattr(endpoint, _TRANSACTIONAL_ROUTE_MARKER, False) is True:
+        # The transactional wrapper marks the routes it wraps; unwrapped ones have no mark.
+        if _TRANSACTIONAL_ROUTE_MARKER in vars(endpoint) and vars(endpoint)[_TRANSACTIONAL_ROUTE_MARKER] is True:
             continue
 
         violations.append(

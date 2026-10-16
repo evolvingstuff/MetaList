@@ -2105,7 +2105,10 @@ async function attachFilesAsReferenceTokens(files, options) {
     }
 
     const createTopNote = options.createTopNote === true;
-    const selectionRange = 'selectionRange' in options ? options.selectionRange : null;
+    if (!('selectionRange' in options)) {
+        throw new Error('selectionRange is required (null when there is none)');
+    }
+    const selectionRange = options.selectionRange;
     if (selectionRange !== null && !(selectionRange instanceof Range)) {
         throw new Error('attachFilesAsReferenceTokens selectionRange must be Range or null');
     }
@@ -2385,7 +2388,10 @@ async function handleClipboardImageFiles(imageFiles, options) {
     }
 
     const createTopNote = options.createTopNote === true;
-    const selectionRange = 'selectionRange' in options ? options.selectionRange : getSelectionRangeSnapshot();
+    if (!('selectionRange' in options)) {
+        throw new Error('handleClipboardImageFiles requires selectionRange (null when there is none)');
+    }
+    const selectionRange = options.selectionRange;
     if (selectionRange !== null && !(selectionRange instanceof Range)) {
         throw new Error('handleClipboardImageFiles selectionRange must be Range or null');
     }
@@ -2477,7 +2483,10 @@ async function processDroppedFiles(droppedFiles, options) {
     if (imageHandlingMode !== 'embed' && imageHandlingMode !== 'attach') {
         throw new Error(`processDroppedFiles invalid imageHandlingMode: ${imageHandlingMode}`);
     }
-    const selectionRange = 'selectionRange' in options ? options.selectionRange : null;
+    if (!('selectionRange' in options)) {
+        throw new Error('selectionRange is required (null when there is none)');
+    }
+    const selectionRange = options.selectionRange;
     if (selectionRange !== null && !(selectionRange instanceof Range)) {
         throw new Error('processDroppedFiles selectionRange must be Range or null');
     }

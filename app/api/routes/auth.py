@@ -439,7 +439,10 @@ def _reset_runtime_state_after_restore() -> bool:
 
 
 def _client_info(request: Request) -> str:
-    user_agent = request.headers.get("user-agent", "Unknown")
+    # The sessions list labels a browser that sends no User-Agent.
+    user_agent = "Unknown"
+    if "user-agent" in request.headers:
+        user_agent = request.headers["user-agent"]
     if request.client:
         client_host = request.client.host
     else:
@@ -866,10 +869,10 @@ def save_namespace_ports(
         namespace = _require_string_field(raw_profile, "namespace")
         port = _require_int_field(raw_profile, "port")
         https_port = _optional_int_field(raw_profile, "https_port")
-        saved_profile = saved_profiles.get(namespace)
+        # A namespace never launched or configured has no saved profile.
         legacy_mcp_port = None
-        if saved_profile is not None:
-            legacy_mcp_port = saved_profile.mcp_port
+        if namespace in saved_profiles:
+            legacy_mcp_port = saved_profiles[namespace].mcp_port
         requested_profiles.append(
             NamespaceLaunchProfile(
                 namespace=namespace,

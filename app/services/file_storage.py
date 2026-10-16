@@ -826,9 +826,9 @@ def _validate_editable_content(*, thumbnail_kind: str, content_bytes: bytes) -> 
         scene = json.loads(text)
     except json.JSONDecodeError as exc:
         raise InvalidFileContent("Excalidraw scene must be valid JSON") from exc
-    if not isinstance(scene, dict) or scene.get("type") != "excalidraw":
+    if not isinstance(scene, dict) or "type" not in scene or scene["type"] != "excalidraw":
         raise InvalidFileContent("Excalidraw scene must be a JSON object with type 'excalidraw'")
-    if not isinstance(scene.get("elements"), list):
+    if "elements" not in scene or not isinstance(scene["elements"], list):
         raise InvalidFileContent("Excalidraw scene must contain an elements list")
 
 
@@ -1013,8 +1013,7 @@ def _decrypt_blob_field(
 def _coerce_encryption_service(encryption_service: object):
     if encryption_service is None:
         return None
-    dek = getattr(encryption_service, "dek", None)
-    if not isinstance(dek, bytes):
+    if not isinstance(encryption_service.dek, bytes):
         return None
     return encryption_service
 

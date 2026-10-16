@@ -1100,9 +1100,7 @@ class ReminderStore:
             if require_success:
                 raise RuntimeError("reminder decryption requires an active DEK")
             return
-        decrypt_fn = getattr(service, "decrypt_from_storage", None)
-        if not callable(decrypt_fn):
-            raise TypeError("encryption service must expose decrypt_from_storage")
+        decrypt_fn = service.decrypt_from_storage
 
         decrypted: dict[str, dict[str, object]] = {}
         for row in self._encrypted_rows.values():
@@ -1141,10 +1139,7 @@ class ReminderStore:
                 explicit_service=encryption_service,
             )
             if service is not None:
-                encrypt_fn = getattr(service, "encrypt_for_storage", None)
-                if not callable(encrypt_fn):
-                    raise TypeError("encryption service must expose encrypt_for_storage")
-                stored_json, nonce, tag = encrypt_fn(payload_json)
+                stored_json, nonce, tag = service.encrypt_for_storage(payload_json)
             elif is_encryption_required():
                 raise RuntimeError("reminder persistence requires an active DEK")
         created_at = _parse_dt(reminder["created_at"], field_name="created_at")
@@ -1176,8 +1171,7 @@ class ReminderStore:
 
     def _resolve_encryption_service(self, *, token: str, explicit_service: object | None):
         if explicit_service is not None:
-            dek = getattr(explicit_service, "dek", None)
-            if dek is None:
+            if explicit_service.dek is None:
                 raise RuntimeError("explicit encryption service must have an active DEK")
             return explicit_service
         if token:
