@@ -10,6 +10,9 @@ function anchorAt(text, offset) {
         after: text.slice(offset, offset + 30),
         affinity: 'backward',
         atRunEnd: false,
+        // No run of its own unless a test gives one (see the short list item test).
+        runText: '',
+        runOffset: 0,
     };
 }
 
@@ -62,6 +65,16 @@ test('findTextPosition matches a clicked list item although the source adds list
         const clicked = viewText.indexOf(item);
         assert.deepEqual(match(sourceText, anchorAt(viewText, clicked)), { position: sourceText.indexOf(item), exact: true }, item);
     }
+});
+
+test('findTextPosition finds a short list item by its own text when too little surrounds it', () => {
+    // "item two" leaves under eight matching characters either side once the
+    // source adds "- ": the clicked run, whole, still finds its line.
+    const viewText = 'HeadingA paragraph of Markdown textitem oneitem two';
+    const sourceText = '# HeadingA paragraph of Markdown text- item one- item two';
+    const clicked = viewText.indexOf('item two') + 'item'.length;
+    const anchor = { ...anchorAt(viewText, clicked), runText: 'item two', runOffset: 'item'.length };
+    assert.deepEqual(match(sourceText, anchor), { position: sourceText.indexOf('item two') + 'item'.length, exact: true });
 });
 
 test('findTextPosition keeps the side of a line boundary', () => {

@@ -273,7 +273,32 @@ export function findTextPosition(text, anchor) {
         }
     }
     const proportional = Math.round(anchor.textOffset * text.length / Math.max(1, anchor.textLength));
+    // Too little text either side to match (a short Markdown list item, whose
+    // "- " the rendering drops): the run of text the place is in, whole, where
+    // it occurs nearest to the same proportion of the way through.
+    if (anchor.runText.trim() !== '') {
+        let best = null;
+        let index = text.indexOf(anchor.runText);
+        while (index !== -1) {
+            if (best === null || Math.abs(index - proportional) < Math.abs(best - proportional)) {
+                best = index;
+            }
+            index = text.indexOf(anchor.runText, index + 1);
+        }
+        if (best !== null) {
+            return { position: best + anchor.runOffset, exact: true, affinity: anchor.affinity };
+        }
+    }
     return { position: Math.min(text.length, Math.max(0, proportional)), exact: false, affinity: anchor.affinity };
+}
+
+// The text node a DOM point is in, whole, and the point's offset in it; empty
+// when the point is not in a text node.
+function runOf(node, offset) {
+    if (node.nodeType !== Node.TEXT_NODE) {
+        return { runText: '', runOffset: 0 };
+    }
+    return { runText: node.data, runOffset: offset };
 }
 
 // Whether a DOM point is at the very end of its text node: in rendered
@@ -332,6 +357,7 @@ export function captureNoteAnchor(noteElement) {
             before: text.slice(Math.max(0, textOffset - CONTEXT_CHARS), textOffset),
             after: text.slice(textOffset, textOffset + CONTEXT_CHARS),
             noteTop, contentTop, keepVisible: true, affinity, atRunEnd: isAtRunEnd(node, offset), editText: text,
+            ...runOf(node, offset),
         };
     };
 
@@ -394,6 +420,7 @@ export function captureClickAnchor(noteElement, x, y) {
                 after: text.slice(textOffset, textOffset + CONTEXT_CHARS),
                 noteTop, keepVisible: false, clickX: x, clickY: y, affinity,
                 atRunEnd: isAtRunEnd(position.node, position.offset),
+                ...runOf(position.node, position.offset),
             };
         }
     }
@@ -834,6 +861,9 @@ function validateReference(reference) {
         }
         if (typeof reference.atRunEnd !== 'boolean') {
             throw new Error('A text hold needs atRunEnd');
+        }
+        if (typeof reference.runText !== 'string' || !Number.isInteger(reference.runOffset)) {
+            throw new Error('A text hold needs the run of text it is in');
         }
         if (Object.prototype.hasOwnProperty.call(reference, 'editText') && typeof reference.editText !== 'string') {
             throw new Error('A text hold editText must be a string');

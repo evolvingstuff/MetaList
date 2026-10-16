@@ -168,6 +168,29 @@ async function markdownCase(page) {
   await deleteNotes(page, [noteId]);
 }
 
+// A click on a short list item (too little text around it to match the
+// source on its own: the rendering drops the "- "): the caret still goes to
+// that item's source line, at the clicked spot.
+async function markdownShortItemCase(page) {
+  const label = 'click on a short Markdown list item';
+  const source = ['# Heading', '', 'A paragraph of Markdown text', '', '- item one', '- item two'];
+  const noteId = await createNote(page, source.map(line => `<div>${line}</div>`).join(''), '@markdown');
+  await reloadApp(page);
+  const point = await pointIn(page, noteId, 'item two');
+  await clickAt(page, point);
+  await assertCaretShown(page, noteId, label);
+  await page.keyboard.type('X');
+  await pause(SETTLE_MS);
+  const typed = await page.evaluate(id => document.querySelector(`.note[data-note-id="${id}"] > .note-content`).innerText
+    .split('\n').filter(line => line.includes('X')), noteId);
+  const expected = `- ${point.line.slice(0, point.offset)}X${point.line.slice(point.offset)}`;
+  assert.deepEqual(typed, [expected], `${label}: typing lands at the clicked spot of the clicked item`);
+  await page.keyboard.press('Backspace');
+  await page.keyboard.press('Escape');
+  await idle(page);
+  await deleteNotes(page, [noteId]);
+}
+
 // C3: a click into another note while one is being edited.
 async function switchNotesCase(page) {
   const label = 'click from another note being edited';
@@ -254,8 +277,12 @@ async function pastedNoteCase(page) {
   await reloadApp(page);
   await clickAt(page, await pointIn(page, sourceId, 'The copied note'));
   for (const key of ['c', 'v']) {
+    // ⌘V also runs the browser's paste, as a real one does: MetaList decides
+    // from what is pasted.
+    let options = {};
+    if (key === 'v') options = {commands: ['paste']};
     await page.keyboard.down('Meta');
-    await page.keyboard.press(key);
+    await page.keyboard.press(key, options);
     await page.keyboard.up('Meta');
     await pause(SETTLE_MS);
     await idle(page);
@@ -435,6 +462,7 @@ export async function checkClickCaret(page) {
   await reloadApp(page);
   await plainTextCase(page);
   await markdownCase(page);
+  await markdownShortItemCase(page);
   await switchNotesCase(page);
   await paddingCase(page, 'top-left padding', ['XFirst line of the note', 'Second line', 'Third line']);
   await paddingCase(page, 'bottom-right padding', ['First line of the note', 'Second line', 'Third lineX']);
