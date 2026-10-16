@@ -70,7 +70,7 @@ def _probe_candidate(*, python: str, executable: str, directory: Path,
             base_url=f"http://127.0.0.1:{port}", timeout=15, trust_env=False,
             headers={"X-Metalist-Tab-Id": "00000000-0000-4000-8000-000000000001"},
         ) as client:
-            status = client.get("/api2/auth/status")
+            status = client.get("/api2/auth/status")  # shockharness: ignore[DEF002] reason="an HTTP GET request, not a lookup"
             status.raise_for_status()
             if status.json()["version"] != target_version:
                 raise RuntimeError("Update candidate started with the wrong version")

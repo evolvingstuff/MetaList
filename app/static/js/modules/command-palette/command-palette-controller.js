@@ -138,6 +138,8 @@ import {
     validateNoteLayoutSettings,
 } from './note-layout-preferences.js';
 
+const DEFAULT_OPENAI_MODEL = 'gpt-5.6-luna';
+
 function trimToken(token) {
     if (typeof token !== 'string') {
         throw new Error('trimToken requires string');
@@ -716,7 +718,8 @@ class CommandPaletteController {
         const modelPreferenceKey = 'pref.ai.openai_model';
         return {
             provider,
-            model: this._preferences.getRaw(modelPreferenceKey) ?? 'gpt-5.6-luna',
+            // A user who never chose a model uses the default one.
+            model: this._getText(modelPreferenceKey, DEFAULT_OPENAI_MODEL),
             thinkingLevel: this._getSelect(
                 'pref.ai.thinking_level',
                 AI_THINKING_LEVEL_OPTIONS.map((option) => option.value),

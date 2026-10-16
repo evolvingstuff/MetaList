@@ -37,6 +37,7 @@ from app.services.agent.note_tag_suggestions import ranked_vocabulary
 from app.services.agent.note_tag_suggestions import suggest_note_tags
 from app.services.agent.skill_settings import DEFAULT_AGENT_SKILLS
 from app.services.agent.tagging_run import tag_batch_messages
+from app.services.agent.trace import agent_trace_store
 from app.services.agent.web_settings import AgentWebSettings
 from app.services.content_cache import clear_cache
 from app.services.file_registry import file_registry
@@ -161,6 +162,7 @@ def _run(request, inference) -> tuple[list[dict[str, object]], dict[str, list[st
         return [event async for event in suggest_note_tags(
             request=request, inference=inference, base_url="https://api.openai.com/v1", model="gpt-5.6-luna",
             thinking_level="low", web_settings=AgentWebSettings(mode="none"), session_key="session",
+            run_id=agent_trace_store.start_run(session_key="session", model="gpt-5.6-luna", user_message="Suggest Tags with AI"),
         )]
 
     events = asyncio.run(collect())
@@ -566,3 +568,28 @@ def test_a_subtree_too_big_for_one_batch_is_split_by_child_with_the_note_as_cont
     }, "at most two new tags per note; kyoto is existing"
     assert inference.payloads[0]["prior_batch_new_tags"] == []
     assert inference.payloads[1]["prior_batch_new_tags"] == ["japan", "travel-plans"], "later batches see batch 1's new tags"
+
+
+def test_suggesting_tags_after_a_chat_answer_records_its_own_trace_run(live_database, monkeypatch) -> None:
+    # The chat traced a run for this session first; Suggest Tags then records its own.
+    _note("trip", None, content="<div>Temples in Kyoto</div>", tags="")
+    monkeypatch.setattr(ai_routes.token_service, "get_session_key", lambda token: "session")
+    monkeypatch.setattr(ai_routes, "load_client_preferences", lambda *, token: {})
+    monkeypatch.setattr(ai_routes.tab_state_store, "get_sort_mode", lambda *, tab_id: "normal")
+    _set_ai_ready(monkeypatch, is_ready=True)
+    agent_trace_store.clear_trace(session_key="session")
+    agent_trace_store.start_run(session_key="session", model="gpt-5.6-luna", user_message="An earlier question")
+    try:
+        answers = _FakeInference([{"proposals": [{"note_id": "trip", "tags": ["temples"]}]}])
+        monkeypatch.setattr(ai_setup_module, "OpenAIInferenceAdapter", lambda **kwargs: answers)
+        assert _suggestion_lines("trip", include_children=False)[-1] == {"type": "proposals", "proposals": {"trip": ["temples"]}}
+        run = agent_trace_store.snapshot(session_key="session")["run"]
+        assert (run["user_message"], run["status"]) == ("Suggest Tags with AI", "complete")
+        assert [event["type"] for event in run["events"]] == ["TAGGING_INFERENCE"]
+
+        monkeypatch.setattr(ai_setup_module, "OpenAIInferenceAdapter", lambda **kwargs: _FailingInference([]))
+        assert _suggestion_lines("trip", include_children=False)[-1]["type"] == "failed"
+        run = agent_trace_store.snapshot(session_key="session")["run"]
+        assert (run["status"], run["error"]) == ("error", "OpenAI API request failed: connection reset")
+    finally:
+        agent_trace_store.clear_trace(session_key="session")

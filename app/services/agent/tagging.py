@@ -40,7 +40,9 @@ def tree_notes(tree: dict) -> list[dict]:
     while stack:
         node = stack.pop()
         notes.append(node)
-        stack.extend(reversed(node.get("children", [])))
+        # Serialized trees leave out an empty children list.
+        if "children" in node:
+            stack.extend(reversed(node["children"]))
     return notes
 
 

@@ -7,17 +7,14 @@ import sqlite3
 from typing import Optional
 
 from app.db.engine import GuardedConnection
+from .raw_connection import raw_sqlite_connection
 from app.db.schema import REMINDERS_TABLE
 
 
 def _conn(connection: GuardedConnection | sqlite3.Connection) -> GuardedConnection | sqlite3.Connection:
     if isinstance(connection, GuardedConnection):
         return connection
-    raw_connection = getattr(connection, "raw_connection", None)
-    if isinstance(raw_connection, sqlite3.Connection):
-        return raw_connection
-    assert isinstance(connection, sqlite3.Connection)
-    return connection
+    return raw_sqlite_connection(connection)
 
 
 def _serialize_datetime(value: datetime) -> str:

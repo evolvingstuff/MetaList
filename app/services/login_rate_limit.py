@@ -47,9 +47,10 @@ class LoginRateLimiter:
     def check_allowed(self, key: str) -> tuple[bool, int]:
         now = time.monotonic()
         with self._lock:
-            bucket = self._buckets.get(key)
-            if bucket is None:
+            # A key without failures has no bucket.
+            if key not in self._buckets:
                 return True, 0
+            bucket = self._buckets[key]
             if bucket.blocked_until > now:
                 remaining = math.ceil(bucket.blocked_until - now)
                 return False, remaining
@@ -61,10 +62,9 @@ class LoginRateLimiter:
     def record_failure(self, key: str) -> None:
         now = time.monotonic()
         with self._lock:
-            bucket = self._buckets.get(key)
-            if bucket is None:
-                bucket = _AttemptBucket()
-                self._buckets[key] = bucket
+            if key not in self._buckets:
+                self._buckets[key] = _AttemptBucket()
+            bucket = self._buckets[key]
             if bucket.blocked_until > now:
                 return
             self._prune_attempts(bucket, now)

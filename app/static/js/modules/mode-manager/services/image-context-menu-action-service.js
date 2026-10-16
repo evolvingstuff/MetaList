@@ -373,9 +373,9 @@ export async function copyImageFromContext(imageContext) {
 export async function saveImageFromContext(imageContext) {
     requireImageContext(imageContext);
     const loaded = await loadImageBlob(imageContext);
-    const filename = loaded.filename !== null
-        ? loaded.filename
-        : buildSuggestedImageFilename(imageContext, loaded.mimeType);
+    // An image saved without a name of its own is named after its note and type.
+    let filename = buildSuggestedImageFilename(imageContext, loaded.mimeType);
+    if (loaded.filename !== null) filename = loaded.filename;
     triggerImageDownload(loaded.blob, filename);
 }
 

@@ -329,11 +329,17 @@ def build_normalized_content_match_context(*, normalized_content: str) -> Normal
 
     content_tokens = tuple(normalized_content.split())
     match_indexes: dict[str, list[int]] = {}
+
+    def record_match(segment: str, index: int) -> None:
+        if segment not in match_indexes:
+            match_indexes[segment] = []
+        match_indexes[segment].append(index)
+
     for index, token in enumerate(content_tokens):
-        match_indexes.setdefault(token, []).append(index)
+        record_match(token, index)
         # Keep the full token available for tags that contain an apostrophe.
         if token.endswith("'s") and len(token) > 2:
-            match_indexes.setdefault(token[:-2], []).append(index)
+            record_match(token[:-2], index)
     segment_match_indexes = {segment: tuple(indexes) for segment, indexes in match_indexes.items()}
     token_positions = {segment: indexes[0] for segment, indexes in segment_match_indexes.items()}
     return NormalizedContentMatchContext(

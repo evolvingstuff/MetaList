@@ -8,7 +8,12 @@ export async function checkAgentHelpMenus(page) {
             const {CommandPalette} = await import('/static/js/modules/command-palette/command-palette-controller.js');
             const {captureActiveAgentScope} = await import('/static/js/modules/ai-chat/ai-chat-panel-controller.js');
             const result = await CommandPalette.openAgentMenu(entry.id, captureActiveAgentScope(), new AbortController().signal);
-            const element = document.querySelector(entry.selector);
+            // A destination that opened its alternate dialog says so (no other namespace: Create namespace).
+            let shownSelector = entry.selector;
+            if ('alternate_dialog' in entry && result.detail === entry.alternate_dialog.label) {
+                shownSelector = entry.alternate_dialog.selector;
+            }
+            const element = document.querySelector(shownSelector);
             return {result, visible: Boolean(element?.getClientRects().length),
                 selected: document.querySelector('#command-palette-results .selected')?.textContent || ''};  // shockharness: ignore[DEF003] reason="no selected palette item reads as empty text"
         }, target);

@@ -468,7 +468,7 @@ def _determine_root_band(
 
 
 def _timestamp_iso(record: object, field_name: str) -> str:
-    timestamp = getattr(record, field_name, None)
+    timestamp = getattr(record, field_name)
     if not isinstance(timestamp, datetime):
         return ""
     return timestamp.isoformat()

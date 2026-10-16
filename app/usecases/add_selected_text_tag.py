@@ -51,10 +51,11 @@ class CmdAddSelectedTextTag(QueryCommand):
 
         namespace_tag_frequencies = search_index.list_explicit_tag_frequencies()
         current_note_tags = extract_tags_for_search(record.tags)
-        current_note_frequencies = {
-            tag: namespace_tag_frequencies.get(tag, 0)
-            for tag in current_note_tags
-        }
+        # A tag only this note's unsaved text has is on no saved note yet.
+        current_note_frequencies = {tag: 0 for tag in current_note_tags}
+        for tag in current_note_tags:
+            if tag in namespace_tag_frequencies:
+                current_note_frequencies[tag] = namespace_tag_frequencies[tag]
         current_tag = find_equivalent_existing_tag(
             selected_text=self.selected_text,
             existing_tag_frequencies=current_note_frequencies,

@@ -147,7 +147,7 @@ def decode_search_history_payload(
 def coerce_search_history_encryption_service(encryption_service: object):
     if encryption_service is None:
         return None
-    dek = getattr(encryption_service, "dek", None)
+    dek = encryption_service.dek
     if not isinstance(dek, bytes) or len(dek) != 32:
         return None
     return encryption_service

@@ -100,20 +100,27 @@ function removeCachedHashesForDomSubtree(noteId) {
         throw new Error('removeCachedHashesForDomSubtree requires noteId string');
     }
 
+    // The cache holds only what the last view rendered, so a note on screen may
+    // have no entry (the differential view forgets entries the same way).
+    const forgetCachedHash = (id) => {
+        if (ModeContext.hasNoteHash(id)) {
+            ModeContext.removeNoteHash(id);
+        }
+    };
     const noteElement = document.querySelector(`[data-note-id="${noteId}"]`);
     if (!noteElement) {
-        ModeContext.removeNoteHash(noteId);
+        forgetCachedHash(noteId);
         return;
     }
 
-    ModeContext.removeNoteHash(noteId);
+    forgetCachedHash(noteId);
     const descendantElements = noteElement.querySelectorAll('[data-note-id]');
     descendantElements.forEach((element) => {
         const descendantId = element.dataset.noteId;
         if (typeof descendantId !== 'string' || descendantId.length === 0) {
             throw new Error('Deleted subtree descendant missing note id');
         }
-        ModeContext.removeNoteHash(descendantId);
+        forgetCachedHash(descendantId);
     });
 }
 

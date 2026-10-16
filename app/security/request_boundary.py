@@ -10,6 +10,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.api.request_auth import AUTH_COOKIE_NAME
 from app.services.exception_capture import CapturedExceptionContext
 from app.security.request_hosts import _normalize_hostname, resolve_allowed_request_hosts
+from app.utils.sent_fields import sent_or_none
 
 
 _SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
@@ -171,8 +172,8 @@ class RequestBoundaryMiddleware(BaseHTTPMiddleware):
             method=request.method,
             request_scheme=request.scope["scheme"],
             host_header=host_headers[0],
-            origin_header=request.headers.get("origin"),
-            authorization_header=request.headers.get("authorization"),
+            origin_header=sent_or_none(request.headers, "origin"),
+            authorization_header=sent_or_none(request.headers, "authorization"),
             has_auth_cookie=AUTH_COOKIE_NAME in request.cookies,
             allowed_hosts=self._allowed_hosts,
         )

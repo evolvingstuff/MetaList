@@ -82,6 +82,7 @@ import time
 import sys
 import types
 import uuid
+from app.utils.sent_fields import sent_or_none
 from starlette.staticfiles import StaticFiles as StarletteStaticFiles
 from fastapi.middleware.gzip import GZipMiddleware
 import os
@@ -178,13 +179,6 @@ def _diagnostic_request_id(request: Request) -> str:
     if "state" not in request.scope or "diagnostic_request_id" not in request.scope["state"]:
         return ""
     return request.scope["state"]["diagnostic_request_id"]
-
-
-def _sent_header(headers, name: str) -> str | None:
-    """A header the request may leave out (HTTP/1.0 requests may have no Host)."""
-    if name not in headers:
-        return None
-    return headers[name]
 
 
 def _handler_name(request: Request) -> str:
@@ -414,7 +408,8 @@ async def block_v1_root():
 @app.middleware("http")
 async def redirect_remote_http_to_https(request: Request, call_next):
     request_host = resolve_request_host_for_https_redirect(
-        host_header=_sent_header(request.headers, "host"),
+        # HTTP/1.0 requests may have no Host header.
+        host_header=sent_or_none(request.headers, "host"),
         fallback_host=request.url.hostname,
     )
     redirect_url = resolve_https_redirect_url(

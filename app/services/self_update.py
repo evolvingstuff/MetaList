@@ -159,10 +159,12 @@ def _fetch_latest_pypi_version() -> str:
 
     if not isinstance(payload, dict):
         raise RuntimeError("PyPI returned invalid MetaList release metadata; MetaList was not stopped")
-    project_info = payload.get("info")
-    if not isinstance(project_info, dict):
+    if "info" not in payload or not isinstance(payload["info"], dict):
         raise RuntimeError("PyPI returned invalid MetaList release metadata; MetaList was not stopped")
-    target_version = project_info.get("version")
+    project_info = payload["info"]
+    target_version = None
+    if "version" in project_info:
+        target_version = project_info["version"]
     if (
         not isinstance(target_version, str)
         or _RELEASE_VERSION_PATTERN.fullmatch(target_version) is None

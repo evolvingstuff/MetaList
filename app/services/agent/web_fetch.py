@@ -23,6 +23,7 @@ from app.services.public_http import PinnedPublicHTTPTransport
 from app.services.public_http import PublicHttpTargetRejected
 from app.services.public_http import ResolvedPublicHttpTarget
 from app.services.public_http import normalize_public_http_url
+from app.utils.sent_fields import sent_or_none
 from app.services.public_http import resolve_public_http_target
 
 
@@ -378,7 +379,7 @@ def _exchange_web_request(url: str, target: ResolvedPublicHttpTarget) -> _Downlo
     ) as client:
         with client.stream("GET", url) as response:
             if 300 <= response.status_code < 400:
-                location = _sent_header(response.headers, "location")
+                location = sent_or_none(response.headers, "location")
                 if location is None or location.strip() == "":
                     return _download_error(url, "redirect_without_location")
                 next_url = normalize_public_http_url(str(httpx.URL(url).join(location)))
@@ -396,11 +397,11 @@ def _exchange_web_request(url: str, target: ResolvedPublicHttpTarget) -> _Downlo
             if response.status_code >= 400:
                 return _download_error(url, f"http_{response.status_code}")
             # A response without a content type is judged by its bytes below.
-            content_type = _sent_header(response.headers, "content-type")
+            content_type = sent_or_none(response.headers, "content-type")
             media_type = ""
             if content_type is not None:
                 media_type = content_type.split(";", 1)[0].strip().casefold()
-            content_length = _sent_header(response.headers, "content-length")
+            content_length = sent_or_none(response.headers, "content-length")
             if content_length is not None and content_length.isdecimal():
                 if int(content_length) > MAX_WEB_RESPONSE_BYTES:
                     return _download_error(url, "response_too_large")
@@ -575,13 +576,6 @@ def _apply_batch_text_limit(
         limited_by_identity[identity] = limited
         output.append(limited)
     return tuple(output)
-
-
-def _sent_header(headers: httpx.Headers, name: str) -> str | None:
-    """A response header the site may leave out."""
-    if name not in headers:
-        return None
-    return headers[name]
 
 
 def _download_error(url: str, error_kind: str) -> _DownloadedWebResponse:

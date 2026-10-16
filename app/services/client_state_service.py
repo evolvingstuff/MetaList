@@ -205,7 +205,7 @@ def _validate_client_preferences(preferences: dict[str, object]) -> dict[str, st
         if key in _OBSOLETE_CLIENT_PREFERENCES:
             continue
         # Retire the local-provider selection and its stale cloud-model override.
-        if preferences.get("pref.ai.provider") == "ollama" and key in {
+        if "pref.ai.provider" in preferences and preferences["pref.ai.provider"] == "ollama" and key in {
             "pref.ai.provider", "pref.ai.openai_model",
         }:
             continue

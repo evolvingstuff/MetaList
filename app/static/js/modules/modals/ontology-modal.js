@@ -932,7 +932,9 @@ export class OntologyModal extends BaseModal {
 
         container.innerHTML = rows
             .map((row) => {
-                const countBadge = row.count === null ? '' : `<span class="ontology-search-count">${row.count}</span>`;
+                // A tag without a known note count shows no badge.
+                let countBadge = '';
+                if (row.count !== null) countBadge = `<span class="ontology-search-count">${row.count}</span>`;
                 return (
                     `<button class="ontology-search-result" data-action="focus" data-tag="${escapeHtml(row.tag)}">` +
                     `<span class="ontology-search-label">${escapeHtml(row.tag)}</span>` +
@@ -1350,7 +1352,8 @@ export class OntologyModal extends BaseModal {
 
         elements.suggestions.innerHTML = rows
             .map((row) => {
-                const countBadge = row.count === null ? '' : `<span class="ontology-dialog-suggestion-count">${row.count}</span>`;
+                let countBadge = '';
+                if (row.count !== null) countBadge = `<span class="ontology-dialog-suggestion-count">${row.count}</span>`;
                 return (
                     `<button type="button" class="ontology-dialog-suggestion" data-tag="${escapeHtml(row.tag)}">` +
                     `<span class="ontology-dialog-suggestion-label">${escapeHtml(row.tag)}</span>` +

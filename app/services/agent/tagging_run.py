@@ -28,6 +28,7 @@ from app.services.sync import get_current_sync_uuid
 from app.services.tokens import token_service
 from app.services.snapshot import resolve_view_scope_membership
 from app.usecases.bulk_tag_proposals import apply_bulk_proposals, prepare_proposal_changes
+from app.services.preference_values import preference_or_default
 
 
 _TAGGING_CORRECTION_ATTEMPTS = 3
@@ -255,7 +256,7 @@ class TaggingRun:
         # lint: allow-PY001 rationale="evidence budget can legitimately be insufficient for user-selected scope"
         except ValueError as exc:
             raise InferenceProviderError(str(exc)) from exc
-        policy = self.preferences.get(TAGGING_POLICY_KEY, "")
+        policy = preference_or_default(self.preferences, TAGGING_POLICY_KEY, default="")
         total_tokens = make_batch(trees).tokens
         coverage_note = ""
         focus_was_selected = False
@@ -272,7 +273,7 @@ class TaggingRun:
             all_choices = ("proceed",)
             prefix_choices = ("use_prefix",)
             if chooses_focus:
-                default_focus = self.preferences.get(TAGGING_FOCUS_KEY, "existing")
+                default_focus = preference_or_default(self.preferences, TAGGING_FOCUS_KEY, default="existing")
                 all_choices = ("focus_existing", "focus_new", "focus_both")
                 prefix_choices = ("prefix_focus_existing", "prefix_focus_new", "prefix_focus_both")
             assert default_focus in {"existing", "new", "both"}

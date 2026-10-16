@@ -26,7 +26,11 @@ def prepare_proposal_changes(note_ids, action, tag_filter, proposals):
         if action == "generate":
             seen = {tag.casefold() for tag in pending} | _effective_accepted_tag_keys(note_id)
             additions = []
-            for tag in proposals.get(note_id, ()):
+            # The AI proposes nothing for some notes.
+            note_proposals = ()
+            if note_id in proposals:
+                note_proposals = proposals[note_id]
+            for tag in note_proposals:
                 if tag.casefold() not in seen:
                     pending.append(tag)
                     seen.add(tag.casefold())

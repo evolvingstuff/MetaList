@@ -95,7 +95,9 @@ class SummaryBatchStore:
     def clear_session(self, *, session_key: str) -> None:
         _validate_session_key(session_key)
         with self._lock:
-            self._kept.pop(session_key, None)
+            # A session that never kept summary batches has none to clear.
+            if session_key in self._kept:
+                del self._kept[session_key]
 
     def reset(self) -> None:
         with self._lock:

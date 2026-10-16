@@ -334,7 +334,12 @@ def remote_tag_target(root: Path, tag: str) -> str:
         reference: sha
         for sha, reference in (line.split("\t", 1) for line in output.splitlines() if line)
     }
-    return targets.get(f"refs/tags/{tag}^{{}}", targets.get(f"refs/tags/{tag}", ""))
+    # An annotated tag lists its commit as the peeled ^{} reference; a lightweight
+    # tag points at it directly; a tag not on the remote yet has no target ("").
+    for reference in (f"refs/tags/{tag}^{{}}", f"refs/tags/{tag}"):
+        if reference in targets:
+            return targets[reference]
+    return ""
 
 
 def local_tag_target(root: Path, tag: str) -> str:

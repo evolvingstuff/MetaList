@@ -6,15 +6,12 @@ import sqlite3
 from datetime import datetime, timezone
 
 from .engine import GuardedConnection
+from .raw_connection import raw_sqlite_connection
 from .schema import APP_SETTINGS_TABLE
 
 
 def _conn(connection: GuardedConnection | sqlite3.Connection) -> sqlite3.Connection:
-    raw_connection = getattr(connection, "raw_connection", None)
-    if isinstance(raw_connection, sqlite3.Connection):
-        return raw_connection
-    assert isinstance(connection, sqlite3.Connection)
-    return connection
+    return raw_sqlite_connection(connection)
 
 
 def _serialize_datetime(value: datetime | None) -> str:

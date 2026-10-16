@@ -237,9 +237,9 @@ class ShellSessionService:
             raise TypeError("run_id must be a non-empty string")
 
         with self._lock:
-            record = self._runs.get(run_id)
-        if record is None:
-            raise ShellRunNotFound("Shell run has expired or does not exist")
+            if run_id not in self._runs:
+                raise ShellRunNotFound("Shell run has expired or does not exist")
+            record = self._runs[run_id]
         if record.note_id != note_id:
             raise ShellRunNotFound("Shell run does not exist for this note")
         return record

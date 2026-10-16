@@ -4,6 +4,7 @@ from fastapi import HTTPException, Request, Response
 
 from app.config import ACTIVE_NAMESPACE
 from app.server_runtime import validate_namespace
+from app.utils.sent_fields import sent_or_none
 
 
 AUTH_COOKIE_PREFIX = "metalist_auth"
@@ -21,7 +22,7 @@ def read_request_auth_token(request: Request) -> tuple[str | None, str | None]:
     if not isinstance(request, Request):
         raise TypeError("request must be a Request")
 
-    authorization = request.headers.get("authorization")
+    authorization = sent_or_none(request.headers, "authorization")
     if authorization is not None:
         parts = authorization.split()
         if len(parts) != 2 or parts[0].lower() != "bearer":

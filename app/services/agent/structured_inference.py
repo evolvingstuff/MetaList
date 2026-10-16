@@ -140,8 +140,9 @@ class _InstructorTraceCapture:
         attempt = self._current_attempt()
         if not attempt.wire_request:
             raise RuntimeError("Instructor response arrived before its HTTP request")
-        stream_iterator = getattr(response, "_iterator", None)
-        if stream_iterator is not None:
+        # Instructor's streaming responses carry their chunks as _iterator; others have none.
+        if hasattr(response, "_iterator") and response._iterator is not None:
+            stream_iterator = response._iterator
             if not hasattr(stream_iterator, "__aiter__"):
                 raise TypeError("Instructor streaming response iterator must be asynchronous")
             setattr(response, "_iterator", self._capture_stream(stream_iterator))
@@ -421,9 +422,9 @@ def _json_value(value: object) -> object:
         return value
     if isinstance(value, BaseModel):
         return _json_value(value.model_dump(mode="json"))
-    model_dump = getattr(value, "model_dump", None)
-    if callable(model_dump):
-        return _json_value(model_dump(mode="json"))
+    # Provider SDK objects that are not this pydantic's BaseModel still dump the same way.
+    if hasattr(value, "model_dump") and callable(value.model_dump):
+        return _json_value(value.model_dump(mode="json"))
     if isinstance(value, dict):
         converted: dict[str, object] = {}
         for key, nested_value in value.items():

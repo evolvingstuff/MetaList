@@ -24,7 +24,6 @@ import asyncio
 from collections import Counter
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from uuid import uuid4
 
 from app.services.agent.cloud_privacy import CloudPrivacyBoundary
 from app.services.agent.cloud_privacy import cloud_privacy_evaluator
@@ -266,14 +265,15 @@ def keep_new_tags_up_to_limit(*, tags: tuple[str, ...], namespace_vocabulary: di
 
 async def suggest_note_tags(
     *, request: NoteTagRequest, inference: InferenceAdapter, base_url: str, model: str,
-    thinking_level: str, web_settings: AgentWebSettings, session_key: str,
+    thinking_level: str, web_settings: AgentWebSettings, session_key: str, run_id: str,
 ) -> AsyncIterator[dict[str, object]]:
-    """Ask the AI, batch by batch. Yields {"type": "progress", "completed", "total"} as batches
-    finish, then {"type": "proposals", "proposals": {note_id: [tags]}}. InferenceProviderError
-    when it cannot answer usefully."""
+    """Ask the AI, batch by batch, recording each attempt under the trace run `run_id`
+    (agent_trace_store.start_run). Yields {"type": "progress", "completed", "total"} as
+    batches finish, then {"type": "proposals", "proposals": {note_id: [tags]}}.
+    InferenceProviderError when it cannot answer usefully."""
     run = _OneNoteRun(
         base_url=base_url, selected_model=model, thinking_level=thinking_level,
-        web_settings=web_settings, session_key=session_key, run_id=str(uuid4()),
+        web_settings=web_settings, session_key=session_key, run_id=run_id,
     )
     context = await inference.inspect_context_window(base_url=base_url, model=model)
     namespace_note_ids = frozenset(note_store.list_note_ids())

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import sqlite3
 
 from app.config import TEST_MODE
 from app.db.schema import APP_SETTINGS_TABLE, LINK_TITLES_TABLE, NOTES_TABLE, REMINDERS_TABLE
+from app.db.raw_connection import raw_sqlite_connection
 from app.db.session import begin_writer
 from app.db.settings_sql import insert_default_settings
 from app.services.content_cache import populate_cache_from_db
@@ -18,12 +18,7 @@ from app.services.view_cache import view_cache
 
 
 def _execute_sql(connection, statement: str) -> None:
-    raw_connection = getattr(connection, "raw_connection", None)
-    if isinstance(raw_connection, sqlite3.Connection):
-        raw_connection.execute(statement)
-        return
-    assert isinstance(connection, sqlite3.Connection)
-    connection.execute(statement)
+    raw_sqlite_connection(connection).execute(statement)
 
 
 def reset_state_for_tests() -> None:

@@ -42,8 +42,10 @@ def bundled_packages(root: Path, library: dict) -> list[dict]:
     if not isinstance(packages, list) or not packages:
         raise RuntimeError(f'Vendor bundle {library["name"]} lists no packages')
     for package in packages:
-        entry = locked.get(package['lockKey'])
-        if entry is None or entry.get('version') != package['version'] or 'integrity' not in entry:
+        entry = None
+        if package['lockKey'] in locked:
+            entry = locked[package['lockKey']]
+        if entry is None or 'version' not in entry or entry['version'] != package['version'] or 'integrity' not in entry:
             raise RuntimeError(f'Bundled package {package["name"]}@{package["version"]} is not pinned in {bundle["lockfile"]}')
         if not package['lockKey'].endswith('node_modules/' + package['name']):
             raise RuntimeError(f'Bundled package {package["name"]} has an inconsistent lock key {package["lockKey"]}')

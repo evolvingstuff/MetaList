@@ -678,7 +678,9 @@ export function formatMenuShortcut({ isMac, mod, shift, key }) {
         throw new Error('formatMenuShortcut requires key');
     }
     if (isMac) {
-        const macKey = MAC_KEY_SYMBOLS[key] === undefined ? key : MAC_KEY_SYMBOLS[key];
+        // Keys with a Mac symbol (Enter ↩, arrows) show it; letters show themselves.
+        let macKey = key;
+        if (Object.hasOwn(MAC_KEY_SYMBOLS, key)) macKey = MAC_KEY_SYMBOLS[key];
         return `${shift ? '⇧' : ''}${mod ? '⌘' : ''}${macKey}`;
     }
     return [mod ? 'Ctrl' : '', shift ? 'Shift' : '', key].filter((part) => part !== '').join('+');

@@ -586,8 +586,8 @@ reason = "fetch rejects with a TypeError whose cause is ECONNREFUSED while the s
 # step) before rethrowing. MetaList's own startup gates still apply their rules there.
 [[tool.shockharness.overrides]]
 paths = ["tests/**"]
-disable = ["MAGIC001"]
-reason = "Assertions and fixtures spell out the literal values they expect"
+disable = ["MAGIC001", "DEF002"]
+reason = "Assertions and fixtures spell out the literal values they expect, and test doubles answer a missing key with a default as the stores they stand in for do"
 
 [tool.shockharness.cache]
 enabled = true

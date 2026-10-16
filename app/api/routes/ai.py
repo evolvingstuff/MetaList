@@ -79,6 +79,7 @@ from app.services.html_export import resolve_export_scope
 from app.services.ai_setup import describe_ai_setup
 from app.services.input_errors import InputRejected
 from app.utils.text_utils import strip_html
+from app.services.preference_values import preference_or_default
 
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -507,10 +508,14 @@ async def _note_tag_suggestion_events(
     *, request: NoteTagRequest, connection: AiConnection, payload: NoteTagSuggestionRequest,
     web_settings: AgentWebSettings, session_key: str,
 ) -> AsyncIterator[str]:
+    # Its own run in the session's trace (diagnostics, AI history), as a chat answer has.
+    run_id = agent_trace_store.start_run(
+        session_key=session_key, model=payload.model, user_message="Suggest Tags with AI",
+    )
     events = suggest_note_tags(
         request=request, inference=connection.inference, base_url=connection.base_url,
         model=payload.model, thinking_level=payload.thinking_level,
-        web_settings=web_settings, session_key=session_key,
+        web_settings=web_settings, session_key=session_key, run_id=run_id,
     )
     # lint: allow-PY001 rationale="the AI provider failed or kept answering unusably: the client shows why"
     try:
@@ -518,7 +523,10 @@ async def _note_tag_suggestion_events(
             yield json.dumps(event) + "\n"
     # lint: allow-PY001 rationale="the AI provider failed or kept answering unusably: the client shows why"
     except InferenceProviderError as exc:
+        agent_trace_store.fail_run(session_key=session_key, run_id=run_id, error=str(exc))
         yield json.dumps({"type": "failed", "message": str(exc)}) + "\n"
+    else:
+        agent_trace_store.complete_run(session_key=session_key, run_id=run_id)
     finally:
         await events.aclose()
 
@@ -1037,4 +1045,4 @@ def manage_bulk_proposals(payload: BulkManageRequest, token: Annotated[str, Depe
 @router.get("/proposals/settings")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 def get_tagging_settings(token: Annotated[str, Depends(require_request_auth_token)]):
     preferences = load_client_preferences(token=token)
-    return {"policy": preferences.get(TAGGING_POLICY_KEY, "")}
+    return {"policy": preference_or_default(preferences, TAGGING_POLICY_KEY, default="")}

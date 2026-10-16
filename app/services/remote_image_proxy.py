@@ -22,6 +22,7 @@ from app.services.public_http import PinnedPublicHTTPTransport
 from app.services.public_http import PublicHttpTargetRejected
 from app.services.public_http import ResolvedPublicHttpTarget
 from app.services.public_http import resolve_public_http_target
+from app.utils.sent_fields import sent_or_none
 
 
 _FETCH_TIMEOUT_SECONDS = 8.0
@@ -226,7 +227,7 @@ def _request_image(url: str, target: ResolvedPublicHttpTarget) -> tuple[bytes | 
     ) as client:
         with client.stream("GET", url) as response:
             if 300 <= response.status_code < 400:
-                location = response.headers.get("location")
+                location = sent_or_none(response.headers, "location")
                 if location is None or location.strip() == "":
                     return None, None, "redirect_without_location"
                 next_url = normalize_url_for_link_title(str(httpx.URL(url).join(location)))
@@ -235,7 +236,7 @@ def _request_image(url: str, target: ResolvedPublicHttpTarget) -> tuple[bytes | 
                 return None, next_url, None
             if response.status_code >= 400:
                 return None, None, f"http_{response.status_code}"
-            declared_length = response.headers.get("content-length")
+            declared_length = sent_or_none(response.headers, "content-length")
             if declared_length is not None:
                 normalized_length = declared_length.strip()
                 if not normalized_length.isdecimal():

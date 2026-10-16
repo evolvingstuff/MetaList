@@ -475,6 +475,12 @@ function defaultFormState() {
     };
 }
 
+// A schedule that never ends has no end value.
+function endValueText(end) {
+    if (!('value' in end)) return '';
+    return String(end.value);
+}
+
 function stateFromReminder(reminder) {
     if (!reminder || typeof reminder !== 'object') {
         throw new Error('stateFromReminder requires reminder');
@@ -502,7 +508,7 @@ function stateFromReminder(reminder) {
         interval: typeof rule.interval === 'number' ? String(rule.interval) : '1',
         weekdays: Array.isArray(rule.weekdays) ? rule.weekdays : [],
         end_type: typeof end.type === 'string' ? end.type : 'never',
-        end_value: end.value === undefined ? '' : String(end.value),
+        end_value: endValueText(end),
         pre_reminder_enabled: preReminder !== null,
         pre_reminder_amount: preReminderForm.amount,
         pre_reminder_unit: preReminderForm.unit,

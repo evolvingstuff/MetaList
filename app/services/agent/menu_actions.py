@@ -55,7 +55,9 @@ class MenuActionStore:
             self.discard(pending)
 
     def discard(self, pending: PendingMenu) -> None:
-        self._pending.pop(pending.request_id, None)
+        # The browser's acknowledgment may have removed it already.
+        if pending.request_id in self._pending:
+            del self._pending[pending.request_id]
         if not pending.future.done():
             pending.future.cancel()
 

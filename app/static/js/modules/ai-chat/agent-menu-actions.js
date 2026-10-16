@@ -18,11 +18,19 @@ export async function openAgentMenu({ menuId, endpoints, isCurrent, hasOpenModal
         if (!endpoint || typeof endpoint.execute !== 'function') throw new Error(`Missing menu command: ${target.id}`);
         await endpoint.execute();
     }
-    const element = queryElement(target.selector);
-    if (!element || element.getClientRects().length === 0) {
-        return { status: 'unavailable', detail: 'The dialog did not open.' };
+    const isShown = (selector) => {
+        const element = queryElement(selector);
+        return Boolean(element) && element.getClientRects().length > 0;
+    };
+    if (isShown(target.selector)) {
+        return { status: 'opened', detail: target.label };
     }
-    return { status: 'opened', detail: target.label };
+    // Some destinations open another dialog when theirs cannot act (Open/Switch
+    // namespace with no other namespace opens Create namespace): say which.
+    if ('alternate_dialog' in target && isShown(target.alternate_dialog.selector)) {
+        return { status: 'opened', detail: target.alternate_dialog.label };
+    }
+    return { status: 'unavailable', detail: 'The dialog did not open.' };
 }
 
 export async function executeAgentMenuRequest({ event, signal, openMenu, acknowledge }) {

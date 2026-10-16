@@ -84,10 +84,7 @@ class _PinnedResponseStream(httpx.SyncByteStream):
         yield from self._stream
 
     def close(self) -> None:
-        close = getattr(self._stream, "close", None)
-        if not callable(close):
-            raise RuntimeError("Public HTTP response stream has no close method")
-        close()
+        self._stream.close()
 
 
 class PinnedPublicHTTPTransport(httpx.BaseTransport):

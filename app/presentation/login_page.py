@@ -6,6 +6,7 @@ from starlette.requests import Request
 
 from app.api.request_auth import AUTH_COOKIE_NAME
 from app.services.tokens import token_service
+from app.utils.sent_fields import sent_or_none
 
 
 def login_is_certainly_needed(request: Request) -> bool:
@@ -15,9 +16,9 @@ def login_is_certainly_needed(request: Request) -> bool:
     server still knows (no cookie, or one from a session that has ended)."""
     if not isinstance(request, Request):
         raise TypeError("request must be a Request")
-    if request.query_params.get("force_reauth") == "1":
+    if sent_or_none(request.query_params, "force_reauth") == "1":
         return True
-    cookie_token = request.cookies.get(AUTH_COOKIE_NAME)
+    cookie_token = sent_or_none(request.cookies, AUTH_COOKIE_NAME)
     if cookie_token is None:
         return True
     return not token_service.verify_token(cookie_token)

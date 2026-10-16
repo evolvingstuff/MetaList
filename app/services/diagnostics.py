@@ -735,8 +735,9 @@ def _handle_asyncio_exception(
     loop: asyncio.AbstractEventLoop,
     context: dict[str, object],
 ) -> None:
-    exception = context.get("exception")
-    if isinstance(exception, BaseException):
+    # asyncio's error context carries an exception only when one was raised.
+    if "exception" in context and isinstance(context["exception"], BaseException):
+        exception = context["exception"]
         log_unexpected_exception(
             context="asyncio task", exception=exception, request_id="", level="ERROR",
         )
