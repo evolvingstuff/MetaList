@@ -243,7 +243,8 @@ def _verify_installed_assets(*, static_directory: Path, http_port: int, https_po
     assets = [('/static/' + path.relative_to(static_directory).as_posix(), path.read_bytes())
               for path in sorted(static_directory.rglob('*'))
               if path.is_file() and path.suffix in {'.js', '.css', '.json', '.ico'}]
-    assert len(assets) >= ASSET_CONNECTION_COUNT, 'Installed application has too few startup assets'
+    if len(assets) < ASSET_CONNECTION_COUNT:
+        raise RuntimeError('Installed application has too few startup assets')
     for port, use_https in ((http_port, False), (https_port, True)):
         with ThreadPoolExecutor(max_workers=ASSET_CONNECTION_COUNT) as executor:
             futures = [executor.submit(_verify_asset_batch, port=port, use_https=use_https,
@@ -313,7 +314,8 @@ def _verify_browser_startup(*, certificate: Path, host: str,
                             profiles: list[tuple[str, int, int]], browser_name: str,
                             use_https: bool, cold_runs: int, reloads: int,
                             validate_encrypted_login: bool) -> None:
-    assert os.environ['RUNNER_ENVIRONMENT'] == 'github-hosted', 'Release browser validation requires a disposable GitHub-hosted runner'
+    if os.environ['RUNNER_ENVIRONMENT'] != 'github-hosted':
+        raise RuntimeError('Release browser validation requires a disposable GitHub-hosted runner')
     assert not use_https or os.name == 'nt', 'Browser HTTPS trust setup is currently implemented for Windows'
     assert cold_runs >= 1
     assert reloads >= 1

@@ -85,7 +85,8 @@ def _old_version_fixture(wheel: Path, directory: Path, metadata_url: str, *, rep
     if repair:
         with urlopen(REPAIR_BASELINE_URL, timeout=_BASELINE_DOWNLOAD_TIMEOUT_SECONDS) as response:
             wheel_body = response.read()
-        assert hashlib.sha256(wheel_body).hexdigest() == REPAIR_BASELINE_SHA256
+        if hashlib.sha256(wheel_body).hexdigest() != REPAIR_BASELINE_SHA256:
+            raise RuntimeError("Downloaded repair baseline wheel does not match its pinned SHA-256")
         version = fixture_version = REPAIR_BASELINE_VERSION
     with zipfile.ZipFile(io.BytesIO(wheel_body)) as archive:
         members = {name: archive.read(name) for name in archive.namelist() if not name.endswith("/RECORD")}
@@ -95,7 +96,8 @@ def _old_version_fixture(wheel: Path, directory: Path, metadata_url: str, *, rep
         members[metadata] = members[metadata].replace(f"Version: {version}\n".encode(), b"Version: 0.0.0\n", 1)
         members["app/version.py"] = b'__version__ = "0.0.0"\n'
     updater = "app/services/self_update.py"
-    assert members[updater].count(b'https://pypi.org/pypi/metalist/json') == 1
+    if members[updater].count(b'https://pypi.org/pypi/metalist/json') != 1:
+        raise RuntimeError("The updater must name the PyPI metadata URL exactly once")
     members[updater] = members[updater].replace(b'https://pypi.org/pypi/metalist/json', metadata_url.encode())
     record = io.StringIO(newline="")
     writer = csv.writer(record)
@@ -292,8 +294,10 @@ def run(wheel: Path, *, repair: bool) -> None:
 
 
 if __name__ == "__main__":
-    assert len(sys.argv) in (_ARGC_WITHOUT_REPAIR, _ARGC_WITH_REPAIR), "Expected built wheel path and optional --repair"
+    if len(sys.argv) not in (_ARGC_WITHOUT_REPAIR, _ARGC_WITH_REPAIR):
+        raise SystemExit("Expected built wheel path and optional --repair")
     is_repair = len(sys.argv) == _ARGC_WITH_REPAIR
     if is_repair:
-        assert sys.argv[_REPAIR_FLAG_INDEX] == "--repair"
+        if sys.argv[_REPAIR_FLAG_INDEX] != "--repair":
+            raise SystemExit(f"Expected --repair, got {sys.argv[_REPAIR_FLAG_INDEX]!r}")
     run(Path(sys.argv[1]).resolve(), repair=is_repair)

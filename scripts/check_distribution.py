@@ -15,19 +15,22 @@ _WHEEL_IMPORT_CHECK_TIMEOUT_SECONDS = 30
 
 def check_vendor_inventory(names: set[str], expected: set[str]) -> None:
     actual = {name for name in names if name.startswith('app/static/js/vendor/') and name.endswith('.js')}
-    assert actual == expected, f'Distribution contains missing or obsolete vendor bundles: {actual ^ expected}'
+    if actual != expected:
+        raise RuntimeError(f'Distribution contains missing or obsolete vendor bundles: {actual ^ expected}')
 
 
 def check_repository_only_tests(names: set[str]) -> None:
     excluded = {name for name in names if name.split("/")[0] in {"evals", "tests"}}
-    assert not excluded, f"Distribution contains repository-only tests: {sorted(excluded)}"
+    if excluded:
+        raise RuntimeError(f"Distribution contains repository-only tests: {sorted(excluded)}")
 
 
 def check_distribution(distribution_directory: Path) -> None:
     project_root = Path(__file__).resolve().parents[1]
     wheels = list(distribution_directory.glob("*.whl"))
     sources = list(distribution_directory.glob("*.tar.gz"))
-    assert len(wheels) == len(sources) == 1, "Expected exactly one wheel and one source distribution"
+    if not (len(wheels) == len(sources) == 1):
+        raise RuntimeError("Expected exactly one wheel and one source distribution")
     paths = {project_root / "main.py"}
     for pattern in (
         "app/**/*.py", "app/services/agent/**/*.md",
@@ -41,7 +44,8 @@ def check_distribution(distribution_directory: Path) -> None:
         wheel_names = set(wheel.namelist())
         source_names = set(source.getnames())
         source_roots = {name.split("/")[0] for name in source_names}
-        assert len(source_roots) == 1, "Source distribution must have one root directory"
+        if len(source_roots) != 1:
+            raise RuntimeError("Source distribution must have one root directory")
         source_root = source_roots.pop()
         check_repository_only_tests(wheel_names)
         check_repository_only_tests({name.removeprefix(f'{source_root}/') for name in source_names})
@@ -51,14 +55,18 @@ def check_distribution(distribution_directory: Path) -> None:
         check_vendor_inventory({name.removeprefix(f'{source_root}/') for name in source_names}, expected_vendor)
         for path in sorted(paths):
             name = path.relative_to(project_root).as_posix()
-            assert name in wheel_names, f"Wheel is missing runtime file: {name}"
-            assert wheel.read(name) == path.read_bytes(), f"Wheel contains stale runtime file: {name}"
+            if name not in wheel_names:
+                raise RuntimeError(f"Wheel is missing runtime file: {name}")
+            if wheel.read(name) != path.read_bytes():
+                raise RuntimeError(f"Wheel contains stale runtime file: {name}")
             source_name = f"{source_root}/{name}"
-            assert source_name in source_names, f"Source distribution is missing runtime file: {name}"
+            if source_name not in source_names:
+                raise RuntimeError(f"Source distribution is missing runtime file: {name}")
             member = source.extractfile(source_name)
             assert member is not None
             with member:
-                assert member.read() == path.read_bytes(), f"Source distribution contains stale runtime file: {name}"
+                if member.read() != path.read_bytes():
+                    raise RuntimeError(f"Source distribution contains stale runtime file: {name}")
     with tempfile.TemporaryDirectory(prefix="metalist-wheel-import-") as temporary_directory:
         subprocess.run(
             [sys.executable, "-I", "-c", (
@@ -78,5 +86,6 @@ def check_distribution(distribution_directory: Path) -> None:
 
 
 if __name__ == "__main__":
-    assert len(sys.argv) == _EXPECTED_ARGUMENT_COUNT, "Usage: python scripts/check_distribution.py DIST_DIRECTORY"
+    if len(sys.argv) != _EXPECTED_ARGUMENT_COUNT:
+        raise SystemExit("Usage: python scripts/check_distribution.py DIST_DIRECTORY")
     check_distribution(Path(sys.argv[1]))

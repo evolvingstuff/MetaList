@@ -23,5 +23,6 @@ def build_repair_archive(destination: Path) -> None:
 
 
 if __name__ == "__main__":
-    assert len(sys.argv) == _EXPECTED_ARGV_LENGTH, "Expected output ZIP path"
+    if len(sys.argv) != _EXPECTED_ARGV_LENGTH:
+        raise SystemExit("Expected output ZIP path")
     build_repair_archive(Path(sys.argv[1]))

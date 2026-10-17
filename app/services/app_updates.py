@@ -94,9 +94,12 @@ def write_job(record: dict[str, object]) -> None:
 
 def read_job(job_id: str) -> dict[str, object]:
     record = json.loads(job_path(job_id).read_text(encoding='utf-8'))
-    assert isinstance(record, dict) and record['job_id'] == job_id
-    assert record['status'] in {'queued', 'preparing', 'installing', 'complete', 'failed'}
-    assert isinstance(record['pid'], int) and record['pid'] > 0
+    if not (isinstance(record, dict) and record['job_id'] == job_id):
+        raise RuntimeError(f'Update job record {job_id} is not a job record for this id')
+    if record['status'] not in {'queued', 'preparing', 'installing', 'complete', 'failed'}:
+        raise RuntimeError(f'Update job record {job_id} has an unknown status: {record["status"]!r}')
+    if not (isinstance(record['pid'], int) and record['pid'] > 0):
+        raise RuntimeError(f'Update job record {job_id} has an invalid process id: {record["pid"]!r}')
     _release_version_key(record['target_version'])
     if record['status'] == 'installing' and _release_version_key(__version__) >= _release_version_key(record['target_version']):
         record = dict(record, status='complete', message=f'MetaList {__version__} is ready. Reload to continue.')
