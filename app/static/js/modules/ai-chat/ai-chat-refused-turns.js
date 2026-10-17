@@ -7,6 +7,8 @@
 export const AT_CHAT_START = '';
 // Messages shown before the server has them (a Send in progress, a refused one).
 export const LOCAL_MESSAGE_ID_PREFIX = 'local-';
+// A turn is the user's message and the answer to it.
+export const MESSAGES_PER_TURN = 2;
 
 function requireMessages(messages, caller) {
     if (!Array.isArray(messages)) {

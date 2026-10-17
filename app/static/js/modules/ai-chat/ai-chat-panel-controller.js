@@ -13,7 +13,9 @@ import {
     handleBulkEvent,
 } from './bulk-proposal-ui.js';
 import { placeChatMessageElements } from './ai-chat-message-placement.js';
-import { LOCAL_MESSAGE_ID_PREFIX, lastServerMessageId, placeRefusedTurns } from './ai-chat-refused-turns.js';
+import {
+    LOCAL_MESSAGE_ID_PREFIX, MESSAGES_PER_TURN, lastServerMessageId, placeRefusedTurns,
+} from './ai-chat-refused-turns.js';
 import {
     AiApiError,
     AiChatRefusedError,
@@ -1267,8 +1269,8 @@ class AiChatPanelController {
                 activities: [],
             },
         );
-        const userMessage = this._messages[this._messages.length - 2];
-        const assistantMessage = this._messages[this._messages.length - 1];
+        // The list keeps its own copies: stream into those, not into the literals above.
+        const [userMessage, assistantMessage] = this._messages.slice(-MESSAGES_PER_TURN);
         if (this._activeChatAbortController !== null) {
             throw new Error('AI chat abort controller already exists');
         }
