@@ -1,6 +1,7 @@
 import { ApplicationState, stateValuesEqual } from '../application-state.js';
 import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
+import { contextMenuIconMarkup } from '../context-menu/context-menu-service.js';
 import { CommandGate } from '../mode-manager/services/command-gate-service.js';
 import { buildSessionHeaders } from '../session-auth.js';
 import { handleDictationPasteEvent } from '../mode-manager/services/dictation-paste-service.js';
@@ -2148,7 +2149,7 @@ export class OntologyModal extends BaseModal {
                 <button class="ontology-tag" data-action="focus" data-tag="${escapeHtml(focusTag)}">${escapeHtml(focusTag)}</button>
                 <div class="ontology-row-actions">
                     <button class="ontology-edit" data-action="rename-focus" aria-label="Edit tag">✎</button>
-                    <span class="ontology-spacer"></span>
+                    <button class="ontology-remove ontology-delete-tag" data-action="delete-focus" aria-label="Delete tag" title="Delete tag">${contextMenuIconMarkup('trash', 'ontology-delete-tag-icon')}</button>
                 </div>
             </div>
         `);
@@ -2607,6 +2608,16 @@ export class OntologyModal extends BaseModal {
 
             if (action === 'rename-focus') {
                 await this._renameFocusedTag();
+                return;
+            }
+
+            // Deleting the focused tag is also inside its edit dialog; here it is one click away.
+            if (action === 'delete-focus') {
+                const focusTag = this.getModalState().focusTag;
+                if (typeof focusTag !== 'string' || focusTag.trim() === '') {
+                    throw new Error('Focus tag missing');
+                }
+                await this._deleteFocusedTag(focusTag);
                 return;
             }
 

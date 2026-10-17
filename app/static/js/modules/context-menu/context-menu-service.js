@@ -681,6 +681,18 @@ function createMenuIcon(iconName) {
     return svg;
 }
 
+// A menu icon as SVG markup, for views built from HTML strings (it matches the
+// menu's own drawing).
+export function contextMenuIconMarkup(iconName, className) {
+    if (typeof className !== 'string' || className.length === 0) {
+        throw new Error('contextMenuIconMarkup requires a class name');
+    }
+    const paths = CONTEXT_MENU_ICONS[iconName];
+    assertMenuIconPaths(paths, iconName);
+    const pathMarkup = paths.map((pathData) => `<path d="${pathData}"></path>`).join('');
+    return `<svg class="${className}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${pathMarkup}</svg>`;
+}
+
 function assertMenuIconPaths(paths, iconName) {
     if (!Array.isArray(paths) || paths.length === 0) {
         throw new Error(`Context menu icon has no paths: ${iconName}`);

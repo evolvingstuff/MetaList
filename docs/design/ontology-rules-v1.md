@@ -140,6 +140,7 @@ Implementation note (DOM):
 
 - The add/edit dialogs for implications, synonyms, incoming conditions, and tags keep their visible submit button.
 - **Add new tag…** presents only the tag input and actions; it omits redundant introductory copy and a redundant field label.
+- The focused tag has a ✎ (edit) and a 🗑 (delete) button. 🗑 deletes it after the same confirmation as ✎ → **Delete tag…**.
 - Editing the focused tag supports both rename and **Delete tag…**. Deletion requires a separate confirmation, removes the exact tag token from every note tag bar, and deletes every ontology rule that references the tag. Quoted text and regular-expression matchers with the same characters are not tag references and remain intact.
 - Suggestions open without an automatic selection; clicking a row selects it, and one `ArrowDown` selects the first row.
 - Search and relationship-dialog inputs explicitly reset inherited modal margins, keeping suggestion panels directly below the field for incoming conditions, implications, synonyms, and edits.

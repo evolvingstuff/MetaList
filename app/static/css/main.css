@@ -1410,6 +1410,20 @@ body.ontology-modal-open #ontology-modal {
     color: rgba(255, 255, 255, 0.9);
 }
 
+/* The focused tag's 🗑: deletes it everywhere (after the same confirmation as
+   Edit tag → Delete tag…). */
+.ontology-delete-tag-icon {
+    width: 14px;
+    height: 14px;
+    /* A click goes to the button (the dialog reads actions from HTML elements). */
+    pointer-events: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
 .ontology-spacer {
     width: 24px;
     height: 24px;
