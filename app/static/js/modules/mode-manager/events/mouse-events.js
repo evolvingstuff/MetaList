@@ -238,6 +238,8 @@ function isMouseDownOutsideEditExclusion(target) {
             // App notices (a new release, the backup reminder) act on their own: a button
             // that opens a dialog saves and leaves the note itself, and × leaves it be.
             '.app-notice-stack',
+            // The Reminders popup (reminder-surface-service.js) handles its own presses too.
+            '#reminder-surface',
             '#ai-chat-panel',
             '.add-note',
             '#trash-can',
@@ -1228,8 +1230,8 @@ function handleClick(event) {
     if (isWritingAssistantInteraction(event)) return;
     // The card offering a format for a paste handles its own clicks (paste-format-offer-service.js).
     if (event.target instanceof Element && event.target.closest('.paste-format-offer')) return;
-    // App notices (a new release, the backup reminder) handle their own clicks too.
-    if (event.target instanceof Element && event.target.closest('.app-notice-stack')) return;
+    // App notices (a new release, the backup reminder) and the Reminders popup handle their own clicks too.
+    if (event.target instanceof Element && event.target.closest('.app-notice-stack, #reminder-surface')) return;
 
     if (isViewModeNoteDisclosureToggle(event.target)) {
         return;
