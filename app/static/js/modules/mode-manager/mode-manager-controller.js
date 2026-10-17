@@ -10,6 +10,7 @@ import { initContextMenuEvents } from './events/context-menu-events.js';
 import { initInputEvents } from './events/input-events.js';
 import { initFocusEvents } from './events/focus-events.js';
 import { initContentAutoSave } from './events/inactivity-events.js';
+import { initEditingImageSizes } from './services/editing-image-size-service.js';
 import { initializeSearchEvents } from './events/search-events.js';
 import { startPolling } from './services/polling-service.js';
 import { hasRootsBelowLoadedWindow, startInfiniteScrollMonitor, resetInfiniteScrollState } from './services/infinite-scroll-service.js';
@@ -57,6 +58,7 @@ const ModeManager = {
         initInputEvents();
         initFocusEvents();
         initContentAutoSave();
+        initEditingImageSizes();
         await initializeSearchEvents();
         startPolling();
         startInfiniteScrollMonitor();

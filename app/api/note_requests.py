@@ -269,6 +269,13 @@ class ResizeNoteImageRequest(TypedDict):
     undoContext: UndoContext
     viewport: Viewport
 
+# The edited note's text and tags as the editor has them, unsaved; image sources
+# may be left out (only the structure decides sizes).
+@with_config(ConfigDict(strict=True))
+class EditingImageSizesRequest(TypedDict):
+    content: Content
+    tags: Text
+
 @with_config(ConfigDict(strict=True))
 class FinishFileEditSessionRequest(TypedDict):
     clientId: Identifier

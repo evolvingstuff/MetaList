@@ -105,8 +105,8 @@ Other (non-meta) tags may also appear inside wrapper tokens (e.g. `{{foo bar}}`)
 - **Remove Formatting** also removes footnote tags/scopes and leaves their original text in place.
 
 ## Size meta tags
-- `@size=0.1`, `@size=0.25`, `@size=0.5`, `@size=0.75`, `@size=1.0`, `@size=1.25`, `@size=1.5`, `@size=2.0`, and `@size=3.0` scale the whole note or matching scoped region in view mode without modifying image bytes or file metadata, up to the width of the note or embedded note it is in and never past it. Any image shrinks to fit that width, keeping its shape, in MetaList, exports and prints.
-- Inline-image context menus expose **Make Bigger**, **Make Smaller**, and **Reset Size** in both edit and view modes. View mode refreshes immediately; edit mode shows the updated raw delimiters and numeric tag.
+- `@size=0.1`, `@size=0.25`, `@size=0.5`, `@size=0.75`, `@size=1.0`, `@size=1.25`, `@size=1.5`, `@size=2.0`, and `@size=3.0` scale the whole note or matching scoped region in view mode without modifying image bytes or file metadata, up to the width of the note or embedded note it is in and never past it. Any image shrinks to fit that width, keeping its shape, in MetaList, exports and prints. A size is a fraction of the size that fits: an image wider than its note fills it at `@size=1.0`, and every smaller step shows as that fraction of the note's width.
+- Inline-image context menus expose **Make Bigger**, **Make Smaller**, and **Reset Size** in both edit and view modes. View mode refreshes immediately; edit mode shows the updated raw delimiters and numeric tag, keeps the caret where it was, and ⌘Z undoes the size first. While editing, images show at their size too (as outside edit mode, images only): at once after a menu resize, and about half a second after typing a size tag or a brace pauses; the display zoom is never saved.
 - Stored image-file embeds expose the same actions in view mode. Reset removes `@size` and removes delimiters only when no surviving tag owns that scope.
 
 ## List meta tags

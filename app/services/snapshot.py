@@ -33,6 +33,7 @@ from app.services.search_index import search_index
 from app.services.search_query import ParsedSearchQuery, SearchClause, parse_search_query
 from app.services.sync import get_all_locks
 from app.services.view_state import ViewState
+from app.services.editing_image_sizes import editing_image_size_factors
 from app.security.sensitive_cache import SensitiveMemo
 from app.utils.text_utils import strip_html
 
@@ -873,6 +874,8 @@ def _render_view_note(
     is_editing = bool(flags["isEditing"])
     if is_editing:
         rendered_content = rec.content
+        # The editor shows each image at its size from the start (docs/ui/content-formatting.md).
+        flags["editingImageSizes"] = editing_image_size_factors(content_html=rec.content, tags=rec.tags)
     elif type(rec) is NoteRecord and _is_render_cacheable(rec.content):
         # Identity keys are exact only for immutable records; any other record
         # type (e.g. test doubles) could change in place and renders directly.

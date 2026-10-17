@@ -26,11 +26,11 @@
     --note-vertical-spacing: 2px;
     --note-corner-radius: 12px;
     --note-corner-radius-nested: 10px;
-    /* Embeds: the first level, then each embed inside an embed a shade deeper. */
-    --embed-tint-1: #afd7fb;
-    --embed-tint-2: #96c8f7;
-    --embed-tint-3: #7db8f2;
-    --embed-edge: rgba(23, 92, 170, 0.28);
+    /* Embeds: greys, the first level, then each embed inside an embed a shade deeper. */
+    --embed-tint-1: #f1f3f5;
+    --embed-tint-2: #e5e8eb;
+    --embed-tint-3: #d8dce0;
+    --embed-edge: rgba(0, 0, 0, 0.12);
     /* The light theme's header bar (search, tabs icon, result count): black,
        with white on it, as it long was. */
     --search-shell-surface: #000000;
@@ -3999,6 +3999,14 @@ html[data-theme="dark"] .ai-chat-header-actions #ai-chat-spend-toggle[aria-press
     height: auto;
 }
 
+/* While a note is edited its text is raw, so the editor gives each image its
+   size directly (a display-only property, never saved), with the same rule as
+   .meta-size: a fraction of the size that fits. */
+.note.editing .note-content img {
+    max-width: calc(100% * var(--editing-image-size, 1));
+    zoom: var(--editing-image-size, 1);
+}
+
 /* Preformatted blocks (Markdown code, raw CSV, diagram source) wrap too,
    keeping their spaces and indents: nothing scrolls sideways or runs out. */
 .note-content pre {
@@ -6622,9 +6630,13 @@ body.tab-drag-active * {
     display: block;
 }
 
+/* A size is a fraction of the size that fits: the note's width caps the content
+   first, then the size scales it (zoom resolves a percentage width after
+   scaling, so the cap is scaled by the same factor). Every step shows, however
+   wide the picture or the note. */
 .meta-size {
     display: inline-block;
-    max-width: 100%;
+    max-width: calc(100% * var(--meta-size-factor));
     zoom: var(--meta-size-factor);
 }
 
@@ -7983,10 +7995,10 @@ html[data-theme="dark"] .note-embed-collapse-toggle:hover {
 }
 
 html[data-theme="dark"] {
-    --embed-tint-1: #173350;
-    --embed-tint-2: #1d3f63;
-    --embed-tint-3: #244b76;
-    --embed-edge: rgba(147, 197, 253, 0.22);
+    --embed-tint-1: #202224;
+    --embed-tint-2: #2a2d30;
+    --embed-tint-3: #35393d;
+    --embed-edge: rgba(235, 235, 235, 0.14);
 }
 
 html[data-theme="dark"] .note:not(.editing):has(> .note-content > .note-reference-only) {

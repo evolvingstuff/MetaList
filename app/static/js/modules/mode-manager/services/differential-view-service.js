@@ -24,6 +24,7 @@ import {
     syncNoteTimestampDataset,
 } from './note-timestamp-hover-service.js';
 import { syncTagProposalPresentation } from './tag-proposal-service.js';
+import { applyEditingImageSizes } from './editing-image-size-service.js';
 import { splitTagsForDisplay } from './tag-syntax-service.js';
 
 const CONTENT_ELEMENT_CACHE = ApplicationState.createWeakCollection('CONTENT_ELEMENT_CACHE', 'map');
@@ -982,6 +983,10 @@ export function applyDifferentialView(payload, options) {
         if (shouldRenderContent) {
             contentElement.innerHTML = noteData.content;
             ensureAnchorsOpenInNewTabs(contentElement);
+            // The edited note's images show at their size from the first frame.
+            if (Array.isArray(noteData.flags.editingImageSizes)) {
+                applyEditingImageSizes(contentElement, noteData.flags.editingImageSizes);
+            }
             logVDOM('replaced note content', { noteId });
             vdomOperations += 1;
             if (incomingHash) {
@@ -1219,6 +1224,11 @@ function applyNoteDataFromPayload(noteElement, noteId, noteData, noteLocks, curr
         ensureAnchorsOpenInNewTabs(contentElement);
         noteElement.dataset.contentHash = snapshotHash;
         contentChanged = true;
+        // The edited note's images show at their size from the first frame (the
+        // server sends sizes only for the note this client edits; its lock may come later).
+        if (Array.isArray(flags.editingImageSizes)) {
+            applyEditingImageSizes(contentElement, flags.editingImageSizes);
+        }
     } else if (snapshotHash && !editingByCurrentClient) {
         noteElement.dataset.contentHash = snapshotHash;
     }

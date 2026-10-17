@@ -26,6 +26,7 @@ export const CONFIG = {
             TOGGLE_TODO: (noteId) => `${API_NOTES_BASE}/${noteId}/toggle-todo`,
             UNFORMAT: (noteId) => `${API_NOTES_BASE}/${noteId}/unformat`,
             RESIZE_IMAGE: (noteId) => `${API_NOTES_BASE}/${noteId}/resize-image`,
+            EDITING_IMAGE_SIZES: (noteId) => `${API_NOTES_BASE}/${noteId}/editing-image-sizes`,
             RUN_SHELL: (noteId) => `${API_NOTES_BASE}/${noteId}/run-shell`,
             RUN_SHELL_STATUS: (noteId, runId) => `${API_NOTES_BASE}/${noteId}/run-shell/${runId}`,
             REFERENCE_MODE: (noteId) => `${API_NOTES_BASE}/${noteId}/reference-mode`,

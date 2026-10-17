@@ -460,6 +460,24 @@ export const NotesAPI = {
         });
     },
 
+    // The size each inline image shows at in the editor, for unsaved text and tags.
+    async fetchEditingImageSizes(noteId, content, tags) {
+        if (typeof noteId !== 'string' || noteId.length === 0) {
+            throw new Error('NotesAPI.fetchEditingImageSizes requires noteId string');
+        }
+        if (typeof content !== 'string' || typeof tags !== 'string') {
+            throw new Error('NotesAPI.fetchEditingImageSizes requires content and tags strings');
+        }
+        const payload = await this._apiCall(CONFIG.API.NOTES.EDITING_IMAGE_SIZES(noteId), {
+            method: 'POST',
+            body: JSON.stringify({ content, tags }),
+        });
+        if (payload === null || typeof payload !== 'object' || !Array.isArray(payload.factors)) {
+            throw new Error('Editing image sizes response must list factors');
+        }
+        return payload.factors;
+    },
+
     async runShell(noteId, timeoutSeconds) {
         if (!noteId) {
             throw new Error('runShell requires noteId');

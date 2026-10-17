@@ -11,6 +11,7 @@ import { scrollNoteIntoView } from '../services/scroll-restoration-service.js';
 import { detachEditorSurface } from '../../editor-toolbar.js';
 import { clearTagBar } from '../services/tag-bar-service.js';
 import { resolveHistoryEditingState } from '../services/history-selection-policy-service.js';
+import { refreshEditingImageSizes } from '../services/editing-image-size-service.js';
 
 function applyScrollRestore(scrollRestore, contextLabel) {
     if (!scrollRestore || typeof scrollRestore !== 'object') {
@@ -198,6 +199,10 @@ export async function actionUndo() {
     if (ModeContext.currentContent !== newContent && newContent !== null) {
         ModeContext.setCurrentContent(newContent);
     }
+    // An undone or redone size tag leaves the text as it was: the sizes follow it.
+    if (ModeContext.isEditing) {
+        await refreshEditingImageSizes(ModeContext.currentNoteId);
+    }
 
     ModeContext.validate();
 }
@@ -272,6 +277,10 @@ export async function actionRedo() {
 
     if (ModeContext.currentContent !== newContent && newContent !== null) {
         ModeContext.setCurrentContent(newContent);
+    }
+    // An undone or redone size tag leaves the text as it was: the sizes follow it.
+    if (ModeContext.isEditing) {
+        await refreshEditingImageSizes(ModeContext.currentNoteId);
     }
 
     ModeContext.validate();

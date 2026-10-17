@@ -35,6 +35,7 @@ import {
 import { CommandGate } from '../services/command-gate-service.js';
 import { captureEditingFocus, restoreEditingFocus } from '../services/viewport-hold-service.js';
 import { editingFocusAtRightPress, rememberEditingFocusAtRightPress } from '../services/right-press-focus-service.js';
+import { applyEditingImageSizes, refreshEditingImageSizes } from '../services/editing-image-size-service.js';
 import {
     prepareDeleteNoteContextAction,
     prepareOutlineMoveContextAction,
@@ -139,6 +140,9 @@ async function resizeImageFromContext(imageContext, action) {
     if (typeof response.content !== 'string' || typeof response.tags !== 'string') {
         throw new Error('Image resize response must include content and tags');
     }
+    if (!Array.isArray(response.editingImageSizes)) {
+        throw new Error('Image resize response must include editingImageSizes');
+    }
     if (ModeContext.isEditing && ModeContext.currentNoteId === hostNoteId) {
         const noteElement = document.querySelector(`.note[data-note-id="${hostNoteId}"]`);
         if (!(noteElement instanceof HTMLElement)) {
@@ -154,9 +158,13 @@ async function resizeImageFromContext(imageContext, action) {
         if (noteContent.innerHTML !== response.content) {
             noteContent.innerHTML = response.content;
         }
+        // In the same frame as the new text, so an image never shows at full size between.
+        applyEditingImageSizes(noteContent, response.editingImageSizes);
         setTagBarValue(noteElement, response.tags);
+        let shiftedFocus = null;
         if (editingFocus !== null) {
-            restoreEditingFocus(noteElement, shiftedEditingFocus(editingFocus, textBefore, noteContent.textContent));
+            shiftedFocus = shiftedEditingFocus(editingFocus, textBefore, noteContent.textContent);
+            restoreEditingFocus(noteElement, shiftedFocus);
         }
         markTagBarSaved(noteElement, response.tags);
         if (ModeContext.currentContent !== response.content) {
@@ -171,6 +179,16 @@ async function resizeImageFromContext(imageContext, action) {
         // Everything is saved, the resize last: ⌘Z undoes it first, then what was
         // typed before (as after a saved paste, the session's history restarts).
         ModeContext.resetEditSessionState({ startedCollapsed: ModeContext.editSessionStartedCollapsed });
+        // The view learns the saved note too (its tags, and the fingerprint that
+        // tells a later undo apart from this state), then the caret goes back.
+        await actionRefreshAndMaybeSelect({
+            startedAt: performance.now(),
+            context: `resizeImage.${action}.editing`,
+        });
+        if (shiftedFocus !== null) {
+            restoreEditingFocus(noteElement, shiftedFocus);
+        }
+        await refreshEditingImageSizes(hostNoteId);
         return;
     }
     await actionRefreshAndMaybeSelect({

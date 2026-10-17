@@ -39,6 +39,7 @@ from app.api.note_requests import (
     ToggleTodoDoneRequest,
     UnformatNoteContentRequest,
     ResizeNoteImageRequest,
+    EditingImageSizesRequest,
     RunShellEndpointRequest,
     ToggleReferenceModeEndpointRequest,
     MoveNoteEndpointRequest,
@@ -161,6 +162,7 @@ from app.services.selected_text_tag import SelectedTextTagValidationError
 from app.api.request_auth import require_request_auth_token
 from app.security.shell_execution import is_loopback_host
 from app.services.input_errors import InputRejected
+from app.services.editing_image_sizes import editing_image_size_factors
 
 
 logger = logging.getLogger(__name__)
@@ -1210,6 +1212,16 @@ def resize_note_image(request: Request, note_id: str, body: ResizeNoteImageReque
         viewport=viewport,
     )
     return cmd.execute()
+
+
+# The size each inline image shows at in the editor, for unsaved text and tags:
+# what the view would render (a display-only zoom; nothing is saved).
+@router.post("/notes/{note_id}/editing-image-sizes")
+@transactional_route
+def editing_image_sizes(request: Request, note_id: str, body: EditingImageSizesRequest) -> Dict[str, object]:
+    _require_bearer_token(request)
+    _require_note_present(note_id, context="notes.editing-image-sizes")
+    return {"factors": editing_image_size_factors(content_html=body["content"], tags=body["tags"])}
 
 
 @router.post("/notes/{note_id}/run-shell")
