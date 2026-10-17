@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from datetime import datetime, timedelta
 
 from app.db.session import begin_writer
 from app.db.settings_sql import (
@@ -49,6 +50,10 @@ _ALLOWED_CLIENT_PREFERENCES = {
     "pref.dictation.negate": "dictation_phrase",
     "pref.update_notice_version": "release_version",
     "pref.reminder_surface_expanded": {"true", "false"},
+    # How often to remind the user to back up this namespace (backup-reminder-service.js).
+    "pref.backup_reminder": {"off", "daily", "weekly", "every_2_weeks", "monthly"},
+    # Until when the dismissed backup reminder stays hidden.
+    "pref.backup_reminder_hidden_until": "utc_timestamp",
     "pref.note_layout.top_level_note_size": {"same", "larger", "largest"},
     "pref.note_layout.child_indentation": {"compact", "standard", "wide"},
     "pref.note_layout.vertical_spacing": {"compact", "comfortable", "spacious"},
@@ -194,6 +199,18 @@ class ClientStateValidationError(ValueError, RuntimeError):
     """Invalid serialized client preference or usage input."""
 
 
+# A UTC moment as JavaScript's Date.toISOString() writes it.
+_UTC_TIMESTAMP_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z")
+
+
+def _validate_utc_timestamp_preference(*, key: str, value: str) -> None:
+    if _UTC_TIMESTAMP_RE.fullmatch(value) is None:
+        raise ClientStateValidationError(f"Client preference {key} must be a UTC timestamp like 2026-10-16T12:00:00.000Z")
+    # The pattern fixes the shape; an impossible date such as month 13 fails loudly here.
+    moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    assert moment.utcoffset() == timedelta(0)
+
+
 def _validate_client_preferences(preferences: dict[str, object]) -> dict[str, str]:
     if not isinstance(preferences, dict):
         raise TypeError("preferences must be a dict")
@@ -217,6 +234,8 @@ def _validate_client_preferences(preferences: dict[str, object]) -> dict[str, st
         if allowed_values == "release_version":
             if re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", value) is None:
                 raise ClientStateValidationError("Invalid update notice version")
+        elif allowed_values == "utc_timestamp":
+            _validate_utc_timestamp_preference(key=key, value=value)
         elif allowed_values == "tag_activity_windows":
             _validate_tag_activity_windows_preference(key=key, value=value)
         elif allowed_values == "dictation_phrase":

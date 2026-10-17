@@ -119,6 +119,7 @@ export const CONFIG = {
             SETTINGS: `${API_BASE}/backup/settings`,
             RUN: `${API_BASE}/backup/run`,
             LIST: `${API_BASE}/backup/list`,
+            TIMES: `${API_BASE}/backup/times`,
             RESTORE: `${API_BASE}/backup/restore`,
             RESTORE_PREFLIGHT: `${API_BASE}/backup/restore/preflight`,
             RESTORE_IMPORT: `${API_BASE}/backup/restore/import`,

@@ -12,7 +12,10 @@ function fakeDocument() {
     const elements = new Map();
     function element() {
         return { children: [], listeners: {}, setAttribute() {},
-            append(...children) { this.children.push(...children); },
+            append(...children) {
+                this.children.push(...children);
+                for (const child of children) if (child.id) elements.set(child.id, child);
+            },
             addEventListener(name, listener) { this.listeners[name] = listener; },
             remove() { elements.delete(this.id); },
         };
@@ -35,7 +38,7 @@ test('slow page check returns later, shows notice once, and a refresh performs a
     const firstPage = await import(`${servicePath}?page=first`);
     firstPage.checkReleaseOnPageLoad();
     const pending = firstPage.showUpdateNotice(store, async () => {opened += 1;});
-    assert.equal(document.elements.size, 0);
+    assert.equal(document.getElementById('app-update-notice'), undefined);
     requests.shift()({ok: true, json: async () => release});
     await pending;
     const notice = document.getElementById('app-update-notice');
@@ -43,14 +46,15 @@ test('slow page check returns later, shows notice once, and a refresh performs a
     await notice.children[1].listeners.click();
     assert.equal(opened, 1);
     notice.children[2].listeners.click();
-    assert.equal(document.elements.size, 0);
+    assert.equal(document.getElementById('app-update-notice'), undefined);
+    assert(document.getElementById('app-notice-stack'), 'the notice floats in the shared notice stack');
     const secondPage = await import(`${servicePath}?page=refresh`);
     secondPage.checkReleaseOnPageLoad();
     assert.equal(requests.length, 1, 'refresh must make a new server request');
     const secondPending = secondPage.showUpdateNotice(store, async () => {});
     requests.shift()({ok: true, json: async () => release});
     await secondPending;
-    assert.equal(document.elements.size, 0, 'same version must not nag after refresh');
+    assert.equal(document.getElementById('app-update-notice'), undefined, 'same version must not nag after refresh');
     const thirdPage = await import(`${servicePath}?page=newrelease`);
     thirdPage.checkReleaseOnPageLoad();
     const thirdPending = thirdPage.showUpdateNotice(store, async () => {});

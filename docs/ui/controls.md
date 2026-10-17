@@ -196,6 +196,7 @@ On macOS, `⌘ + Y` normally opens Safari History rather than performing native 
 - Show/Hide AI Chat (label reflects current visibility)
 - AI Agent Settings… (OpenAI API key, model, cloud privacy, evidence and tagging limits; model and thinking level are selected beside chat Send)
 - Create backup now (opens Backup Settings, where you choose one backup folder, select the namespaces to include, set retention, and then run the backup; typing `backups` in the palette also matches it, and the completion modal shows archive size)
+- Backup reminder (Off, Daily, Weekly, Every 2 weeks or Monthly; see Backup reminder below)
 - Restore from backup…
 - Logout
 - Generate random password…
@@ -216,5 +217,12 @@ When `Show tags in list` is enabled, the right-aligned tag column wraps and is c
 
 ### Update notifications
 Each document load/refresh starts a fresh server-side PyPI check in parallel with app startup, including on the login page. Once authenticated and ready, a newly discovered release shows a dismissible reminder-style notice linking to Version Info. `pref.update_notice_version` remembers the displayed release using namespace preferences, so refreshes do not repeat it. Failed checks leave the app usable and Version Info offers Check again. Version Info also checks when opened.
+
+Notices float in one bottom-right column (`app-notice-stack.js`), so a release notice and the backup reminder stack instead of covering each other.
+
+### Backup reminder
+An optional, per-namespace nudge to back up, separate from Reminders (`backup-reminder-service.js`, `backup-reminder-schedule.js`). The menu's `Backup reminder` is `Weekly` by default, or `Off`, `Daily`, `Every 2 weeks` or `Monthly` (`pref.backup_reminder`). The clock runs from this namespace's newest archive in the backup folder (`GET /api2/backup/times`), so a backup made while backing up another namespace counts; with no backup or no folder it is due at once.
+
+When due, a card floats in the notice stack: `Time to back up: the last backup was N days ago.`, `Back Up Now` (the `Create backup now` flow) and `×`, which hides it for a day (`pref.backup_reminder_hidden_until`, so a reload does not bring it back early). Following the interaction principles, it takes no space and never takes focus or the caret; it waits while a dialog or the menu is open; `Back Up Now` saves and leaves a note being edited, as every dialog does; cancelling Backup Settings leaves the card; a successful backup removes it and restarts the clock; `Off` removes it at once. It is checked when the app opens, when its tab becomes visible again (re-reading the backup times), when a dialog or the menu closes, and on the first click or key at least 30 seconds after the last check. It never polls and never runs while the tab is hidden.
 
 Update is a deliberate action: it preflights the reviewed release, creates verified immutable backups, and restarts all namespaces. The modal displays progress and a Reload action on completion. Closing/reopening it in the same page resumes the accepted job. Job status can be read using its opaque ID after restart, but starting an update requires authentication. Source checkouts and unmanaged installs show the eligibility reason. After a post-shutdown failure, inspect the updater output/log and restart with `metalist`; automatic rollback is not provided.

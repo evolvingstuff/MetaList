@@ -87,6 +87,11 @@ class BackupListResponse(BaseModel):
     backups: list[BackupListEntryResponse]
 
 
+class BackupTimesResponse(BaseModel):
+    # When each of this namespace's backups in the backup folder was made, newest first.
+    backup_times: list[str]
+
+
 class BackupRunDestinationResponse(BaseModel):
     namespace: str
     destination: str
@@ -867,6 +872,16 @@ def list_backups(token: Annotated[str, Depends(_require_auth)]):
             )
     backups.sort(key=lambda entry: entry.created_at, reverse=True)
     return BackupListResponse(backups=backups)
+
+
+@router.get("/times", response_model=BackupTimesResponse)
+def list_backup_times(token: Annotated[str, Depends(_require_auth)]):
+    """When this namespace was backed up into the backup folder (the backup reminder's clock)."""
+    if ACTIVE_NAMESPACE is None:
+        raise RuntimeError("Backup times need an active namespace")
+    folder_backups = list_backups(token=token).backups
+    backup_times = [backup.created_at for backup in folder_backups if backup.namespace == ACTIVE_NAMESPACE]
+    return BackupTimesResponse(backup_times=backup_times)
 
 
 @router.post("/run", response_model=BackupRunResponse)

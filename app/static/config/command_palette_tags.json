@@ -153,6 +153,10 @@
       "tags": ["backup", "backups", "create", "save", "database", "sqlite", "snapshot", "safety"]
     },
     {
+      "id": "pref.backup_reminder",
+      "tags": ["backup", "backups", "reminder", "remind", "nag", "schedule", "daily", "weekly", "monthly", "frequency", "safety"]
+    },
+    {
       "id": "form.restore_backup",
       "tags": ["backup", "restore", "recover", "database", "sqlite", "snapshot"]
     },

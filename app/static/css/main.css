@@ -9665,13 +9665,24 @@ body.ai-tagging-locked .ai-chat-tag-operation select:enabled { cursor: pointer !
 }
 
 
-/* Release notices use the reminder card styling without sharing reminder state. */
-.app-update-notice {
+/* App notices (app-notice-stack.js) stack in one bottom-right column, so a release
+   notice and the backup reminder never cover each other. */
+.app-notice-stack {
     position: fixed;
     right: 18px;
     bottom: 18px;
     z-index: 1100;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
     max-width: min(460px, calc(100vw - 36px));
+    pointer-events: none;
+}
+
+/* Release notices use the reminder card styling without sharing reminder state. */
+.app-update-notice {
+    max-width: 100%;
     display: flex;
     align-items: center;
     gap: 12px;

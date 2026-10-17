@@ -14,6 +14,9 @@ Create backup now is an operation, not merely opening a dialog. It can prompt fo
 backup folder/settings and creates one versioned .tar.gz archive per namespace
 containing its notes database and sibling files database when present. The result
 shows one row per namespace. The help action cannot invoke backup creation.
+Backup reminder (menu: Off, Daily, Weekly, Every 2 weeks, Monthly; Weekly by
+default) floats a card when this namespace's newest backup is older than that;
+its Back Up Now opens Backup Settings and × hides it for a day.
 Restore from backup opens a picker for configured-folder snapshots. The user
 chooses and confirms a restore; success is confirmed with OK before reloading.
 Opening this picker neither restores data nor changes backups. Existing backup

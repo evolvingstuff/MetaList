@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         Auth.revealMainApp();
         await ReminderSurface.start();
+        await CommandPalette.startBackupReminder();
         document.body.dataset.appReady = 'true';
         CommandPalette.notifyAppUpdate();
     } else {

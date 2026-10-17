@@ -275,6 +275,12 @@
     "presentation": "palette"
   },
   {
+    "id": "pref.backup_reminder",
+    "label": "Backup reminder",
+    "selector": "#command-palette-modal",
+    "presentation": "palette"
+  },
+  {
     "id": "action.logout",
     "label": "Logout",
     "selector": "#command-palette-modal",

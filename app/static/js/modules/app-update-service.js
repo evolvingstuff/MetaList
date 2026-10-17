@@ -1,4 +1,5 @@
 import { ApplicationState } from './application-state.js';
+import { appNoticeStack } from './app-notice-stack.js';
 import { CONFIG } from './config.js';
 import { buildSessionHeaders } from './session-auth.js';
 import { HttpRequestError, rethrowUnexpectedError } from './expected-errors.js';
@@ -75,7 +76,7 @@ export async function showUpdateNotice(preferences, openVersionInfo) {
     dismiss.setAttribute('aria-label', 'Dismiss update notification');
     dismiss.addEventListener('click', () => notice.remove());
     notice.append(label, view, dismiss);
-    document.body.appendChild(notice);
+    appNoticeStack().append(notice);
     // Remember a version only after its notice is displayed, using existing encrypted preferences.
     try {
         await persistUpdateNotice(preferences, release.target_version);

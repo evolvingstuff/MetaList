@@ -673,6 +673,8 @@ export const Auth = {
                 this.revealMainApp();
                 startupPhase = 'starting reminders';
                 await ReminderSurface.start();
+                startupPhase = 'starting the backup reminder';
+                await CommandPalette.startBackupReminder();
                 document.body.dataset.appReady = 'true';
                 CommandPalette.notifyAppUpdate();
             } else {

@@ -2,6 +2,7 @@ import { openAgentMenu } from '../ai-chat/agent-menu-actions.js';
 import { addDiagramToNote } from '../excalidraw/excalidraw-actions.js';
 import { captureActiveAgentScope } from '../ai-chat/ai-chat-panel-controller.js';
 import { showUpdateNotice } from '../app-update-service.js';
+import { BackupReminder } from '../backup-reminder-service.js';
 import { receiveSearchSuggestionPreferences } from '../mode-manager/services/search-suggestion-windows-service.js';
 import { ApplicationState, stateValuesEqual } from '../application-state.js';
 import { HttpRequestError } from '../expected-errors.js';
@@ -582,6 +583,8 @@ class CommandPaletteController {
         });
 
         applyNoteLayoutSettings(document.body, this._readNoteLayoutSettings());
+
+        void BackupReminder.preferencesChanged();
 
         const theme = this._getSelect('pref.theme', ['system', 'light', 'dark'], 'system');
         if (theme === 'system') {
@@ -2160,6 +2163,7 @@ class CommandPaletteController {
             throw new Error('Backup run expected results array from CommandGate');
         }
 
+        await BackupReminder.backupMade();
         await this._openBackupResultModal({
             results: backupResult,
         });
@@ -2400,6 +2404,14 @@ class CommandPaletteController {
             this._reminderModal = new ReminderModal();
         }
         await this._reminderModal.open({ search });
+    }
+
+    async startBackupReminder() {
+        await BackupReminder.start({
+            preferences: this._preferences,
+            fetchBackupTimes: () => this._authRequest(CONFIG.API.BACKUP.TIMES, 'GET', null),
+            openBackup: () => this.createBackup(),
+        });
     }
 
     async notifyAppUpdate() {
