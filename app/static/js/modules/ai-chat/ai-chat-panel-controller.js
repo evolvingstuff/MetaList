@@ -1282,6 +1282,10 @@ class AiChatPanelController {
 
         let wasCancelled = false;
         let didStartChat = false;
+        // The request failed (the server refused it, or could not be reached): the
+        // server has no record of this turn, so the turn shown here, with its
+        // error, is the only one, and reloading the session would erase it.
+        let didRequestFail = false;
         try {
             if (selectedNoteId !== '') {
                 await CommandGate.run('ai.save_selected_note', () => actionSaveNote(selectedNoteId));
@@ -1382,6 +1386,7 @@ class AiChatPanelController {
                 assistantMessage.error = 'Cancelled by user';
                 this._render({ shouldScrollToBottom: true });
             } else if (error instanceof HttpRequestError || isNetworkTransportError(error)) {
+                didRequestFail = true;
                 assistantMessage.status = 'error';
                 assistantMessage.error = error.message;
                 this._render({ shouldScrollToBottom: true });
@@ -1409,7 +1414,7 @@ class AiChatPanelController {
                 await this._refreshOpenAiCostSnapshot();
             }
         }
-        if (!wasCancelled && didStartChat) {
+        if (!wasCancelled && didStartChat && !didRequestFail) {
             await this._loadSession({ shouldScrollToBottom: false });
         }
         this._elements.input.focus();
