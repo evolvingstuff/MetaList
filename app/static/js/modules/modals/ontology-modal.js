@@ -1,3 +1,4 @@
+import { NO_SELECTION } from '../list-selection.js';
 import { parseDecimalInteger } from '../decimal-integer.js';
 import { ApplicationState, stateValuesEqual } from '../application-state.js';
 import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js';
@@ -400,14 +401,14 @@ export class OntologyModal extends BaseModal {
         super('ontologyModal', 'ontology-modal');
         this._abortController = null;
         this._rulesCache = null;
-        this._searchSelectedIndex = -1;
+        this._searchSelectedIndex = NO_SELECTION;
         this._suppressNextSearchResults = false;
         this._shouldFocusSearchInput = true;
         this._dialogState = null;
         this._dialogAbortController = null;
         this._dialogSuggestionTimer = null;
         this._dialogRequestSerial = 0;
-        this._dialogSelectedIndex = -1;
+        this._dialogSelectedIndex = NO_SELECTION;
         this._dialogSuggestionWasExplicitlyNavigated = false;
         this._dialogPointerSelectionPendingEnter = false;
         this._dialogSuggestionContext = null;
@@ -455,7 +456,7 @@ export class OntologyModal extends BaseModal {
 
         this._closeDialog(null);
         if (this._rulesCache !== null) this._rulesCache = null;
-        if (this._searchSelectedIndex !== -1) this._searchSelectedIndex = -1;
+        if (this._searchSelectedIndex !== NO_SELECTION) this._searchSelectedIndex = NO_SELECTION;
         if (this._suppressNextSearchResults) this._suppressNextSearchResults = false;
         if (!this._shouldFocusSearchInput) this._shouldFocusSearchInput = true;
     }
@@ -741,7 +742,7 @@ export class OntologyModal extends BaseModal {
             event.preventDefault();
             let currentIndex = this._searchSelectedIndex;
             if (!Number.isInteger(currentIndex)) {
-                currentIndex = -1;
+                throw new Error('Ontology search selection index must be an integer');
             }
             let nextIndex = currentIndex + 1;
             if (nextIndex < 0) {
@@ -760,7 +761,7 @@ export class OntologyModal extends BaseModal {
             event.preventDefault();
             let currentIndex = this._searchSelectedIndex;
             if (!Number.isInteger(currentIndex)) {
-                currentIndex = 0;
+                throw new Error('Ontology search selection index must be an integer');
             }
             let nextIndex = currentIndex - 1;
             if (nextIndex < 0) {
@@ -922,7 +923,7 @@ export class OntologyModal extends BaseModal {
         if (!Array.isArray(tags) || tags.length === 0) {
             container.innerHTML = '';
             container.style.display = 'none';
-            if (this._searchSelectedIndex !== -1) this._searchSelectedIndex = -1;
+            if (this._searchSelectedIndex !== NO_SELECTION) this._searchSelectedIndex = NO_SELECTION;
             return;
         }
 
@@ -1320,7 +1321,7 @@ export class OntologyModal extends BaseModal {
             this._dialogAbortController = null;
         }
         this._dialogRequestSerial += 1;
-        if (this._dialogSelectedIndex !== -1) this._dialogSelectedIndex = -1;
+        if (this._dialogSelectedIndex !== NO_SELECTION) this._dialogSelectedIndex = NO_SELECTION;
         this._clearDialogNavigation();
         if (this._dialogSuggestionContext !== null) this._dialogSuggestionContext = null;
     }
@@ -1336,7 +1337,7 @@ export class OntologyModal extends BaseModal {
         elements.suggestions.innerHTML = '';
         elements.suggestions.classList.add('is-hidden');
         ApplicationState.receiveOwnerSnapshot(this, {
-            _dialogSelectedIndex: -1,
+            _dialogSelectedIndex: NO_SELECTION,
             _dialogSuggestionWasExplicitlyNavigated: false,
             _dialogSuggestionContext: null,
         });
@@ -1381,7 +1382,7 @@ export class OntologyModal extends BaseModal {
             .join('');
         elements.suggestions.classList.remove('is-hidden');
         ApplicationState.receiveOwnerSnapshot(this, {
-            _dialogSelectedIndex: -1,
+            _dialogSelectedIndex: NO_SELECTION,
             _dialogSuggestionWasExplicitlyNavigated: false,
         });
         this._updateDialogSuggestionSelection(elements.suggestions);
@@ -1419,7 +1420,7 @@ export class OntologyModal extends BaseModal {
         }
         const items = Array.from(container.querySelectorAll('.ontology-dialog-suggestion'));
         if (items.length === 0) {
-            if (this._dialogSelectedIndex !== -1) this._dialogSelectedIndex = -1;
+            if (this._dialogSelectedIndex !== NO_SELECTION) this._dialogSelectedIndex = NO_SELECTION;
             return;
         }
         if (!Number.isInteger(this._dialogSelectedIndex)) {
@@ -1431,7 +1432,7 @@ export class OntologyModal extends BaseModal {
         items.forEach((item, index) => {
             item.classList.toggle('is-selected', index === this._dialogSelectedIndex);
         });
-        if (this._dialogSelectedIndex === -1) {
+        if (this._dialogSelectedIndex === NO_SELECTION) {
             return;
         }
         const selected = items[this._dialogSelectedIndex];
@@ -1549,7 +1550,7 @@ export class OntologyModal extends BaseModal {
             ApplicationState.receiveOwnerSnapshot(this, {
                 _dialogPointerSelectionPendingEnter: false,
                 _dialogSuggestionWasExplicitlyNavigated: true,
-                _dialogSelectedIndex: this._dialogSelectedIndex === -1 ? 0 : Math.min(this._dialogSelectedIndex + 1, items.length - 1),
+                _dialogSelectedIndex: this._dialogSelectedIndex === NO_SELECTION ? 0 : Math.min(this._dialogSelectedIndex + 1, items.length - 1),
             });
             this._updateDialogSuggestionSelection(container);
             return;
@@ -1561,7 +1562,7 @@ export class OntologyModal extends BaseModal {
             ApplicationState.receiveOwnerSnapshot(this, {
                 _dialogPointerSelectionPendingEnter: false,
                 _dialogSuggestionWasExplicitlyNavigated: true,
-                _dialogSelectedIndex: this._dialogSelectedIndex === -1 ? items.length - 1 : Math.max(this._dialogSelectedIndex - 1, 0),
+                _dialogSelectedIndex: this._dialogSelectedIndex === NO_SELECTION ? items.length - 1 : Math.max(this._dialogSelectedIndex - 1, 0),
             });
             this._updateDialogSuggestionSelection(container);
             return;
@@ -1854,7 +1855,7 @@ export class OntologyModal extends BaseModal {
         }
         const items = Array.from(container.querySelectorAll('.ontology-search-result'));
         if (items.length === 0) {
-            if (this._searchSelectedIndex !== -1) this._searchSelectedIndex = -1;
+            if (this._searchSelectedIndex !== NO_SELECTION) this._searchSelectedIndex = NO_SELECTION;
             return;
         }
         if (!Number.isInteger(this._searchSelectedIndex)) {

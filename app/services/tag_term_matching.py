@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.utils.not_found import NOT_FOUND
 from app.services.resource_limits import SENSITIVE_MEMO_BYTES
 from dataclasses import dataclass
 from app.security.sensitive_cache import sensitive_lru_cache
@@ -189,15 +190,15 @@ class NormalizedContentMatchContext:
         )
 
     def find_first_phrase_index(self, segments: tuple[str, ...]) -> int:
-        """Return the earliest index where `segments` match, or -1."""
+        """Return the earliest index where `segments` match, or NOT_FOUND."""
         assert segments
         for segment in segments:
             if segment not in self.segment_match_indexes:
-                return -1
+                return NOT_FOUND
         for index in self.segment_match_indexes[segments[0]]:
             if self.matches_phrase_at(segments, index):
                 return index
-        return -1
+        return NOT_FOUND
 
 
 def normalize_tag_match_text(text: str) -> str:
@@ -377,7 +378,7 @@ def match_tag_term_in_content_match_context(
 
     raw_partial_phrase_match = False
     raw_partial_phrase_segment_count = 0
-    raw_partial_phrase_position = -1
+    raw_partial_phrase_position = NOT_FOUND
     raw_partial_phrase_indexes: tuple[int, ...] = ()
     partial_phrase_segment_count = raw_segment_count - 1
     if not raw_phrase_match and partial_phrase_segment_count >= _MIN_PARTIAL_PHRASE_SEGMENTS:

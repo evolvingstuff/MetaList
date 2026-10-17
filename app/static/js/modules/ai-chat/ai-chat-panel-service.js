@@ -1,3 +1,5 @@
+import { AI_CHAT_MINIMUM_NOTES_WIDTH, AI_CHAT_MINIMUM_WIDTH } from './ai-chat-size-limits.js';
+
 const AI_STREAM_EVENT_TYPES = new Set([
     'bulk_progress', 'bulk_question', 'bulk_complete', 'bulk_preferences',
     'action_status', 'menu_open',
@@ -6,8 +8,6 @@ const AI_STREAM_EVENT_TYPES = new Set([
     'done',
     'error',
 ]);
-const AI_CHAT_MINIMUM_WIDTH = 280;
-const AI_CHAT_MINIMUM_NOTES_WIDTH = 480;
 // A cost shows at least whole cents, and down to a millionth of a dollar.
 const COST_MIN_FRACTION_DIGITS = 2;
 const COST_MAX_FRACTION_DIGITS = 6;

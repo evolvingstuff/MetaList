@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from app.security.crypto_sizes import AES_256_KEY_BYTES, GCM_NONCE_BYTES, GCM_TAG_BYTES, SALT_BYTES
 import argparse
 from collections import Counter
 import base64
@@ -14,11 +15,8 @@ import sys
 from app.db.version import CURRENT_DATABASE_VERSION
 
 
-_NONCE_BYTES = 12
-_TAG_BYTES = 16
-_SALT_BYTES = 32
 # The data encryption key is AES-256; GCM ciphertext is as long as its plaintext.
-_ENCRYPTED_DEK_BYTES = 32
+_ENCRYPTED_DEK_BYTES = AES_256_KEY_BYTES
 _DEFAULT_NAMESPACES_DIRECTORY = Path.home() / "MetaList" / "namespaces"
 _CANONICAL_BASE64_PATTERN = re.compile(
     r"^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
@@ -672,12 +670,12 @@ def _audit_payload_row(
             message="sensitive value has incomplete encryption metadata",
         )
         return
-    if not isinstance(nonce, bytes) or len(nonce) != _NONCE_BYTES:
+    if not isinstance(nonce, bytes) or len(nonce) != GCM_NONCE_BYTES:
         state.add_finding(
             database_path=database_path,
             table=spec.table,
             field=spec.nonce_column,
-            message=f"AES-GCM nonce must be a {_NONCE_BYTES}-byte BLOB",
+            message=f"AES-GCM nonce must be a {GCM_NONCE_BYTES}-byte BLOB",
         )
     else:
         state.record_nonce(
@@ -686,12 +684,12 @@ def _audit_payload_row(
             table=spec.table,
             field=spec.value_column,
         )
-    if not isinstance(tag, bytes) or len(tag) != _TAG_BYTES:
+    if not isinstance(tag, bytes) or len(tag) != GCM_TAG_BYTES:
         state.add_finding(
             database_path=database_path,
             table=spec.table,
             field=spec.tag_column,
-            message=f"AES-GCM tag must be a {_TAG_BYTES}-byte BLOB",
+            message=f"AES-GCM tag must be a {GCM_TAG_BYTES}-byte BLOB",
         )
     if spec.storage_kind == "text" and not _is_valid_base64_ciphertext(value):
         state.add_finding(
@@ -817,11 +815,11 @@ def _audit_vault_metadata_values(
                 message=f"expected current encrypted-vault value {expected!r}",
             )
     byte_lengths = {
-        "auth_salt": _SALT_BYTES,
-        "kek_salt": _SALT_BYTES,
+        "auth_salt": SALT_BYTES,
+        "kek_salt": SALT_BYTES,
         "encrypted_dek": _ENCRYPTED_DEK_BYTES,
-        "dek_nonce": _NONCE_BYTES,
-        "dek_tag": _TAG_BYTES,
+        "dek_nonce": GCM_NONCE_BYTES,
+        "dek_tag": GCM_TAG_BYTES,
     }
     for field, expected_length in byte_lengths.items():
         value = row[field]

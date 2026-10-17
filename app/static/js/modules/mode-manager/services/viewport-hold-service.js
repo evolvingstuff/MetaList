@@ -11,6 +11,7 @@
 // input or scroll, once the layout has been still for a moment, or after a
 // maximum time.
 
+import { NOT_FOUND } from '../../not-found.js';
 import { half } from '../../half.js';
 import { ApplicationState } from '../../application-state.js';
 import { getViewportTopInset } from './viewport-reference.js';
@@ -223,7 +224,7 @@ export function findTextPosition(text, anchor) {
         }
         let best = null;
         let index = text.indexOf(needle);
-        while (index !== -1) {
+        while (index !== NOT_FOUND) {
             const position = index + shift;
             if (best === null || Math.abs(position - anchor.textOffset) < Math.abs(best - anchor.textOffset)) {
                 best = position;
@@ -286,7 +287,7 @@ export function findTextPosition(text, anchor) {
     if (anchor.runText.trim() !== '') {
         let best = null;
         let index = text.indexOf(anchor.runText);
-        while (index !== -1) {
+        while (index !== NOT_FOUND) {
             if (best === null || Math.abs(index - proportional) < Math.abs(best - proportional)) {
                 best = index;
             }
@@ -594,15 +595,15 @@ function captureFormulaClickAnchor({ content, noteId, noteTop, x, y }) {
 // edited), or null.
 function formulaAtEditedOffset(content, editText, textOffset) {
     for (const formula of formulasIn(content)) {
-        let index = -1;
+        let index = NOT_FOUND;
         for (let repeat = 0; repeat <= formula.occurrence; repeat += 1) {
             index = editText.indexOf(formula.source, index + 1);
-            if (index === -1) {
+            if (index === NOT_FOUND) {
                 break;
             }
         }
         // The delimiters around the source ($$, \( …) count as the formula too.
-        if (index !== -1 && textOffset >= index - FORMULA_DELIMITER_CHARS
+        if (index !== NOT_FOUND && textOffset >= index - FORMULA_DELIMITER_CHARS
             && textOffset <= index + formula.source.length + FORMULA_DELIMITER_CHARS) {
             return formula.element;
         }
@@ -662,7 +663,7 @@ function findSourcePosition(text, reference) {
     const positions = [];
     for (const needle of reference.needles) {
         let index = text.indexOf(needle.text);
-        while (index !== -1) {
+        while (index !== NOT_FOUND) {
             positions.push(index + needle.shift);
             index = text.indexOf(needle.text, index + 1);
         }

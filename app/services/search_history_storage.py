@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.security.crypto_sizes import AES_256_KEY_BYTES
 from datetime import date
 import json
 import uuid
@@ -10,8 +11,6 @@ MAX_TAG_ACTIVITY_RETENTION_DAYS = 365
 _AAD_PREFIX = "MetaList|tag_activity_history|payload|v2|"
 # Storage ids are random (version 4) UUIDs.
 _STORAGE_ID_UUID_VERSION = 4
-# The namespace data encryption key is an AES-256 key.
-_DEK_BYTES = 32
 
 
 def new_search_history_storage_id() -> str:
@@ -152,6 +151,6 @@ def coerce_search_history_encryption_service(encryption_service: object):
     if encryption_service is None:
         return None
     dek = encryption_service.dek
-    if not isinstance(dek, bytes) or len(dek) != _DEK_BYTES:
+    if not isinstance(dek, bytes) or len(dek) != AES_256_KEY_BYTES:
         return None
     return encryption_service

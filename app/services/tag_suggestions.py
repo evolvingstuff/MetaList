@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.utils.not_found import NOT_FOUND
 from collections import Counter
 from dataclasses import dataclass
 from app.services.tag_ontology import TagOntology
@@ -534,7 +535,7 @@ def _build_prefix_content_remainder(*, term: str, prefix: str) -> str:
     if not prefix_segments:
         return slice_tag_term_segments(term=term, first=0, last=len(raw_segments) - 1)
 
-    matched_segment_index = -1
+    matched_segment_index = NOT_FOUND
     if term.casefold().startswith(prefix.casefold()):
         matched_segment_index = len(prefix_segments) - 1
         assert matched_segment_index < len(raw_segments)

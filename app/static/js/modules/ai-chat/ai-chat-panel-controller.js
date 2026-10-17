@@ -1,3 +1,4 @@
+import { AI_CHAT_COMPOSER_MAXIMUM_HEIGHT, AI_CHAT_COMPOSER_MINIMUM_HEIGHT, AI_CHAT_MAXIMUM_WIDTH, AI_CHAT_MINIMUM_WIDTH } from './ai-chat-size-limits.js';
 import { twoDigits } from '../local-date-text.js';
 import { MS_PER_MINUTE, MS_PER_SECOND, SECONDS_PER_MINUTE } from '../time-units.js';
 import { executeAgentMenuRequest } from './agent-menu-actions.js';
@@ -59,10 +60,6 @@ import {
 const DEFAULT_PANEL_WIDTH_DIVISOR = 3;
 const THINKING_DOT_COUNT = 3;
 // The persisted panel-width and composer-height ranges (checked again by the server).
-const AI_CHAT_MINIMUM_WIDTH = 280;
-const AI_CHAT_MAXIMUM_WIDTH = 5000;
-const AI_CHAT_COMPOSER_MINIMUM_HEIGHT = 74;
-const AI_CHAT_COMPOSER_MAXIMUM_HEIGHT = 220;
 const RESIZER_KEYBOARD_STEP_PX = 24;
 const REFERENCES_PREVIEW_MAXIMUM_HEIGHT_PX = 48;
 

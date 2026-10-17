@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.security.crypto_sizes import AES_256_KEY_BYTES
 import asyncio
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -22,6 +23,8 @@ from app.server_runtime import resolve_runtime_logs_directory
 from app.utils.time_units import MS_PER_SECOND
 
 
+# Smaller than any file's size, so the first log file counts as the largest so far.
+_BELOW_ANY_FILE_SIZE = -1
 _LOG_ROTATION = "25 MB"
 _LOG_RETENTION = "14 days"
 _DIRECT_APPEND_LOG_MAX_BYTES = 25 * 1024 * 1024
@@ -41,8 +44,6 @@ _SLOW_REQUEST_LOG_INTERVAL_SECONDS = 10.0
 _REQUEST_WATCH_INTERVAL_SECONDS = 2.0
 # Random bytes in the session id that names each authenticated log file.
 _LOG_SESSION_ID_RANDOM_BYTES = 8
-# The authenticated log is keyed by a 256-bit data-encryption key.
-_AUTHENTICATED_LOG_DEK_BYTES = 32
 _diagnostic_file_handle = None
 _process_diagnostics_configured = False
 _request_watchdog_started = False
@@ -195,8 +196,8 @@ def activate_authenticated_logging(*, namespace: str, dek: bytes) -> Path:
 
     if not isinstance(namespace, str) or namespace.strip() == "":
         raise ValueError("namespace must be a non-empty string")
-    if not isinstance(dek, bytes) or len(dek) != _AUTHENTICATED_LOG_DEK_BYTES:
-        raise ValueError(f"authenticated logging requires a {_AUTHENTICATED_LOG_DEK_BYTES}-byte DEK")
+    if not isinstance(dek, bytes) or len(dek) != AES_256_KEY_BYTES:
+        raise ValueError(f"authenticated logging requires a {AES_256_KEY_BYTES}-byte DEK")
 
     with _authenticated_logging_lock:
         if _authenticated_logging_active:
@@ -382,7 +383,7 @@ def calculate_log_disk_usage(*, logs_directory: Path) -> LogDiskUsage:
 
     total_bytes = 0
     largest_file_path = log_files[0]
-    largest_file_bytes = -1
+    largest_file_bytes = _BELOW_ANY_FILE_SIZE
     for path in log_files:
         size_bytes = path.stat().st_size
         total_bytes += size_bytes

@@ -1,3 +1,4 @@
+import { NO_SELECTION } from '../../list-selection.js';
 import { ApplicationState } from '../../application-state.js';
 import { isMacControlClick } from '../../context-menu/context-menu-service.js';
 import { unlessDiagramEditorOpen } from '../../excalidraw/excalidraw-editor-state.js';
@@ -16,7 +17,7 @@ const POSITION_MARGIN = 12;
 const moduleState = ApplicationState.createFields('tag-suggestions-service', {
     pendingTimer: null,
     requestSerial: 0,
-    selectedIndex: -1,
+    selectedIndex: NO_SELECTION,
     activeContainer: null,
     activeInput: null,
     initialized: false,
@@ -63,7 +64,7 @@ function hideSuggestions(container) {
     container.style.display = 'none';
     container.innerHTML = '';
     // Rendering or dismissing an empty result list can observe no selection.
-        if (moduleState.selectedIndex !== -1) moduleState.selectedIndex = -1;
+        if (moduleState.selectedIndex !== NO_SELECTION) moduleState.selectedIndex = NO_SELECTION;
     if (moduleState.activeContainer === container) {
         moduleState.activeContainer = null;
         moduleState.activeInput = null;
@@ -98,7 +99,7 @@ function updateSelectedSuggestion(container) {
     const items = Array.from(container.querySelectorAll('.note-tag-suggestion'));
     if (items.length === 0) {
         // Rendering or dismissing an empty result list can observe no selection.
-        if (moduleState.selectedIndex !== -1) moduleState.selectedIndex = -1;
+        if (moduleState.selectedIndex !== NO_SELECTION) moduleState.selectedIndex = NO_SELECTION;
         return;
     }
     if (moduleState.selectedIndex < 0 || moduleState.selectedIndex >= items.length) {

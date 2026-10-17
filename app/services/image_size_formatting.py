@@ -14,6 +14,9 @@ from app.services.embedded_references import collect_reference_tokens_from_html
 from app.services.inline_image_occurrences import INLINE_IMAGE_TAG_RE
 
 
+# Steps through SIZE_FACTORS for Make Bigger and Make Smaller.
+_ONE_SIZE_BIGGER = 1
+_ONE_SIZE_SMALLER = -1
 SIZE_FACTORS = ("0.1", "0.25", "0.5", "0.75", "1.0", "1.25", "1.5", "2.0", "3.0")
 _SIZE_TAG_RE = re.compile(
     r"^@size=(0\.1|0\.25|0\.5|0\.75|1\.0|1\.25|1\.5|2\.0|3\.0)$",
@@ -286,10 +289,10 @@ def _target_size_factor(*, current_factor: str, action: str) -> str:
     if action == "reset":
         return "1.0"
     if action == "bigger":
-        direction = 1
+        direction = _ONE_SIZE_BIGGER
     else:
         assert action == "smaller"
-        direction = -1
+        direction = _ONE_SIZE_SMALLER
     target_index = max(0, min(len(SIZE_FACTORS) - 1, current_index + direction))
     return SIZE_FACTORS[target_index]
 

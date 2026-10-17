@@ -26,6 +26,8 @@ SORT_MODES = frozenset(
     }
 )
 TIMESTAMP_SORT_MODES = frozenset({SORT_MODE_CREATED, SORT_MODE_UPDATED})
+# An index not yet built for any store revision.
+_NO_REVISION = -1
 _ALPHABETICAL_KEY_MEMO_ENTRIES = 32768
 # The missing-parents error names at most this many of them.
 _MISSING_PARENTS_SHOWN = 5
@@ -85,7 +87,7 @@ class _RootMetrics:
         self.own = {}
         self.text_keys = {}
         self.roots = {}
-        self.revision = -1
+        self.revision = _NO_REVISION
         for note_id, record in records.items():
             if note_id not in self.children:
                 self.children[note_id] = set()

@@ -1,3 +1,4 @@
+import { NO_SELECTION } from '../../list-selection.js';
 import { ApplicationState } from '../../application-state.js';
 import { isContextMenuOpen, isMacControlClick } from '../../context-menu/context-menu-service.js';
 import { NotesAPI } from '../../api-client.js';
@@ -18,7 +19,7 @@ const ESCAPE_SEQUENCE_LENGTH = 2;
 const moduleState = ApplicationState.createFields('search-suggestions-service', {
     pendingTimer: null,
     requestSerial: 0,
-    selectedIndex: -1,
+    selectedIndex: NO_SELECTION,
     suppressSuggestionsUntilInputInteraction: false,
 });
 
@@ -148,7 +149,7 @@ function hideSuggestions(options) {
     container.style.display = 'none';
     container.innerHTML = '';
     // Rendering or dismissing an empty result list can observe no selection.
-        if (moduleState.selectedIndex !== -1) moduleState.selectedIndex = -1;
+        if (moduleState.selectedIndex !== NO_SELECTION) moduleState.selectedIndex = NO_SELECTION;
 }
 
 function shouldHideForVerticalPointerPosition(container, pointerClientY) {
@@ -309,7 +310,7 @@ function updateSelectedSuggestion(container) {
     const items = Array.from(container.querySelectorAll('.search-suggestion'));
     if (items.length === 0) {
         // Rendering or dismissing an empty result list can observe no selection.
-        if (moduleState.selectedIndex !== -1) moduleState.selectedIndex = -1;
+        if (moduleState.selectedIndex !== NO_SELECTION) moduleState.selectedIndex = NO_SELECTION;
         return;
     }
     if (moduleState.selectedIndex < 0 || moduleState.selectedIndex >= items.length) {

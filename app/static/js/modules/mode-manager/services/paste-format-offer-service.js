@@ -1,3 +1,4 @@
+import { NOT_IN_TAB_ORDER } from '../../dom-focus.js';
 import { ApplicationState } from '../../application-state.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 
@@ -100,7 +101,7 @@ function buildButton(label, className, onActivate) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = className;
-    button.tabIndex = -1;
+    button.tabIndex = NOT_IN_TAB_ORDER;
     button.textContent = label;
     // Pressing a button keeps the caret in the note.
     button.addEventListener('mousedown', (event) => event.preventDefault());

@@ -1,3 +1,4 @@
+import { NOT_FOUND } from '../../not-found.js';
 import { CONFIG } from '../../config.js';
 import {
     estimateDataUrlPayloadBytes,
@@ -587,16 +588,8 @@ function getSiblingContextTokens(imageElement) {
     }
 
     const siblings = Array.from(parent.childNodes);
-    let imageIndex = -1;
-    let i = 0;
-    while (i < siblings.length) {
-        if (siblings[i] === imageElement) {
-            imageIndex = i;
-            break;
-        }
-        i += 1;
-    }
-    if (imageIndex < 0) {
+    const imageIndex = siblings.indexOf(imageElement);
+    if (imageIndex === NOT_FOUND) {
         return [];
     }
 
@@ -670,16 +663,8 @@ function hasNearbyAuthorTimeContext(imageElement) {
         orderedNodes.push(walker.currentNode);
     }
 
-    let imageIndex = -1;
-    let i = 0;
-    while (i < orderedNodes.length) {
-        if (orderedNodes[i] === imageElement) {
-            imageIndex = i;
-            break;
-        }
-        i += 1;
-    }
-    if (imageIndex < 0) {
+    const imageIndex = orderedNodes.indexOf(imageElement);
+    if (imageIndex === NOT_FOUND) {
         return false;
     }
 

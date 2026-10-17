@@ -35,10 +35,10 @@ _DICTATION_PHRASE_MAX_CHARS = 64
 _PREFERENCES_MEMO_MAX_SESSIONS = 2
 _PREFERENCES_MEMO_MAX_KIB = 256
 # The same bounds as the browser's AI chat panel and search suggestion windows.
-_AI_CHAT_MINIMUM_WIDTH = 280
-_AI_CHAT_MAXIMUM_WIDTH = 5000
-_AI_CHAT_COMPOSER_MINIMUM_HEIGHT = 74
-_AI_CHAT_COMPOSER_MAXIMUM_HEIGHT = 220
+AI_CHAT_MINIMUM_WIDTH = 280
+AI_CHAT_MAXIMUM_WIDTH = 5000
+AI_CHAT_COMPOSER_MINIMUM_HEIGHT = 74
+AI_CHAT_COMPOSER_MAXIMUM_HEIGHT = 220
 _MAX_SEARCH_SUGGESTION_WINDOW_SLOTS = 20
 _MAX_SEARCH_SUGGESTION_WINDOW_DAYS = 365
 
@@ -282,7 +282,7 @@ def _validate_ai_chat_width_preference(*, key: str, value: str) -> None:
     if re.fullmatch(r"[1-9][0-9]*", value) is None:
         raise ClientStateValidationError(f"Invalid client preference value for {key}: {value}")
     width = int(value)
-    if width < _AI_CHAT_MINIMUM_WIDTH or width > _AI_CHAT_MAXIMUM_WIDTH:
+    if width < AI_CHAT_MINIMUM_WIDTH or width > AI_CHAT_MAXIMUM_WIDTH:
         raise ClientStateValidationError(f"Invalid client preference value for {key}: {value}")
 
 
@@ -290,7 +290,7 @@ def _validate_ai_chat_composer_height_preference(*, key: str, value: str) -> Non
     if re.fullmatch(r"[1-9][0-9]*", value) is None:
         raise ClientStateValidationError(f"Invalid client preference value for {key}: {value}")
     height = int(value)
-    if height < _AI_CHAT_COMPOSER_MINIMUM_HEIGHT or height > _AI_CHAT_COMPOSER_MAXIMUM_HEIGHT:
+    if height < AI_CHAT_COMPOSER_MINIMUM_HEIGHT or height > AI_CHAT_COMPOSER_MAXIMUM_HEIGHT:
         raise ClientStateValidationError(f"Invalid client preference value for {key}: {value}")
 
 

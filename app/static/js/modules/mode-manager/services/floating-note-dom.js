@@ -1,3 +1,5 @@
+import { NOT_IN_TAB_ORDER } from '../../dom-focus.js';
+
 const FLOATING_NOTE_TITLE_MAX_CHARS = 120;
 
 export function createFloatingNoteElements(id) {
@@ -6,7 +8,7 @@ export function createFloatingNoteElements(id) {
     element.dataset.floatingNoteId = id;
     element.setAttribute('role', 'dialog');
     element.setAttribute('aria-label', 'Floating note');
-    element.tabIndex = -1;
+    element.tabIndex = NOT_IN_TAB_ORDER;
 
     const shadow = element.attachShadow({mode: 'open'});
     const sharedStyles = document.createElement('link');

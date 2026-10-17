@@ -1,3 +1,4 @@
+import { NOT_FOUND } from '../../not-found.js';
 import { clampNumber, distanceToLine, getViewportReferenceY, getViewportTopInset } from './viewport-reference.js';
 import { half } from '../../half.js';
 
@@ -92,7 +93,7 @@ function getNoteContentElement(noteElement) {
 
 function findAnchorIndex(noteElements, anchorBias) {
     const lineY = getViewportReferenceY(anchorBias);
-    let bestIndex = -1;
+    let bestIndex = NOT_FOUND;
     let bestDistance = Infinity;
     let bestCenterDistance = Infinity;
 
@@ -139,10 +140,10 @@ export function computeScrollAnchor(options) {
     }
 
     let anchorBias = requestedBias;
-    let anchorIndex = -1;
+    let anchorIndex = NOT_FOUND;
     if (requestedBias === 'auto') {
         const topRef = getViewportReferenceY('top');
-        let bestPinnedIndex = -1;
+        let bestPinnedIndex = NOT_FOUND;
         let bestPinnedDistance = Infinity;
         for (let i = 0; i < noteElements.length; i += 1) {
             const element = noteElements[i];

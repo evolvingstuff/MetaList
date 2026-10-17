@@ -1,5 +1,6 @@
 """AES-256-GCM encryption service for note content and file payloads."""
 
+from app.security.crypto_sizes import AES_256_KEY_BYTES, GCM_NONCE_BYTES, GCM_TAG_BYTES, SALT_BYTES
 import base64
 import os
 from typing import Optional, Tuple
@@ -13,10 +14,6 @@ from app.config import (
     KDF_TIME_COST,
 )
 
-AES_256_KEY_BYTES = 32
-GCM_NONCE_BYTES = 12
-GCM_TAG_BYTES = 16
-SALT_BYTES = 32
 # Base64 text comes in groups of this many characters; a short last group needs "=" padding.
 _BASE64_GROUP_CHARS = 4
 

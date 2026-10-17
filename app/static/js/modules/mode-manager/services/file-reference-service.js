@@ -1,3 +1,4 @@
+import { NOT_FOUND } from '../../not-found.js';
 import { FilesAPI } from '../../api-client.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import { captureSelectionSnapshot, getActiveEditable, getActiveNoteId, restoreSelection } from '../../editor-selection.js';
@@ -56,7 +57,7 @@ function linePrefixText(fullText) {
     const lastLf = fullText.lastIndexOf('\n');
     const lastCr = fullText.lastIndexOf('\r');
     const boundary = Math.max(lastLf, lastCr);
-    if (boundary === -1) {
+    if (boundary === NOT_FOUND) {
         return fullText;
     }
     return fullText.slice(boundary + 1);
@@ -68,15 +69,15 @@ function lineSuffixText(fullText) {
     }
     const lf = fullText.indexOf('\n');
     const cr = fullText.indexOf('\r');
-    let boundary = -1;
-    if (lf === -1) {
+    let boundary = NOT_FOUND;
+    if (lf === NOT_FOUND) {
         boundary = cr;
-    } else if (cr === -1) {
+    } else if (cr === NOT_FOUND) {
         boundary = lf;
     } else {
         boundary = Math.min(lf, cr);
     }
-    if (boundary === -1) {
+    if (boundary === NOT_FOUND) {
         return fullText;
     }
     return fullText.slice(0, boundary);

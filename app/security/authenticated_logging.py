@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from app.security.crypto_sizes import AES_256_KEY_BYTES, GCM_NONCE_BYTES, GCM_TAG_BYTES
 import base64
 import os
 from pathlib import Path
@@ -15,9 +16,6 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 _ENVELOPE_PREFIX = b"MLLOG1 "
 _ENVELOPE_AAD = b"MetaList authenticated diagnostic log v1"
-_NONCE_BYTES = 12
-_TAG_BYTES = 16
-_DEK_BYTES = 32
 _LOG_KEY_INFO = b"MetaList authenticated diagnostic log key v1"
 # Owner read and write only.
 _LOG_FILE_MODE = 0o600
@@ -26,15 +24,15 @@ _LOG_FILE_MODE = 0o600
 def _validate_dek(dek: bytes) -> None:
     if not isinstance(dek, bytes):
         raise TypeError(f"dek must be bytes, got {type(dek)}")
-    if len(dek) != _DEK_BYTES:
-        raise ValueError(f"dek must be {_DEK_BYTES} bytes, got {len(dek)}")
+    if len(dek) != AES_256_KEY_BYTES:
+        raise ValueError(f"dek must be {AES_256_KEY_BYTES} bytes, got {len(dek)}")
 
 
 def _derive_log_key(dek: bytes) -> bytes:
     _validate_dek(dek)
     return HKDF(
         algorithm=hashes.SHA256(),
-        length=_DEK_BYTES,
+        length=AES_256_KEY_BYTES,
         salt=None,
         info=_LOG_KEY_INFO,
     ).derive(dek)
@@ -44,7 +42,7 @@ def encrypt_log_record(*, plaintext: str, dek: bytes) -> bytes:
     if not isinstance(plaintext, str):
         raise TypeError(f"plaintext must be a string, got {type(plaintext)}")
     log_key = _derive_log_key(dek)
-    nonce = os.urandom(_NONCE_BYTES)
+    nonce = os.urandom(GCM_NONCE_BYTES)
     ciphertext_and_tag = AESGCM(log_key).encrypt(
         nonce,
         plaintext.encode("utf-8"),
@@ -62,14 +60,14 @@ def decrypt_log_record(*, envelope: bytes, dek: bytes) -> str:
     if not normalized.startswith(_ENVELOPE_PREFIX):
         raise ValueError("Encrypted log record is missing the MLLOG1 envelope prefix")
     payload = base64.b64decode(normalized[len(_ENVELOPE_PREFIX):], validate=True)
-    minimum_payload_bytes = _NONCE_BYTES + _TAG_BYTES
+    minimum_payload_bytes = GCM_NONCE_BYTES + GCM_TAG_BYTES
     if len(payload) < minimum_payload_bytes:
         raise ValueError(
             "Encrypted log record payload is too short: "
             f"expected at least {minimum_payload_bytes} bytes, got {len(payload)}"
         )
-    nonce = payload[:_NONCE_BYTES]
-    ciphertext_and_tag = payload[_NONCE_BYTES:]
+    nonce = payload[:GCM_NONCE_BYTES]
+    ciphertext_and_tag = payload[GCM_NONCE_BYTES:]
     plaintext = AESGCM(log_key).decrypt(nonce, ciphertext_and_tag, _ENVELOPE_AAD)
     return plaintext.decode("utf-8")
 

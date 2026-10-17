@@ -22,6 +22,9 @@ from app.utils.time_units import MS_PER_SECOND
 
 
 _STATUS_RUNNING = "running"
+# The exitCode of a run that has no exit status (still running, or never started).
+# The browser names it too: NO_EXIT_CODE in shell-output-service.js.
+NO_EXIT_CODE = -1
 _STATUS_SUCCESS = "success"
 _STATUS_ERROR = "error"
 _STATUS_TIMEOUT = "timeout"
@@ -175,7 +178,6 @@ class ShellSessionService:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=False,
-            bufsize=-1,
             start_new_session=True,
         )
         if process.stdout is None:
@@ -195,7 +197,7 @@ class ShellSessionService:
             stdout_chunks=[],
             stderr_chunks=[],
             status=_STATUS_RUNNING,
-            exit_code=-1,
+            exit_code=NO_EXIT_CODE,
             error_message="",
             finished_at_monotonic=0.0,
             lock=threading.RLock(),

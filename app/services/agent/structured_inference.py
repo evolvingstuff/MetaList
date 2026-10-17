@@ -34,7 +34,7 @@ _STRUCTURED_MAX_RETRIES = 1
 # rejected reply on every attempt.
 _STRUCTURED_MIN_OUTPUT_TOKENS = 8_192
 # Batch steps (a batch of tags, a batch of summaries) have their own budgets.
-_TAG_BATCH_MAX_OUTPUT_TOKENS = 8_192
+TAG_BATCH_MAX_OUTPUT_TOKENS = 8_192
 _SUMMARY_BATCH_MAX_OUTPUT_TOKENS = 8_192
 # Streamed output is reported again once this many more tokens have arrived.
 _OUTPUT_PROGRESS_STEP_TOKENS = 8
@@ -43,7 +43,7 @@ _OUTPUT_PROGRESS_STEP_TOKENS = 8
 def _structured_max_output_tokens(response_model: type[BaseModel]) -> int:
     limits = {
         OutputJudgment: _STRUCTURED_MIN_OUTPUT_TOKENS,
-        TagBatchResult: _TAG_BATCH_MAX_OUTPUT_TOKENS,
+        TagBatchResult: TAG_BATCH_MAX_OUTPUT_TOKENS,
         ExportTitleAnswer: _STRUCTURED_MIN_OUTPUT_TOKENS,
         SummaryBatchResult: _SUMMARY_BATCH_MAX_OUTPUT_TOKENS,
         SummaryFindingsResult: _STRUCTURED_MIN_OUTPUT_TOKENS,

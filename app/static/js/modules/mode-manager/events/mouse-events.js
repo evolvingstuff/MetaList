@@ -46,6 +46,7 @@ import {
     ensureShellOutputStructure,
     renderShellError,
     renderShellSnapshot,
+    NO_EXIT_CODE,
 } from '../services/shell-output-service.js';
 import {
     navigateBackFromReferenceContext,
@@ -2251,7 +2252,7 @@ function handleShellRunClick(event) {
     renderShellSnapshot(outputElement, shellElement, {
         runId: '',
         status: 'running',
-        exitCode: -1,
+        exitCode: NO_EXIT_CODE,
         stdout: '',
         stderr: '',
         durationMs: 0,

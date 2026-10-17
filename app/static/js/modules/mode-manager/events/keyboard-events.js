@@ -1229,39 +1229,6 @@ async function handleCopyNoteShortcut(event) {
     }
 }
 
-function _linePrefixText(fullText) {
-    if (typeof fullText !== 'string') {
-        throw new Error('_linePrefixText requires string');
-    }
-    const lastLf = fullText.lastIndexOf('\n');
-    const lastCr = fullText.lastIndexOf('\r');
-    const boundary = Math.max(lastLf, lastCr);
-    if (boundary === -1) {
-        return fullText;
-    }
-    return fullText.slice(boundary + 1);
-}
-
-function _lineSuffixText(fullText) {
-    if (typeof fullText !== 'string') {
-        throw new Error('_lineSuffixText requires string');
-    }
-    const lf = fullText.indexOf('\n');
-    const cr = fullText.indexOf('\r');
-    let boundary = -1;
-    if (lf === -1) {
-        boundary = cr;
-    } else if (cr === -1) {
-        boundary = lf;
-    } else {
-        boundary = Math.min(lf, cr);
-    }
-    if (boundary === -1) {
-        return fullText;
-    }
-    return fullText.slice(0, boundary);
-}
-
 function _lineHasVisibleText(text) {
     if (typeof text !== 'string') {
         throw new Error('_lineHasVisibleText requires string');

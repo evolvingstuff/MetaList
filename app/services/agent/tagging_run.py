@@ -13,6 +13,9 @@ from app.services.agent.tagging import (
 )
 from app.services.agent.inference import InferenceProviderError
 from app.services.agent.inference import StructuredInferenceError
+# The context room kept for the model's answer when checking that a batch fits is the
+# batch's own output cap.
+from app.services.agent.structured_inference import TAG_BATCH_MAX_OUTPUT_TOKENS
 from app.services.agent.failure_explanations import FailureSetup, explain_structured_failure
 from app.services.agent.context import format_active_skill
 from app.services.agent.token_estimation import estimate_message_tokens, estimate_input_tokens
@@ -33,8 +36,6 @@ from app.services.preference_values import preference_or_default
 
 _TAGGING_CORRECTION_ATTEMPTS = 3
 _TAGGING_PARALLEL_CONCURRENCY = 4
-# Context room kept for the model's answer when checking that a tagging batch fits.
-_TAG_BATCH_RESPONSE_ALLOWANCE_TOKENS = 8192
 
 
 _FOCUS_INSTRUCTIONS = {
@@ -140,7 +141,7 @@ async def infer_validated_batch(
     for attempt in range(_TAGGING_CORRECTION_ATTEMPTS + 1):
         required_tokens = (estimate_message_tokens(attempt_messages)
                            + estimate_input_tokens(TagBatchResult.model_json_schema())
-                           + _TAG_BATCH_RESPONSE_ALLOWANCE_TOKENS)
+                           + TAG_BATCH_MAX_OUTPUT_TOKENS)
         if required_tokens > context_tokens:
             raise InferenceProviderError("The tagging request exceeds this model's context. Reduce the tagging batch window or narrow the search; nothing was applied.")
         response = await infer_with_progress(inference, run, attempt_messages, TagBatchResult, lambda progress: None)
@@ -366,7 +367,7 @@ class TaggingRun:
             )
             required_tokens = (estimate_message_tokens(messages)
                                + estimate_input_tokens(TagBatchResult.model_json_schema())
-                               + _TAG_BATCH_RESPONSE_ALLOWANCE_TOKENS)
+                               + TAG_BATCH_MAX_OUTPUT_TOKENS)
             if required_tokens > context.loaded_tokens:
                 raise InferenceProviderError("The tagging batch, shared vocabulary, instructions, and response allowance exceed this model's context. Reduce the tagging batch window or narrow the search; nothing was applied.")
             validated = await infer_validated_batch(

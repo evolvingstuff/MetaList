@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.utils.not_found import NOT_FOUND
 import html
 from dataclasses import dataclass
 
@@ -186,7 +187,7 @@ def _find_closing_delimiter(text: str, start_index: int, delimiter: str) -> int:
         if text.startswith(delimiter, cursor) and not _is_escaped(text, cursor):
             return cursor
         cursor += 1
-    return -1
+    return NOT_FOUND
 
 
 def _find_inline_closing(text: str, start_index: int) -> int:
@@ -204,7 +205,7 @@ def _find_inline_closing(text: str, start_index: int) -> int:
         ):
             return cursor
         cursor += 1
-    return -1
+    return NOT_FOUND
 
 
 def _parse_latex_segments(text: str) -> list[_LatexSegment]:
@@ -230,7 +231,7 @@ def _parse_latex_segments(text: str) -> list[_LatexSegment]:
             close_index = _find_closing_delimiter(
                 text, cursor + len(_DISPLAY_MATH_DELIMITER), _DISPLAY_MATH_DELIMITER
             )
-            if close_index != -1:
+            if close_index != NOT_FOUND:
                 flush_text(cursor)
                 segments.append(
                     _LatexSegment(
@@ -248,7 +249,7 @@ def _parse_latex_segments(text: str) -> list[_LatexSegment]:
             and (cursor + 1 >= len(text) or text[cursor + 1] != "$")
         ):
             close_index = _find_inline_closing(text, cursor + 1)
-            if close_index != -1:
+            if close_index != NOT_FOUND:
                 flush_text(cursor)
                 segments.append(
                     _LatexSegment(

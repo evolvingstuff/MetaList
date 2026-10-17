@@ -38,6 +38,8 @@ _LinkTitleTargetRejected = PublicHttpTargetRejected
 _PinnedHTTPTransport = PinnedPublicHTTPTransport
 _ResolvedHttpTarget = ResolvedPublicHttpTarget
 
+# A record not yet stored has no database row id.
+_UNSAVED_ROW_ID = -1
 _FETCH_TIMEOUT_SECONDS = 4.0
 _MAX_REDIRECTS = 5
 _MAX_RESPONSE_BYTES = 1024 * 1024
@@ -908,7 +910,7 @@ def _build_next_record(
         )
 
     if previous is None:
-        row_id = -1
+        row_id = _UNSAVED_ROW_ID
         created_at = now
     else:
         row_id = previous.id

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.utils.not_found import NOT_FOUND
 import html
 import re
 from dataclasses import dataclass
@@ -411,12 +412,12 @@ def _extract_code_spans(text: str, placeholders: List[_InlinePlaceholder]) -> st
     cursor = 0
     while cursor < len(text):
         start = text.find("`", cursor)
-        if start == -1:
+        if start == NOT_FOUND:
             output.append(text[cursor:])
             break
         fence_len = _count_repeated_char(text=text, start=start, char="`")
         end = text.find("`" * fence_len, start + fence_len)
-        if end == -1:
+        if end == NOT_FOUND:
             output.append(text[cursor:])
             break
         output.append(text[cursor:start])
@@ -439,15 +440,15 @@ def _extract_markdown_links(text: str, placeholders: List[_InlinePlaceholder]) -
     cursor = 0
     while cursor < len(text):
         start = text.find("[", cursor)
-        if start == -1:
+        if start == NOT_FOUND:
             output.append(text[cursor:])
             break
         open_paren = text.find(_LINK_TEXT_TO_HREF, start)
-        if open_paren == -1:
+        if open_paren == NOT_FOUND:
             output.append(text[cursor:])
             break
         close_paren = _find_unescaped_char(text=text, start=open_paren + len(_LINK_TEXT_TO_HREF), target=")")
-        if close_paren == -1:
+        if close_paren == NOT_FOUND:
             output.append(text[cursor:])
             break
         output.append(text[cursor:start])
@@ -520,7 +521,7 @@ def _extract_latex_math(text: str, placeholders: List[_InlinePlaceholder]) -> st
             start=content_start,
             delimiter=delimiter,
         )
-        if close_index == -1:
+        if close_index == NOT_FOUND:
             output.append(text[cursor])
             cursor += 1
             continue
@@ -591,7 +592,7 @@ def _is_currency_amount(*, text: str, match: re.Match[str]) -> bool:
         raise TypeError("text must be a string")
     amount_end = match.end()
     next_dollar = _find_unescaped_char(text=text, start=amount_end, target="$")
-    if next_dollar == -1:
+    if next_dollar == NOT_FOUND:
         return True
     if next_dollar + 1 < len(text) and text[next_dollar + 1].isdigit():
         return True
@@ -647,7 +648,7 @@ def _find_latex_closing_delimiter(
             cursor += 1
             continue
         return cursor
-    return -1
+    return NOT_FOUND
 
 
 def _is_escaped_delimiter(*, text: str, index: int) -> bool:
@@ -733,7 +734,7 @@ def _find_unescaped_char(*, text: str, start: int, target: str) -> int:
         if text[cursor] == target and (cursor == 0 or text[cursor - 1] != "\\"):
             return cursor
         cursor += 1
-    return -1
+    return NOT_FOUND
 
 
 def _make_placeholder(*, placeholders: List[_InlinePlaceholder], html_value: str) -> str:

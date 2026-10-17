@@ -1,3 +1,4 @@
+import { AI_CHAT_COMPOSER_MAXIMUM_HEIGHT, AI_CHAT_COMPOSER_MINIMUM_HEIGHT, AI_CHAT_MAXIMUM_WIDTH, AI_CHAT_MINIMUM_WIDTH } from '../ai-chat/ai-chat-size-limits.js';
 import { openAgentMenu } from '../ai-chat/agent-menu-actions.js';
 import { addDiagramToNote } from '../excalidraw/excalidraw-actions.js';
 import { captureActiveAgentScope } from '../ai-chat/ai-chat-panel-controller.js';
@@ -143,10 +144,6 @@ import { MS_PER_SECOND } from '../time-units.js';
 const DEFAULT_OPENAI_MODEL = 'gpt-5.6-luna';
 
 // Bounds on the stored AI chat panel width and composer height, in pixels.
-const AI_CHAT_MINIMUM_WIDTH = 280;
-const AI_CHAT_MAXIMUM_WIDTH = 5000;
-const AI_CHAT_COMPOSER_MINIMUM_HEIGHT = 74;
-const AI_CHAT_COMPOSER_MAXIMUM_HEIGHT = 220;
 
 // How long banners stay up: a short notice, a command's outcome, an error.
 const NOTICE_BANNER_SECONDS = 5;
@@ -774,7 +771,7 @@ class CommandPaletteController {
 
     async saveAiChatPanelWidth(width) {
         if (!Number.isInteger(width) || width < AI_CHAT_MINIMUM_WIDTH || width > AI_CHAT_MAXIMUM_WIDTH) {
-            throw new Error('AI chat width must be an integer from 280 to 5000');
+            throw new Error(`AI chat width must be an integer from ${AI_CHAT_MINIMUM_WIDTH} to ${AI_CHAT_MAXIMUM_WIDTH}`);
         }
         await this._preferences.setRaw('pref.ai.chat_width', String(width));
     }
@@ -827,7 +824,7 @@ class CommandPaletteController {
             || height < AI_CHAT_COMPOSER_MINIMUM_HEIGHT
             || height > AI_CHAT_COMPOSER_MAXIMUM_HEIGHT
         ) {
-            throw new Error('AI chat composer height must be an integer from 74 to 220');
+            throw new Error(`AI chat composer height must be an integer from ${AI_CHAT_COMPOSER_MINIMUM_HEIGHT} to ${AI_CHAT_COMPOSER_MAXIMUM_HEIGHT}`);
         }
         await this._preferences.setRaw('pref.ai.composer_height', String(height));
     }
