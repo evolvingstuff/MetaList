@@ -25,6 +25,8 @@ _CHECKED_PATHS = ("app", "main.py", "serve_namespace.py")
 _ERROR_LINE = re.compile(r"^(?P<path>[^:\n]+):(?P<line>\d+): error: (?P<message>.*)$")
 _BASELINE_HEADER = "# Known mypy errors, one line per occurrence (scripts/check_types.py).\n"
 _USAGE = "Usage: python scripts/check_types.py check|update"
+# The script itself and its one command.
+_EXPECTED_ARGV_LENGTH = 2
 # mypy exits 0 with no errors and 1 with errors; anything else means it could not run.
 _MYPY_FOUND_ERRORS = 1
 
@@ -74,7 +76,7 @@ def update() -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2 or sys.argv[1] not in ("check", "update"):
+    if len(sys.argv) != _EXPECTED_ARGV_LENGTH or sys.argv[1] not in ("check", "update"):
         raise SystemExit(_USAGE)
     if sys.argv[1] == "check":
         check()
