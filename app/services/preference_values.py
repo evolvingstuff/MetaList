@@ -8,6 +8,6 @@ from typing import Mapping
 def preference_or_default(preferences: Mapping[str, str], key: str, *, default: str) -> str:
     """The user's choice for this setting; one they never changed is not saved
     and takes the feature's default."""
-    if key not in preferences:
+    if key not in preferences:  # shockharness: ignore[DEF002] reason="a setting the user never changed is not saved and takes the feature's default"
         return default
     return preferences[key]

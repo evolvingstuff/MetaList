@@ -337,13 +337,13 @@ def _suggestion_tiebreak(term: str) -> Tuple[int, str]:
 
 
 def _lookup_count(counts: Dict[str, int], term: str) -> int:
-    if term in counts:
+    if term in counts:  # shockharness: ignore[DEF002] reason="a term with no uses counts 0"
         return counts[term]
     return 0
 
 
 def _lookup_rank_after_ranked_terms(ranks: Dict[str, int], term: str) -> int:
-    if term in ranks:
+    if term in ranks:  # shockharness: ignore[DEF002] reason="an unranked term ranks after every ranked one"
         return ranks[term]
     return len(ranks)
 
@@ -1063,7 +1063,7 @@ def match_tag_in_note_text(*, term: str, content_html: str, ontology) -> TagCont
         normalized_content=note_text_for_tag_matching(content_html),
     )
     matches = _collect_content_match_scores(candidate_terms=[term], context=context, ontology=ontology)
-    if term not in matches:
+    if term not in matches:  # shockharness: ignore[DEF002] reason="a note whose text does not name the tag has no match"
         return None
     return matches[term]
 

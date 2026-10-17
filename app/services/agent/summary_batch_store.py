@@ -90,7 +90,7 @@ class SummaryBatchStore:
     def kept(self, *, session_key: str) -> KeptSummaryBatches | None:
         _validate_session_key(session_key)
         with self._lock:
-            if session_key not in self._kept:
+            if session_key not in self._kept:  # shockharness: ignore[DEF002] reason="a session that kept no summary batches has none"
                 return None
             return self._kept[session_key]
 

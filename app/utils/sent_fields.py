@@ -8,6 +8,6 @@ from typing import Mapping
 
 def sent_or_none(fields: Mapping[str, str], name: str) -> str | None:
     """The value sent under this name, or None when none was sent."""
-    if name not in fields:
+    if name not in fields:  # shockharness: ignore[DEF002] reason="a field that was not sent is None"
         return None
     return fields[name]

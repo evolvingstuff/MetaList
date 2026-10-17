@@ -399,7 +399,7 @@ def _create_text_node(text: str, *, preserve_line_breaks: bool) -> _HtmlNode:
 
 
 def _read_attr(attrs: dict[str, str], key: str) -> str:
-    if key in attrs:
+    if key in attrs:  # shockharness: ignore[DEF002] reason="an element without the attribute has an empty value, as in HTML"
         return attrs[key]
     return ""
 

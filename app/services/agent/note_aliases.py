@@ -41,7 +41,7 @@ class NoteAliases:
 
     def note_id(self, value: str) -> str:
         """The note id an alias stands for; any other value (a full id, a typo) is returned as given."""
-        if value in self._id_by_alias:
+        if value in self._id_by_alias:  # shockharness: ignore[DEF002] reason="a value that is not an alias (a full id, a typo) is returned as given"
             return self._id_by_alias[value]
         return value
 
@@ -57,7 +57,7 @@ class NoteAliases:
         return self._map_ids(payload, self.note_id)
 
     def _to_alias(self, value: str) -> str:
-        if value in self._alias_by_id:
+        if value in self._alias_by_id:  # shockharness: ignore[DEF002] reason="a value that is not a known note id is left as written"
             return self._alias_by_id[value]
         return value
 

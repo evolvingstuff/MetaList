@@ -213,7 +213,7 @@ def _required_query_param(request: Request, name: str) -> str:
 
 def _optional_note_id_param(request: Request) -> str | None:
     """The note an export covers, with its children; absent means the whole view."""
-    if "note_id" not in request.query_params:
+    if "note_id" not in request.query_params:  # shockharness: ignore[DEF002] reason="an export without note_id covers the whole view"
         return None
     return request.query_params["note_id"]
 

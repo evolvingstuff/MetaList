@@ -142,7 +142,7 @@ def note_evidence_url_capabilities(evidence: InvestigationEvidencePayload) -> We
 
 def _listed_or_none(note: dict[str, object], key: str) -> object:
     """A list the serialized tree leaves out when it is empty (children, tags)."""
-    if key not in note:
+    if key not in note:  # shockharness: ignore[DEF002] reason="the serialized tree leaves out an empty list"
         return []
     return note[key]
 

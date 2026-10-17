@@ -210,7 +210,7 @@ def _handler_name(request: Request) -> str:
 
 def _header_for_log(headers, name: str) -> str:
     """A header as the request log shows it: "-" when the request or response has none."""
-    if name not in headers:
+    if name not in headers:  # shockharness: ignore[DEF002] reason="the request log shows a dash for a header the request or response does not have"
         return "-"
     return headers[name]
 

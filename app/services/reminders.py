@@ -192,7 +192,7 @@ _SCHEDULE_FIELDS = ("schedule_kind", "time_mode", "scheduled_at", "scheduled_dat
 def _mapping_value_or(mapping: Mapping[str, object], key: str, default_value: object) -> object:
     if not isinstance(key, str) or key == "":
         raise InputRejected("key must be a non-empty string")
-    if key in mapping:
+    if key in mapping:  # shockharness: ignore[DEF002] reason="the caller names the default for a field the stored reminder leaves out"
         return mapping[key]
     return default_value
 

@@ -7,7 +7,7 @@ from app.services.view_state import ViewState
 
 def _children_in(view: ViewState, parent_id: Optional[str]) -> List[str]:
     """A note's children in a view; a note without children there has no entry."""
-    if parent_id not in view.children_by_parent:
+    if parent_id not in view.children_by_parent:  # shockharness: ignore[DEF002] reason="a note without children in the view has no entry"
         return []
     return view.children_by_parent[parent_id]
 
