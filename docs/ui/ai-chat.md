@@ -43,7 +43,7 @@
 - Stop no longer ends in a fatal error: the "Cancelling request" activity carries the fields every activity needs.
 - The AI remembers a failed request and the explanation you saw, so you can follow up
   with "try that again" or ask why it failed (`docs/design/agent-harness.md`).
-- A Send that MetaList refuses before the AI starts (the AI is not set up, the active tab changed, a message it rejects) stays in the chat with the reason, so the message is not lost and the reason says what to fix. The server keeps no record of such a turn, so the chat is not reloaded from it after the refusal.
+- A Send that MetaList refuses before the AI starts (the AI is not set up, the active tab changed, a message it rejects) stays in the chat with the reason, so the message is not lost and the reason says what to fix. The server keeps no record of such a turn, so the page keeps it (`ai-chat-refused-turns.js`) and puts it back after the server message it followed each time the chat reloads: later Sends leave it in place, in order. Clear chat clears it, a refused turn goes with the earlier message it followed when the server trims old history, and reloading the page forgets it. The AI never sees refused turns. A connection lost mid-answer is not a refusal: the server has that turn.
 
 ## Web access
 

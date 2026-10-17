@@ -22,6 +22,9 @@ const moduleState = ApplicationState.createFields('tag-suggestions-service', {
     activeInput: null,
     initialized: false,
     activeRequestController: null,
+    // The tag bar text the list on screen was built for. Once the text changes,
+    // the list is for older text until the new one arrives.
+    listBuiltForText: '',
 });
 
 
@@ -164,7 +167,10 @@ function requireSuggestionReasons(reasonsByTag, tag) {
     return reasons;
 }
 
-function renderSuggestions(tagBarInput, suggestions, reasonsByTag) {
+function renderSuggestions(tagBarInput, builtForText, suggestions, reasonsByTag) {
+    if (typeof builtForText !== 'string') {
+        throw new Error('renderSuggestions requires the text the list was built for');
+    }
     const { tagBar, container } = getTagSuggestionsContainer(tagBarInput);
     if (!Array.isArray(suggestions) || suggestions.length === 0) {
         hideSuggestions(container);
@@ -200,6 +206,8 @@ function renderSuggestions(tagBarInput, suggestions, reasonsByTag) {
         container.appendChild(button);
     }
 
+    // The same text can be suggested for again (the bar was focused again).
+    if (moduleState.listBuiltForText !== builtForText) moduleState.listBuiltForText = builtForText;
     container.hidden = false;
     container.style.display = 'flex';
     container.scrollTop = 0;
@@ -295,7 +303,7 @@ export function updateTagSuggestions(tagBarInput) {
         if (requestId !== moduleState.requestSerial) {
             return;
         }
-        renderSuggestions(tagBarInput, response.suggestions, response.reasons);
+        renderSuggestions(tagBarInput, rawValue, response.suggestions, response.reasons);
     }, SUGGESTION_DEBOUNCE_MS);
 }
 
@@ -364,6 +372,18 @@ function handleKeyDown(event) {
 
     const items = Array.from(container.querySelectorAll('.note-tag-suggestion'));
     if (items.length === 0) {
+        return;
+    }
+    // Only a list built for the text in the bar is acted on: Enter on an older
+    // list leaves the typed text alone, and the arrows wait for the new list.
+    const isListForOlderText = target.value !== moduleState.listBuiltForText;
+    if (isListForOlderText && event.key === 'Enter') {
+        cancelPendingRequests();
+        hideSuggestions(container);
+        return;
+    }
+    if (isListForOlderText && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+        event.preventDefault();
         return;
     }
 

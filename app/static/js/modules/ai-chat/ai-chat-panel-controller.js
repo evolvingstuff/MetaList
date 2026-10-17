@@ -14,7 +14,11 @@ import {
 } from './bulk-proposal-ui.js';
 import { placeChatMessageElements } from './ai-chat-message-placement.js';
 import {
+    LOCAL_MESSAGE_ID_PREFIX, MESSAGES_PER_TURN, lastServerMessageId, placeRefusedTurns,
+} from './ai-chat-refused-turns.js';
+import {
     AiApiError,
+    AiChatRefusedError,
     acknowledgeAgentMenu,
     clearAiChatSession,
     copyAiChatResponse,
@@ -250,6 +254,8 @@ class AiChatPanelController {
     constructor() {
         this._initialized = false;
         this._messages = [];
+        // Sends MetaList refused, which only this page knows (ai-chat-refused-turns.js).
+        this._refusedTurns = [];
         this._bulkPanel = null;
         this._bulkPanelAnchorMessageId = '';
         this._expandedThinkingMessageIds = new Set();
@@ -1156,8 +1162,10 @@ class AiChatPanelController {
             }
             if (this._expandedThinkingMessageIds.size > 0) this._expandedThinkingMessageIds.clear();
             if (this._expandedReferenceMessageIds.size > 0) this._expandedReferenceMessageIds.clear();
-            const incomingMessages = payload.messages.map(validateMessage);
-            if (!stateValuesEqual(this._messages, incomingMessages)) this._messages = incomingMessages;
+            const placed = placeRefusedTurns(payload.messages.map(validateMessage), this._refusedTurns);
+            // Turns whose earlier message the server trimmed go with it.
+            if (placed.keptTurns.length !== this._refusedTurns.length) this._refusedTurns = placed.keptTurns;
+            if (!stateValuesEqual(this._messages, placed.messages)) this._messages = placed.messages;
             this._render({ shouldScrollToBottom });
             await queueMermaidDiagramRendering(this._elements.messages);
         } catch (error) {
@@ -1199,6 +1207,7 @@ class AiChatPanelController {
         if (this._expandedThinkingMessageIds.size > 0) this._expandedThinkingMessageIds.clear();
         if (this._expandedReferenceMessageIds.size > 0) this._expandedReferenceMessageIds.clear();
         if (this._messages.length > 0) this._messages = [];
+        if (this._refusedTurns.length > 0) this._refusedTurns = [];
         this._render({ shouldScrollToBottom: true });
         await AgentDebugView.refreshIfOpen();
         this._elements.input.focus();
@@ -1229,7 +1238,9 @@ class AiChatPanelController {
             return;
         }
 
-        const localTurnId = `local-${Date.now()}`;
+        // Where this turn goes back if MetaList refuses it.
+        const afterMessageId = lastServerMessageId(this._messages);
+        const localTurnId = `${LOCAL_MESSAGE_ID_PREFIX}${Date.now()}`;
         this._messages.push(
             {
                 id: `${localTurnId}-user`,
@@ -1258,7 +1269,8 @@ class AiChatPanelController {
                 activities: [],
             },
         );
-        const assistantMessage = this._messages[this._messages.length - 1];
+        // The list keeps its own copies: stream into those, not into the literals above.
+        const [userMessage, assistantMessage] = this._messages.slice(-MESSAGES_PER_TURN);
         if (this._activeChatAbortController !== null) {
             throw new Error('AI chat abort controller already exists');
         }
@@ -1389,6 +1401,9 @@ class AiChatPanelController {
                 didRequestFail = true;
                 assistantMessage.status = 'error';
                 assistantMessage.error = error.message;
+                if (error instanceof AiChatRefusedError) {
+                    this._refusedTurns.push({ afterMessageId, messages: [userMessage, assistantMessage] });
+                }
                 this._render({ shouldScrollToBottom: true });
             } else {
                 throw error;

@@ -14,6 +14,15 @@ export class AiApiError extends HttpRequestError {
     }
 }
 
+// MetaList refused a chat Send before the AI started (the AI is not set up, the
+// active tab changed, a message it rejects): the server keeps no record of it.
+export class AiChatRefusedError extends AiApiError {
+    constructor(message) {
+        super(message);
+        this.name = 'AiChatRefusedError';
+    }
+}
+
 
 async function fetchAi(url, options) {
     try {
@@ -31,6 +40,24 @@ async function fetchAi(url, options) {
 }
 
 
+// The reason a failed response gives: the server's detail, or the fallback and its status.
+function failedResponseMessage(response, responseText, isJson, fallbackMessage) {
+    if (isJson && responseText !== '') {
+        const payload = JSON.parse(responseText);
+        if (payload && typeof payload.detail === 'string') {
+            return payload.detail;
+        }
+    }
+    return `${fallbackMessage} (${response.status})`;
+}
+
+
+function isJsonResponse(response) {
+    const contentType = response.headers.get('content-type');
+    return typeof contentType === 'string' && contentType.toLowerCase().includes('json');
+}
+
+
 async function readJsonResponse(response, fallbackMessage) {
     if (!(response instanceof Response)) {
         throw new Error('readJsonResponse requires Response');
@@ -39,18 +66,9 @@ async function readJsonResponse(response, fallbackMessage) {
         throw new Error('readJsonResponse requires fallbackMessage');
     }
     const responseText = await response.text();
-    const contentType = response.headers.get('content-type');
-    const isJson = typeof contentType === 'string'
-        && contentType.toLowerCase().includes('json');
+    const isJson = isJsonResponse(response);
     if (!response.ok) {
-        let message = `${fallbackMessage} (${response.status})`;
-        if (isJson && responseText !== '') {
-            const payload = JSON.parse(responseText);
-            if (payload && typeof payload.detail === 'string') {
-                message = payload.detail;
-            }
-        }
-        throw new AiApiError(message);
+        throw new AiApiError(failedResponseMessage(response, responseText, isJson, fallbackMessage));
     }
     if (!isJson || responseText === '') {
         throw new Error(`${fallbackMessage}: response must be JSON`);
@@ -420,7 +438,8 @@ export async function streamAiChat({
         signal,
     });
     if (!response.ok) {
-        await readJsonResponse(response, 'Failed to start AI chat');
+        const responseText = await response.text();
+        throw new AiChatRefusedError(failedResponseMessage(response, responseText, isJsonResponse(response), 'Failed to start AI chat'));
     }
     if (!(response.body instanceof ReadableStream)) {
         throw new Error('AI chat response is missing readable stream');
