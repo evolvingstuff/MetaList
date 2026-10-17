@@ -12,6 +12,8 @@ import tempfile
 
 from app.server_runtime import validate_namespace
 
+_MANIFEST_JSON_INDENT = 2
+
 
 def _namespace_database_paths(namespaces_directory: Path) -> tuple[Path, ...]:
     if not namespaces_directory.exists():
@@ -140,7 +142,7 @@ def _backup_namespace(database_path: Path) -> Path:
             "files": entries,
         }
         manifest_path = snapshot_directory / "manifest.json"
-        manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
+        manifest_path.write_text(json.dumps(manifest, indent=_MANIFEST_JSON_INDENT, sort_keys=True), encoding="utf-8")
         with tarfile.open(archive_path, mode="x:gz") as archive:
             archive.add(manifest_path, arcname="manifest.json")
             for entry in entries:

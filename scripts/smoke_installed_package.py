@@ -27,6 +27,18 @@ from uuid import uuid4
 
 from app.services.exception_capture import CapturedExceptionContext
 
+PORTS_PER_PROFILE = 2  # HTTP and HTTPS
+PS_TIMEOUT_SECONDS = 10
+PS_FIELD_COUNT = 2  # pid=,args=
+FAULT_STACK_WAIT_SECONDS = 2
+FAULT_LOG_STABLE_SAMPLES = 3
+ASSET_CONNECTION_TIMEOUT_SECONDS = 10
+# Each asset is fetched this many times over one kept-alive connection.
+ASSET_BATCH_ROUNDS = 3
+JSON_INDENT = 2
+SERVER_TERMINATE_GRACE_SECONDS = 10
+SERVER_EXIT_WAIT_SECONDS = 10
+
 
 def _request(port: int, path: str, *, host: str, use_https: bool, tls_context: ssl.SSLContext) -> bytes:
     if use_https:
@@ -49,7 +61,7 @@ def _profiles_with_free_ports() -> list[tuple[str, int, int]]:
     with ExitStack() as reservations:
         for suffix in ("first", "second"):
             ports = []
-            for _ in range(2):
+            for _ in range(PORTS_PER_PROFILE):
                 listener = reservations.enter_context(socket.socket())
                 listener.bind(("127.0.0.1", 0))
                 ports.append(listener.getsockname()[1])
@@ -94,12 +106,12 @@ def _namespace_processes(*, executable: Path, profiles: list[tuple[str, int, int
     else:
         completed = subprocess.run(
             ["ps", "-axww", "-o", "pid=,args="], capture_output=True,
-            encoding="utf-8", errors="replace", check=True, timeout=10,
+            encoding="utf-8", errors="replace", check=True, timeout=PS_TIMEOUT_SECONDS,
         )
         processes = []
         for line in completed.stdout.splitlines():
             fields = line.strip().split(maxsplit=1)
-            if len(fields) == 2:
+            if len(fields) == PS_FIELD_COUNT:
                 processes.append((int(fields[0]), fields[1]))
     owned_pids = set()
     for pid, command in processes:
@@ -164,7 +176,7 @@ def _dump_failed_namespace_stacks(*, executable: Path, profiles: list[tuple[str,
             fault_sizes[fault_path] = fault_path.stat().st_size
             with suppress(ProcessLookupError):
                 os.kill(pid, signal.SIGUSR1)
-    deadline = time.monotonic() + 2
+    deadline = time.monotonic() + FAULT_STACK_WAIT_SECONDS
     previous_sizes = fault_sizes.copy()
     stable_samples = 0
     while fault_sizes and time.monotonic() < deadline:
@@ -174,7 +186,7 @@ def _dump_failed_namespace_stacks(*, executable: Path, profiles: list[tuple[str,
             stable_samples += 1
         else:
             stable_samples = 0
-        if stable_samples >= 3:
+        if stable_samples >= FAULT_LOG_STABLE_SAMPLES:
             break
         previous_sizes = current_sizes
     for fault_path in sorted(fault_sizes):
@@ -184,14 +196,14 @@ def _dump_failed_namespace_stacks(*, executable: Path, profiles: list[tuple[str,
 
 def _verify_asset_batch(*, port: int, use_https: bool, tls_context: ssl.SSLContext, assets: list[tuple[str, bytes]]) -> None:
     if use_https:
-        connection = http.client.HTTPSConnection('127.0.0.1', port, context=tls_context, timeout=10)
+        connection = http.client.HTTPSConnection('127.0.0.1', port, context=tls_context, timeout=ASSET_CONNECTION_TIMEOUT_SECONDS)
     else:
-        connection = http.client.HTTPConnection('127.0.0.1', port, timeout=10)
+        connection = http.client.HTTPConnection('127.0.0.1', port, timeout=ASSET_CONNECTION_TIMEOUT_SECONDS)
     try:
         connection.connect()
         original_socket = connection.sock
         assert original_socket is not None
-        for _ in range(3):
+        for _ in range(ASSET_BATCH_ROUNDS):
             for path, expected in assets:
                 connection.request('GET', path, headers={'Accept-Encoding': 'gzip'})
                 response = connection.getresponse()
@@ -334,7 +346,7 @@ def _verify_browser_startup(*, certificate: Path, host: str,
                 subprocess.run(['certutil', '-delstore', 'Root', thumbprint],
                                stdin=subprocess.DEVNULL, check=True, timeout=30)
         finally:
-            (output_directory / 'setup-results.json').write_text(json.dumps(diagnostics, indent=2), encoding='utf-8')
+            (output_directory / 'setup-results.json').write_text(json.dumps(diagnostics, indent=JSON_INDENT), encoding='utf-8')
 
 
 def _verify_remembered_network_settings(*, executable: Path, environment: dict[str, str],
@@ -446,12 +458,12 @@ def smoke_installed_package(*, browsers: list[str], https_browsers: list[str],
             finally:
                 if process.poll() is None:
                     process.terminate()
-                    deadline = time.monotonic() + 10
+                    deadline = time.monotonic() + SERVER_TERMINATE_GRACE_SECONDS
                     while process.poll() is None and time.monotonic() < deadline:
                         time.sleep(0.1)
                     if process.poll() is None:
                         process.kill()
-                    process.wait(timeout=10)
+                    process.wait(timeout=SERVER_EXIT_WAIT_SECONDS)
                 if not is_successful:
                     _dump_failed_namespace_stacks(executable=executable, profiles=profiles, data_directory=data_directory)
                 try:

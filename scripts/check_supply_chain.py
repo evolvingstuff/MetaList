@@ -14,6 +14,7 @@ from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPORT_OPTIONS = ['--frozen', '--offline', '--no-emit-project', '--no-header', '--no-annotate']
+VENDOR_REPORT_JSON_INDENT = 2
 
 
 def check_exports(root: Path) -> None:
@@ -144,7 +145,7 @@ def audit(root: Path, output: Path) -> None:
     (output / 'vendor.json').write_text(json.dumps({
         'checked_at': datetime.now(timezone.utc).isoformat(),
         'source': 'https://api.osv.dev/v1/query', 'libraries': vendor_results,
-    }, indent=2) + '\n')
+    }, indent=VENDOR_REPORT_JSON_INDENT) + '\n')
     if completed.returncode != 0:
         raise RuntimeError(f'Python dependency audit failed (exit {completed.returncode}); inspect python.json')
     if any(library['vulnerabilities'] for library in vendor_results):

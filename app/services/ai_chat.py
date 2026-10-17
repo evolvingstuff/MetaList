@@ -11,6 +11,8 @@ from app.services.ai_chat_rendering import strip_note_citations_for_history
 
 
 _MAX_MESSAGES_PER_SESSION = 100
+# A turn is the user's message followed by the assistant's answer.
+_MESSAGES_PER_TURN = 2
 _MAX_MESSAGE_CHARACTERS = 32_000
 
 
@@ -172,10 +174,10 @@ class AiChatSessionStore:
                 raise RuntimeError("AI chat session already streaming a turn")
             if messages and messages[-1]["provider"] != provider:
                 session.history_start = len(messages)
-            if len(messages) + 2 > _MAX_MESSAGES_PER_SESSION:
-                removed_message_ids = [message["id"] for message in messages[:2]]
-                del messages[:2]
-                session.history_start = max(0, session.history_start - 2)
+            if len(messages) + _MESSAGES_PER_TURN > _MAX_MESSAGES_PER_SESSION:
+                removed_message_ids = [message["id"] for message in messages[:_MESSAGES_PER_TURN]]
+                del messages[:_MESSAGES_PER_TURN]
+                session.history_start = max(0, session.history_start - _MESSAGES_PER_TURN)
                 session_action_logs = session.action_logs
                 for removed_message_id in removed_message_ids:
                     if removed_message_id not in session_activities:
@@ -351,9 +353,9 @@ class AiChatSessionStore:
                 return []
             session = self._sessions[session_key]
             messages = session.messages
-            assert len(messages) % 2 == 0, "AI chat history must contain complete turn pairs"
+            assert len(messages) % _MESSAGES_PER_TURN == 0, "AI chat history must contain complete turn pairs"
             provider_messages: list[dict[str, str]] = []
-            for index in range(session.history_start, len(messages), 2):
+            for index in range(session.history_start, len(messages), _MESSAGES_PER_TURN):
                 user_message = messages[index]
                 assistant_message = messages[index + 1]
                 assert user_message["role"] == "user"
@@ -370,7 +372,7 @@ class AiChatSessionStore:
                     )
                     continue
                 if assistant_message["status"] == "streaming":
-                    assert index == len(messages) - 2, "only the current turn may be streaming"
+                    assert index == len(messages) - _MESSAGES_PER_TURN, "only the current turn may be streaming"
                     continue
                 assert assistant_message["status"] == "complete"
                 assistant_content = assistant_message["content"]
@@ -397,7 +399,7 @@ class AiChatSessionStore:
             messages = session.messages
             session_action_logs = session.action_logs
             earlier: list[dict[str, object]] = []
-            for index in range(session.history_start, len(messages), 2):
+            for index in range(session.history_start, len(messages), _MESSAGES_PER_TURN):
                 user_message, assistant_message = messages[index], messages[index + 1]
                 if assistant_message["status"] != "complete":
                     continue

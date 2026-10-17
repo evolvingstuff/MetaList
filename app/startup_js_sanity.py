@@ -29,6 +29,8 @@ from app.startup_sanity_config import is_installed_distribution_root
 _JS_EXTENSIONS = frozenset({".js", ".jsx"})
 _TS_EXTENSIONS = frozenset({".ts", ".tsx"})
 _MAX_VIOLATIONS = 200
+_CODEFRAME_GUTTER = " | "
+_CODEFRAME_CONTEXT_LINES = 2
 _PARSER = Parser(Language(tree_sitter_javascript.language()))
 
 
@@ -180,9 +182,9 @@ def _codeframe(lines: list[str], lineno: int, col: int, context_lines: int) -> s
     current = start
     while current <= end:
         prefix = str(current).rjust(width)
-        out.append(f"{prefix} | {lines[current - 1]}")
+        out.append(f"{prefix}{_CODEFRAME_GUTTER}{lines[current - 1]}")
         if current == lineno:
-            out.append(" " * (width + 3 + col) + "^")
+            out.append(" " * (width + len(_CODEFRAME_GUTTER) + col) + "^")
         current += 1
     return "\n".join(out)
 
@@ -376,7 +378,7 @@ class _StartupJsChecker:
                 path=_path_rel(self._project_root, self._path),
                 lineno=lineno,
                 col=col,
-                codeframe=_codeframe(self._lines, lineno, col, 2),
+                codeframe=_codeframe(self._lines, lineno, col, _CODEFRAME_CONTEXT_LINES),
             )
         )
 

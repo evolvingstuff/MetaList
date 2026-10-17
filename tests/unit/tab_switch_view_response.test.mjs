@@ -47,6 +47,7 @@ function buildHarness() {
         restoreScrollForActiveTabNow() { events.push(`scroll-now:${this.activeTabId}`); },
     };
     const uiDependencies = {
+        PERF_LOG_MS_DECIMALS: 2,
         ModeContext,
         moduleState: ApplicationState.createFields(`test.tab-switch.${Math.random()}`, { viewRequestInFlight: false }),
         Logger: { logAction() {}, logDebug() {}, logNoop() {} },

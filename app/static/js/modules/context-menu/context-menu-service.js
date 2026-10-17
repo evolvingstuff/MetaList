@@ -1,3 +1,4 @@
+import { parseDecimalInteger } from '../decimal-integer.js';
 import { ApplicationState } from '../application-state.js';
 const MENU_PADDING_PX = 8;
 // Moving the pointer this far outside the menu (and its open submenu) closes it,
@@ -292,7 +293,7 @@ function handleMenuClick(event) {
     if (typeof indexAttr !== 'string' || indexAttr.trim() === '') {
         throw new Error('Context menu item missing index');
     }
-    const index = Number.parseInt(indexAttr, 10);
+    const index = parseDecimalInteger(indexAttr);
     if (!Number.isInteger(index) || index < 0 || index >= items.length) {
         throw new Error(`Context menu item index invalid: ${indexAttr}`);
     }

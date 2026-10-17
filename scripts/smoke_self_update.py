@@ -43,6 +43,13 @@ _REPAIR_SPEC.loader.exec_module(repair_archive)
 REPAIR_BASELINE_VERSION = "0.7.1"
 REPAIR_BASELINE_URL = "https://files.pythonhosted.org/packages/05/a1/11778f70740ff305d47c2e194b267f3ec6e57f0db0b2c25a19f7072ec47e/metalist-0.7.1-py3-none-any.whl"
 REPAIR_BASELINE_SHA256 = "3e14d8d0d16408e4092cbf10a37432c0c19c71a8bc1867e9a67bacc7fe7d8137"
+# sys.version_info[:N] is (major, minor), the interpreter an update must keep.
+_MAJOR_MINOR_PARTS = 2
+_BROWSER_RELOADS = 2
+# Command line: script, wheel path, optional --repair.
+_ARGC_WITHOUT_REPAIR = 2
+_ARGC_WITH_REPAIR = 3
+_REPAIR_FLAG_INDEX = 2
 
 
 def _path_without_uv(path_value: str) -> str:
@@ -245,18 +252,18 @@ def run(wheel: Path, *, repair: bool) -> None:
                 scripts = directory / "tools/metalist" / ("Scripts" if os.name == "nt" else "bin")
                 python = scripts / ("python.exe" if os.name == "nt" else "python")
                 identity = subprocess.check_output([str(python), "-I", "-c", "import sys,json; print(json.dumps(list(sys.version_info[:2])))"], text=True)
-                assert json.loads(identity) == list(sys.version_info[:2]), identity
+                assert json.loads(identity) == list(sys.version_info[:_MAJOR_MINOR_PARTS]), identity
                 if repair:
                     for browser_name in ('chrome', 'firefox'):
                         smoke._verify_browser_startup(
                             certificate=certificate, host='127.0.0.1', profiles=profiles,
                             browser_name=browser_name, use_https=False,
-                            cold_runs=1, reloads=2, validate_encrypted_login=True,
+                            cold_runs=1, reloads=_BROWSER_RELOADS, validate_encrypted_login=True,
                         )
                     smoke._verify_browser_startup(
                         certificate=certificate, host=lan_host, profiles=profiles,
                         browser_name='edge', use_https=True,
-                        cold_runs=1, reloads=2, validate_encrypted_login=True,
+                        cold_runs=1, reloads=_BROWSER_RELOADS, validate_encrypted_login=True,
                     )
                 print(f"Real uv update, backups, offline installation, interpreter preservation, and two-namespace restart passed on {sys.platform} Python {sys.version.split()[0]}.")
             finally:
@@ -274,8 +281,8 @@ def run(wheel: Path, *, repair: bool) -> None:
 
 
 if __name__ == "__main__":
-    assert len(sys.argv) in (2, 3), "Expected built wheel path and optional --repair"
-    is_repair = len(sys.argv) == 3
+    assert len(sys.argv) in (_ARGC_WITHOUT_REPAIR, _ARGC_WITH_REPAIR), "Expected built wheel path and optional --repair"
+    is_repair = len(sys.argv) == _ARGC_WITH_REPAIR
     if is_repair:
-        assert sys.argv[2] == "--repair"
+        assert sys.argv[_REPAIR_FLAG_INDEX] == "--repair"
     run(Path(sys.argv[1]).resolve(), repair=is_repair)

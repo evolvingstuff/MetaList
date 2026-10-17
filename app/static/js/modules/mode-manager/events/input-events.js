@@ -8,6 +8,9 @@ import { scrollWindowToYFastAnimated } from '../services/animated-scroll-service
 import { initializeTagSuggestions, updateTagSuggestions } from '../services/tag-suggestions-service.js';
 import { handleDictationPasteEvent, isDictationRawInsertInProgress, noteDictationEditSeen } from '../services/dictation-paste-service.js';
 
+// Divisor for the middle of a length.
+const HALF = 2;
+
 const moduleState = ApplicationState.createFields('input-events', {
     lastKeyPressed: null,
 });
@@ -17,8 +20,8 @@ function scrollViewportToCenterRect(rect) {
         throw new Error('scrollViewportToCenterRect requires a DOMRect-like object');
     }
 
-    const centerY = rect.top + rect.height / 2;
-    const targetScrollY = Math.max(0, window.scrollY + centerY - window.innerHeight / 2);
+    const centerY = rect.top + rect.height / HALF;
+    const targetScrollY = Math.max(0, window.scrollY + centerY - window.innerHeight / HALF);
     scrollWindowToYFastAnimated(Math.round(targetScrollY));
 }
 

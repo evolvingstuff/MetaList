@@ -93,6 +93,10 @@ from urllib.parse import urlsplit
 from urllib.parse import urlunsplit
 from app.services.input_errors import InputRejected, NamespaceInputRejected
 
+# Loguru's standard-logging intercept: the caller sits at least this many
+# frames above the handler, plus one per logging-module frame.
+_INTERCEPT_BASE_DEPTH = 2
+
 logger.remove()
 logger.add(
     sys.stdout,
@@ -108,16 +112,17 @@ class InterceptHandler(logging.Handler):
     def emit(self, record):
         level = record.levelno
 
-        frame, depth = logging.currentframe(), 2
+        frame, depth = logging.currentframe(), _INTERCEPT_BASE_DEPTH
         while frame and frame.f_code.co_filename == logging.__file__:
             frame = frame.f_back
             depth += 1
 
         error_detail = ""
         if record.exc_info is not None and record.exc_info[0] is not None:
+            error_type, _, error_traceback = record.exc_info
             error_detail = (
-                f" error_type={record.exc_info[0].__name__} "
-                f"frames={traceback_frame_summary(record.exc_info[2])}"
+                f" error_type={error_type.__name__} "
+                f"frames={traceback_frame_summary(error_traceback)}"
             )
         logger.opt(depth=depth).log(
             level,

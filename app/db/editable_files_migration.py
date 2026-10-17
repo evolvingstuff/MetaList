@@ -14,6 +14,8 @@ from app.db.file_schema import FILE_PREVIEWS_TABLE, FILES_TABLE, initialize_file
 
 # Same shared in-memory database FileSession uses when the notes database is in memory.
 _FILE_MEMORY_URI = "file:metalist_files_memory?mode=memory&cache=shared"
+# PRAGMA database_list rows are (seq, name, file).
+_DATABASE_LIST_FILE_COLUMN = 2
 
 
 def _upgrade(files: sqlite3.Connection) -> None:
@@ -35,7 +37,7 @@ def add_editable_file_schema(
     encryption_enabled: bool,  # noqa: ARG001
     encryption_service: object,  # noqa: ARG001
 ) -> int:
-    database = connection.execute("PRAGMA database_list").fetchone()[2]
+    database = connection.execute("PRAGMA database_list").fetchone()[_DATABASE_LIST_FILE_COLUMN]
     if not database:
         with closing(sqlite3.connect(_FILE_MEMORY_URI, uri=True)) as files:
             _upgrade(files)

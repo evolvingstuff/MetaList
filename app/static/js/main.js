@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         let element = null;
         if (typeof target.closest === 'function') {
             element = target;
-        } else if (target.nodeType === 3 && target.parentElement && typeof target.parentElement.closest === 'function') {
+        } else if (target.nodeType === Node.TEXT_NODE && target.parentElement && typeof target.parentElement.closest === 'function') {
             element = target.parentElement;
         } else {
             return;

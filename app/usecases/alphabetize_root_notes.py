@@ -11,6 +11,8 @@ from app.usecases.base import QueryCommand
 from app.usecases.move import _assert_neighbors, _neighbors, apply_move
 from app.utils.text_utils import strip_html
 
+_MIN_ROOTS_TO_ALPHABETIZE = 2
+
 
 def _normalize_direction(direction: str) -> str:
     if not isinstance(direction, str):
@@ -101,7 +103,7 @@ class CmdAlphabetizeRootNotes(QueryCommand):
         ordered_root_ids = store.children(None)
         visible_root_ids = _resolve_visible_root_ids(self.search_query)
 
-        if len(visible_root_ids) < 2:
+        if len(visible_root_ids) < _MIN_ROOTS_TO_ALPHABETIZE:
             return {
                 "status": "noop",
                 "reason": "not_enough_roots",

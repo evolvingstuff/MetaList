@@ -339,6 +339,11 @@ _ATTACHMENT_COLUMNS = frozenset(
 _FILE_REVISION_COLUMN = "content_revision"
 _FILE_PREVIEWS_TABLE = "file_previews"
 _EDITABLE_FILES_DATABASE_VERSION = 10
+# Migration 1→2 added the namespace_content_migrations table.
+_CONTENT_MIGRATIONS_DATABASE_VERSION = 2
+# Migration 2→3 replaced legacy deterministic search history with opaque columns.
+_OPAQUE_SEARCH_HISTORY_DATABASE_VERSION = 3
+_EXPECTED_VAULT_VERSION = 3
 
 _FILE_SCHEMA = {
     "files": _ATTACHMENT_COLUMNS | {_FILE_REVISION_COLUMN},
@@ -773,7 +778,7 @@ def _audit_vault_metadata_values(
     state: _AuditState,
 ) -> None:
     exact_values = {
-        "vault_version": 3,
+        "vault_version": _EXPECTED_VAULT_VERSION,
         "kdf_algorithm": "ARGON2ID",
         "encryption_algorithm": "AES-256-GCM",
     }
@@ -950,7 +955,7 @@ def _audit_namespace(*, namespace: str, database_path: Path) -> NamespaceAuditRe
             findings=(),
         )
     uses_legacy_search_history = (
-        database_version < 3
+        database_version < _OPAQUE_SEARCH_HISTORY_DATABASE_VERSION
         and search_history_columns == _LEGACY_SEARCH_HISTORY_COLUMNS
     )
     expected_main_schema = _OPAQUE_MAIN_SCHEMA_BEFORE_CONTENT_MIGRATIONS
@@ -971,14 +976,17 @@ def _audit_namespace(*, namespace: str, database_path: Path) -> NamespaceAuditRe
                 "database migration"
             ),
         )
-    elif database_version in (2, 3) and search_history_columns == _OPAQUE_SEARCH_HISTORY_COLUMNS:
+    elif (
+        database_version in (_CONTENT_MIGRATIONS_DATABASE_VERSION, _OPAQUE_SEARCH_HISTORY_DATABASE_VERSION)
+        and search_history_columns == _OPAQUE_SEARCH_HISTORY_COLUMNS
+    ):
         state.add_migration_finding(
             database_path=database_path,
             table="search_interaction_history",
             field="*",
             message="authenticated live-database tag-activity reset has not completed",
         )
-    if database_version >= 2 or "namespace_content_migrations" in main_table_names:
+    if database_version >= _CONTENT_MIGRATIONS_DATABASE_VERSION or "namespace_content_migrations" in main_table_names:
         if uses_legacy_search_history:
             expected_main_schema = _MAIN_SCHEMA
         else:

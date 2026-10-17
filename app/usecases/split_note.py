@@ -13,11 +13,13 @@ from app.services.sync import generate_new_uuid
 from app.services.undo_state import record_split_note
 from app.security.note_html import sanitize_note_html
 
+_MIN_SPLIT_SEGMENTS = 2
+
 
 def _validate_split_segments(segments: List[str]) -> None:
     if not isinstance(segments, list):
         raise TypeError("segments must be a list")
-    if len(segments) < 2:
+    if len(segments) < _MIN_SPLIT_SEGMENTS:
         raise ValueError("split requires at least two segments")
     for segment in segments:
         if not isinstance(segment, str):

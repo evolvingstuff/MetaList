@@ -16,6 +16,9 @@ from app.services.agent.staged_summary import SummaryBatchResult
 from app.services.agent.staged_summary import summary_reference_note_ids
 from app.services.agent.web_settings import AgentWebSettings
 
+# The base system prompt and at least one message after it.
+_MIN_CONTEXT_MESSAGES_FOR_SKILL = 2
+
 
 def _exact_citation_token(note_id: str) -> str:
     if not isinstance(note_id, str) or note_id == "":
@@ -230,7 +233,7 @@ class AgentContextBuilder:
         messages: list[dict[str, str]],
         skill: AgentSkill,
     ) -> list[dict[str, str]]:
-        if not isinstance(messages, list) or len(messages) < 2:
+        if not isinstance(messages, list) or len(messages) < _MIN_CONTEXT_MESSAGES_FOR_SKILL:
             raise ValueError("Skill activation requires an existing agent context")
         if messages[0].get("role") != "system":
             raise ValueError("Skill activation requires the base system prompt first")

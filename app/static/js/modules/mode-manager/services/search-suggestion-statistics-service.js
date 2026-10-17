@@ -1,3 +1,6 @@
+const ISO_DATE_TEXT_LENGTH = 'YYYY-MM-DD'.length;
+
+
 function requirePositiveInteger(value, label) {
     if (!Number.isInteger(value) || value <= 0) {
         throw new Error(`${label} must be a positive integer`);
@@ -11,7 +14,7 @@ function validateDateText(value) {
         throw new Error('Search suggestion statistics date must use YYYY-MM-DD');
     }
     const parsed = new Date(`${value}T00:00:00Z`);
-    if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
+    if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, ISO_DATE_TEXT_LENGTH) !== value) {
         throw new Error('Search suggestion statistics date is invalid');
     }
     return value;

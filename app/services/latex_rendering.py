@@ -35,6 +35,10 @@ _LATEX_CONVERSION_ERRORS = (
     NumeratorNotFoundError,
 )
 
+_DISPLAY_MATH_DELIMITER = "$$"
+# Backslashes pair up into escaped backslashes; an odd one out escapes what follows.
+_BACKSLASHES_PER_ESCAPED_BACKSLASH = 2
+
 
 @dataclass(frozen=True, slots=True)
 class LatexRenderResult:
@@ -166,7 +170,7 @@ def _is_escaped(text: str, index: int) -> bool:
     while cursor >= 0 and text[cursor] == "\\":
         count += 1
         cursor -= 1
-    return count % 2 == 1
+    return count % _BACKSLASHES_PER_ESCAPED_BACKSLASH == 1
 
 
 def _find_closing_delimiter(text: str, start_index: int, delimiter: str) -> int:
@@ -222,17 +226,19 @@ def _parse_latex_segments(text: str) -> list[_LatexSegment]:
             )
 
     while cursor < len(text):
-        if text.startswith("$$", cursor) and not _is_escaped(text, cursor):
-            close_index = _find_closing_delimiter(text, cursor + 2, "$$")
+        if text.startswith(_DISPLAY_MATH_DELIMITER, cursor) and not _is_escaped(text, cursor):
+            close_index = _find_closing_delimiter(
+                text, cursor + len(_DISPLAY_MATH_DELIMITER), _DISPLAY_MATH_DELIMITER
+            )
             if close_index != -1:
                 flush_text(cursor)
                 segments.append(
                     _LatexSegment(
                         segment_type="display",
-                        value=text[cursor + 2:close_index],
+                        value=text[cursor + len(_DISPLAY_MATH_DELIMITER):close_index],
                     )
                 )
-                cursor = close_index + 2
+                cursor = close_index + len(_DISPLAY_MATH_DELIMITER)
                 last_text_start = cursor
                 continue
 

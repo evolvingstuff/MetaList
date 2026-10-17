@@ -134,6 +134,8 @@ const NAVIGATION_KEYS = new Set([
 const MOVE_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 const DELETE_KEYS = new Set(['Backspace', 'Delete']);
 const TAG_BAR_META_SHORTCUT_KEYS = new Set(['c', 'x', 'v', 'z', 'y', 'r', 's', 'j', 'u', 'p']);
+// Tabs can be dragged to reorder only when there are at least this many.
+const MIN_TABS_TO_DRAG = 2;
 
 const moduleState = ApplicationState.createFields('keyboard-events', {
     savedEditingSelection: null,
@@ -3184,7 +3186,7 @@ function handleTabDragCandidateMouseDown(event) {
         return;
     }
     const item = getTabContextItem(event.target);
-    if (!item || ModeContext.tabOrder.length < 2) {
+    if (!item || ModeContext.tabOrder.length < MIN_TABS_TO_DRAG) {
         return;
     }
     moduleState.tabDragCandidateId = getTabIdFromContextItem(item);

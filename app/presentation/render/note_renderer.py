@@ -22,6 +22,9 @@ from app.services.content_cache import get_cached_content
 from app.services.content_cache import get_cached_tags
 from app.services.note_store import store as note_store
 
+# re.split with one capture group alternates text parts and tag parts, text first.
+_PARTS_PER_TEXT_AND_TAG = 2
+
 
 def _format_note_content_standard(*, content_html: str, tags: str) -> str:
     if note_tags_include(tags, "@llm"):
@@ -97,7 +100,7 @@ def highlight_search_terms(html_content: str, search_query: str) -> str:
     
     # Process only text parts (odd indices after split)
     for i in range(len(parts)):
-        if i % 2 == 0 and parts[i]:  # Text content
+        if i % _PARTS_PER_TEXT_AND_TAG == 0 and parts[i]:  # Text content
             # Apply highlighting with case-insensitive matching
             parts[i] = re.sub(pattern, replace_in_text_nodes, parts[i], flags=re.IGNORECASE)
     

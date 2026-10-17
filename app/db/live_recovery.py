@@ -110,9 +110,9 @@ def _recover_locked(database_path: Path) -> None:
     manifest_path = directory / 'ready.json'
     if manifest_path.exists() and not (directory / 'committed').exists():
         manifest = json.loads(manifest_path.read_text())
-        if manifest['version'] != 1 or len(manifest['files']) != 2:
-            raise RuntimeError('Unsupported live recovery manifest')
         targets = _targets(database_path)
+        if manifest['version'] != 1 or len(manifest['files']) != len(targets):
+            raise RuntimeError('Unsupported live recovery manifest')
         # Validate the entire recovery set before restoring either database.
         for index, entry in enumerate(manifest['files']):
             if entry['name'] != targets[index].name:

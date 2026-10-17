@@ -6,6 +6,11 @@ import { reorderTabOrderToHoveredSlot } from './services/tab-drag-service.js';
 import { createUuid } from '../uuid.js';
 import { stateValuesEqual, ApplicationState, immutableSnapshot } from '../application-state.js';
 
+// Loaded roots from the end within which an anchor counts as near it, by default.
+const DEFAULT_ANCHOR_NEAR_END_DISTANCE = 3;
+// The browser asks to move a band edge once the viewport is within half the server's margin.
+const ROOT_BAND_REFETCH_MARGIN_DIVISOR = 2;
+
 class ModeContext {
     constructor() {
         this._modalScopes = new Map();
@@ -1139,7 +1144,7 @@ class ModeContext {
 
 	isAnchorNearEnd(anchorId, distance) {
 		if (typeof distance === 'undefined') {
-			distance = 3;
+			distance = DEFAULT_ANCHOR_NEAR_END_DISTANCE;
 		}
 		if (typeof anchorId !== 'string' || !anchorId) {
 			return false;
@@ -1207,7 +1212,7 @@ class ModeContext {
     // Distance, in loaded roots, at which the browser asks the server to move a
     // band edge: the server keeps an edge until the viewport is this close.
     getRootBandRefetchDistance() {
-        return Math.floor(this._tabRootWindows[this._activeTabId].margin / 2);
+        return Math.floor(this._tabRootWindows[this._activeTabId].margin / ROOT_BAND_REFETCH_MARGIN_DIVISOR);
     }
 
     isAnchorNearStart(anchorId, distance) {

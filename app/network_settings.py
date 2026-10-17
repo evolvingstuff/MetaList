@@ -16,6 +16,7 @@ from app.security.request_hosts import resolve_allowed_request_hosts
 
 
 _NETWORK_ENVIRONMENT_KEYS = frozenset({'METALIST_HOST', 'METALIST_ALLOWED_HOSTS'})
+_JSON_INDENT_SPACES = 2
 
 
 def _validate_network_environment(environment: object) -> dict[str, str]:
@@ -43,7 +44,7 @@ def _write_network_settings(path: Path, environment: dict[str, str]) -> None:
     temporary = path.with_name(f'.network-settings-{uuid4().hex}.tmp')
     try:
         with temporary.open('x', encoding='utf-8') as stream:
-            json.dump({'version': 1, 'environment': environment}, stream, indent=2)
+            json.dump({'version': 1, 'environment': environment}, stream, indent=_JSON_INDENT_SPACES)
             stream.write('\n')
         os.replace(temporary, path)
     finally:

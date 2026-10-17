@@ -21,6 +21,12 @@ EXPECTED_INPUT_EXCEPTION = "InputRejected"
 _MUTATION_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 _ROUTE_DECORATOR_METHODS = frozenset({"post", "put", "patch", "delete"})
 _MAX_VIOLATIONS = 200
+_CODEFRAME_GUTTER = " | "
+_CODEFRAME_CONTEXT_LINES = 2
+# open(file, mode), tarfile.open(name, mode): mode is the second positional argument.
+_MODE_ARG_INDEX = 1
+# next(it, default) and dict.pop(key, default) pass the default second.
+_ARG_COUNT_WITH_DEFAULT = 2
 _BACKUP_SERVICE_PATH = "app/services/backup_service.py"
 _DATABASE_MIGRATIONS_PATH = "app/db/migrations.py"
 _AUTH_SERVICE_PATH = "app/services/auth_service.py"
@@ -107,9 +113,9 @@ def _codeframe(lines: list[str], lineno: int, col: int, context_lines: int) -> s
     current = start
     while current <= end:
         prefix = str(current).rjust(width)
-        out.append(f"{prefix} | {lines[current - 1]}")
+        out.append(f"{prefix}{_CODEFRAME_GUTTER}{lines[current - 1]}")
         if current == lineno:
-            marker = " " * (width + 3 + col) + "^"
+            marker = " " * (width + len(_CODEFRAME_GUTTER) + col) + "^"
             out.append(marker)
         current += 1
     return "\n".join(out)
@@ -391,7 +397,7 @@ class _StartupSanityChecker(ast.NodeVisitor):
         col = node.col_offset
         if rule_id != "BKP001" and _suppressed(self._lines, lineno, rule_id):
             return
-        frame = _codeframe(self._lines, lineno, col, 2)
+        frame = _codeframe(self._lines, lineno, col, _CODEFRAME_CONTEXT_LINES)
         self._violations.append(
             StartupSanityViolation(
                 rule_id=rule_id,
@@ -679,8 +685,8 @@ class _StartupSanityChecker(ast.NodeVisitor):
                     return
             if callee == "tarfile.open" and "backup" in call_text:
                 mode_node = None
-                if len(node.args) >= 2:
-                    mode_node = node.args[1]
+                if len(node.args) > _MODE_ARG_INDEX:
+                    mode_node = node.args[_MODE_ARG_INDEX]
                 for keyword in node.keywords:
                     if keyword.arg == "mode":
                         mode_node = keyword.value
@@ -710,8 +716,8 @@ class _StartupSanityChecker(ast.NodeVisitor):
 
         if callee == "tarfile.open":
             mode_node = None
-            if len(node.args) >= 2:
-                mode_node = node.args[1]
+            if len(node.args) > _MODE_ARG_INDEX:
+                mode_node = node.args[_MODE_ARG_INDEX]
             for keyword in node.keywords:
                 if keyword.arg == "mode":
                     mode_node = keyword.value
@@ -737,8 +743,8 @@ class _StartupSanityChecker(ast.NodeVisitor):
             if "backup" not in target_text:
                 return
             mode_node = None
-            if len(node.args) >= 2:
-                mode_node = node.args[1]
+            if len(node.args) > _MODE_ARG_INDEX:
+                mode_node = node.args[_MODE_ARG_INDEX]
             for keyword in node.keywords:
                 if keyword.arg == "mode":
                     mode_node = keyword.value
@@ -823,7 +829,7 @@ class _StartupSanityChecker(ast.NodeVisitor):
             if callee in self._defaultdict_callees:
                 self._add(node=node, rule_id="PY003", message="collections.defaultdict(...) is forbidden")
                 return
-            if callee == "next" and len(node.args) >= 2:
+            if callee == "next" and len(node.args) >= _ARG_COUNT_WITH_DEFAULT:
                 self._add(node=node, rule_id="PY003", message="next(it, default) is forbidden")
                 return
             if callee == "dataclasses.field" or callee == "field":
@@ -854,7 +860,7 @@ class _StartupSanityChecker(ast.NodeVisitor):
         if node.func.attr == "setdefault":
             self._add(node=node, rule_id="PY003", message="dict.setdefault(...) is forbidden")
             return
-        if node.func.attr == "pop" and len(node.args) >= 2:
+        if node.func.attr == "pop" and len(node.args) >= _ARG_COUNT_WITH_DEFAULT:
             self._add(node=node, rule_id="PY003", message="dict.pop(key, default) is forbidden")
 
     def visit_BoolOp(self, node: ast.BoolOp) -> None:

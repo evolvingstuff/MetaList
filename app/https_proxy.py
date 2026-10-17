@@ -15,6 +15,8 @@ MAX_REQUEST_SECONDS = 30 * 60
 HOP_HEADERS = frozenset({'connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
                          'te', 'trailer', 'trailers', 'transfer-encoding', 'upgrade'})
 RETRYABLE_METHODS = frozenset({'GET', 'HEAD', 'OPTIONS'})
+# A bodyless safe request is tried once more after a transient upstream failure.
+RETRYABLE_REQUEST_ATTEMPTS = 2
 LOGGER = logging.getLogger(__name__)
 
 
@@ -74,7 +76,7 @@ def make_proxy_handler(*, backend_host: str, backend_port: int, forward_headers)
         def _request_upstream(self, *, headers, content_length: int, deadline: float):
             attempts = 1
             if self.command in RETRYABLE_METHODS and content_length == 0:
-                attempts = 2
+                attempts = RETRYABLE_REQUEST_ATTEMPTS
             for attempt in range(attempts):
                 connection = http.client.HTTPConnection(
                     backend_host, backend_port, timeout=IDLE_TIMEOUT_SECONDS,

@@ -16,6 +16,8 @@ from rich.console import Console
 from rich.text import Text
 
 _LABEL_WIDTH = 27
+# Spaces between a namespace column and the status or action after it.
+_NAMESPACE_COLUMN_GAP = 2
 _ACTION_STYLES = {"launched": "green", "restarted": "cyan"}
 _AUDIT_STATUS_STYLES = {"PASS": "green"}
 
@@ -70,7 +72,7 @@ def print_audit_namespaces(console: Console, *, statuses: Sequence[tuple[str, st
         style = "yellow"
         if status in _AUDIT_STATUS_STYLES:
             style = _AUDIT_STATUS_STYLES[status]
-        console.print(Text.assemble("     ", namespace.ljust(width + 2), (status, style)))
+        console.print(Text.assemble("     ", namespace.ljust(width + _NAMESPACE_COLUMN_GAP), (status, style)))
 
 
 def print_namespace_table(console: Console, *, rows: Sequence[tuple[str, str, str, str]]) -> None:
@@ -84,7 +86,7 @@ def print_namespace_table(console: Console, *, rows: Sequence[tuple[str, str, st
         action_style = ""
         if action in _ACTION_STYLES:
             action_style = _ACTION_STYLES[action]
-        console.print(Text.assemble(" ", (namespace.ljust(width + 2), "bold"), (action, action_style)))
+        console.print(Text.assemble(" ", (namespace.ljust(width + _NAMESPACE_COLUMN_GAP), "bold"), (action, action_style)))
         for url in (http_url, https_url):
             console.print(Text.assemble("   ", _url_text(url, is_linked=console.is_interactive)))
 

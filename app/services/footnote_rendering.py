@@ -14,6 +14,8 @@ _INLINE_FORMATTING_TAG = re.compile(
     r"</?(?:a|b|strong|i|em|u|s|strike|del|ins|span|small|sub|sup|code|mark)\b[^>]*>",
     re.IGNORECASE,
 )
+_PARAGRAPH_OPEN = "<p>"
+_PARAGRAPH_CLOSE = "</p>"
 
 
 def _trim_spaces_before_marker(parts: list[str]) -> None:
@@ -125,8 +127,10 @@ class _FootnoteMarkdown(HTMLParser):
             self.output.append(html.escape(data, quote=False))
             return
         rendered = render_markdown_to_html(data)
-        if rendered.startswith("<p>") and rendered.endswith("</p>"):
-            rendered = rendered[3:-4].replace("</p><p>", "<br><br>")
+        if rendered.startswith(_PARAGRAPH_OPEN) and rendered.endswith(_PARAGRAPH_CLOSE):
+            rendered = rendered[len(_PARAGRAPH_OPEN) : -len(_PARAGRAPH_CLOSE)].replace(
+                _PARAGRAPH_CLOSE + _PARAGRAPH_OPEN, "<br><br>"
+            )
         self.output.append(rendered)
 
 

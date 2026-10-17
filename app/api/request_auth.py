@@ -9,6 +9,8 @@ from app.utils.sent_fields import sent_or_none
 
 
 AUTH_COOKIE_PREFIX = "metalist_auth"
+# "Bearer <token>": the scheme and the token.
+_BEARER_HEADER_PARTS = 2
 
 
 def auth_cookie_name_for_namespace(namespace: str) -> str:
@@ -26,7 +28,7 @@ def read_request_auth_token(request: Request) -> tuple[str | None, str | None]:
     authorization = sent_or_none(request.headers, "authorization")
     if authorization is not None:
         parts = authorization.split()
-        if len(parts) != 2 or parts[0].lower() != "bearer":
+        if len(parts) != _BEARER_HEADER_PARTS or parts[0].lower() != "bearer":
             return None, "Invalid Authorization header"
         return parts[1], None
 

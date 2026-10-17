@@ -62,12 +62,15 @@ from app.services.windows_process_control import find_listening_pids_for_port as
 from app.services.windows_process_control import is_process_running as is_windows_process_running
 from app.services.windows_process_control import stop_process as stop_windows_process
 
+# A socket address starts with host and port; IPv6 adds flowinfo and scope_id after them.
+_SOCKET_ADDRESS_HOST_AND_PORT_COUNT = 2
+
 
 class _HttpsProxyServer(BoundedProxyServer):
     def server_bind(self) -> None:
         # The proxy needs its bound address, not a potentially blocking reverse DNS lookup.
         TCPServer.server_bind(self)
-        self.server_name, self.server_port = self.server_address[:2]
+        self.server_name, self.server_port = self.server_address[:_SOCKET_ADDRESS_HOST_AND_PORT_COUNT]
 
 
 @dataclass(frozen=True)

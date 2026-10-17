@@ -7,11 +7,13 @@ export const EXCALIDRAW_AUTOSAVE_DELAY_MS = 2000;
 export const EXCALIDRAW_PREVIEW_VARIANTS = ['light', 'dark'];
 const EXPORT_PADDING = 16;
 const DEFAULT_BACKGROUNDS = ['#ffffff', '#fff', 'white', 'transparent'];
+// The Excalidraw scene file format version a new drawing is written in.
+const EXCALIDRAW_SCENE_FORMAT_VERSION = 2;
 
 export function buildEmptySceneJson() {
     return JSON.stringify({
         type: 'excalidraw',
-        version: 2,
+        version: EXCALIDRAW_SCENE_FORMAT_VERSION,
         source: 'MetaList',
         elements: [],
         appState: { viewBackgroundColor: '#ffffff' },

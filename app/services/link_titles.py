@@ -62,8 +62,9 @@ _FAILED_RETRY_DELAYS = (
     _FAILED_REFRESH_AFTER,
 )
 # A site that answered HTTP 429 (too many requests) is retried more slowly.
+_RATE_LIMITED_FIRST_RETRY_MINUTES = 10
 _RATE_LIMITED_RETRY_DELAYS = (
-    timedelta(minutes=10),
+    timedelta(minutes=_RATE_LIMITED_FIRST_RETRY_MINUTES),
     timedelta(hours=1),
     timedelta(hours=6),
     timedelta(days=1),
@@ -76,9 +77,10 @@ _HOST_WAIT_POLL_SECONDS = 0.1
 _RATE_LIMIT_DEFAULT_COOLDOWN_SECONDS = 10 * 60
 _RATE_LIMIT_MIN_COOLDOWN_SECONDS = 60
 _RATE_LIMIT_MAX_COOLDOWN_SECONDS = 6 * 60 * 60
+_NO_TITLE_SECOND_RETRY_MINUTES = 10
 _NO_TITLE_RETRY_DELAYS = (
     timedelta(minutes=1),
-    timedelta(minutes=10),
+    timedelta(minutes=_NO_TITLE_SECOND_RETRY_MINUTES),
     timedelta(hours=1),
     timedelta(days=1),
     timedelta(days=7),
@@ -542,12 +544,13 @@ class LinkTitleFetcher:
 
 
 _FETCHER_EXECUTOR = None
+_FETCHER_WORKER_COUNT = 3
 
 
 def _executor():
     global _FETCHER_EXECUTOR
     if _FETCHER_EXECUTOR is None:
-        _FETCHER_EXECUTOR = ThreadPoolExecutor(max_workers=3, thread_name_prefix="link-title")
+        _FETCHER_EXECUTOR = ThreadPoolExecutor(max_workers=_FETCHER_WORKER_COUNT, thread_name_prefix="link-title")
     return _FETCHER_EXECUTOR
 
 
@@ -1416,14 +1419,21 @@ def _is_placeholder_title(*, title: str, url: str) -> bool:
 
 # Second-level labels under a country code ("bbc.co.uk"): the site's name is the label before.
 _COUNTRY_SECOND_LEVEL_LABELS = {"ac", "co", "com", "edu", "gov", "net", "org"}
+_COUNTRY_CODE_LENGTH = 2
+_SITE_DOMAIN_LABEL_COUNT = 2  # "reddit", "com"
+_COUNTRY_SITE_DOMAIN_LABEL_COUNT = 3  # "bbc", "co", "uk"
 
 
 def _site_domain_labels(url: str) -> list[str]:
     """The site's own domain: ["reddit", "com"] for old.reddit.com, ["bbc", "co", "uk"] for bbc.co.uk."""
     labels = _pacing_host(url).split(".")
-    if len(labels) >= 3 and len(labels[-1]) == 2 and labels[-2] in _COUNTRY_SECOND_LEVEL_LABELS:
-        return labels[-3:]
-    return labels[-2:]
+    if (
+        len(labels) >= _COUNTRY_SITE_DOMAIN_LABEL_COUNT
+        and len(labels[-1]) == _COUNTRY_CODE_LENGTH
+        and labels[-2] in _COUNTRY_SECOND_LEVEL_LABELS
+    ):
+        return labels[-_COUNTRY_SITE_DOMAIN_LABEL_COUNT:]
+    return labels[-_SITE_DOMAIN_LABEL_COUNT:]
 
 
 def _is_site_name_title(*, title: str, url: str) -> bool:

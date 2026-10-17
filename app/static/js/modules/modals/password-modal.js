@@ -33,6 +33,8 @@ const PASSWORD_MODAL_CONFIG = {
         modalElementId: 'remove-password-modal',
     },
 };
+// Largest random step, in percent, of the simulated bulk-operation progress bar.
+const SIMULATED_PROGRESS_MAX_STEP_PERCENT = 10;
 
 
 class PasswordOperationModal extends BaseModal {
@@ -793,7 +795,7 @@ class PasswordOperationModal extends BaseModal {
         
         let progress = 0;
         const interval = setInterval(() => {
-            progress += Math.random() * 10;
+            progress += Math.random() * SIMULATED_PROGRESS_MAX_STEP_PERCENT;
             if (progress >= 90) {
                 progress = 90; // Stop at 90% to show we're waiting for completion
                 clearInterval(interval);

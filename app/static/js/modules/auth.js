@@ -22,6 +22,8 @@ import { formatElapsedDuration } from './elapsed-time.js';
 
 // Matches the 350 ms slide in main.css (.login-view-leaving).
 const LOGIN_SLIDE_MS = 350;
+// With a single namespace there is nothing to switch to.
+const MIN_NAMESPACES_FOR_SWITCHER = 2;
 
 export const Auth = {
     hasPassword: null,
@@ -201,7 +203,7 @@ export const Auth = {
         select.innerHTML = optionsHtml;
         select.value = catalog.currentNamespace;
         select.disabled = disabled;
-        switcher.dataset.hasChoices = catalog.namespaces.length >= 2 ? 'true' : 'false';
+        switcher.dataset.hasChoices = catalog.namespaces.length >= MIN_NAMESPACES_FOR_SWITCHER ? 'true' : 'false';
         this._syncLoginNamespaceVisibility();
     },
 

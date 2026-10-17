@@ -1,4 +1,7 @@
 const DEFAULT_BELT_SIZE = 4;
+const MAX_BELT_SIZE = 10;
+// Divisor for the midpoint between two edges.
+const HALF = 2;
 
 const ROOT_PARENT_SENTINELS = new Set(['', 'null', 'undefined', 'none']);
 
@@ -57,7 +60,7 @@ function clampNumber(value, min, max) {
 function getViewportReferenceY(anchorBias) {
     const topInset = getViewportTopInset();
     if (anchorBias === 'center') {
-        return topInset + (window.innerHeight - topInset) / 2;
+        return topInset + (window.innerHeight - topInset) / HALF;
     }
     if (anchorBias === 'top') {
         return topInset;
@@ -142,7 +145,7 @@ function findAnchorIndex(noteElements, anchorBias) {
         if (rect.height <= 0) continue;
 
         const dist = distanceToLine(rect, lineY);
-        const centerDist = Math.abs((rect.top + rect.bottom) / 2 - lineY);
+        const centerDist = Math.abs((rect.top + rect.bottom) / HALF - lineY);
         if (dist < bestDistance || (dist === bestDistance && centerDist < bestCenterDistance)) {
             bestIndex = i;
             bestDistance = dist;
@@ -163,8 +166,8 @@ export function computeScrollAnchor(options) {
         requestedBias = 'center';
     }
     const beltSize = typeof options.beltSize === 'number' ? options.beltSize : DEFAULT_BELT_SIZE;
-    if (!Number.isInteger(beltSize) || beltSize < 0 || beltSize > 10) {
-        throw new Error('beltSize must be an integer between 0 and 10');
+    if (!Number.isInteger(beltSize) || beltSize < 0 || beltSize > MAX_BELT_SIZE) {
+        throw new Error(`beltSize must be an integer between 0 and ${MAX_BELT_SIZE}`);
     }
 
     let container = options.container;

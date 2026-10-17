@@ -1,6 +1,12 @@
 import { HttpRequestError } from '../../expected-errors.js';
 import { CONFIG } from '../../config.js';
 
+// Base64 encodes each 3 bytes as 4 characters, padding the last group with '='.
+const BASE64_BYTES_PER_GROUP = 3;
+const BASE64_CHARS_PER_GROUP = 4;
+const BASE64_DOUBLE_PADDING = '==';
+const BASE64_SINGLE_PADDING = '=';
+
 function getPastePositiveIntegerConfig(key) {
     if (typeof key !== 'string' || key.length === 0) {
         throw new Error('getPastePositiveIntegerConfig expects non-empty key');
@@ -66,12 +72,12 @@ export function estimateDataUrlPayloadBytes(dataUrl) {
         return 0;
     }
     let paddingBytes = 0;
-    if (payload.endsWith('==')) {
-        paddingBytes = 2;
-    } else if (payload.endsWith('=')) {
-        paddingBytes = 1;
+    if (payload.endsWith(BASE64_DOUBLE_PADDING)) {
+        paddingBytes = BASE64_DOUBLE_PADDING.length;
+    } else if (payload.endsWith(BASE64_SINGLE_PADDING)) {
+        paddingBytes = BASE64_SINGLE_PADDING.length;
     }
-    const estimated = Math.floor((payload.length * 3) / 4) - paddingBytes;
+    const estimated = Math.floor((payload.length * BASE64_BYTES_PER_GROUP) / BASE64_CHARS_PER_GROUP) - paddingBytes;
     if (estimated < 0) {
         return null;
     }

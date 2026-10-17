@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.utils.byte_sizes import MIB
+from app.services.resource_limits import SENSITIVE_MEMO_BYTES
 from collections.abc import Mapping
 from dataclasses import dataclass
 from app.security.sensitive_cache import sensitive_lru_cache
@@ -44,7 +44,7 @@ def estimate_cached_root_tree_tokens(
     )
 
 
-@sensitive_lru_cache(maxsize=32_768, max_bytes=16 * MIB)
+@sensitive_lru_cache(maxsize=32_768, max_bytes=SENSITIVE_MEMO_BYTES)
 def _estimate_cached_root_tree_tokens(
     *,
     root_id: str,

@@ -15,6 +15,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 from typing_extensions import Self
 
+from app.api.note_requests import MAX_NOTE_CONTENT_CHARS
 from app.api.request_auth import require_request_auth_token
 from app.api.transactions import transactional_route
 from app.models.utils import note_data_to_html
@@ -196,7 +197,7 @@ class NoteTagSuggestionAvailabilityRequest(BaseModel):
     provider: AiProvider
     # The note as it is being edited, unsaved changes included.
     tags: str = Field(..., max_length=MIB)
-    content_html: str = Field(..., max_length=16 * MIB)
+    content_html: str = Field(..., max_length=MAX_NOTE_CONTENT_CHARS)
 
 
 class NoteTagSuggestionAvailabilityResponse(BaseModel):

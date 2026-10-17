@@ -57,7 +57,8 @@ TAG_SUGGESTION_SUPPRESS_REDUNDANT_CONTENT_VARIANTS = _env_flag(
 
 # Authentication configuration
 DEFAULT_TOKEN_EXPIRY_MINUTES = 0  # Disabled unless a namespace explicitly enables idle expiry
-KDF_TIME_COST = _env_int("KDF_TIME_COST", 3)
+DEFAULT_KDF_TIME_COST = 3
+KDF_TIME_COST = _env_int("KDF_TIME_COST", DEFAULT_KDF_TIME_COST)
 KDF_MIN_TIME_COST = 1
 KDF_MAX_TIME_COST = 10
 KDF_MEMORY_COST_KIB = _env_int("KDF_MEMORY_COST_KIB", 65_536)

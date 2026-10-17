@@ -15,6 +15,18 @@ const moduleState = ApplicationState.createFields('paste-format-detection-servic
 });
 
 const FEN_PIECES = new Set(['k', 'q', 'r', 'b', 'n', 'p']);
+// Positions of the optional FEN fields after the piece placement.
+const FEN_SIDE_TO_MOVE_FIELD = 1;
+const FEN_CASTLING_FIELD = 2;
+const FEN_EN_PASSANT_FIELD = 3;
+const JSON_UNICODE_ESCAPE_PREFIX = '\\u';
+// A backslash and one character, such as \n.
+const JSON_SHORT_ESCAPE_LENGTH = 2;
+const CSV_ESCAPED_QUOTE = '""';
+// The diagram-type line plus at least one line of diagram.
+const MERMAID_MIN_LINES = 2;
+// One column of cells is plain text, not a table.
+const SPREADSHEET_MIN_COLUMNS = 2;
 const MERMAID_FIRST_LINE_RE = /^(?:(?:graph|flowchart)\s+(?:TD|TB|BT|RL|LR)\b|sequenceDiagram\b|classDiagram\b|stateDiagram(?:-v2)?\b|erDiagram\b|gantt\b|pie\b|journey\b|gitGraph\b|mindmap\b|timeline\b|quadrantChart\b)/;
 const DIFF_HUNK_RE = /^@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@/m;
 const LATEX_BLOCK_RES = [
@@ -102,12 +114,12 @@ function scanJsonString(scanner) {
         if (char === '\\') {
             const escape = scanner.text[scanner.index + 1];
             if (escape === 'u') {
-                if (!/^[0-9a-fA-F]{4}$/.test(scanner.text.slice(scanner.index + 2, scanner.index + 6))) return false;
+                if (!/^[0-9a-fA-F]{4}$/.test(scanner.text.slice(scanner.index + JSON_UNICODE_ESCAPE_PREFIX.length, scanner.index + 6))) return false;
                 scanner.index += 6;
                 continue;
             }
             if (!'"\\/bfnrt'.includes(escape)) return false;
-            scanner.index += 2;
+            scanner.index += JSON_SHORT_ESCAPE_LENGTH;
             continue;
         }
         scanner.index += 1;
@@ -168,9 +180,9 @@ function isFenPosition(text) {
             return false;
         }
     }
-    if (fields.length >= 2 && !['w', 'b'].includes(fields[1])) return false;
-    if (fields.length >= 3 && !/^(?:-|K?Q?k?q?)$/.test(fields[2])) return false;
-    if (fields.length >= 4 && !/^(?:-|[a-h][36])$/.test(fields[3])) return false;
+    if (fields.length > FEN_SIDE_TO_MOVE_FIELD && !['w', 'b'].includes(fields[FEN_SIDE_TO_MOVE_FIELD])) return false;
+    if (fields.length > FEN_CASTLING_FIELD && !/^(?:-|K?Q?k?q?)$/.test(fields[FEN_CASTLING_FIELD])) return false;
+    if (fields.length > FEN_EN_PASSANT_FIELD && !/^(?:-|[a-h][36])$/.test(fields[FEN_EN_PASSANT_FIELD])) return false;
     return fields.slice(4).every((field) => /^\d+$/.test(field));
 }
 
@@ -191,7 +203,7 @@ function isUnifiedDiff(text) {
 
 function isMermaidDiagram(text) {
     const lines = text.split('\n');
-    return lines.length >= 2 && MERMAID_FIRST_LINE_RE.test(lines[0].trim());
+    return lines.length >= MERMAID_MIN_LINES && MERMAID_FIRST_LINE_RE.test(lines[0].trim());
 }
 
 function isLatexBlock(text) {
@@ -218,7 +230,7 @@ function parseTabSeparatedRows(text) {
         if (isQuoted) {
             if (char === '"' && text[index + 1] === '"') {
                 cell += '"';
-                index += 2;
+                index += CSV_ESCAPED_QUOTE.length;
                 continue;
             }
             if (char === '"') {
@@ -263,7 +275,7 @@ function spreadsheetCellsAsCsv(plainText, html) {
         return null;
     }
     const rows = parseTabSeparatedRows(normalizeLineEnds(plainText).replace(/\n+$/, ''));
-    if (rows.length === 0 || rows[0].length < 2 || rows.some((cells) => cells.length !== rows[0].length)) {
+    if (rows.length === 0 || rows[0].length < SPREADSHEET_MIN_COLUMNS || rows.some((cells) => cells.length !== rows[0].length)) {
         return null;
     }
     return rows.map((cells) => cells.map(csvCell).join(',')).join('\n');

@@ -3,6 +3,8 @@ export const DEFAULT_PASSWORD_CHARSET = `abcdefghijklmnopqrstuvwxyz
 ABCDEFGHIJKLMNOPQRSTUVWXYZ
 0123456789
 @%+\\/\'!#$^?:,.(){}[]~`;
+// Random values drawn per missing character, so rejected (biased) samples rarely need another round.
+const RANDOM_SAMPLES_PER_CHARACTER = 2;
 
 function resolveRandomValuesFunction(fillRandomValues) {
     if (typeof fillRandomValues === 'function') {
@@ -55,7 +57,7 @@ export function generateRandomPassword(length, charset, fillRandomValues) {
     const result = [];
     while (result.length < length) {
         const remaining = length - result.length;
-        const sampleCount = remaining * 2;
+        const sampleCount = remaining * RANDOM_SAMPLES_PER_CHARACTER;
         const randomBuffer = new Uint32Array(sampleCount);
         randomValues(randomBuffer);
 

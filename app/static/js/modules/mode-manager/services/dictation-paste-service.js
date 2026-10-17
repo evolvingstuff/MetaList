@@ -46,7 +46,8 @@ export function receiveDictationPhrases({ tagPhrase, quoteOpen, quoteClose, nega
             throw new Error(`Invalid dictation phrase: ${phrase}`);
         }
     }
-    if (new Set([quoteOpen, quoteClose, negate].map((phrase) => phrase.toLowerCase())).size !== 3) {
+    const distinctPhrases = [quoteOpen, quoteClose, negate];
+    if (new Set(distinctPhrases.map((phrase) => phrase.toLowerCase())).size !== distinctPhrases.length) {
         throw new Error('The quote and exclusion phrases must differ');
     }
     if (moduleState.tagPhrase !== tagPhrase) moduleState.tagPhrase = tagPhrase;

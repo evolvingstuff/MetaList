@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from app.services.content_formatting import find_plain_text_urls
+from app.services.content_formatting import COMMENT_CLOSE, COMMENT_OPEN, find_plain_text_urls
 from app.services.link_titles import link_title_store, normalize_url_for_link_title
 from app.utils.text_utils import strip_html_keeping_link_urls
 
@@ -21,20 +21,20 @@ def extract_tag_bar_comment_text(tags: str) -> str:
     comments: list[str] = []
     index = 0
     while index < len(tags):
-        start = tags.find("/*", index)
+        start = tags.find(COMMENT_OPEN, index)
         if start == -1:
             break
 
-        end = tags.find("*/", start + 2)
+        end = tags.find(COMMENT_CLOSE, start + len(COMMENT_OPEN))
         if end == -1:
             break
 
-        inner = tags[start + 2 : end]
+        inner = tags[start + len(COMMENT_OPEN) : end]
         normalized = _normalize_whitespace(inner)
         if normalized:
             comments.append(normalized)
 
-        index = end + 2
+        index = end + len(COMMENT_CLOSE)
 
     return " ".join(comments)
 

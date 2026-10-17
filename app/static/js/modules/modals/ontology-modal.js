@@ -1,3 +1,4 @@
+import { parseDecimalInteger } from '../decimal-integer.js';
 import { ApplicationState, stateValuesEqual } from '../application-state.js';
 import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
@@ -11,6 +12,10 @@ const TAG_LIMIT = 20;
 const DIALOG_SUGGESTION_LIMIT = 8;
 const DIALOG_SUGGESTION_DEBOUNCE_MS = 50;
 const DIALOG_DELETE_TAG_RESULT = Object.freeze({ action: 'delete-tag' });
+// A backslash and the character it escapes.
+const ESCAPE_SEQUENCE_LENGTH = 2;
+// An opening and a closing quote.
+const QUOTED_TOKEN_MIN_LENGTH = 2;
 
 function escapeHtml(value) {
     if (typeof value !== 'string') {
@@ -115,7 +120,7 @@ function parseDialogSuggestionContext(rawValue, cursorIndex) {
 
         if (quoteChar !== null) {
             if (ch === '\\' && index + 1 < cursorIndex) {
-                index += 2;
+                index += ESCAPE_SEQUENCE_LENGTH;
                 continue;
             }
             if (ch === quoteChar) {
@@ -128,7 +133,7 @@ function parseDialogSuggestionContext(rawValue, cursorIndex) {
 
         if (inRegex) {
             if (ch === '\\' && index + 1 < cursorIndex) {
-                index += 2;
+                index += ESCAPE_SEQUENCE_LENGTH;
                 continue;
             }
             if (ch === '/') {
@@ -221,7 +226,7 @@ function parseIncomingAtoms(raw) {
                 if (c === '\\') {
                     if (index + 1 < raw.length) {
                         token += raw[index + 1];
-                        index += 2;
+                        index += ESCAPE_SEQUENCE_LENGTH;
                         continue;
                     }
                     index += 1;
@@ -233,7 +238,7 @@ function parseIncomingAtoms(raw) {
                 }
                 index += 1;
             }
-            if (token.length < 2 || token[token.length - 1] !== quote) {
+            if (token.length < QUOTED_TOKEN_MIN_LENGTH || token[token.length - 1] !== quote) {
                 return { atoms: null, error: `Unclosed quote: ${quote}` };
             }
             atoms.push(token);
@@ -248,7 +253,7 @@ function parseIncomingAtoms(raw) {
                 if (c === '\\') {
                     if (index + 1 < raw.length) {
                         token += raw[index + 1];
-                        index += 2;
+                        index += ESCAPE_SEQUENCE_LENGTH;
                         continue;
                     }
                     index += 1;
@@ -2668,7 +2673,7 @@ export class OntologyModal extends BaseModal {
                 .split(',')
                 .map((value) => value.trim())
                 .filter((value) => value !== '')
-                .map((value) => Number.parseInt(value, 10));
+                .map((value) => parseDecimalInteger(value));
             if (ruleIds.length === 0) {
                 throw new Error('remove action missing ruleIds');
             }
@@ -2720,7 +2725,7 @@ export class OntologyModal extends BaseModal {
             if (typeof rawRuleId !== 'string' || rawRuleId.trim() === '') {
                 throw new Error('edit action missing ruleId');
             }
-            const ruleId = Number.parseInt(rawRuleId, 10);
+            const ruleId = parseDecimalInteger(rawRuleId);
             if (!Number.isInteger(ruleId) || ruleId < 0) {
                 throw new Error(`invalid rule id: ${rawRuleId}`);
             }
@@ -2746,7 +2751,7 @@ export class OntologyModal extends BaseModal {
             if (typeof rawRuleId !== 'string' || rawRuleId.trim() === '') {
                 throw new Error('edit action missing ruleId');
             }
-            const ruleId = Number.parseInt(rawRuleId, 10);
+            const ruleId = parseDecimalInteger(rawRuleId);
             if (!Number.isInteger(ruleId) || ruleId < 0) {
                 throw new Error(`invalid rule id: ${rawRuleId}`);
             }

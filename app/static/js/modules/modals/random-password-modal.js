@@ -1,3 +1,4 @@
+import { parseDecimalInteger } from '../decimal-integer.js';
 import { ApplicationState } from '../application-state.js';
 import { rethrowUnexpectedError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
@@ -386,7 +387,7 @@ export class RandomPasswordModal extends BaseModal {
             throw new Error('password-copy-btn missing');
         }
 
-        const lengthValue = Number.parseInt(lengthInput.value, 10);
+        const lengthValue = parseDecimalInteger(lengthInput.value);
         const charsetValue = charsetInput.value;
         if (!Number.isInteger(lengthValue) || lengthValue <= 0) {
             errorOutput.textContent = 'Password length must be a positive integer.';

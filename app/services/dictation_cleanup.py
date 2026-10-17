@@ -43,6 +43,10 @@ KNOWN_META_TAGS = (
 _META_AT_WORDS = frozenset({"at", "@"})
 # Meta tag names are at most this many words when spoken ("list bulleted").
 _MAX_META_WORDS = 3
+_PHRASE_SETTING_MIN_CHARS = 2
+_PHRASE_SETTING_MAX_CHARS = 64
+# A word of at least this many letters, all capitals, keeps its case as an acronym.
+_ACRONYM_MIN_LETTERS = 2
 _SEARCH_OR_WORDS = frozenset({"or"})
 _SPOKEN_JOINERS = {"dash": "-", "hyphen": "-", "underscore": "_", "slash": "/"}
 _SENTENCE_PUNCTUATION = ",.?!;:"
@@ -166,8 +170,15 @@ def _join_spoken_joiners(text: str) -> str:
 
 def _require_phrase_settings(*phrases: str) -> None:
     for phrase in phrases:
-        if not isinstance(phrase, str) or not 2 <= len(phrase) <= 64 or _PHRASE_SETTING_RE.fullmatch(phrase) is None:
-            raise ValueError(f"Dictation phrases must be words of letters, 2 to 64 characters: {phrase!r}")
+        if (
+            not isinstance(phrase, str)
+            or not _PHRASE_SETTING_MIN_CHARS <= len(phrase) <= _PHRASE_SETTING_MAX_CHARS
+            or _PHRASE_SETTING_RE.fullmatch(phrase) is None
+        ):
+            raise ValueError(
+                "Dictation phrases must be words of letters, "
+                f"{_PHRASE_SETTING_MIN_CHARS} to {_PHRASE_SETTING_MAX_CHARS} characters: {phrase!r}"
+            )
     if len({phrase.casefold() for phrase in phrases}) != len(phrases):
         raise ValueError("The dictation phrases must differ from each other")
 
@@ -186,7 +197,7 @@ def _quoted_re(quote_open: str, quote_close: str) -> re.Pattern[str]:
     """A quoted phrase: quote marks, or the spoken open phrase … close phrase (to
     the end of the text when it is never closed)."""
     return re.compile(
-        r'"([^"]*)"|' + _spoken_pattern(quote_open) + r"[\s,.:;]*(.*?)[\s,.]*(?:" + _spoken_pattern(quote_close) + r"|$)",
+        r'"(?P<marked>[^"]*)"|' + _spoken_pattern(quote_open) + r"[\s,.:;]*(?P<spoken>.*?)[\s,.]*(?:" + _spoken_pattern(quote_close) + r"|$)",
         re.IGNORECASE | re.DOTALL,
     )
 
@@ -217,9 +228,9 @@ def _items(text: str, *, target: str, quoted_re: re.Pattern[str], open_re: re.Pa
     position = 0
     for match in quoted_re.finditer(text):
         items.extend(_words(close_re.sub(" ", text[position:match.start()]), target=target))
-        phrase = match.group(1)
+        phrase = match.group("marked")
         if phrase is None:
-            phrase = match.group(2)
+            phrase = match.group("spoken")
         # Dictation tools may type quote marks as well as the spoken quote
         # phrases ('quote "Fat. end quote'): inside a phrase they are dropped.
         phrase = " ".join(phrase.replace('"', " ").strip(_SENTENCE_PUNCTUATION + " ").split())
@@ -326,7 +337,7 @@ def _new_tag(text: str) -> str:
     words = []
     for word in text.split():
         letters = [char for char in word if char.isalpha()]
-        if len(letters) >= 2 and all(char.isupper() for char in letters):
+        if len(letters) >= _ACRONYM_MIN_LETTERS and all(char.isupper() for char in letters):
             words.append(word)
         else:
             words.append(word.lower())
@@ -370,9 +381,9 @@ def _search_text(items: list, *, tag_index: _TagIndex, current_value: str, opera
             continue
         match = _tag_match_at(items, index, tag_index, in_meta_run)
         if match is not None:
-            in_meta_run = match[2]
-            elements.append(match[0])
-            index += match[1]
+            tag, words_used, in_meta_run = match
+            elements.append(tag)
+            index += words_used
             continue
         in_meta_run = False
         negate_length = _phrase_length_at(items, index, negate_words)
@@ -430,10 +441,10 @@ def _tag_bar_text(items: list, *, tag_index: _TagIndex, current_value: str, nega
             index += 1
         else:
             match = _tag_match_at(items, index, tag_index, in_meta_run)
-            in_meta_run = match is not None and match[2]
+            in_meta_run = False
             if match is not None:
-                tag = match[0]
-                index += match[1]
+                tag, words_used, in_meta_run = match
+                index += words_used
             elif _phrase_length_at(items, index, negate_words):
                 # Tags cannot exclude: the exclusion phrase is only dropped.
                 index += _phrase_length_at(items, index, negate_words)

@@ -4,6 +4,9 @@ from dataclasses import dataclass
 import re
 from typing import Dict, FrozenSet, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 
+# An escape is a backslash and the character it escapes.
+_ESCAPE_LENGTH = 2
+
 
 @dataclass(frozen=True, slots=True)
 class OntologyParseError(Exception):
@@ -190,7 +193,7 @@ def _parse_rule_line(*, raw_line: str, filename: str, line_number: int) -> List[
     op: Optional[str] = None
     if line.startswith("=>", index):
         op = "=>"
-        index += 2
+        index += len(op)
     elif index < len(line) and line[index] == "=":
         op = "="
         index += 1
@@ -315,7 +318,7 @@ def _read_quoted_phrase(*, line: str, index: int, filename: str, line_number: in
             nxt = line[index + 1]
             if nxt == quote or nxt == "\\":
                 out += nxt
-                index += 2
+                index += _ESCAPE_LENGTH
                 continue
             out += "\\"
             index += 1
@@ -347,10 +350,10 @@ def _read_regex_literal(*, line: str, index: int, filename: str, line_number: in
                 nxt = line[index + 1]
                 if nxt == "/":
                     pattern += "/"
-                    index += 2
+                    index += _ESCAPE_LENGTH
                     continue
                 pattern += f"\\{nxt}"
-                index += 2
+                index += _ESCAPE_LENGTH
                 continue
             pattern += "\\"
             index += 1

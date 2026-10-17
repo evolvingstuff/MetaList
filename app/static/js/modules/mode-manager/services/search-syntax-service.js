@@ -24,6 +24,8 @@ const SPACED_PREFIX_WARNING = 'In a search, + or - must be directly followed by 
 
 const QUOTE_CHARS = new Set(['"', "'" ]);
 const OR_OPERATOR = 'OR';
+// A backslash and the character it escapes.
+const ESCAPE_SEQUENCE_LENGTH = 2;
 
 function isAsciiPrintable(char) {
     if (typeof char !== 'string' || char.length === 0) {
@@ -90,7 +92,7 @@ function readQuotedInner(rawInput, startIndex, quoteChar) {
                 const nextChar = rawInput[index + 1];
                 if (nextChar === quoteChar || nextChar === '\\') {
                     normalizedInner += `\\${nextChar}`;
-                    index += 2;
+                    index += ESCAPE_SEQUENCE_LENGTH;
                     continue;
                 }
             }

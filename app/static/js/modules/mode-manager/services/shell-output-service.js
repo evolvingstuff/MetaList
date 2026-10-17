@@ -2,6 +2,8 @@ export const SHELL_SELECTOR = '.meta-shell';
 export const SHELL_OUTPUT_SELECTOR = '.meta-shell-output';
 export const SHELL_CLOSE_SELECTOR = '.meta-shell-output-close';
 export const SHELL_RUNNING_CLASS = 'meta-shell-running';
+// Durations shorter than this show tenths of a second.
+const TENTHS_SHOWN_BELOW_SECONDS = 10;
 
 export function ensureShellOutputElement(shellElement) {
     if (!(shellElement instanceof HTMLElement)) {
@@ -123,7 +125,7 @@ function formatShellDuration(durationMs) {
         return '0s';
     }
     const durationSeconds = durationMs / 1000;
-    if (durationSeconds < 10) {
+    if (durationSeconds < TENTHS_SHOWN_BELOW_SECONDS) {
         return `${durationSeconds.toFixed(1)}s`;
     }
     return `${Math.round(durationSeconds)}s`;

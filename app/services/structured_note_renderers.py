@@ -26,6 +26,11 @@ _CSV_IMAGE_PLACEHOLDER_PREFIX = "MLCSVIMAGEPLACEHOLDER"
 
 _CSV_IMAGE_PLACEHOLDER_SUFFIX = "TOKEN"
 
+# Rows are numbered from 1 in messages; the header is row 1.
+_CSV_HEADER_ROW_NUMBER = 1
+# A backslash and the character it escapes.
+_JSON_ESCAPE_LENGTH = 2
+
 
 def _render_json_meta(*, content_html: str, formatting_tags: FrozenSet[str], extra_classes: str, size_style_attr: str) -> str:
     raw_text = _extract_plain_text(content_html)
@@ -338,7 +343,7 @@ def _parse_csv_rows(
     if expected_len == 0:
         return [], "CSV has no columns"
 
-    for idx, row in enumerate(rows[1:], start=2):
+    for idx, row in enumerate(rows[1:], start=_CSV_HEADER_ROW_NUMBER + 1):
         if _is_full_width_csv_media_row(
             row=row,
             full_width_cell_tokens=full_width_cell_tokens,
@@ -430,7 +435,7 @@ def _consume_json_string(text: str, start: int) -> tuple[str, int]:
     while index < length:
         char = text[index]
         if char == "\\":
-            index += 2
+            index += _JSON_ESCAPE_LENGTH
             continue
         if char == '"':
             index += 1

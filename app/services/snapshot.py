@@ -44,6 +44,11 @@ from app.utils.text_utils import strip_html
 # between half and twice this far from the visible roots, so ordinary
 # scrolling changes nothing and unloading happens far from the viewport.
 ROOT_BAND_MARGIN = 75
+# "Between half and twice": the near edge is the margin divided by this, the
+# far edge the margin times this.
+_BAND_EDGE_HOLD_FACTOR = 2
+# A root has a neighbour only in a list of at least this many roots.
+_MIN_ROOTS_WITH_NEIGHBOUR = 2
 _UUID_IN_TEXT_RE = re.compile(
     r"(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 )
@@ -448,12 +453,12 @@ def _determine_root_band(
         target_start, target_end = max(0, top - margin), min(last, bottom + margin)
         if current_indices:
             start = _keep_or_move_edge(
-                current=min(current_indices), near=max(0, top - margin // 2),
-                far=max(0, top - 2 * margin), target=target_start,
+                current=min(current_indices), near=max(0, top - margin // _BAND_EDGE_HOLD_FACTOR),
+                far=max(0, top - _BAND_EDGE_HOLD_FACTOR * margin), target=target_start,
             )
             end = _keep_or_move_edge(
-                current=max(current_indices), near=min(last, bottom + margin // 2),
-                far=min(last, bottom + 2 * margin), target=target_end,
+                current=max(current_indices), near=min(last, bottom + margin // _BAND_EDGE_HOLD_FACTOR),
+                far=min(last, bottom + _BAND_EDGE_HOLD_FACTOR * margin), target=target_end,
             )
         else:
             start, end = target_start, target_end
@@ -543,7 +548,7 @@ def _share_neighbour_timestamp(
     roots: List[str], edited_root_id: str, root_sort_timestamps: Dict[str, datetime],
 ) -> Dict[str, datetime]:
     """Date-bucketed sorts: a root held in place shows under its neighbour's date header."""
-    if edited_root_id not in root_sort_timestamps or edited_root_id not in roots or len(roots) < 2:
+    if edited_root_id not in root_sort_timestamps or edited_root_id not in roots or len(roots) < _MIN_ROOTS_WITH_NEIGHBOUR:
         return root_sort_timestamps
     index = roots.index(edited_root_id)
     if index > 0:

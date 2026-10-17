@@ -28,6 +28,13 @@ from app.services.tag_term_matching import split_tag_term_segments
 from app.services.tag_term_matching import split_tag_term_segments_preserving_case
 from app.services.tag_term_matching import tag_term_matches_prefix
 
+_UNMATCHED_SEGMENT_PENALTY = 10
+_MIN_DIRECT_LITERAL_TERM_LENGTH = 2
+# A term of at least this many segments, one of them a number, needs only one matched segment.
+_MIN_NUMBERED_TERM_SEGMENT_COUNT = 3
+# A suggestion reason quotes at most this many sets of shared tags (ContextOverlap).
+_MAX_SHARED_TAG_SETS = 2
+
 
 def _preferred_display_term_sort_key(
     *,
@@ -295,7 +302,7 @@ def _score_content_match(match: TagContentMatch) -> int:
     if match.raw_partial_phrase_match:
         score += 750
     score += match.matched_segment_count * 100
-    score -= unmatched_segment_count * 10
+    score -= unmatched_segment_count * _UNMATCHED_SEGMENT_PENALTY
     score += max(0, 100 - min(match.first_position, 100))
     score += match.normalized_length
     return score
@@ -490,7 +497,7 @@ def _collect_direct_standalone_literal_terms(
 
     direct_terms: set[str] = set()
     for term in candidate_terms:
-        if len(normalize_tag_match_text(term)) < 2:
+        if len(normalize_tag_match_text(term)) < _MIN_DIRECT_LITERAL_TERM_LENGTH:
             continue
         # A tag no rule names has no equivalents.
         if term in ontology.scc_members_by_tag:
@@ -642,7 +649,7 @@ def _term_has_required_content_overlap(*, term: str, content_token_set: FrozenSe
     if matched_segment_count >= required_matched_segment_count:
         return True
     has_numeric_segment = any(segment.isdigit() for segment in raw_segments)
-    return raw_segment_count >= 3 and has_numeric_segment and matched_segment_count > 0
+    return raw_segment_count >= _MIN_NUMBERED_TERM_SEGMENT_COUNT and has_numeric_segment and matched_segment_count > 0
 
 
 def _collect_undercovered_content_overlap_terms(
@@ -759,7 +766,7 @@ def _rank_terms_by_context_overlap(
             if overlap_count == previous_max:
                 overlap_support_by_term[canonical_term] += 1
                 shared_sets = overlap_shared_by_term[canonical_term]
-                if shared_casefold not in shared_sets and len(shared_sets) < 2:
+                if shared_casefold not in shared_sets and len(shared_sets) < _MAX_SHARED_TAG_SETS:
                     shared_sets.append(shared_casefold)
 
     ranked_terms = list(overlap_max_by_term.keys())

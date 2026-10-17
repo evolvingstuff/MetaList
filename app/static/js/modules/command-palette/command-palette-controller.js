@@ -150,6 +150,7 @@ function trimToken(token) {
 
 const BACKUP_COMMAND_AVAILABILITY_TIMEOUT_MS = 30000;
 const BACKUP_COMMAND_AVAILABILITY_POLL_INTERVAL_MS = 50;
+const MAX_SUGGESTED_TAGS = 10;
 
 function tokenizeQuery(rawQuery) {
     if (typeof rawQuery !== 'string') {
@@ -312,7 +313,7 @@ function computeSuggestedTags(matches, committedTokens, prefix, usageSnapshot) {
         return a.tag.localeCompare(b.tag);
     });
 
-    return suggestions.slice(0, 10).map((s) => s.tag);
+    return suggestions.slice(0, MAX_SUGGESTED_TAGS).map((s) => s.tag);
 }
 
 class CommandPaletteController {

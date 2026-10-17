@@ -1,3 +1,4 @@
+import { parseDecimalInteger } from '../decimal-integer.js';
 import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
 
@@ -214,7 +215,7 @@ export class BackupRetentionModal extends BaseModal {
             return null;
         }
 
-        const keepCount = Number.parseInt(raw, 10);
+        const keepCount = parseDecimalInteger(raw);
         if (keepCount < 1 || keepCount > backupCount) {
             this.updateModalState({
                 error: `Backups to keep must be between 1 and ${backupCount}.`,
@@ -277,7 +278,7 @@ export class BackupRetentionModal extends BaseModal {
             return null;
         }
 
-        const keepCount = Number.parseInt(raw, 10);
+        const keepCount = parseDecimalInteger(raw);
         if (keepCount < 1 || keepCount > backupCount) {
             return null;
         }

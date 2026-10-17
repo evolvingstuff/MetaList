@@ -27,6 +27,7 @@ _BACKUP_LOCK = Lock()
 _ARCHIVE_BACKUP_FORMAT_VERSION = 1
 _MANIFEST_SCHEMA_VERSION = 1
 _MANIFEST_FILENAME = "manifest.json"
+_MANIFEST_JSON_INDENT = 2
 _SUPPORTED_ARCHIVE_BACKUP_FORMAT_VERSIONS = {_ARCHIVE_BACKUP_FORMAT_VERSION}
 _ARCHIVE_BACKUP_FILENAME_RE = re.compile(
     r"^(?P<namespace>.+)-(?P<timestamp>[0-9]{8}-[0-9]{6}-[0-9]{6})\.metalist-backup\.tar\.gz$"
@@ -344,16 +345,17 @@ def _read_launch_profile_from_database(
         connection.close()
     if row is None:
         return None
-    stored_namespace = str(row[0])
+    namespace_value, port_value, https_port_value, mcp_port_value = row
+    stored_namespace = str(namespace_value)
     if stored_namespace != namespace:
         raise RuntimeError(
             f"Backup launch profile namespace mismatch: expected {namespace}, got {stored_namespace}"
         )
     return BackupLaunchProfile(
         namespace=stored_namespace,
-        port=_coerce_optional_db_port(value=row[1]),
-        https_port=_coerce_optional_db_port(value=row[2]),
-        mcp_port=_coerce_optional_db_port(value=row[3]),
+        port=_coerce_optional_db_port(value=port_value),
+        https_port=_coerce_optional_db_port(value=https_port_value),
+        mcp_port=_coerce_optional_db_port(value=mcp_port_value),
     )
 
 
@@ -737,7 +739,7 @@ def _create_archive_backup_for_paths(database_path: Path, backup_directory: Path
             }
             manifest_path = temp_directory_path / _MANIFEST_FILENAME
             manifest_path.write_text(
-                json.dumps(manifest, indent=2, sort_keys=True),
+                json.dumps(manifest, indent=_MANIFEST_JSON_INDENT, sort_keys=True),
                 encoding="utf-8",
             )
 

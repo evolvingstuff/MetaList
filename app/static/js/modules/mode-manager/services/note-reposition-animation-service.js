@@ -7,6 +7,8 @@ const NOTE_REPOSITION_RECT_TOLERANCE_PX = 0.5;
 const NOTE_REPOSITION_GHOST_Z_INDEX = '15';
 const NOTE_REPOSITION_COLLAPSED_SCALE_Y = '0.08';
 const NOTE_REPOSITION_ANIMATION_EASING = 'cubic-bezier(0.2, 0, 0.2, 1)';
+// The note and its ghost each run one animation.
+const NOTE_REPOSITION_ANIMATION_COUNT = 2;
 const NOTE_REMOVAL_ANIMATION_CLASS = 'is-removal-collapsing';
 const NOTE_REMOVAL_ANIMATION_FALLBACK_MS = 240;
 const NOTE_REMOVAL_ANIMATION_DURATION_MS = 180;
@@ -254,7 +256,7 @@ function animateNoteRepositionChange(capture) {
         return;
     }
 
-    let remainingAnimations = 2;
+    let remainingAnimations = NOTE_REPOSITION_ANIMATION_COUNT;
     const markAnimationFinished = () => {
         remainingAnimations -= 1;
         if (remainingAnimations === 0) {

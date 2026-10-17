@@ -13,6 +13,8 @@ import {
 
 const SUGGESTION_DEBOUNCE_MS = 50;
 const HOVER_DISMISS_BOTTOM_BUFFER_PX = 25;
+// A backslash and the character it escapes.
+const ESCAPE_SEQUENCE_LENGTH = 2;
 const moduleState = ApplicationState.createFields('search-suggestions-service', {
     pendingTimer: null,
     requestSerial: 0,
@@ -59,7 +61,7 @@ function parseSuggestionContext(rawValue, cursorIndex) {
         if (char === '\\' && index + 1 < cursorIndex) {
             const nextChar = rawValue[index + 1];
             if (quoteChar && (nextChar === quoteChar || nextChar === '\\')) {
-                index += 2;
+                index += ESCAPE_SEQUENCE_LENGTH;
                 continue;
             }
         }

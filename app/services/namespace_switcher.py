@@ -40,7 +40,8 @@ from app.services.windows_process_control import stop_process as stop_windows_pr
 from app.services.input_errors import NamespaceInputRejected
 
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# This file is <project>/app/services/namespace_switcher.py.
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLACEHOLDER_NEW_NAMESPACE = "new-namespace"
 _LAUNCH_READY_TIMEOUT_SECONDS = 120.0
 _LAUNCH_PROGRESS_INTERVAL_SECONDS = 5.0

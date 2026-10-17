@@ -1,3 +1,4 @@
+import { localDateText, twoDigits, utcOffsetText } from './local-date-text.js';
 import { HTTP_STATUS } from './http-status.js';
 import { FileEditSessionExpiredError, FileRevisionConflictError, HttpRequestError, ServerInputRejectedError, rethrowUnexpectedError } from './expected-errors.js';
 import { CONFIG } from './config.js';
@@ -16,6 +17,7 @@ function buildAuthHeaders(includeContentType) {
 
 const FILE_REVISION_HEADER = 'X-MetaList-File-Revision';
 const FILE_PREVIEW_VARIANTS = ['light', 'dark'];
+const MIN_SPLIT_NOTE_SEGMENTS = 2;
 
 function readFileRevision(response) {
     const revision = Number(response.headers.get(FILE_REVISION_HEADER));
@@ -405,7 +407,7 @@ export const NotesAPI = {
         if (typeof noteId !== 'string' || noteId.length === 0) {
             throw new Error('NotesAPI.splitNote requires noteId string');
         }
-        if (!Array.isArray(segments) || segments.length < 2) {
+        if (!Array.isArray(segments) || segments.length < MIN_SPLIT_NOTE_SEGMENTS) {
             throw new Error('NotesAPI.splitNote requires at least two segments');
         }
         for (const segment of segments) {
@@ -1513,10 +1515,7 @@ function reminderLocalDate(value) {
     if (!(value instanceof Date)) {
         throw new Error('reminderLocalDate requires Date');
     }
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const day = String(value.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return localDateText(value);
 }
 
 function reminderLocalIso(value) {
@@ -1524,15 +1523,8 @@ function reminderLocalIso(value) {
         throw new Error('reminderLocalIso requires Date');
     }
     const dateText = reminderLocalDate(value);
-    const hour = String(value.getHours()).padStart(2, '0');
-    const minute = String(value.getMinutes()).padStart(2, '0');
-    const second = String(value.getSeconds()).padStart(2, '0');
-    const offsetMinutes = -value.getTimezoneOffset();
-    const sign = offsetMinutes >= 0 ? '+' : '-';
-    const absolute = Math.abs(offsetMinutes);
-    const offsetHours = String(Math.floor(absolute / 60)).padStart(2, '0');
-    const offsetRemainder = String(absolute % 60).padStart(2, '0');
-    return `${dateText}T${hour}:${minute}:${second}${sign}${offsetHours}:${offsetRemainder}`;
+    const clockText = `${twoDigits(value.getHours())}:${twoDigits(value.getMinutes())}:${twoDigits(value.getSeconds())}`;
+    return `${dateText}T${clockText}${utcOffsetText(value)}`;
 }
 
 function reminderActionBody(actionName, actionPayload) {

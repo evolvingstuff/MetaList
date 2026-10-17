@@ -1,9 +1,11 @@
+import { localDateText } from './local-date-text.js';
 import { ApplicationState } from './application-state.js';
 import { ReminderStore } from './reminder-store.js';
 import { loadClientState, persistClientPreferences } from './client-state-api.js';
 
 const NON_IDLE_THROTTLE_MS = 30_000;
 const ELAPSED_UPDATE_MS = 1_000;
+const DATE_ONLY_TEXT_LENGTH = 'YYYY-MM-DD'.length;
 const REMINDER_RENDER_ICON = '🔔';
 
 const OCCURRENCE_KIND_MAIN = 'main';
@@ -102,14 +104,11 @@ function localDateStringFromDate(value) {
     if (!(value instanceof Date)) {
         throw new Error('localDateStringFromDate requires Date');
     }
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const day = String(value.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return localDateText(value);
 }
 
 function formatTimeUntilDateOnly(value, now) {
-    if (typeof value !== 'string' || value.length !== 10) {
+    if (typeof value !== 'string' || value.length !== DATE_ONLY_TEXT_LENGTH) {
         throw new Error('formatTimeUntilDateOnly requires YYYY-MM-DD');
     }
     if (!(now instanceof Date)) {
@@ -167,7 +166,7 @@ function reminderPreReminder(reminder) {
 }
 
 function subtractLocalDays(dateValue, days) {
-    if (typeof dateValue !== 'string' || dateValue.length !== 10) {
+    if (typeof dateValue !== 'string' || dateValue.length !== DATE_ONLY_TEXT_LENGTH) {
         throw new Error('subtractLocalDays requires YYYY-MM-DD');
     }
     if (!Number.isInteger(days) || days < 1) {
@@ -178,10 +177,7 @@ function subtractLocalDays(dateValue, days) {
         throw new Error('subtractLocalDays requires valid date');
     }
     date.setDate(date.getDate() - days);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return localDateText(date);
 }
 
 function localDateFromDateTime(value) {
@@ -192,10 +188,7 @@ function localDateFromDateTime(value) {
     if (Number.isNaN(parsed.getTime())) {
         throw new Error('localDateFromDateTime requires valid datetime');
     }
-    const year = parsed.getFullYear();
-    const month = String(parsed.getMonth() + 1).padStart(2, '0');
-    const day = String(parsed.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return localDateText(parsed);
 }
 
 function preReminderKey(reminder, triggerValue, eventValue) {
@@ -668,10 +661,7 @@ class ReminderSurfaceService {
         if (!(value instanceof Date)) {
             throw new Error('_localDate requires Date');
         }
-        const year = value.getFullYear();
-        const month = String(value.getMonth() + 1).padStart(2, '0');
-        const day = String(value.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+        return localDateText(value);
     }
 
     _ensureContainer() {

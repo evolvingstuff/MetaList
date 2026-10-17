@@ -1,3 +1,4 @@
+import { twoDigits } from '../local-date-text.js';
 import { executeAgentMenuRequest } from './agent-menu-actions.js';
 import { ApplicationState, stateValuesEqual } from '../application-state.js';
 import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js';
@@ -52,6 +53,10 @@ import {
     isThinkingLevelAvailableForModel,
     normalizeThinkingLevelForModel,
 } from './ai-thinking-level-service.js';
+
+// The panel's default width is a third of the window (--ai-chat-width in main.css).
+const DEFAULT_PANEL_WIDTH_DIVISOR = 3;
+const THINKING_DOT_COUNT = 3;
 
 
 function requireElement(id, constructor) {
@@ -847,7 +852,7 @@ class AiChatPanelController {
     _syncResizerAria() {
         let requestedWidth = this._elements.panel.getBoundingClientRect().width;
         if (requestedWidth <= 0) {
-            requestedWidth = window.innerWidth / 3;
+            requestedWidth = window.innerWidth / DEFAULT_PANEL_WIDTH_DIVISOR;
         }
         const width = calculateAiChatPanelWidth({
             pointerClientX: window.innerWidth - requestedWidth,
@@ -1485,7 +1490,7 @@ class AiChatPanelController {
         const totalSeconds = Math.floor(durationMs / 1_000);
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = totalSeconds % 60;
-        return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
+        return `${minutes}m ${twoDigits(seconds)}s`;
     }
 
     _appendLocalErrorPanel(message) {
@@ -1617,7 +1622,7 @@ class AiChatPanelController {
                     const dots = document.createElement('span');
                     dots.className = 'ai-chat-thinking-dots';
                     dots.setAttribute('aria-hidden', 'true');
-                    for (let index = 0; index < 3; index += 1) {
+                    for (let index = 0; index < THINKING_DOT_COUNT; index += 1) {
                         const dot = document.createElement('span');
                         dot.textContent = '.';
                         dots.appendChild(dot);
@@ -1863,7 +1868,7 @@ class AiChatPanelController {
         const dots = document.createElement('span');
         dots.className = 'ai-chat-thinking-dots';
         dots.setAttribute('aria-hidden', 'true');
-        for (let index = 0; index < 3; index += 1) {
+        for (let index = 0; index < THINKING_DOT_COUNT; index += 1) {
             const dot = document.createElement('span');
             dot.textContent = '.';
             dots.appendChild(dot);

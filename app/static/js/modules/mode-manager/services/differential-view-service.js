@@ -1,3 +1,4 @@
+import { parseDecimalInteger } from '../../decimal-integer.js';
 import { ApplicationState } from '../../application-state.js';
 import { CONFIG } from '../../config.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
@@ -859,7 +860,7 @@ export function applyDifferentialView(payload, options) {
                 contentElement.contentEditable = 'false';
             }
             updateLockIcon(noteElement, lockedByOther);
-            const proposalCount = Number.parseInt(noteElement.dataset.proposalCount, 10);
+            const proposalCount = parseDecimalInteger(noteElement.dataset.proposalCount);
             if (!Number.isInteger(proposalCount) || proposalCount < 0) {
                 throw new Error(`Note ${noteId} has invalid cached proposal count`);
             }

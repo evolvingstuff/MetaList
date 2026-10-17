@@ -1,3 +1,4 @@
+import { parseDecimalInteger } from './decimal-integer.js';
 import { ApplicationState } from './application-state.js';
 import { HttpRequestError } from './expected-errors.js';
 import {
@@ -186,7 +187,7 @@ function sanitizeScalarAttribute(tagName, attributeName, rawValue, policy) {
         return IMAGE_DIMENSION_ATTRIBUTE_PATTERN.test(value) ? value : null;
     }
     if (attributeName === 'colspan' || attributeName === 'rowspan') {
-        return POSITIVE_INTEGER_ATTRIBUTE_PATTERN.test(value) && Number.parseInt(value, 10) > 0
+        return POSITIVE_INTEGER_ATTRIBUTE_PATTERN.test(value) && parseDecimalInteger(value) > 0
             ? value
             : null;
     }

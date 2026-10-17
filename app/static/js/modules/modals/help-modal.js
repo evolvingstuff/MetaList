@@ -8,6 +8,9 @@ import { ApplicationState } from '../application-state.js';
 
 import { BaseModal } from './base-modal.js';
 
+// The long shortcut sections are laid out in this many columns.
+const LONG_SECTION_COLUMNS = 2;
+
 export class HelpModal extends BaseModal {
     constructor() {
         super('help', 'help-modal');
@@ -61,7 +64,7 @@ export class HelpModal extends BaseModal {
         const shortcuts = [
             {
                 category: 'Global and Idle',
-                columnCount: 2,
+                columnCount: LONG_SECTION_COLUMNS,
                 items: [
                     { keys: `${modKey}+/`, description: 'Open command palette' },
                     { keys: '?', description: 'Open keyboard shortcuts / cheatsheet (idle only)' },
@@ -74,7 +77,7 @@ export class HelpModal extends BaseModal {
             },
             {
                 category: 'When Editing',
-                columnCount: 2,
+                columnCount: LONG_SECTION_COLUMNS,
                 items: [
                     { keys: 'Tab', description: 'Toggle focus between note content and tag bar' },
                     { keys: `${modKey}+${enterKey}`, description: 'Create sibling note' },

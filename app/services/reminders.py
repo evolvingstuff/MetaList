@@ -38,6 +38,8 @@ REMINDER_STATUSES = frozenset(
 ATTACHMENT_ATTACHED = "attached"
 ATTACHMENT_UNATTACHED = "unattached"
 ATTACHMENT_TYPES = frozenset({ATTACHMENT_ATTACHED, ATTACHMENT_UNATTACHED})
+# HH:MM has an hour part and a minute part.
+_TIME_OF_DAY_PARTS = 2
 
 SCHEDULE_ONE_TIME = "one_time"
 SCHEDULE_RECURRING = "recurring"
@@ -110,7 +112,7 @@ def _parse_time_of_day(value: object, *, field_name: str) -> time:
     if not isinstance(value, str):
         raise InputRejected(f"{field_name} must be HH:MM string")
     parts = value.split(":")
-    if len(parts) != 2:
+    if len(parts) != _TIME_OF_DAY_PARTS:
         raise InputRejected(f"{field_name} must be HH:MM string")
     hour = int(parts[0])
     minute = int(parts[1])

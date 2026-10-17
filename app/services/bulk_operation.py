@@ -86,9 +86,11 @@ class BulkOperationGuard:
 
     def answer(self, session_key: str, question_id: str, value: str):
         with self._mutation_lock:
-            if question_id not in self.questions or self.questions[question_id][2] != session_key:
+            if question_id not in self.questions:
                 raise ValueError("This question is no longer pending")
-            future, choices, _, _ = self.questions[question_id]
+            future, choices, asking_session_key, _ = self.questions[question_id]
+            if asking_session_key != session_key:
+                raise ValueError("This question is no longer pending")
             if value not in choices or future.done():
                 raise ValueError("Invalid or already submitted answer")
             del self.questions[question_id]

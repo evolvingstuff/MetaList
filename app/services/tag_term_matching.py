@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.utils.byte_sizes import MIB
+from app.services.resource_limits import SENSITIVE_MEMO_BYTES
 from dataclasses import dataclass
 from app.security.sensitive_cache import sensitive_lru_cache
 import re
@@ -107,6 +107,11 @@ _LOW_SIGNAL_CONTENT_MATCH_SEGMENTS = frozenset(
 )
 _LOW_SIGNAL_UPPERCASE_SINGLE_LETTER_SEGMENTS = frozenset({"a", "i"})
 _WORD_JOINER_RE = re.compile(r"[-_]+")
+# Shorter segments count only as a lone capital letter ("C", "R").
+_MIN_SIGNIFICANT_SEGMENT_CHARS = 2
+_POSSESSIVE_SUFFIX = "'s"
+# A partial phrase match (all but one of a tag's words) needs at least this many words.
+_MIN_PARTIAL_PHRASE_SEGMENTS = 2
 
 
 @dataclass(frozen=True, slots=True)
@@ -209,7 +214,7 @@ def split_tag_term_segments(term: str) -> tuple[str, ...]:
     return _split_tag_term_segments_cached(term)
 
 
-@sensitive_lru_cache(maxsize=32768, max_bytes=16 * MIB)
+@sensitive_lru_cache(maxsize=32768, max_bytes=SENSITIVE_MEMO_BYTES)
 def _split_tag_term_segments_cached(term: str) -> tuple[str, ...]:
     normalized = normalize_tag_match_text(term)
     if normalized == "":
@@ -224,7 +229,7 @@ def split_tag_term_segments_preserving_case(term: str) -> tuple[str, ...]:
     return _split_tag_term_segments_preserving_case_cached(term)
 
 
-@sensitive_lru_cache(maxsize=32768, max_bytes=16 * MIB)
+@sensitive_lru_cache(maxsize=32768, max_bytes=SENSITIVE_MEMO_BYTES)
 def _split_tag_term_segments_preserving_case_cached(term: str) -> tuple[str, ...]:
     connectors_as_spaces = _CONNECTOR_RE.sub(" ", term.replace("’", "'"))
     stripped_noise = _MATCH_NOISE_RE.sub(" ", connectors_as_spaces)
@@ -239,7 +244,7 @@ def _is_significant_content_match_segment(*, segment: str, raw_segment: str) -> 
         raise TypeError("segment must be a string")
     if not isinstance(raw_segment, str):
         raise TypeError("raw_segment must be a string")
-    if len(segment) < 2:
+    if len(segment) < _MIN_SIGNIFICANT_SEGMENT_CHARS:
         return (
             len(segment) == 1
             and raw_segment.isalpha()
@@ -261,7 +266,7 @@ def list_significant_content_match_segments(term: str) -> tuple[str, ...]:
     return _list_significant_content_match_segments_cached(term)
 
 
-@sensitive_lru_cache(maxsize=32768, max_bytes=16 * MIB)
+@sensitive_lru_cache(maxsize=32768, max_bytes=SENSITIVE_MEMO_BYTES)
 def _list_significant_content_match_segments_cached(term: str) -> tuple[str, ...]:
     raw_segments = split_tag_term_segments_preserving_case(term)
     return tuple(
@@ -283,7 +288,7 @@ def _list_significant_content_match_segments_with_raw_indexes(
     return _list_significant_content_match_segments_with_raw_indexes_cached(term)
 
 
-@sensitive_lru_cache(maxsize=32768, max_bytes=16 * MIB)
+@sensitive_lru_cache(maxsize=32768, max_bytes=SENSITIVE_MEMO_BYTES)
 def _list_significant_content_match_segments_with_raw_indexes_cached(
     term: str,
 ) -> tuple[tuple[str, ...], tuple[int, ...], int]:
@@ -339,8 +344,8 @@ def build_normalized_content_match_context(*, normalized_content: str) -> Normal
     for index, token in enumerate(content_tokens):
         record_match(token, index)
         # Keep the full token available for tags that contain an apostrophe.
-        if token.endswith("'s") and len(token) > 2:
-            record_match(token[:-2], index)
+        if token.endswith(_POSSESSIVE_SUFFIX) and len(token) > len(_POSSESSIVE_SUFFIX):
+            record_match(token[:-len(_POSSESSIVE_SUFFIX)], index)
     segment_match_indexes = {segment: tuple(indexes) for segment, indexes in match_indexes.items()}
     token_positions = {segment: indexes[0] for segment, indexes in segment_match_indexes.items()}
     return NormalizedContentMatchContext(
@@ -373,7 +378,7 @@ def match_tag_term_in_content_match_context(
     raw_partial_phrase_position = -1
     raw_partial_phrase_indexes: tuple[int, ...] = ()
     partial_phrase_segment_count = raw_segment_count - 1
-    if not raw_phrase_match and partial_phrase_segment_count >= 2:
+    if not raw_phrase_match and partial_phrase_segment_count >= _MIN_PARTIAL_PHRASE_SEGMENTS:
         significant_raw_index_set = set(segment_raw_indexes)
         for raw_start_index in range(raw_segment_count - partial_phrase_segment_count + 1):
             raw_end_index = raw_start_index + partial_phrase_segment_count

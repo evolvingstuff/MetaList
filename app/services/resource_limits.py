@@ -23,6 +23,10 @@ CLIENT_IDLE_SECONDS = configured_limit('METALIST_CLIENT_IDLE_SECONDS', 1800)
 SHELL_SECONDS = configured_limit('METALIST_SHELL_MAX_SECONDS', 1800)
 SHELL_RUNS = configured_limit('METALIST_SHELL_MAX_RUNS', 4)
 SHELL_OUTPUT_BYTES = configured_limit('METALIST_SHELL_OUTPUT_BYTES', 4 * MIB)
+# Each sensitive memoization cache retains at most this much (docs/security/README.md,
+# "Runtime memory and shell budgets"); a cache that needs a different budget names its own.
+_SENSITIVE_MEMO_MIB = 16
+SENSITIVE_MEMO_BYTES = _SENSITIVE_MEMO_MIB * MIB
 
 
 def retained_bytes(value: object) -> int:

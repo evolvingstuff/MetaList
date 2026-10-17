@@ -4,6 +4,8 @@ import { buildSessionHeaders } from '../session-auth.js';
 import { parseAiChatNdjsonBuffer } from './ai-chat-panel-service.js';
 import { validateAiThinkingLevel } from './ai-thinking-level-service.js';
 
+// Each LLM history entry is an [input, output] pair.
+const HISTORY_PAIR_LENGTH = 2;
 
 export class AiApiError extends HttpRequestError {
     constructor(message) {
@@ -460,7 +462,7 @@ export async function loadAiHistory() {
         await readJsonResponse(response, 'Failed to export LLM history');
     }
     const pairs = await response.json();
-    if (!Array.isArray(pairs) || pairs.some((pair) => !Array.isArray(pair) || pair.length !== 2)) {
+    if (!Array.isArray(pairs) || pairs.some((pair) => !Array.isArray(pair) || pair.length !== HISTORY_PAIR_LENGTH)) {
         throw new Error('LLM history must contain input/output pairs');
     }
     return pairs;

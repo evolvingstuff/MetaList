@@ -20,6 +20,8 @@ from app.services.search_text import (
 
 
 _QUOTE_CHARS = {"'", '"'}
+# A backslash and the character it escapes.
+_ESCAPE_SEQUENCE_LENGTH = 2
 # Walking one anchor-note term in Python costs roughly this many times less
 # than one C set intersection per suggestion candidate (measured on 107k notes).
 SUGGESTION_INTERSECT_COST_RATIO = 8
@@ -85,7 +87,7 @@ def _parse_search_suggestion_context(raw_input: str) -> _SearchSuggestionContext
                 if char == "\\" and index + 1 < length:
                     next_char = raw_input[index + 1]
                     if next_char in (quote_char, "\\"):
-                        index += 2
+                        index += _ESCAPE_SEQUENCE_LENGTH
                         continue
                 index += 1
             if not closed:

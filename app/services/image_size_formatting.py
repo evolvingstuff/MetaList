@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Callable, List, Tuple
 
 from app.services.content_formatting import (
+    MAX_DELIMITER_DEPTH,
     _tokenize_tag_bar_preserving_comments,
     _unwrap_tag_token,
     remove_formatting_scope_delimiters,
@@ -19,7 +20,6 @@ _SIZE_TAG_RE = re.compile(
     re.IGNORECASE,
 )
 _OPEN_TO_CLOSE = {"{": "}", "[": "]", "(": ")"}
-_MAX_DELIMITER_DEPTH = 3
 
 
 @dataclass(frozen=True, slots=True)
@@ -296,7 +296,7 @@ def _target_size_factor(*, current_factor: str, action: str) -> str:
 
 def _choose_unused_wrapper(*, content_html: str, tags: str) -> Tuple[str, int]:
     for opener, closer in _OPEN_TO_CLOSE.items():
-        for depth in range(1, _MAX_DELIMITER_DEPTH + 1):
+        for depth in range(1, MAX_DELIMITER_DEPTH + 1):
             if opener * depth in content_html or closer * depth in content_html:
                 continue
             if opener * depth in tags or closer * depth in tags:

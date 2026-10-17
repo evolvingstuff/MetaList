@@ -8,6 +8,9 @@ import tarfile
 import tempfile
 import zipfile
 
+# The script name and DIST_DIRECTORY.
+_EXPECTED_ARGUMENT_COUNT = 2
+
 
 def check_vendor_inventory(names: set[str], expected: set[str]) -> None:
     actual = {name for name in names if name.startswith('app/static/js/vendor/') and name.endswith('.js')}
@@ -74,5 +77,5 @@ def check_distribution(distribution_directory: Path) -> None:
 
 
 if __name__ == "__main__":
-    assert len(sys.argv) == 2, "Usage: python scripts/check_distribution.py DIST_DIRECTORY"
+    assert len(sys.argv) == _EXPECTED_ARGUMENT_COUNT, "Usage: python scripts/check_distribution.py DIST_DIRECTORY"
     check_distribution(Path(sys.argv[1]))

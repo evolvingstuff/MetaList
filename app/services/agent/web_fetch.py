@@ -36,6 +36,7 @@ MAX_WEB_PAGE_TEXT_CHARACTERS = 120_000
 MAX_WEB_BATCH_TEXT_CHARACTERS = 480_000
 MAX_WEB_PDF_PAGES = 100
 MAX_WEB_PAGE_OUTGOING_LINKS = 256
+_OUTGOING_LINK_FIELD_COUNT = 2  # (title, URL)
 WEB_FETCH_TIMEOUT_SECONDS = 10.0
 _WEB_USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -83,7 +84,7 @@ class WebPageFetchResult:
             raise TypeError("Web fetch outgoing_links must be a tuple")
         outgoing_urls: list[str] = []
         for link in self.outgoing_links:
-            if not isinstance(link, tuple) or len(link) != 2:
+            if not isinstance(link, tuple) or len(link) != _OUTGOING_LINK_FIELD_COUNT:
                 raise TypeError("Web fetch outgoing link must be a (title, URL) tuple")
             link_title, link_url = link
             if not isinstance(link_title, str) or link_title == "":

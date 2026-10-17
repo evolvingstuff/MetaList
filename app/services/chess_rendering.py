@@ -24,6 +24,12 @@ _PIECE_GLYPHS = {"k": "♚", "q": "♛", "r": "♜", "b": "♝", "n": "♞", "p"
 _TEXT_PRESENTATION = "︎"
 _CASTLING_RE = re.compile(r"^(?:-|K?Q?k?q?)$")
 _EN_PASSANT_RE = re.compile(r"^(?:-|[a-h][36])$")
+# Positions of the optional FEN fields after the piece placement.
+_SIDE_TO_MOVE_FIELD = 1
+_CASTLING_FIELD = 2
+_EN_PASSANT_FIELD = 3
+# Squares alternate between the two shades, light and dark.
+_SHADE_COUNT = 2
 
 
 @dataclass(frozen=True)
@@ -49,20 +55,20 @@ def parse_fen(raw_text: str) -> tuple[ChessPosition | None, str]:
     if ranks is None:
         return None, message
     side_to_move = "-"
-    if len(fields) >= 2:
-        if fields[1] not in {"w", "b"}:
-            return None, f"Side to move must be w or b, not {fields[1]}"
-        side_to_move = fields[1]
+    if len(fields) > _SIDE_TO_MOVE_FIELD:
+        if fields[_SIDE_TO_MOVE_FIELD] not in {"w", "b"}:
+            return None, f"Side to move must be w or b, not {fields[_SIDE_TO_MOVE_FIELD]}"
+        side_to_move = fields[_SIDE_TO_MOVE_FIELD]
     castling = "-"
-    if len(fields) >= 3:
-        if fields[2] == "" or not _CASTLING_RE.match(fields[2]):
-            return None, f"Castling must be - or letters from KQkq in that order, not {fields[2]}"
-        castling = fields[2]
+    if len(fields) > _CASTLING_FIELD:
+        if fields[_CASTLING_FIELD] == "" or not _CASTLING_RE.match(fields[_CASTLING_FIELD]):
+            return None, f"Castling must be - or letters from KQkq in that order, not {fields[_CASTLING_FIELD]}"
+        castling = fields[_CASTLING_FIELD]
     en_passant = "-"
-    if len(fields) >= 4:
-        if not _EN_PASSANT_RE.match(fields[3]):
-            return None, f"En passant must be - or a square on rank 3 or 6 such as e3, not {fields[3]}"
-        en_passant = fields[3]
+    if len(fields) > _EN_PASSANT_FIELD:
+        if not _EN_PASSANT_RE.match(fields[_EN_PASSANT_FIELD]):
+            return None, f"En passant must be - or a square on rank 3 or 6 such as e3, not {fields[_EN_PASSANT_FIELD]}"
+        en_passant = fields[_EN_PASSANT_FIELD]
     for index, name in ((4, "Halfmove clock"), (5, "Move number")):
         if len(fields) > index and not fields[index].isdigit():
             return None, f"{name} must be a whole number, not {fields[index]}"
@@ -137,7 +143,7 @@ def _render_rank(squares: Tuple[str, ...], *, rank_number: int) -> str:
     for file_index, piece in enumerate(squares):
         # a1 is a dark square.
         shade = "meta-chess-light"
-        if (file_index + rank_number) % 2 == 1:
+        if (file_index + rank_number) % _SHADE_COUNT == 1:
             shade = "meta-chess-dark"
         square_name = f"{_FILES[file_index]}{rank_number}"
         if piece == "":

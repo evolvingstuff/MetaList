@@ -1,6 +1,9 @@
 import { findSearchTagAtIndex } from './search-syntax-service.js';
 import { findTagAtIndexInTagBar } from './tag-syntax-service.js';
 
+// Dividing a selection's length by this gives its middle.
+const HALVES = 2;
+
 export function selectTagOnDoubleClick(event) {
     const input = event.target;
     if (!(input instanceof HTMLInputElement) || event.button !== 0) return;
@@ -15,7 +18,7 @@ export function selectTagOnDoubleClick(event) {
         throw new Error('Tag input must expose selection offsets');
     }
     if (input.value.slice(start, end).trim() === '') return;
-    const index = start + Math.floor((end - start) / 2);
+    const index = start + Math.floor((end - start) / HALVES);
     const tag = isSearch
         ? findSearchTagAtIndex(input.value, index)
         : findTagAtIndexInTagBar(input.value, index);

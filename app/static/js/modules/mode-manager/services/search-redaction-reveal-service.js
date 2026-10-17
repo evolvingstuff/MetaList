@@ -1,6 +1,9 @@
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import { areScrollAnchorsEqual, computeScrollAnchor } from './scroll-anchor-service.js';
 
+// Dividing a span by this gives its middle.
+const HALVES = 2;
+
 function getNoteElementById(noteId) {
     if (typeof noteId !== 'string' || noteId.length === 0) {
         return null;
@@ -79,7 +82,7 @@ function getViewportTopInset() {
 function getViewportReferenceY(anchorBias) {
     const topInset = getViewportTopInset();
     if (anchorBias === 'center') {
-        return topInset + (window.innerHeight - topInset) / 2;
+        return topInset + (window.innerHeight - topInset) / HALVES;
     }
     if (anchorBias === 'top') {
         return topInset;
@@ -110,7 +113,7 @@ function findBestViewportAnchorNote() {
             continue;
         }
         const dist = distanceToLine(rect, centerRef);
-        const centerDistance = Math.abs((rect.top + rect.bottom) / 2 - centerRef);
+        const centerDistance = Math.abs((rect.top + rect.bottom) / HALVES - centerRef);
         if (dist < bestDistance || (dist === bestDistance && centerDistance < bestCenterDistance)) {
             bestElement = noteElement;
             bestDistance = dist;

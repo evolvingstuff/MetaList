@@ -1,3 +1,5 @@
+import { parseDecimalInteger } from '../decimal-integer.js';
+import { localDateText, twoDigits, utcOffsetText } from '../local-date-text.js';
 import { ApplicationState, stateValuesEqual } from '../application-state.js';
 import { ReminderStore } from '../reminder-store.js';
 import { ReminderSurface } from '../reminder-surface-service.js';
@@ -8,6 +10,14 @@ import { BaseModal } from './base-modal.js';
 const PRE_REMINDER_FORM_DEFAULTS = Object.freeze({ amount: '1', unit: 'days' });
 
 const REMINDER_RENDER_ICON = '🔔';
+
+const DATE_INPUT_LENGTH = 'YYYY-MM-DD'.length;
+// Hours and minutes of an HH:mm time.
+const TIME_PIECE_COUNT = 2;
+const DECIMAL_BASE = 10;
+// Last digits that take "nd" (2nd, 22nd) and "rd" (3rd, 23rd).
+const ND_LAST_DIGIT = 2;
+const RD_LAST_DIGIT = 3;
 
 function escapeHtml(value) {
     if (typeof value !== 'string') {
@@ -37,19 +47,14 @@ function formatDateInput(value) {
     if (!(value instanceof Date)) {
         throw new Error('formatDateInput requires Date');
     }
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const day = String(value.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return localDateText(value);
 }
 
 function formatTimeInput(value) {
     if (!(value instanceof Date)) {
         throw new Error('formatTimeInput requires Date');
     }
-    const hour = String(value.getHours()).padStart(2, '0');
-    const minute = String(value.getMinutes()).padStart(2, '0');
-    return `${hour}:${minute}`;
+    return `${twoDigits(value.getHours())}:${twoDigits(value.getMinutes())}`;
 }
 
 function localDateTimeIso(dateValue, timeValue) {
@@ -63,19 +68,14 @@ function localDateTimeIso(dateValue, timeValue) {
     if (Number.isNaN(local.getTime())) {
         throw new Error('Invalid local date/time');
     }
-    const offsetMinutes = -local.getTimezoneOffset();
-    const sign = offsetMinutes >= 0 ? '+' : '-';
-    const absolute = Math.abs(offsetMinutes);
-    const offsetHours = String(Math.floor(absolute / 60)).padStart(2, '0');
-    const offsetRemainder = String(absolute % 60).padStart(2, '0');
-    return `${dateValue}T${timeValue}:00${sign}${offsetHours}:${offsetRemainder}`;
+    return `${dateValue}T${timeValue}:00${utcOffsetText(local)}`;
 }
 
 function toInputDate(value) {
     if (typeof value !== 'string' || value.length === 0) {
         return todayLocalDate();
     }
-    return value.slice(0, 10);
+    return value.slice(0, DATE_INPUT_LENGTH);
 }
 
 function toInputTime(value) {
@@ -91,11 +91,11 @@ function toInputTime(value) {
 function displayTime(value) {
     const inputTime = toInputTime(value);
     const pieces = inputTime.split(':');
-    if (pieces.length !== 2) {
+    if (pieces.length !== TIME_PIECE_COUNT) {
         throw new Error('displayTime requires HH:mm time');
     }
-    const hour = Number.parseInt(pieces[0], 10);
-    const minute = Number.parseInt(pieces[1], 10);
+    const hour = parseDecimalInteger(pieces[0]);
+    const minute = parseDecimalInteger(pieces[1]);
     if (!Number.isInteger(hour) || !Number.isInteger(minute)) {
         throw new Error('displayTime requires numeric time');
     }
@@ -104,16 +104,16 @@ function displayTime(value) {
     }
     const period = hour >= 12 ? 'PM' : 'AM';
     const displayHour = hour % 12 === 0 ? 12 : hour % 12;
-    return `${displayHour}:${String(minute).padStart(2, '0')} ${period}`;
+    return `${displayHour}:${twoDigits(minute)} ${period}`;
 }
 
 function parseLocalDateInput(value) {
-    if (typeof value !== 'string' || value.length !== 10) {
+    if (typeof value !== 'string' || value.length !== DATE_INPUT_LENGTH) {
         throw new Error('parseLocalDateInput requires YYYY-MM-DD');
     }
-    const year = Number.parseInt(value.slice(0, 4), 10);
-    const month = Number.parseInt(value.slice(5, 7), 10);
-    const day = Number.parseInt(value.slice(8, 10), 10);
+    const year = parseDecimalInteger(value.slice(0, 4));
+    const month = parseDecimalInteger(value.slice(5, 7));
+    const day = parseDecimalInteger(value.slice(8, DATE_INPUT_LENGTH));
     return new Date(year, month - 1, day);
 }
 
@@ -408,14 +408,14 @@ function ordinalDay(day) {
     if (remainder100 >= 11 && remainder100 <= 13) {
         return `${day}th`;
     }
-    const remainder10 = day % 10;
+    const remainder10 = day % DECIMAL_BASE;
     if (remainder10 === 1) {
         return `${day}st`;
     }
-    if (remainder10 === 2) {
+    if (remainder10 === ND_LAST_DIGIT) {
         return `${day}nd`;
     }
-    if (remainder10 === 3) {
+    if (remainder10 === RD_LAST_DIGIT) {
         return `${day}rd`;
     }
     return `${day}th`;
@@ -538,7 +538,7 @@ function buildPayloadFromForm(form) {
         recurrence_rule: null,
         pre_reminder: form.pre_reminder_enabled
             ? {
-                amount: Number.parseInt(form.pre_reminder_amount, 10),
+                amount: parseDecimalInteger(form.pre_reminder_amount),
                 unit: timeMode === 'date_only' ? 'days' : form.pre_reminder_unit,
             }
             : null,
@@ -549,18 +549,18 @@ function buildPayloadFromForm(form) {
     if (scheduleKind === 'recurring') {
         payload.recurrence_rule = {
             frequency: form.frequency,
-            interval: Number.parseInt(form.interval, 10),
+            interval: parseDecimalInteger(form.interval),
             end: buildRecurrenceEnd(form),
         };
         if (form.frequency === 'weekly') {
             payload.recurrence_rule.weekdays = form.weekdays.slice();
         }
         if (form.frequency === 'monthly') {
-            payload.recurrence_rule.day_of_month = Number.parseInt(form.date.slice(8, 10), 10);
+            payload.recurrence_rule.day_of_month = parseDecimalInteger(form.date.slice(8, DATE_INPUT_LENGTH));
         }
         if (form.frequency === 'yearly') {
-            payload.recurrence_rule.month = Number.parseInt(form.date.slice(5, 7), 10);
-            payload.recurrence_rule.day = Number.parseInt(form.date.slice(8, 10), 10);
+            payload.recurrence_rule.month = parseDecimalInteger(form.date.slice(5, 7));
+            payload.recurrence_rule.day = parseDecimalInteger(form.date.slice(8, DATE_INPUT_LENGTH));
         }
         if (timeMode === 'date_time') {
             payload.recurrence_rule.time_of_day = form.time;
@@ -579,7 +579,7 @@ function buildRecurrenceEnd(form) {
         return { type: 'on_date', value: form.end_value };
     }
     if (form.end_type === 'after_count') {
-        return { type: 'after_count', value: Number.parseInt(form.end_value, 10) };
+        return { type: 'after_count', value: parseDecimalInteger(form.end_value) };
     }
     throw new Error(`Unsupported recurrence end type: ${form.end_type}`);
 }
@@ -603,7 +603,7 @@ function reminderFormWarning(form) {
     if (
         form.time_mode === 'date_time'
         && typeof form.date === 'string'
-        && form.date.length === 10
+        && form.date.length === DATE_INPUT_LENGTH
         && typeof form.time === 'string'
         && form.time.length === 5
         && localDateTimeIso(form.date, form.time) < new Date().toISOString()
@@ -617,10 +617,10 @@ function reminderFormWarning(form) {
         form.schedule_kind === 'recurring'
         && form.frequency === 'monthly'
         && typeof form.date === 'string'
-        && form.date.length === 10
-        && Number.parseInt(form.date.slice(8, 10), 10) > 28
+        && form.date.length === DATE_INPUT_LENGTH
+        && parseDecimalInteger(form.date.slice(8, DATE_INPUT_LENGTH)) > 28
     ) {
-        return `Months without the ${ordinalDay(Number.parseInt(form.date.slice(8, 10), 10))} use that month's last day.`;
+        return `Months without the ${ordinalDay(parseDecimalInteger(form.date.slice(8, DATE_INPUT_LENGTH)))} use that month's last day.`;
     }
     return '';
 }
@@ -655,7 +655,7 @@ function recurrenceIntervalUnit(form) {
     if (!form || typeof form !== 'object') {
         throw new Error('recurrenceIntervalUnit requires form');
     }
-    const interval = Number.parseInt(form.interval, 10);
+    const interval = parseDecimalInteger(form.interval);
     const isSingular = interval === 1;
     if (form.frequency === 'daily') {
         return isSingular ? 'day' : 'days';
@@ -1160,7 +1160,7 @@ export class ReminderModal extends BaseModal {
         }
         const weekday = target.getAttribute('data-reminder-weekday');
         if (weekday !== null) {
-            const value = Number.parseInt(weekday, 10);
+            const value = parseDecimalInteger(weekday);
             if (target.checked) {
                 if (!form.weekdays.includes(value)) {
                     form.weekdays.push(value);

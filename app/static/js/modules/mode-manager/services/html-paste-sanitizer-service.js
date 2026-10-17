@@ -96,6 +96,19 @@ const TREE_WALKER_SHOW_ELEMENT_AND_TEXT = 0x1 | 0x4;
 const TREE_WALKER_SHOW_TEXT = 0x4;
 const AVATAR_FORWARD_SCAN_NODE_LIMIT = 140;
 const AVATAR_BACKWARD_SCAN_NODE_LIMIT = 40;
+// Siblings before an image that are read as its context tokens.
+const SIBLING_CONTEXT_BEFORE_COUNT = 3;
+// Avatar likelihood score weights.
+const AVATAR_HINT_SCORE = 3;
+const AVATAR_REPEATED_SOURCE_SCORE = 2;
+const AVATAR_TIME_AND_HANDLE_SCORE = 2;
+// An image source used at least this often on the page looks like an avatar.
+const AVATAR_REPEATED_SOURCE_MIN_USES = 2;
+// Line counts that make pasted text keep its line breaks.
+const STRUCTURED_LINES_MIN = 2;
+const SINGLE_STRUCTURED_LINE_TEXT_MAX_LINES = 2;
+const UNMARKED_LIST_MIN_LINES = 3;
+const TIMESTAMP_RUN_MIN_LINKS = 2;
 
 const TEXT_STYLE_PROPERTIES = new Set([
     'white-space',
@@ -573,7 +586,7 @@ function getSiblingContextTokens(imageElement) {
         return [];
     }
 
-    let start = imageIndex - 3;
+    let start = imageIndex - SIBLING_CONTEXT_BEFORE_COUNT;
     if (start < 0) {
         start = 0;
     }
@@ -588,7 +601,7 @@ function getSiblingContextTokens(imageElement) {
     while (cursor < end) {
         if (cursor !== imageIndex) {
             const node = siblings[cursor];
-            if (node.nodeType === 3) {
+            if (node.nodeType === TEXT_NODE) {
                 const textNode = node;
                 const content = textNode.textContent;
                 if (typeof content === 'string') {
@@ -705,7 +718,7 @@ function hasNearbyAuthorTimeContext(imageElement) {
             if (typeof elementTextContent === 'string') {
                 collectAvatarContextSignalsFromText(elementTextContent, signals);
             }
-        } else if (node.nodeType === 3) {
+        } else if (node.nodeType === TEXT_NODE) {
             const textNodeContent = node.textContent;
             if (typeof textNodeContent === 'string') {
                 collectAvatarContextSignalsFromText(textNodeContent, signals);
@@ -780,7 +793,7 @@ function isLikelyAvatarImage(sourceImageElement, imageSourceFrequencyMap) {
     while (i < hints.length) {
         const hint = hints[i];
         if (typeof hint === 'string' && AVATAR_HINT_PATTERN.test(hint)) {
-            score += 3;
+            score += AVATAR_HINT_SCORE;
             break;
         }
         i += 1;
@@ -789,8 +802,8 @@ function isLikelyAvatarImage(sourceImageElement, imageSourceFrequencyMap) {
     if (typeof srcValue === 'string') {
         const key = srcValue.trim();
         const frequency = imageSourceFrequencyMap.get(key);
-        if (typeof frequency === 'number' && frequency >= 2) {
-            score += 2;
+        if (typeof frequency === 'number' && frequency >= AVATAR_REPEATED_SOURCE_MIN_USES) {
+            score += AVATAR_REPEATED_SOURCE_SCORE;
         }
     }
 
@@ -830,7 +843,7 @@ function isLikelyAvatarImage(sourceImageElement, imageSourceFrequencyMap) {
     }
 
     if (hasTimeHint && hasHandleToken) {
-        score += 2;
+        score += AVATAR_TIME_AND_HANDLE_SCORE;
     }
     if (hasMetaHint) {
         score += 1;
@@ -1190,14 +1203,14 @@ function hasStructuredLineBreaks(lines) {
     if (emptyInteriorLineCount > 0) {
         return true;
     }
-    if (structuredLineCount >= 2) {
+    if (structuredLineCount >= STRUCTURED_LINES_MIN) {
         return true;
     }
-    if (structuredLineCount === 1 && nonEmptyLineCount <= 2) {
+    if (structuredLineCount === 1 && nonEmptyLineCount <= SINGLE_STRUCTURED_LINE_TEXT_MAX_LINES) {
         return true;
     }
     if (
-        nonEmptyLineCount >= 3
+        nonEmptyLineCount >= UNMARKED_LIST_MIN_LINES
         && unmarkedListLineCount >= Math.ceil(nonEmptyLineCount * 0.8)
     ) {
         return true;
@@ -1535,7 +1548,7 @@ function preserveFlattenedTimestampLinkRuns(rootNode) {
         .filter((link) => TIMESTAMP_ONLY_PATTERN.test(normalizeText(
             getElementTextContent(link, 'preserveFlattenedTimestampLinkRuns')
         )));
-    if (timestampLinks.length < 2) {
+    if (timestampLinks.length < TIMESTAMP_RUN_MIN_LINKS) {
         return;
     }
 

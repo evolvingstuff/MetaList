@@ -8,6 +8,9 @@ from app.services.app_updates import read_job, release_update_job, update_execut
 from app.services.self_update import schedule_self_update
 from app.version import __version__
 
+# The module name and JOB_ID.
+_EXPECTED_ARGV_LENGTH = 2
+
 
 def run_update(job_id: str) -> None:
     record = read_job(job_id)
@@ -38,5 +41,5 @@ def run_update(job_id: str) -> None:
 
 
 if __name__ == '__main__':
-    assert len(sys.argv) == 2, 'Usage: python -m app.services.app_update_worker JOB_ID'
+    assert len(sys.argv) == _EXPECTED_ARGV_LENGTH, 'Usage: python -m app.services.app_update_worker JOB_ID'
     run_update(sys.argv[1])

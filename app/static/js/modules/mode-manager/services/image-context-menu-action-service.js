@@ -1,3 +1,4 @@
+import { parseDecimalInteger } from '../../decimal-integer.js';
 import { ApplicationState } from '../../application-state.js';
 import { HttpRequestError } from '../../expected-errors.js';
 const moduleState = ApplicationState.createFields('image-context-menu-action-service', {
@@ -299,7 +300,7 @@ export function resolveImageContextFromElement(element) {
             throw new Error('Rendered file image is missing its reference occurrence');
         }
         const hostNoteId = referenceBlock.dataset.refHostNoteId;
-        const occurrenceIndex = Number.parseInt(referenceBlock.dataset.refOccurrence, 10);
+        const occurrenceIndex = parseDecimalInteger(referenceBlock.dataset.refOccurrence);
         if (typeof hostNoteId !== 'string' || hostNoteId.length === 0) {
             throw new Error('Rendered file image is missing its host note id');
         }
@@ -319,7 +320,7 @@ export function resolveImageContextFromElement(element) {
         };
     }
 
-    let occurrenceIndex = Number.parseInt(image.dataset.inlineImageOccurrence, 10);
+    let occurrenceIndex = parseDecimalInteger(image.dataset.inlineImageOccurrence);
     if (!Number.isInteger(occurrenceIndex) || occurrenceIndex < 0) {
         const noteContent = image.closest('.note-content');
         if (!(noteContent instanceof HTMLElement)) {

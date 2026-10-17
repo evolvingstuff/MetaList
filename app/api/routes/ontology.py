@@ -29,6 +29,12 @@ from app.utils.text_utils import strip_html
 
 # The longest tag a rename or delete accepts, in characters.
 MAX_TAG_LENGTH = 1024
+# An equality line (A = B) parses into two rules, A => B and B => A.
+_EQUALITY_LINE_RULE_COUNT = 2
+# Tag search ranks: prefix matches first, then substring, then fuzzy.
+_PREFIX_MATCH_RANK = 0
+_SUBSTRING_MATCH_RANK = 1
+_FUZZY_MATCH_RANK = 2
 
 
 def _maybe_bearer_token(request: Request) -> str:
@@ -307,7 +313,7 @@ def focus_view(tag: str) -> dict:
         raise TypeError(f"Unknown atom: {type(atom)}")
 
     def record_equality_rule_ids(rules: list, rule_id: int) -> bool:
-        if len(rules) != 2:
+        if len(rules) != _EQUALITY_LINE_RULE_COUNT:
             return False
         first, second = rules
         if len(first.lhs) != 1 or len(second.lhs) != 1:
@@ -466,18 +472,19 @@ def list_tags(q: str, limit: int) -> dict:
     for tag in tags:
         folded = tag.casefold()
         if folded.startswith(needle):
-            rank = 0
+            rank = _PREFIX_MATCH_RANK
         elif needle in folded:
-            rank = 1
+            rank = _SUBSTRING_MATCH_RANK
         elif _fuzzy_match(needle, folded):
-            rank = 2
+            rank = _FUZZY_MATCH_RANK
         else:
             continue
         count = tag_counts[tag]
         matches.append((rank, -count, tag))
 
-    matches.sort(key=lambda item: (item[0], item[1], item[2]))
-    results = [item[2] for item in matches]
+    # By rank, then most used, then name.
+    matches.sort()
+    results = [tag for _rank, _negative_count, tag in matches]
     results = results[:limit]
 
     payload = [

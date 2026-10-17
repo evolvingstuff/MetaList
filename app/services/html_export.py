@@ -30,6 +30,8 @@ from app.services.content_formatting import extract_note_text_for_agent
 
 
 _VALID_EXPORT_THEMES = frozenset({"dark", "light"})
+# Spaces for one level of nesting in the exported HTML.
+_HTML_INDENT_LEVEL_SPACES = 2
 _EXPORT_STYLE_OVERRIDES = """
 /* The scrollbar's place is kept, as in MetaList: collapsing or expanding a
    note can stop or start the page scrolling, and the centred page must not
@@ -660,7 +662,7 @@ def _render_exported_note_node(
         children_markup = "\n".join(children_html_parts)
         children_html = (
             "<div class=\"note-children\">\n"
-            f"{_indent_block(children_markup, 2)}\n"
+            f"{_indent_block(children_markup, _HTML_INDENT_LEVEL_SPACES)}\n"
             "</div>"
         )
 
@@ -710,7 +712,7 @@ def _render_exported_note_node(
             "  </div>",
         ]
     if children_html != "":
-        lines.append(_indent_block(children_html, 2))
+        lines.append(_indent_block(children_html, _HTML_INDENT_LEVEL_SPACES))
     lines.append("</article>")
     return "\n".join(lines)
 

@@ -18,7 +18,7 @@ class FakeHTMLElement extends FakeElement {}
 class FakeSVGElement extends FakeElement {}
 class FakeMathMLElement extends FakeElement {}
 
-const resolveEventElement = new Function('HTMLElement', 'Element', `${resolveSource}\nreturn resolveEventElement;`)(FakeHTMLElement, FakeElement);
+const resolveEventElement = new Function('HTMLElement', 'Element', 'Node', `${resolveSource}\nreturn resolveEventElement;`)(FakeHTMLElement, FakeElement, {TEXT_NODE: 3});
 
 test('an HTML element, or text inside one, is the target itself', () => {
     const content = new FakeHTMLElement(null);

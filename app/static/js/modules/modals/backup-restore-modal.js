@@ -1,3 +1,4 @@
+import { parseDecimalInteger } from '../decimal-integer.js';
 import { KIB } from '../byte-sizes.js';
 import { isAnsweredStatus } from '../http-status.js';
 import { ApplicationState } from '../application-state.js';
@@ -72,7 +73,7 @@ function parsePort(rawValue, label) {
     if (!/^[0-9]+$/.test(trimmed)) {
         throw new Error(`${label} must be numeric`);
     }
-    const port = Number.parseInt(trimmed, 10);
+    const port = parseDecimalInteger(trimmed);
     if (!Number.isInteger(port) || port < 1 || port > 65535) {
         throw new Error(`${label} must be between 1 and 65535`);
     }

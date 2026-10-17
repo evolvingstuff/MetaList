@@ -225,16 +225,17 @@ def _fetch_launch_profile_from_connection(
     ).fetchone()
     if row is None:
         return None
-    stored_namespace = str(row[0])
+    namespace_value, port_value, https_port_value, mcp_port_value = row
+    stored_namespace = str(namespace_value)
     if stored_namespace != namespace:
         raise RuntimeError(
             f"Launch profile namespace mismatch in {namespace}: found {stored_namespace}"
         )
     return NamespaceLaunchProfile(
         namespace=stored_namespace,
-        port=_coerce_optional_db_port(value=row[1]),
-        https_port=_coerce_optional_db_port(value=row[2]),
-        mcp_port=_coerce_optional_db_port(value=row[3]),
+        port=_coerce_optional_db_port(value=port_value),
+        https_port=_coerce_optional_db_port(value=https_port_value),
+        mcp_port=_coerce_optional_db_port(value=mcp_port_value),
     )
 
 
@@ -897,7 +898,7 @@ def _detect_lan_ip(*, environ: Mapping[str, str]) -> str | None:
         return None
     if resolution is None:
         raise RuntimeError("Hostname resolution did not return an IP list")
-    resolved_ips = resolution[2]
+    _hostname, _aliases, resolved_ips = resolution
     for candidate_ip in resolved_ips:
         parsed_ip_capture = CapturedExceptionContext(ValueError, boundary='app/server_runtime.py:_detect_lan_ip:parsed_ip_capture')
         parsed_ip: ipaddress._BaseAddress | None = None

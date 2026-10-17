@@ -11,9 +11,9 @@ from app.services.code_rendering import render_fenced_code
 from app.services.latex_rendering import render_latex_math_to_html
 
 
-_ORDERED_LIST_RE = re.compile(r"^(\d+)\.\s+(.*)$")
-_UNORDERED_LIST_RE = re.compile(r"^[-+*]\s+(.*)$")
-_ATX_HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)$")
+_ORDERED_LIST_RE = re.compile(r"^(\d+)\.\s+(?P<content>.*)$")
+_UNORDERED_LIST_RE = re.compile(r"^[-+*]\s+(?P<content>.*)$")
+_ATX_HEADING_RE = re.compile(r"^(?P<marks>#{1,6})\s+(?P<content>.*)$")
 _FENCE_RE = re.compile(r"^```([^\s`]*)\s*$")
 _TABLE_DELIMITER_CELL_RE = re.compile(r"^\s*:?-{3,}:?\s*$")
 _AUTO_LINK_RE = re.compile(r"(?<![\"'=])(https?://[^\s<]+)")
@@ -21,6 +21,12 @@ _CURRENCY_AMOUNT_RE = re.compile(
     r"\$(?:\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)(?![\dA-Za-z_.$])"
 )
 _ALLOWED_MARKDOWN_LINK_SCHEMES = frozenset({"http", "https", "mailto"})
+# A table starts with a header row and a delimiter row.
+_TABLE_HEAD_LINE_COUNT = 2
+_HORIZONTAL_RULE_MIN_CHARS = 3
+_LINK_TEXT_TO_HREF = "]("
+# Backslashes pair up into escaped backslashes; an odd one out escapes what follows.
+_BACKSLASHES_PER_ESCAPED_BACKSLASH = 2
 
 
 @dataclass(frozen=True, slots=True)
@@ -146,8 +152,8 @@ class _MarkdownRenderer:
         line = self._lines[self._index]
         match = _ATX_HEADING_RE.match(line.strip())
         assert match is not None
-        level = len(match.group(1))
-        content = match.group(2).strip()
+        level = len(match.group("marks"))
+        content = match.group("content").strip()
         self._index += 1
         rendered = _render_inline_markdown(content, allow_links=True)
         return f"<h{level}>{rendered}</h{level}>"
@@ -159,7 +165,7 @@ class _MarkdownRenderer:
         delimiter_cells = _split_table_row(delimiter_line)
         assert len(header_cells) == len(delimiter_cells)
 
-        self._index += 2
+        self._index += _TABLE_HEAD_LINE_COUNT
         body_rows: List[List[str]] = []
         while self._index < len(self._lines):
             line = self._lines[self._index]
@@ -255,9 +261,7 @@ class _MarkdownRenderer:
         else:
             match = _UNORDERED_LIST_RE.match(stripped)
         assert match is not None
-        item_content = match.group(1)
-        if is_ordered:
-            item_content = match.group(2)
+        item_content = match.group("content")
         item_lines = [item_content]
         self._index += 1
 
@@ -334,7 +338,7 @@ class _MarkdownRenderer:
 
     def _is_horizontal_rule(self, line: str) -> bool:
         stripped = line.strip()
-        if len(stripped) < 3:
+        if len(stripped) < _HORIZONTAL_RULE_MIN_CHARS:
             return False
         if any(ch not in {"-", "*", "_"} for ch in stripped):
             return False
@@ -438,17 +442,17 @@ def _extract_markdown_links(text: str, placeholders: List[_InlinePlaceholder]) -
         if start == -1:
             output.append(text[cursor:])
             break
-        open_paren = text.find("](", start)
+        open_paren = text.find(_LINK_TEXT_TO_HREF, start)
         if open_paren == -1:
             output.append(text[cursor:])
             break
-        close_paren = _find_unescaped_char(text=text, start=open_paren + 2, target=")")
+        close_paren = _find_unescaped_char(text=text, start=open_paren + len(_LINK_TEXT_TO_HREF), target=")")
         if close_paren == -1:
             output.append(text[cursor:])
             break
         output.append(text[cursor:start])
         link_text = text[start + 1 : open_paren]
-        href = text[open_paren + 2 : close_paren].strip()
+        href = text[open_paren + len(_LINK_TEXT_TO_HREF) : close_paren].strip()
         if href == "":
             output.append(text[start : close_paren + 1])
             cursor = close_paren + 1
@@ -657,7 +661,7 @@ def _is_escaped_delimiter(*, text: str, index: int) -> bool:
     while cursor >= 0 and text[cursor] == "\\":
         backslash_count += 1
         cursor -= 1
-    return backslash_count % 2 == 1
+    return backslash_count % _BACKSLASHES_PER_ESCAPED_BACKSLASH == 1
 
 
 def _is_valid_inline_dollar_opener(*, text: str, index: int) -> bool:

@@ -65,6 +65,8 @@ const moduleState = ApplicationState.createFields('mouse-events', {
 
 const MOVE_DRAG_COMMIT_THRESHOLD_PX = 20;
 const MOVE_DRAG_COMMIT_THRESHOLD_SQ = MOVE_DRAG_COMMIT_THRESHOLD_PX * MOVE_DRAG_COMMIT_THRESHOLD_PX;
+// Dividing a height by this gives its middle.
+const HALVES = 2;
 // The cursor icon shown for each drag direction.
 const DRAG_DIRECTION_ICONS = { up: 'up', down: 'down', right: 'indent', left: 'outdent' };
 const CREDENTIAL_VALUE_SELECTOR = '.meta-credential-value';
@@ -977,7 +979,7 @@ function resolveVerticalMoveDestination(noteId, dropY, dragDirection, eventTarge
             const rect = element.getBoundingClientRect();
             return {
                 id: DOMUtils.getNoteId(element),
-                midY: rect.top + (rect.height / 2),
+                midY: rect.top + (rect.height / HALVES),
             };
         });
 

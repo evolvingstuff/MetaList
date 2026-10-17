@@ -143,6 +143,12 @@ def _apply_root_order_updates(updates: List[SimpleNamespace]) -> None:
         _assert_neighbors(update.id, update.parent_id, update.prev_id, update.next_id)
 
 
+def _scored_term_order(scored_term: tuple[int, int, str, str]) -> tuple[int, int, str, str]:
+    """Direct prefix matches first, then the most used, then by name."""
+    direct_prefix_score, count, casefolded, representative = scored_term
+    return (-direct_prefix_score, -count, casefolded, representative)
+
+
 def list_prioritize_tag_suggestions(
     *,
     search_query: Optional[str],
@@ -207,7 +213,7 @@ def list_prioritize_tag_suggestions(
             )
         )
 
-    scored_terms.sort(key=lambda item: (-item[0], -item[1], item[2], item[3]))
+    scored_terms.sort(key=_scored_term_order)
     return [representative for _, _, _, representative in scored_terms[:limit]]
 
 

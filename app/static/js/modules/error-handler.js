@@ -2,12 +2,15 @@
  * Error Handler - Centralized error handling for authentication and network errors
  */
 
+import { parseDecimalInteger } from './decimal-integer.js';
 import { ModeContextInstance as ModeContext } from './mode-manager/mode-context.js';
 import { Auth } from './auth.js';
 import { classifyApiFailure } from './api-failure-classification-service.js';
 import { clearEditingStateForDisconnect } from './disconnect-editing-state-service.js';
 
 const RESTORE_TRANSITION_UNTIL_KEY = 'metalist_restore_transition_until_ms';
+// Lets the banner's hidden state render first so the slide-in transition runs.
+const BANNER_SHOW_DELAY_MS = 10;
 
 
 function _isRestoreTransitionActive() {
@@ -19,7 +22,7 @@ function _isRestoreTransitionActive() {
         sessionStorage.removeItem(RESTORE_TRANSITION_UNTIL_KEY);
         return false;
     }
-    const untilMs = Number.parseInt(rawValue, 10);
+    const untilMs = parseDecimalInteger(rawValue);
     if (!Number.isInteger(untilMs)) {
         sessionStorage.removeItem(RESTORE_TRANSITION_UNTIL_KEY);
         return false;
@@ -235,7 +238,7 @@ export const ErrorHandler = {
         }
         
         // Animate in
-        setTimeout(() => banner.classList.add('error-banner-visible'), 10);
+        setTimeout(() => banner.classList.add('error-banner-visible'), BANNER_SHOW_DELAY_MS);
     },
     
     /**

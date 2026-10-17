@@ -1,3 +1,4 @@
+import { parseDecimalInteger } from '../decimal-integer.js';
 import { UserInputRejected, HttpRequestError } from '../expected-errors.js';
 import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
@@ -94,7 +95,7 @@ function parsePort(rawValue, label) {
     if (!/^[0-9]+$/.test(trimmed)) {
         throw new UserInputRejected(`${label} must be numeric`);
     }
-    const parsed = Number.parseInt(trimmed, 10);
+    const parsed = parseDecimalInteger(trimmed);
     if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
         throw new UserInputRejected(`${label} must be between 1 and 65535`);
     }

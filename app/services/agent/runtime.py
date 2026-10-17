@@ -63,6 +63,10 @@ from app.services.agent.history import record_history
 
 _STAGED_SUMMARY_CONCURRENCY = 4
 _MAX_STAGED_SUMMARY_REDUCTION_LEVELS = 8
+# One batch is a plain summary; staging starts at two.
+_MIN_STAGED_SUMMARY_BATCHES = 2
+# The final response is retried once after a provider failure that produced no output.
+_FINAL_RESPONSE_MAX_ATTEMPTS = 2
 # One corrective request when a summary cites IDs that were not disclosed as evidence.
 _SUMMARY_CITATION_CORRECTIONS = 1
 # Streamed batch previews are throttled per batch and trimmed to a compact tail.
@@ -483,7 +487,7 @@ class AgentRuntime(AgentLoopMixin):
         has_succeeded = False
         # lint: allow-PY001 rationale="keep a failed summary's finished batches, then re-raise with how many were kept"
         try:
-            if len(plan.batches) < 2:
+            if len(plan.batches) < _MIN_STAGED_SUMMARY_BATCHES:
                 raise ValueError("Staged scope summary requires at least two batches")
             # aclosing guarantees worker cancellation when the client abandons the stream.
             async with aclosing(self._stream_staged_summary_batches(  # shockharness: ignore[EXC003] reason="the staged summary (batches, reduction, final answer) is the operation whose failure says how many batches were kept"
@@ -599,7 +603,7 @@ class AgentRuntime(AgentLoopMixin):
         failure then propagates, so no final synthesis runs on partial results.
         """
         batch_count = len(plan.batches)
-        assert batch_count >= 2
+        assert batch_count >= _MIN_STAGED_SUMMARY_BATCHES
         assert len(summaries) == batch_count
         batch_states = ["queued"] * batch_count
         batch_output_tokens = [0] * batch_count
@@ -1266,7 +1270,7 @@ class AgentRuntime(AgentLoopMixin):
         started_at = time.perf_counter()
         state = _FinalStreamState(thinking="", content="", usage={}, did_finish=False)
         last_reported_output_tokens = 0
-        for attempt in (1, 2):
+        for attempt in range(1, _FINAL_RESPONSE_MAX_ATTEMPTS + 1):
             state = _FinalStreamState(thinking="", content="", usage={}, did_finish=False)
             # Shown as "Waiting for OpenAI" until the provider's first signal.
             yield self._status_event("provider_wait", "started", f"Waiting for {self._provider_label}",
@@ -1318,7 +1322,7 @@ class AgentRuntime(AgentLoopMixin):
                 has_partial_output = any(
                     (state.thinking != "", state.content != "")
                 )
-                if has_partial_output or attempt == 2:
+                if has_partial_output or attempt == _FINAL_RESPONSE_MAX_ATTEMPTS:
                     raise
                 yield self._status_event(
                     "respond",
@@ -1468,7 +1472,7 @@ class AgentRuntime(AgentLoopMixin):
                 run=run,
                 purpose=InferencePurpose.FINAL_RESPONSE,
                 attempt=attempt,
-                max_attempts=2,
+                max_attempts=_FINAL_RESPONSE_MAX_ATTEMPTS,
                 wire_request=wire_request,
             )
         return record

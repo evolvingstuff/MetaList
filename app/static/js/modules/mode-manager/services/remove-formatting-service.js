@@ -2,6 +2,7 @@ import {
     ADD_STYLE_OPTIONS,
     chooseStyleScope,
 } from './add-style-service.js';
+import { COMMENT_CLOSE, COMMENT_OPEN, MAX_WRAPPER_DEPTH } from './tag-syntax-service.js';
 
 const WRAPPER_TYPES = Object.freeze([
     Object.freeze({ opener: '{', closer: '}' }),
@@ -39,9 +40,9 @@ function scanTopLevelTokens(tagBarText) {
         }
 
         const start = index;
-        if (tagBarText.startsWith('/*', index)) {
-            const commentEnd = tagBarText.indexOf('*/', index + 2);
-            index = commentEnd === -1 ? tagBarText.length : commentEnd + 2;
+        if (tagBarText.startsWith(COMMENT_OPEN, index)) {
+            const commentEnd = tagBarText.indexOf(COMMENT_CLOSE, index + COMMENT_OPEN.length);
+            index = commentEnd === -1 ? tagBarText.length : commentEnd + COMMENT_CLOSE.length;
             tokens.push(tagBarText.slice(start, index));
             continue;
         }
@@ -49,7 +50,7 @@ function scanTopLevelTokens(tagBarText) {
         const wrapper = WRAPPER_BY_OPENER.get(tagBarText[index]);
         if (wrapper) {
             let depth = 1;
-            while (depth < 3 && tagBarText[index + depth] === wrapper.opener) {
+            while (depth < MAX_WRAPPER_DEPTH && tagBarText[index + depth] === wrapper.opener) {
                 depth += 1;
             }
             const closeToken = wrapper.closer.repeat(depth);
@@ -78,7 +79,7 @@ function parseWrappedToken(rawToken) {
     while (depth < rawToken.length && rawToken[depth] === wrapper.opener) {
         depth += 1;
     }
-    if (depth > 3 || rawToken.slice(-depth) !== wrapper.closer.repeat(depth)) {
+    if (depth > MAX_WRAPPER_DEPTH || rawToken.slice(-depth) !== wrapper.closer.repeat(depth)) {
         return null;
     }
     const innerText = rawToken.slice(depth, -depth);
@@ -97,7 +98,7 @@ function parseWrappedToken(rawToken) {
 
 function parseTagBar(tagBarText) {
     return scanTopLevelTokens(tagBarText).map((rawToken, index) => {
-        const wrapped = rawToken.startsWith('/*') ? null : parseWrappedToken(rawToken);
+        const wrapped = rawToken.startsWith(COMMENT_OPEN) ? null : parseWrappedToken(rawToken);
         return { index, rawToken, wrapped };
     });
 }

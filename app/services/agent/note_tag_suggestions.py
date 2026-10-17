@@ -51,6 +51,8 @@ MOST_USED_LIMIT = 150
 MAX_NEW_TAGS = 2
 # Batches after the first run this many at a time (as bulk tagging).
 _PARALLEL_BATCHES = 4
+# The ontology rules go after the skill and instruction system messages, before the user payload.
+_RULES_MESSAGE_INDEX = 2
 
 _REQUEST = "Suggest tags for these notes."
 _VOCABULARY_SCOPE = "The accepted_vocabulary lists the user's existing tags that this request may see."
@@ -246,7 +248,7 @@ def request_messages(request: NoteTagRequest, index: int, prior_batch_new_tags: 
     messages = tag_batch_messages(
         tag_skill=request.tag_skill, vocabulary_scope=_VOCABULARY_SCOPE, focus="both", user_payload=user_payload,
     )
-    messages.insert(2, {"role": "system", "content": request.rules})
+    messages.insert(_RULES_MESSAGE_INDEX, {"role": "system", "content": request.rules})
     return messages
 
 

@@ -20,7 +20,7 @@ from typing import Optional, Tuple
 from app.services.inline_image_occurrences import INLINE_IMAGE_TAG_RE
 
 _DATA_SRC_RE = re.compile(
-    r"""\ssrc\s*=\s*(["'])data:image/[a-z0-9.+-]+;base64,([A-Za-z0-9+/=\s]+)\1""",
+    r"""\ssrc\s*=\s*(["'])data:image/[a-z0-9.+-]+;base64,(?P<payload>[A-Za-z0-9+/=\s]+)\1""",
     re.IGNORECASE,
 )
 _SIZE_ATTRIBUTE_RE = re.compile(r"\s(?:width|height)\s*=", re.IGNORECASE)
@@ -29,6 +29,13 @@ _SIZE_ATTRIBUTE_RE = re.compile(r"\s(?:width|height)\s*=", re.IGNORECASE)
 _HEADER_BASE64_CHARS = 131_072
 _JPEG_STANDALONE_MARKERS = frozenset({0x01, *range(0xD0, 0xD8)})
 _JPEG_FRAME_MARKERS = frozenset({0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF})
+# GIF header: 6-byte signature, then 2-byte width and 2-byte height.
+_GIF_SIZE_HEADER_END = 10
+_JPEG_START_OF_IMAGE = b"\xff\xd8"
+# A JPEG marker is 0xFF plus a code byte.
+_JPEG_MARKER_BYTES = 2
+# A segment's length field is 2 bytes and counts itself.
+_JPEG_SEGMENT_LENGTH_BYTES = 2
 
 
 def _png_size(data: bytes) -> Optional[Tuple[int, int]]:
@@ -38,15 +45,15 @@ def _png_size(data: bytes) -> Optional[Tuple[int, int]]:
 
 
 def _gif_size(data: bytes) -> Optional[Tuple[int, int]]:
-    if len(data) < 10 or data[:6] not in (b"GIF87a", b"GIF89a"):
+    if len(data) < _GIF_SIZE_HEADER_END or data[:6] not in (b"GIF87a", b"GIF89a"):
         return None
-    return int.from_bytes(data[6:8], "little"), int.from_bytes(data[8:10], "little")
+    return int.from_bytes(data[6:8], "little"), int.from_bytes(data[8:_GIF_SIZE_HEADER_END], "little")
 
 
 def _jpeg_size(data: bytes) -> Optional[Tuple[int, int]]:
-    if len(data) < 4 or data[:2] != b"\xff\xd8":
+    if len(data) < 4 or data[:len(_JPEG_START_OF_IMAGE)] != _JPEG_START_OF_IMAGE:
         return None
-    index = 2
+    index = len(_JPEG_START_OF_IMAGE)
     while index + 4 <= len(data):
         if data[index] != 0xFF:
             return None
@@ -55,18 +62,18 @@ def _jpeg_size(data: bytes) -> Optional[Tuple[int, int]]:
             index += 1
             continue
         if marker in _JPEG_STANDALONE_MARKERS:
-            index += 2
+            index += _JPEG_MARKER_BYTES
             continue
-        segment_length = int.from_bytes(data[index + 2:index + 4], "big")
+        segment_length = int.from_bytes(data[index + _JPEG_MARKER_BYTES:index + 4], "big")
         if marker in _JPEG_FRAME_MARKERS:
             if index + 9 > len(data):
                 return None
             height = int.from_bytes(data[index + 5:index + 7], "big")
             width = int.from_bytes(data[index + 7:index + 9], "big")
             return width, height
-        if segment_length < 2:
+        if segment_length < _JPEG_SEGMENT_LENGTH_BYTES:
             return None
-        index += 2 + segment_length
+        index += _JPEG_MARKER_BYTES + segment_length
     return None
 
 
@@ -128,7 +135,7 @@ def add_inline_image_dimensions(html: str) -> str:
         source = _DATA_SRC_RE.search(tag)
         if source is None:
             return tag
-        size = image_size_from_header(_decode_header(source.group(2)))
+        size = image_size_from_header(_decode_header(source.group("payload")))
         if size is None:
             return tag
         width, height = size

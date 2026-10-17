@@ -55,6 +55,9 @@ from app.services.encryption import EncryptionService
 
 router = APIRouter(prefix="/backup", tags=["backup2"])
 _FOLDER_PATH_REQUIRED_MESSAGE = "Folder backups require an absolute folder path."
+# A folder backup id is "folder::<namespace>::<filename>".
+_FOLDER_BACKUP_ID_SEPARATOR = "::"
+_FOLDER_BACKUP_ID_PART_COUNT = 3
 
 
 class BackupSettingsResponse(BaseModel):
@@ -412,11 +415,11 @@ def _folder_backup_id(*, namespace: str, filename: str) -> str:
 def _parse_folder_backup_id(backup_id: str) -> tuple[str, str]:
     if not isinstance(backup_id, str) or backup_id == "":
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="backup_id must be a non-empty string")
-    parts = backup_id.split("::", 2)
-    if len(parts) != 3 or parts[0] != "folder":
+    parts = backup_id.split(_FOLDER_BACKUP_ID_SEPARATOR, _FOLDER_BACKUP_ID_PART_COUNT - 1)
+    if len(parts) != _FOLDER_BACKUP_ID_PART_COUNT or parts[0] != "folder":
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Invalid folder backup_id")
     namespace = validate_namespace(namespace=parts[1])
-    filename = parts[2]
+    filename = parts[-1]
     if filename == "":
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Invalid folder backup_id filename")
     return namespace, filename

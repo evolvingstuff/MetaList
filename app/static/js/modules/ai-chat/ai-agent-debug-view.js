@@ -7,6 +7,9 @@ import {
     setAiDebugExactDetails,
 } from './ai-chat-api.js';
 
+// Spaces per level in the debug JSON shown, copied and downloaded.
+const DEBUG_JSON_INDENT = 2;
+
 
 function requireElement(id, constructor) {
     const element = document.getElementById(id);
@@ -189,7 +192,7 @@ class AgentDebugViewController {
 
     async _exportHistory() {
         const pairs = await loadAiHistory();
-        const blob = new Blob([JSON.stringify(pairs, null, 2)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify(pairs, null, DEBUG_JSON_INDENT)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -207,7 +210,7 @@ class AgentDebugViewController {
         if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
             throw new Error('Clipboard text writing is unavailable');
         }
-        await navigator.clipboard.writeText(JSON.stringify(this._snapshot.run, null, 2));
+        await navigator.clipboard.writeText(JSON.stringify(this._snapshot.run, null, DEBUG_JSON_INDENT));
         this._setStatus('Copied complete trace to clipboard.');
     }
 
@@ -266,7 +269,7 @@ class AgentDebugViewController {
             type.className = 'ai-agent-debug-event-type';
             type.textContent = `${event.type} · ${event.timestamp}`;
             const payload = document.createElement('pre');
-            payload.textContent = JSON.stringify(event.detail, null, 2);
+            payload.textContent = JSON.stringify(event.detail, null, DEBUG_JSON_INDENT);
             details.append(summary, type);
             if (showExactDetails) {
                 details.appendChild(payload);

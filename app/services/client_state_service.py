@@ -29,6 +29,10 @@ from app.services.agent.web_settings import WEB_ACCESS_MODE_PREFERENCE_KEY
 from app.services.agent.web_settings import WEB_ACCESS_MODES
 from app.services.agent.openai_inference import validate_openai_model
 
+_DICTATION_PHRASE_MIN_CHARS = 2
+_DICTATION_PHRASE_MAX_CHARS = 64
+# Sessions whose decrypted preferences may be held in memory at once.
+_PREFERENCES_MEMO_MAX_SESSIONS = 2
 
 _ALLOWED_CLIENT_PREFERENCES = {
     "pref.ai.tagging.vocabulary": {"existing", "new"},
@@ -240,8 +244,15 @@ def _validate_client_preferences(preferences: dict[str, object]) -> dict[str, st
         elif allowed_values == "tag_activity_windows":
             _validate_tag_activity_windows_preference(key=key, value=value)
         elif allowed_values == "dictation_phrase":
-            if len(value) < 2 or len(value) > 64 or re.fullmatch(r"[A-Za-z]+(?: [A-Za-z]+)*", value) is None:
-                raise ClientStateValidationError("Dictation phrases must be words of letters, 2 to 64 characters")
+            if (
+                len(value) < _DICTATION_PHRASE_MIN_CHARS
+                or len(value) > _DICTATION_PHRASE_MAX_CHARS
+                or re.fullmatch(r"[A-Za-z]+(?: [A-Za-z]+)*", value) is None
+            ):
+                raise ClientStateValidationError(
+                    "Dictation phrases must be words of letters, "
+                    f"{_DICTATION_PHRASE_MIN_CHARS} to {_DICTATION_PHRASE_MAX_CHARS} characters"
+                )
         elif allowed_values == "openai_model":
             value = validate_openai_model(value)
         elif allowed_values == "ai_chat_width":
@@ -344,7 +355,7 @@ def _validate_usage_state(usage_state: dict[str, object]) -> dict[str, dict[str,
 # them each time. Keyed by the session token: a new login reads them again; every
 # save goes through save_client_preferences, which replaces the copy. Cleared with
 # the other sensitive caches (lock, logout, restore) and never kept while locked.
-_preferences_in_memory = SensitiveMemo(maxsize=2, max_bytes=256 * KIB)
+_preferences_in_memory = SensitiveMemo(maxsize=_PREFERENCES_MEMO_MAX_SESSIONS, max_bytes=256 * KIB)
 
 
 def _preferences_memory_key(token: str) -> str:

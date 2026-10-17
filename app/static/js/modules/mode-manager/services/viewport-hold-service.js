@@ -26,6 +26,9 @@ const USER_INPUT_EVENTS = ['wheel', 'touchstart', 'keydown', 'mousedown', 'point
 const MIN_MATCH_CHARS = 8;
 // The longest LaTeX delimiter ($$, \\[, \\( and their closers).
 const FORMULA_DELIMITER_CHARS = 2;
+// With no caret in view, the anchor is read a third of the way down the visible area.
+const READING_LINE_DIVISOR = 3;
+const HALF_DIVISOR = 2;
 
 const moduleState = ApplicationState.createFields('viewport-hold-service', {
     session: null,
@@ -371,10 +374,10 @@ export function captureNoteAnchor(noteElement) {
         }
     }
 
-    const readingLineY = inset + (viewportBottom - inset) / 3;
+    const readingLineY = inset + (viewportBottom - inset) / READING_LINE_DIVISOR;
     const contentRect = content.getBoundingClientRect();
     if (contentRect.top <= readingLineY && contentRect.bottom >= readingLineY) {
-        const position = caretPositionAt(contentRect.left + Math.min(40, contentRect.width / 2), readingLineY);
+        const position = caretPositionAt(contentRect.left + Math.min(40, contentRect.width / HALF_DIVISOR), readingLineY);
         if (position !== null && content.contains(position.node)) {
             const reading = textAnchorAt(position.node, position.offset);
             if (reading !== null) {

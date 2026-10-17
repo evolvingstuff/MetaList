@@ -5,6 +5,7 @@ const API_AUTH_BASE = `${API_BASE}/auth`;
 const API_FILES_BASE = `${API_BASE}/files`;
 const API_REMINDERS_BASE = `${API_BASE}/reminders`;
 const API_AI_BASE = `${API_BASE}/ai`;
+const BACKUP_RETENTION_SUGGESTED_KEEP_COUNT = 3;
 
 export const CONFIG = {
     API: {
@@ -230,6 +231,6 @@ export const CONFIG = {
 
     BACKUP: {
         RETENTION_PROMPT_THRESHOLD: 25,
-        RETENTION_SUGGESTED_KEEP_COUNT: 3,
+        RETENTION_SUGGESTED_KEEP_COUNT: BACKUP_RETENTION_SUGGESTED_KEEP_COUNT,
     },
 };

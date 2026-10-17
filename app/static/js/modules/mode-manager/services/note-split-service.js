@@ -1,3 +1,8 @@
+// Before and after the caret.
+const COLLAPSED_SPLIT_SEGMENT_COUNT = 2;
+// Before, selected and after.
+const RANGE_SPLIT_SEGMENT_COUNT = 3;
+
 function assertNormalizedSegment(segment, index) {
     if (!segment || typeof segment !== 'object') {
         throw new Error(`Split segment ${index} must be an object`);
@@ -26,7 +31,7 @@ export function selectSplitSegmentHtmls(normalizedSegments, isCollapsedSelection
     normalizedSegments.forEach((segment, index) => assertNormalizedSegment(segment, index));
 
     if (isCollapsedSelection) {
-        if (normalizedSegments.length !== 2) {
+        if (normalizedSegments.length !== COLLAPSED_SPLIT_SEGMENT_COUNT) {
             throw new Error('Collapsed split requires before and after segments');
         }
         const [beforeSegment, afterSegment] = normalizedSegments;
@@ -36,7 +41,7 @@ export function selectSplitSegmentHtmls(normalizedSegments, isCollapsedSelection
         return [segmentHtml(beforeSegment), segmentHtml(afterSegment)];
     }
 
-    if (normalizedSegments.length !== 3) {
+    if (normalizedSegments.length !== RANGE_SPLIT_SEGMENT_COUNT) {
         throw new Error('Range split requires before, selected, and after segments');
     }
 

@@ -5,6 +5,8 @@ const MERMAID_CODE_SELECTOR = (
     + '.meta-mermaid > .meta-mermaid-source > code.language-mermaid:not([data-mermaid-state])'
 );
 const MERMAID_SCRIPT_URL = '/static/js/vendor/mermaid-11.16.1.min.js';
+// Widths are rounded to this many pixels so tiny resizes keep the same rendering.
+const SIZE_KEY_WIDTH_STEP_PX = 10;
 
 const moduleState = ApplicationState.createFields('mermaid-render-service', {
     mermaidLoadPromise: null,
@@ -31,7 +33,7 @@ function sizeKey(source, sourceBlock) {
     if (container === null) {
         throw new Error('Mermaid source block has no parent element');
     }
-    const width = Math.round(container.clientWidth / 10) * 10;
+    const width = Math.round(container.clientWidth / SIZE_KEY_WIDTH_STEP_PX) * SIZE_KEY_WIDTH_STEP_PX;
     return `${hashSource(source)}:${width}`;
 }
 

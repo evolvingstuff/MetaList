@@ -8,6 +8,8 @@ import { EXCALIDRAW_PREVIEW_VARIANTS } from './excalidraw-scene.js';
 const EMBED_SELECTOR = '.note-file-excalidraw-embed[data-file-ref-id]';
 // Excalidraw exports an empty drawing as a tiny padded square.
 const EMPTY_PREVIEW_MAX_PX = 40;
+// Frame widths within this step share a remembered height.
+const FRAME_WIDTH_BUCKET_PX = 10;
 
 const previewState = ApplicationState.createFields('excalidraw-preview-service', {
     // `${fileId}:${revision}:${variant}` -> Promise<{ status: 'ready', objectUrl } | { status: 'missing' }>
@@ -28,7 +30,7 @@ function frameOf(target) {
 }
 
 function frameHeightKey(target, fileId, revision) {
-    return `${fileId}:${revision}:${Math.round(frameOf(target).clientWidth / 10) * 10}`;
+    return `${fileId}:${revision}:${Math.round(frameOf(target).clientWidth / FRAME_WIDTH_BUCKET_PX) * FRAME_WIDTH_BUCKET_PX}`;
 }
 
 function previewKey(fileId, revision, variant) {

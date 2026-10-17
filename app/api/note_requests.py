@@ -8,7 +8,10 @@ from pydantic import AfterValidator, ConfigDict, Field, with_config
 
 Identifier = Annotated[str, Field(min_length=1, max_length=256)]
 Text = Annotated[str, Field(max_length=MIB)]
-Content = Annotated[str, Field(max_length=16 * MIB)]
+# The longest note content (HTML) one request may carry, in characters: 16 Mi (2**24),
+# so a single request cannot make the server hold an unbounded note.
+MAX_NOTE_CONTENT_CHARS = 16_777_216
+Content = Annotated[str, Field(max_length=MAX_NOTE_CONTENT_CHARS)]
 # Clients build undo contexts as "tab:<id>|search:<executed query>|epoch:<n>", so the
 # limit must admit any Text-sized search query (for example an "Open all references"
 # query ORing every cited note ID) plus that small fixed envelope.

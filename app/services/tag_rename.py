@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import re
 
-from app.services.content_formatting import _unwrap_tag_token
+from app.services.content_formatting import COMMENT_CLOSE, COMMENT_OPEN, MAX_DELIMITER_DEPTH, _unwrap_tag_token
+
 
 
 def delete_tag_from_tag_bar(*, tags: str, tag: str) -> tuple[str, bool]:
@@ -15,13 +16,13 @@ def delete_tag_from_tag_bar(*, tags: str, tag: str) -> tuple[str, bool]:
     changed = False
     index = 0
     while index < len(tags):
-        if tags.startswith('/*', index):
-            end = tags.find('*/', index + 2)
+        if tags.startswith(COMMENT_OPEN, index):
+            end = tags.find(COMMENT_CLOSE, index + len(COMMENT_OPEN))
             if end == -1:
                 out += tags[index:]
                 break
-            out += tags[index : end + 2]
-            index = end + 2
+            out += tags[index : end + len(COMMENT_CLOSE)]
+            index = end + len(COMMENT_CLOSE)
             continue
 
         ch = tags[index]
@@ -38,7 +39,7 @@ def delete_tag_from_tag_bar(*, tags: str, tag: str) -> tuple[str, bool]:
             opener_run = 1
             while index + opener_run < len(tags) and tags[index + opener_run] == opener:
                 opener_run += 1
-            if opener_run <= 3:
+            if opener_run <= MAX_DELIMITER_DEPTH:
                 closer = {"[": "]", "{": "}", "(": ")"}[opener]
                 needle = closer * opener_run
                 close_at = tags.find(needle, index + opener_run)
@@ -97,13 +98,13 @@ def rename_tag_in_tag_bar(*, tags: str, old: str, new: str) -> tuple[str, bool]:
     changed = False
     index = 0
     while index < len(tags):
-        if tags.startswith('/*', index):
-            end = tags.find('*/', index + 2)
+        if tags.startswith(COMMENT_OPEN, index):
+            end = tags.find(COMMENT_CLOSE, index + len(COMMENT_OPEN))
             if end == -1:
                 out += tags[index:]
                 break
-            out += tags[index : end + 2]
-            index = end + 2
+            out += tags[index : end + len(COMMENT_CLOSE)]
+            index = end + len(COMMENT_CLOSE)
             continue
 
         ch = tags[index]
@@ -120,7 +121,7 @@ def rename_tag_in_tag_bar(*, tags: str, old: str, new: str) -> tuple[str, bool]:
             opener_run = 1
             while index + opener_run < len(tags) and tags[index + opener_run] == opener:
                 opener_run += 1
-            if opener_run <= 3:
+            if opener_run <= MAX_DELIMITER_DEPTH:
                 closer = {"[": "]", "{": "}", "(": ")"}[opener]
                 needle = closer * opener_run
                 close_at = tags.find(needle, index + opener_run)
@@ -195,13 +196,13 @@ def toggle_meta_tag_pair_in_tag_bar(*, tags: str, tag_a: str, tag_b: str) -> tup
     changed = False
     index = 0
     while index < len(tags):
-        if tags.startswith('/*', index):
-            end = tags.find('*/', index + 2)
+        if tags.startswith(COMMENT_OPEN, index):
+            end = tags.find(COMMENT_CLOSE, index + len(COMMENT_OPEN))
             if end == -1:
                 out += tags[index:]
                 break
-            out += tags[index : end + 2]
-            index = end + 2
+            out += tags[index : end + len(COMMENT_CLOSE)]
+            index = end + len(COMMENT_CLOSE)
             continue
 
         ch = tags[index]
@@ -218,7 +219,7 @@ def toggle_meta_tag_pair_in_tag_bar(*, tags: str, tag_a: str, tag_b: str) -> tup
             opener_run = 1
             while index + opener_run < len(tags) and tags[index + opener_run] == opener:
                 opener_run += 1
-            if opener_run <= 3:
+            if opener_run <= MAX_DELIMITER_DEPTH:
                 closer = {"[": "]", "{": "}", "(": ")"}[opener]
                 needle = closer * opener_run
                 close_at = tags.find(needle, index + opener_run)
@@ -247,11 +248,11 @@ def toggle_meta_tag_pair_in_tag_bar(*, tags: str, tag_a: str, tag_b: str) -> tup
 def _has_global_tag(*, tags: str, target: str) -> bool:
     index = 0
     while index < len(tags):
-        if tags.startswith('/*', index):
-            end = tags.find('*/', index + 2)
+        if tags.startswith(COMMENT_OPEN, index):
+            end = tags.find(COMMENT_CLOSE, index + len(COMMENT_OPEN))
             if end == -1:
                 return False
-            index = end + 2
+            index = end + len(COMMENT_CLOSE)
             continue
 
         ch = tags[index]
@@ -267,7 +268,7 @@ def _has_global_tag(*, tags: str, target: str) -> bool:
             opener_run = 1
             while index + opener_run < len(tags) and tags[index + opener_run] == opener:
                 opener_run += 1
-            if opener_run <= 3:
+            if opener_run <= MAX_DELIMITER_DEPTH:
                 closer = {"[": "]", "{": "}", "(": ")"}[opener]
                 needle = closer * opener_run
                 close_at = tags.find(needle, index + opener_run)

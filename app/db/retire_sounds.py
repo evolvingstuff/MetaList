@@ -7,6 +7,8 @@ import sqlite3
 
 SOUND_FIELDS = frozenset({'popup_sound_enabled', 'popup_sound_id', 'ack_sound_enabled', 'ack_sound_id'})
 SOUND_PREFERENCES = frozenset({f'pref.reminder_{prefix}{field}' for prefix in ('', 'default_') for field in SOUND_FIELDS})
+# PRAGMA database_list rows are (seq, name, file).
+_DATABASE_LIST_FILE_COLUMN = 2
 
 
 def _clean_json(value, nonce, tag, removed_keys, encryption_service):
@@ -33,9 +35,10 @@ def _clean_json(value, nonce, tag, removed_keys, encryption_service):
 def retire_sounds(*, connection, encryption_enabled, encryption_service) -> int:
     rewritten = 0
     for row in connection.execute('SELECT id, payload_json, payload_encryption_nonce, payload_encryption_tag FROM reminders').fetchall():
-        cleaned = _clean_json(row[1], row[2], row[3], SOUND_FIELDS, encryption_service)
+        reminder_id, payload_json, payload_nonce, payload_tag = row
+        cleaned = _clean_json(payload_json, payload_nonce, payload_tag, SOUND_FIELDS, encryption_service)
         if cleaned is not None:
-            connection.execute('UPDATE reminders SET payload_json=?, payload_encryption_nonce=?, payload_encryption_tag=? WHERE id=?', (*cleaned, row[0]))
+            connection.execute('UPDATE reminders SET payload_json=?, payload_encryption_nonce=?, payload_encryption_tag=? WHERE id=?', (*cleaned, reminder_id))
             rewritten += 1
     for name, removed_keys in (('client_preferences', SOUND_PREFERENCES), ('command_palette_usage', frozenset({'form.manage_sounds'}))):
         row = connection.execute(f'SELECT {name}_json, {name}_encryption_nonce, {name}_encryption_tag FROM app_settings WHERE id=1').fetchone()
@@ -45,7 +48,7 @@ def retire_sounds(*, connection, encryption_enabled, encryption_service) -> int:
         if cleaned is not None:
             connection.execute(f'UPDATE app_settings SET {name}_json=?, {name}_encryption_nonce=?, {name}_encryption_tag=? WHERE id=1', cleaned)
             rewritten += 1
-    database = connection.execute('PRAGMA database_list').fetchone()[2]
+    database = connection.execute('PRAGMA database_list').fetchone()[_DATABASE_LIST_FILE_COLUMN]
     if database:
         notes = Path(database)
         target = notes.with_name(f'{notes.stem}.files{notes.suffix}')

@@ -114,7 +114,7 @@ def prepare_update(*, target_version: str, environ: Mapping[str, str]) -> list[s
             candidate_python, "-I", "-c",
             "import sys,json,importlib.metadata; print(json.dumps([list(sys.version_info[:2]),importlib.metadata.version('metalist')]))",
         ], environ=stage_environ, directory=directory))
-        if identity != [list(sys.version_info[:2]), target_version]:
+        if identity != [[sys.version_info.major, sys.version_info.minor], target_version]:
             raise RuntimeError("Update preflight changed Python or installed the wrong MetaList version")
         _run_checked([uv_executable, "pip", "check", "--python", candidate_python], environ=stage_environ, directory=directory)
         frozen = _run_checked([uv_executable, "pip", "freeze", "--python", candidate_python], environ=stage_environ, directory=directory)

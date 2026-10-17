@@ -9,6 +9,9 @@ from uuid import uuid4
 
 from app.version import __version__
 
+# Event durations are kept to the microsecond.
+_DURATION_MS_DECIMALS = 3
+
 
 class AgentTraceStore:
     def __init__(self) -> None:
@@ -114,7 +117,7 @@ class AgentTraceStore:
                     "type": event_type,
                     "label": label,
                     "timestamp": self._now_iso(),
-                    "duration_ms": round(duration_ms, 3),
+                    "duration_ms": round(duration_ms, _DURATION_MS_DECIMALS),
                     "detail": deepcopy(detail),
                 }
             )

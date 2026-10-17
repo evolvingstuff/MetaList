@@ -63,6 +63,11 @@ _HTML_SEGMENT_RE = re.compile(r"(<[^>]+>)")
 _OPEN_TAG_RE = re.compile(r"^<\s*([a-zA-Z][a-zA-Z0-9:-]*)\b")
 _CLOSE_TAG_RE = re.compile(r"^<\s*/\s*([a-zA-Z][a-zA-Z0-9:-]*)\s*>")
 _VOID_TAGS = frozenset({"br", "hr", "img"})
+# Inline code is three HTML segments: <code>, its text, </code>.
+_INLINE_CODE_SEGMENT_COUNT = 3
+_INLINE_CODE_CLOSE_OFFSET = 2
+# Sorting needs at least two adjacent citation markers.
+_MIN_CITATION_MARKER_RUN = 2
 _CITATION_SUPPRESSING_TAGS = frozenset({"a", "code", "pre"})
 _UUID_DASH_TRANSLATION = str.maketrans(
     {
@@ -493,11 +498,11 @@ def _replace_note_citations(
         can_replace_inline_code = (
             opening_tag == "code"
             and not any(tag in _CITATION_SUPPRESSING_TAGS for tag in open_tags)
-            and segment_index + 2 < len(segments)
+            and segment_index + _INLINE_CODE_CLOSE_OFFSET < len(segments)
         )
         if can_replace_inline_code:
             code_text = segments[segment_index + 1]
-            closing_code_segment = segments[segment_index + 2]
+            closing_code_segment = segments[segment_index + _INLINE_CODE_CLOSE_OFFSET]
             closing_code_match = _CLOSE_TAG_RE.match(closing_code_segment)
             is_complete_inline_code = (
                 closing_code_match is not None
@@ -519,7 +524,7 @@ def _replace_note_citations(
                             continue
                         seen_note_ids.add(note_id)
                         cited_note_ids.append(note_id)
-                    segment_index += 3
+                    segment_index += _INLINE_CODE_SEGMENT_COUNT
                     continue
         if opening_tag not in _VOID_TAGS and not segment.rstrip().endswith("/>"):
             open_tags.append(opening_tag)
@@ -709,7 +714,7 @@ def _replace_web_citations(
 
 def _sort_adjacent_citation_marker_runs(rendered_text: str) -> str:
     marker_matches = list(_CITATION_MARKER_HTML_RE.finditer(rendered_text))
-    if len(marker_matches) < 2:
+    if len(marker_matches) < _MIN_CITATION_MARKER_RUN:
         return rendered_text
     output: list[str] = []
     cursor = 0

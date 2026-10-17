@@ -217,7 +217,7 @@ function shiftedEditingFocus(focus, textBefore, textAfter) {
 // around it, so the note's menu opens instead of the browser's.
 function resolveEventElement(target) {
     let node = target;
-    if (node && node.nodeType === 3) {
+    if (node && node.nodeType === Node.TEXT_NODE) {
         node = node.parentElement;
     }
     while (node instanceof Element && !(node instanceof HTMLElement)) {

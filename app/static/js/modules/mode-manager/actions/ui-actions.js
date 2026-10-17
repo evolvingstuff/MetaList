@@ -17,6 +17,8 @@ import {
     captureEditingFocus, captureViewportRoot, holdViewportRoot, placeCaretAtClickAnchor, restoreEditingFocus,
 } from '../services/viewport-hold-service.js';
 
+const PERF_LOG_MS_DECIMALS = 2;
+
 const moduleState = ApplicationState.createFields('ui-actions', {
     viewRequestInFlight: false,
 });
@@ -198,7 +200,7 @@ export async function actionRefreshAndMaybeSelect(options) {
         const roundtripMs = performance.now() - requestStartedAt;
         if (CONFIG.DEBUG.LOG_API_CALLS) {
             console.log(' [PERF] notes.view roundtrip:', {
-                ms: Number(roundtripMs.toFixed(2))
+                ms: Number(roundtripMs.toFixed(PERF_LOG_MS_DECIMALS))
             });
         }
 
@@ -325,7 +327,7 @@ export async function actionRefreshAndMaybeSelect(options) {
 
         if (options.startedAt) {  // otherwise called by background polling or palette actions
             console.log(' [PERF] notes.view render:', {
-                ms: Number(renderMs.toFixed(2))
+                ms: Number(renderMs.toFixed(PERF_LOG_MS_DECIMALS))
             });
         }
 

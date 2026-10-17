@@ -31,11 +31,13 @@ from dataclasses import dataclass
 
 from pydantic import BaseModel
 
-from app.services.agent.token_estimation import estimate_text_tokens
+from app.services.agent.token_estimation import PER_MESSAGE_OVERHEAD_TOKENS, REPLY_PRIMING_TOKENS, estimate_text_tokens
 
 
 _TOOL_NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 _PLAIN_ROLES = frozenset({"system", "user"})
+# Chat framing: the reply is primed with a few tokens, and each message and tool call adds its own.
+_PER_TOOL_CALL_OVERHEAD_TOKENS = 3
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,13 +106,13 @@ def validate_tool_conversation(messages: list[dict[str, object]]) -> None:
 def estimate_tool_conversation_tokens(messages: list[dict[str, object]]) -> int:
     """Approximate input tokens of a tool conversation (messages only, not tool schemas)."""
     validate_tool_conversation(messages)
-    estimate = 3
+    estimate = REPLY_PRIMING_TOKENS
     for message in messages:
-        estimate += 3 + estimate_text_tokens(message["role"])
+        estimate += PER_MESSAGE_OVERHEAD_TOKENS + estimate_text_tokens(message["role"])
         estimate += estimate_text_tokens(message["content"])
         if "tool_calls" in message:
             for call in message["tool_calls"]:
-                estimate += 3 + estimate_text_tokens(call["name"]) + estimate_text_tokens(call["arguments"])
+                estimate += _PER_TOOL_CALL_OVERHEAD_TOKENS + estimate_text_tokens(call["name"]) + estimate_text_tokens(call["arguments"])
         if message["role"] == "tool":
             estimate += estimate_text_tokens(message["name"])
     return estimate

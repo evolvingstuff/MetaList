@@ -45,6 +45,7 @@ EXCALIDRAW_FILE_EXTENSION = ".excalidraw"
 FILE_PREVIEW_MIME_TYPE = "image/svg+xml"
 # Only files MetaList edits itself may be replaced in place; other attachments stay immutable.
 _EDITABLE_THUMBNAIL_KINDS = {"excalidraw"}
+_XML_DECLARATION_END = "?>"
 
 
 class FileRevisionConflict(Exception):
@@ -839,9 +840,9 @@ def _validate_svg_preview(*, svg_bytes: bytes, variant: str) -> None:
         raise ValueError("Attachment exceeds the configured size limit")
     text = _decode_utf8_strict(svg_bytes, description=f"{variant} preview").strip()
     if text.startswith("<?xml"):
-        if "?>" not in text:
+        if _XML_DECLARATION_END not in text:
             raise InvalidFileContent(f"{variant} preview has an unterminated XML declaration")
-        text = text[text.index("?>") + 2:].lstrip()
+        text = text[text.index(_XML_DECLARATION_END) + len(_XML_DECLARATION_END):].lstrip()
     if not text.startswith("<svg") or not text.endswith("</svg>"):
         raise InvalidFileContent(f"{variant} preview must be an SVG document")
 

@@ -15,6 +15,7 @@ from app.utils.sent_fields import sent_or_none
 
 
 _SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+_BEARER_HEADER_PART_COUNT = 2  # "Bearer <token>"
 
 
 @dataclass(frozen=True)
@@ -101,7 +102,7 @@ def _is_bearer_authorization(authorization_header: str | None) -> bool:
     if authorization_header is None:
         return False
     parts = authorization_header.split()
-    return len(parts) == 2 and parts[0].casefold() == "bearer" and parts[1] != ""
+    return len(parts) == _BEARER_HEADER_PART_COUNT and parts[0].casefold() == "bearer" and parts[1] != ""
 
 
 def evaluate_request_boundary(

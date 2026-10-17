@@ -1,6 +1,9 @@
 import { ApplicationState } from '../../application-state.js';
 import { scrollWindowToYFastAnimated } from './animated-scroll-service.js';
 
+// Divisor for the middle of the viewport below the top inset.
+const HALF = 2;
+
 const moduleState = ApplicationState.createFields('scroll-restoration-service', {
     pendingScrollNoteIntoViewAnimationFrame: null,
     pendingScrollNoteIntoViewTimeout: null,
@@ -19,7 +22,7 @@ function clampNumber(value, min, max) {
 function getViewportReferenceY(anchorBias) {
     const topInset = getViewportTopInset();
     if (anchorBias === 'center') {
-        return topInset + (window.innerHeight - topInset) / 2;
+        return topInset + (window.innerHeight - topInset) / HALF;
     }
     if (anchorBias === 'top') {
         return topInset;

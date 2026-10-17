@@ -1,3 +1,4 @@
+import { parseDecimalInteger } from '../../decimal-integer.js';
 import { ApplicationState } from '../../application-state.js';
 import { rethrowUnexpectedError } from '../../expected-errors.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
@@ -31,7 +32,7 @@ function _isRestoreTransitionActive() {
         sessionStorage.removeItem(RESTORE_TRANSITION_UNTIL_KEY);
         return false;
     }
-    const untilMs = Number.parseInt(rawValue, 10);
+    const untilMs = parseDecimalInteger(rawValue);
     if (!Number.isInteger(untilMs)) {
         sessionStorage.removeItem(RESTORE_TRANSITION_UNTIL_KEY);
         return false;
