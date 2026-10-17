@@ -41,6 +41,7 @@ import {checkEditableEmbeds} from './browser-editable-embed-regressions.mjs';
 import {checkCollapseOutlines} from './browser-collapse-outline-regressions.mjs';
 import {checkTabSwitching} from './browser-tab-switch-regressions.mjs';
 import {checkAiChatRefusal} from './browser-ai-chat-refusal-regressions.mjs';
+import {checkSearchSuggestions} from './browser-search-suggestion-regressions.mjs';
 import {checkBackupReminder} from './browser-backup-reminder-regressions.mjs';
 import {checkReminderSurfaceWhileEditing} from './browser-reminder-surface-regressions.mjs';
 import {checkFloatingControlsWhileEditing} from './browser-floating-control-regressions.mjs';
@@ -112,7 +113,7 @@ try {
   browser.on('targetdestroyed', target => lifecycle(`target destroyed ${target.type()} ${target.url()}`));
   browser.on('targetcreated', target => lifecycle(`target created ${target.type()} ${target.url()}`));
   const updateFixture = await prepareUpdateFixture(page);
-  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'move-to-bottom', 'list-edges', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews', 'image-menu', 'tag-suggestion-menu', 'paste-formats', 'ai-note-tags', 'robot-proposals', 'export-print', 'url-cleaning', 'reference-paste', 'click-caret', 'editable-embeds', 'delete-warning', 'collapse-outlines', 'backup-reminder', 'reminder-surface', 'floating-controls', 'tab-switching', 'ai-chat-refusal'].includes(process.env.BROWSER_TEST_SUITE)) {
+  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'move-to-bottom', 'list-edges', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews', 'image-menu', 'tag-suggestion-menu', 'paste-formats', 'ai-note-tags', 'robot-proposals', 'export-print', 'url-cleaning', 'reference-paste', 'click-caret', 'editable-embeds', 'delete-warning', 'collapse-outlines', 'backup-reminder', 'reminder-surface', 'floating-controls', 'tab-switching', 'ai-chat-refusal', 'search-suggestions'].includes(process.env.BROWSER_TEST_SUITE)) {
     // The focused suite does not run checkAppUpdates, which normally releases
     // this intentionally held request. Avoid an unrelated update notice too.
     updateFixture.outage = true;
@@ -202,6 +203,10 @@ try {
     await checkDeleteWarning(page);
     assert.deepEqual(errors, []);
     console.log(`PASS delete warning regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'search-suggestions') {
+    await checkSearchSuggestions(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS search suggestion regressions in ${await browser.version()}`);
   } else if (process.env.BROWSER_TEST_SUITE === 'ai-chat-refusal') {
     await checkAiChatRefusal(page);
     assert.deepEqual(errors, []);

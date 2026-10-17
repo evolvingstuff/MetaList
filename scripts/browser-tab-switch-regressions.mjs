@@ -39,8 +39,6 @@ async function createNotes(page) {
 async function searchFor(page, query) {
   await page.click('#search-input', {clickCount: 3});
   await page.keyboard.type(query);
-  await idle(page);
-  await pause(SETTLE_MS);
   await page.keyboard.press('Enter');
   await idle(page);
   await pause(SETTLE_MS);
