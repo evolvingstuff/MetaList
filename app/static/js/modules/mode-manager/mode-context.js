@@ -16,6 +16,13 @@ const SCROLL_RESTORE_USER_MOVE_PX = 60;
 // The last scroll-restore pass, after late layout shifts such as images loading.
 const LATE_SCROLL_RESTORE_DELAY_MS = 250;
 
+function requireEmitOption(options, caller) {
+    if (!options || typeof options !== 'object' || typeof options.emit !== 'boolean') {
+        throw new Error(`${caller} requires options.emit boolean`);
+    }
+    return options.emit;
+}
+
 class ModeContext {
     constructor() {
         this._modalScopes = new Map();
@@ -1535,13 +1542,12 @@ class ModeContext {
     }
 
     updateActiveTabScroll(scrollY) {
-        return this.updateTabScroll(this._activeTabId, scrollY, true);
+        return this.updateTabScroll(this._activeTabId, scrollY, { emit: true });
     }
 
-	updateTabScroll(tabId, scrollY, emit) {
-		if (typeof emit === 'undefined') {
-			emit = true;
-		}
+	// options.emit: whether listeners hear of the change (the tab state is saved).
+	updateTabScroll(tabId, scrollY, options) {
+		const emit = requireEmitOption(options, 'updateTabScroll');
 		if (typeof scrollY !== 'number' || scrollY < 0) {
 			throw new Error('scrollY must be a non-negative number');
 		}
@@ -1555,17 +1561,13 @@ class ModeContext {
         return this;
     }
 
-	updateActiveTabScrollAnchor(scrollAnchor, emit) {
-		if (typeof emit === 'undefined') {
-			emit = true;
-		}
-		return this.updateTabScrollAnchor(this._activeTabId, scrollAnchor, emit);
+	updateActiveTabScrollAnchor(scrollAnchor) {
+		return this.updateTabScrollAnchor(this._activeTabId, scrollAnchor, { emit: true });
 	}
 
-	updateTabScrollAnchor(tabId, scrollAnchor, emit) {
-		if (typeof emit === 'undefined') {
-			emit = true;
-		}
+	// options.emit: whether listeners hear of the change (the tab state is saved).
+	updateTabScrollAnchor(tabId, scrollAnchor, options) {
+		const emit = requireEmitOption(options, 'updateTabScrollAnchor');
 		const entry = this._ensureTabEntry(tabId);
 		if (scrollAnchor !== null && typeof scrollAnchor !== 'object') {
 			throw new Error('scrollAnchor must be an object or null');

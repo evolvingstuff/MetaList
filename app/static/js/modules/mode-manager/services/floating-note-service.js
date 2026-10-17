@@ -73,7 +73,7 @@ export function closeFloatingNote(id) {
     if (moduleState.order.length === 0) {
         window.clearInterval(moduleState.timer);
         moduleState.timer = null;
-        for (const type of ISOLATED_EVENTS) window.removeEventListener(type, handleWindowEvent, true);
+        for (const type of ISOLATED_EVENTS) window.removeEventListener(type, handleWindowEvent, { capture: true });
         window.removeEventListener('resize', fitWindows);
         window.removeEventListener('blur', finishGesture);
         moduleState.listening = false;
@@ -92,7 +92,7 @@ function fitWindows() {
 
 function startWindowEvents() {
     if (moduleState.listening) return;
-    for (const type of ISOLATED_EVENTS) window.addEventListener(type, handleWindowEvent, true);
+    for (const type of ISOLATED_EVENTS) window.addEventListener(type, handleWindowEvent, { capture: true });
     window.addEventListener('resize', fitWindows);
     window.addEventListener('blur', finishGesture);
     moduleState.listening = true;

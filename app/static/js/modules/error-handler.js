@@ -85,7 +85,7 @@ export const ErrorHandler = {
             throw new Error('ErrorHandler.handleHttpError requires message string');
         }
         console.log('[ErrorHandler] HTTP error');
-        this.showErrorBanner(message, 'error', HTTP_ERROR_BANNER_SECONDS * MS_PER_SECOND, true);
+        this.showErrorBanner(message, 'error', HTTP_ERROR_BANNER_SECONDS * MS_PER_SECOND, { closable: true });
     },
     
     /**
@@ -194,13 +194,14 @@ export const ErrorHandler = {
         if (typeof type !== 'string' || type.length === 0) {
             throw new Error('ErrorHandler.showPersistentErrorBanner requires type string');
         }
-        this.showErrorBanner(message, type, 0, false); // duration = 0 means no auto-hide, showClose = false
+        this.showErrorBanner(message, type, 0, { closable: false }); // duration 0: no auto-hide
     },
     
     /**
      * Show error banner at top of screen
      */
-    showErrorBanner(message, type, duration, showClose) {
+    // options.closable: whether the banner shows a × to close it.
+    showErrorBanner(message, type, duration, options) {
         if (typeof message !== 'string' || message.length === 0) {
             throw new Error('ErrorHandler.showErrorBanner requires message string');
         }
@@ -210,9 +211,10 @@ export const ErrorHandler = {
         if (typeof duration !== 'number') {
             throw new Error('ErrorHandler.showErrorBanner requires duration number');
         }
-        if (typeof showClose !== 'boolean') {
-            throw new Error('ErrorHandler.showErrorBanner requires showClose boolean');
+        if (!options || typeof options !== 'object' || typeof options.closable !== 'boolean') {
+            throw new Error('ErrorHandler.showErrorBanner requires options.closable boolean');
         }
+        const showClose = options.closable;
         // Remove any existing banner
         this.hideErrorBanner();
         
@@ -222,7 +224,7 @@ export const ErrorHandler = {
         banner.className = `error-banner error-banner-${type}`;
         
         const closeButton = showClose ? 
-            `<button class="error-banner-close" onclick="ErrorHandler.hideErrorBanner()" aria-label="Close">×</button>` : '';
+            `<button type="button" class="error-banner-close" aria-label="Close">×</button>` : '';
             
         banner.innerHTML = `
             <div class="error-banner-content">
@@ -233,6 +235,10 @@ export const ErrorHandler = {
         `;
         // Plain text: messages can quote what the user typed or what an AI answered.
         banner.querySelector('.error-banner-message').textContent = message;
+        // A listener, not an inline onclick: the Content-Security-Policy blocks inline handlers.
+        if (showClose) {
+            banner.querySelector('.error-banner-close').addEventListener('click', () => this.hideErrorBanner());
+        }
         
         // Add to page
         document.body.insertBefore(banner, document.body.firstChild);
@@ -268,7 +274,7 @@ export const ErrorHandler = {
         if (typeof duration !== 'number') {
             throw new Error('ErrorHandler.showSuccessBanner requires duration number');
         }
-        this.showErrorBanner(message, 'success', duration, false);
+        this.showErrorBanner(message, 'success', duration, { closable: false });
     },
     
     /**
@@ -278,7 +284,7 @@ export const ErrorHandler = {
         if (typeof duration !== 'number') {
             throw new Error('ErrorHandler.showInfoBanner requires duration number');
         }
-        this.showErrorBanner(message, 'info', duration, false);
+        this.showErrorBanner(message, 'info', duration, { closable: false });
     }
 };
 

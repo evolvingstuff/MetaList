@@ -47,7 +47,7 @@ export function initSelectionTracking() {
     if (moduleState.trackingInitialized) {
         return;
     }
-    document.addEventListener('selectionchange', unlessDiagramEditorOpen(handleSelectionChange), true);
+    document.addEventListener('selectionchange', unlessDiagramEditorOpen(handleSelectionChange), { capture: true });
     moduleState.trackingInitialized = true;
 }
 

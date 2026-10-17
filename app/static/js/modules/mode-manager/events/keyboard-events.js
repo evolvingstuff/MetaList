@@ -1646,7 +1646,7 @@ function showImageTooLargeForEmbedError(fileName) {
         `Could not shrink ${label} enough. Target ${formatKiB(targetBytes)}, hard max ${formatMiB(maxBytes)}.`,
         'error',
         IMAGE_SHRINK_FAILURE_BANNER_SECONDS * MS_PER_SECOND,
-        true,
+        { closable: true },
     );
 }
 
@@ -2297,7 +2297,7 @@ async function pasteClipboardImagesAsEmbeddedContent(files, selectionRange) {
                 `Image too large to process. Max allowed is ${maxMiB} MiB.`,
                 'error',
                 IMAGE_TOO_LARGE_BANNER_SECONDS * MS_PER_SECOND,
-                true,
+                { closable: true },
             );
             return false;
         }
@@ -2636,7 +2636,7 @@ function handleDropEvent(event) {
                         'Dropped image files did not start because another command is still running.',
                         'error',
                         COMMAND_BUSY_BANNER_SECONDS * MS_PER_SECOND,
-                        true,
+                        { closable: true },
                     );
                 })
                 .catch((error) => {
@@ -2650,7 +2650,7 @@ function handleDropEvent(event) {
                         'Failed to handle dropped image files.',
                         'error',
                         FAILURE_BANNER_SECONDS * MS_PER_SECOND,
-                        true,
+                        { closable: true },
                     );
                 });
             return;
@@ -2686,7 +2686,7 @@ function handleDropEvent(event) {
                     'File drop did not start because another command is still running.',
                     'error',
                     COMMAND_BUSY_BANNER_SECONDS * MS_PER_SECOND,
-                    true,
+                    { closable: true },
                 );
                 return;
             }
@@ -2709,7 +2709,7 @@ function handleDropEvent(event) {
                     'Failed to handle dropped image files.',
                     'error',
                     FAILURE_BANNER_SECONDS * MS_PER_SECOND,
-                    true,
+                    { closable: true },
                 );
                 return;
             }
@@ -2717,7 +2717,7 @@ function handleDropEvent(event) {
                 `File drop failed: ${message}`,
                 'error',
                 FAILURE_WITH_DETAIL_BANNER_SECONDS * MS_PER_SECOND,
-                true,
+                { closable: true },
             );
         });
 }
@@ -2912,7 +2912,7 @@ function handlePasteEvent(event) {
                         'Pasted image file did not start because another command is still running.',
                         'error',
                         COMMAND_BUSY_BANNER_SECONDS * MS_PER_SECOND,
-                        true,
+                        { closable: true },
                     );
                     return;
                 }
@@ -2931,7 +2931,7 @@ function handlePasteEvent(event) {
                     'Failed to handle pasted image file.',
                     'error',
                     FAILURE_BANNER_SECONDS * MS_PER_SECOND,
-                    true,
+                    { closable: true },
                 );
             });
         return;
@@ -2949,7 +2949,7 @@ function handlePasteEvent(event) {
             'Clipboard contains a file reference/icon preview, not image bytes. Open the image and copy the pixels, then paste again.',
             'error',
             FILE_REFERENCE_PASTE_BANNER_SECONDS * MS_PER_SECOND,
-            true,
+            { closable: true },
         );
         return;
     }
@@ -3012,7 +3012,7 @@ function handlePasteEvent(event) {
                         'Copied note paste did not start because another command is still running.',
                         'error',
                         COMMAND_BUSY_BANNER_SECONDS * MS_PER_SECOND,
-                        true,
+                        { closable: true },
                     );
                 })
                 .catch((error) => {
@@ -3025,7 +3025,7 @@ function handlePasteEvent(event) {
                         'Failed to paste copied note into a new top note.',
                         'error',
                         FAILURE_BANNER_SECONDS * MS_PER_SECOND,
-                        true,
+                        { closable: true },
                     );
                 });
 		}
@@ -3060,7 +3060,7 @@ function handlePasteEvent(event) {
                         'Failed to sanitize pasted HTML.',
                         'error',
                         FAILURE_BANNER_SECONDS * MS_PER_SECOND,
-                        true,
+                        { closable: true },
                     );
                 });
         } else if (shouldCreateTopNote) {
@@ -3075,7 +3075,7 @@ function handlePasteEvent(event) {
                             'Paste did not start because another command is still running.',
                             'error',
                             COMMAND_BUSY_BANNER_SECONDS * MS_PER_SECOND,
-                            true,
+                            { closable: true },
                         );
                         return;
                     }
@@ -3094,7 +3094,7 @@ function handlePasteEvent(event) {
                         'Failed to paste into a new top note.',
                         'error',
                         FAILURE_BANNER_SECONDS * MS_PER_SECOND,
-                        true,
+                        { closable: true },
                     );
                 });
         } else {
@@ -3495,7 +3495,7 @@ function snapshotActiveTabScrollState() {
     const nextScrollAnchor = computeScrollAnchor({ anchorBias: 'auto' });
     // Tab commands can snapshot a view with no root anchor, leaving both anchors null.
     if (!areScrollAnchorsEqual(ModeContext.getTabScrollAnchor(ModeContext.activeTabId), nextScrollAnchor)) {
-        ModeContext.updateActiveTabScrollAnchor(nextScrollAnchor, true);
+        ModeContext.updateActiveTabScrollAnchor(nextScrollAnchor);
     }
 }
 
@@ -3765,7 +3765,7 @@ async function runReferenceSearchInActiveTab(referenceQuery, context) {
     }
     // updateActiveTabScroll and resetRootTracking leave anchors null.
     if (ModeContext.getTabScrollAnchor(ModeContext.activeTabId) !== null) {
-        ModeContext.updateActiveTabScrollAnchor(null, true);
+        ModeContext.updateActiveTabScrollAnchor(null);
     }
     // resetRootTracking clears the root anchor for the reference search.
     if (ModeContext.getRootAnchorId() !== null) {
@@ -3828,7 +3828,7 @@ async function moveTabContext(tabId, hoveredTabId) {
     const nextScrollAnchor = computeScrollAnchor({ anchorBias: 'auto' });
     // Reordering tabs can snapshot a view with no root anchor, leaving both anchors null.
     if (!areScrollAnchorsEqual(ModeContext.getTabScrollAnchor(ModeContext.activeTabId), nextScrollAnchor)) {
-        ModeContext.updateActiveTabScrollAnchor(nextScrollAnchor, true);
+        ModeContext.updateActiveTabScrollAnchor(nextScrollAnchor);
     }
 
     ModeContext.moveTabToHoveredSlot(tabId, hoveredTabId);
@@ -3970,7 +3970,7 @@ async function persistCurrentTabState() {
     const nextScrollAnchor = computeScrollAnchor({ anchorBias: 'auto' });
     // Explicit tab-state persists can run when the stored anchor already matches the DOM anchor.
     if (!areScrollAnchorsEqual(ModeContext.getTabScrollAnchor(ModeContext.activeTabId), nextScrollAnchor)) {
-        ModeContext.updateActiveTabScrollAnchor(nextScrollAnchor, true);
+        ModeContext.updateActiveTabScrollAnchor(nextScrollAnchor);
     }
     await persistTabStateSnapshot();
 }

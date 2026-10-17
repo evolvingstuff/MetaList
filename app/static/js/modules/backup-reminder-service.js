@@ -48,8 +48,8 @@ class BackupReminderService {
         this._preferences = preferences;
         this._fetchBackupTimes = fetchBackupTimes;
         this._openBackup = openBackup;
-        document.addEventListener('pointerdown', this._handleInteraction, true);
-        document.addEventListener('keydown', this._handleInteraction, true);
+        document.addEventListener('pointerdown', this._handleInteraction, { capture: true });
+        document.addEventListener('keydown', this._handleInteraction, { capture: true });
         document.addEventListener('visibilitychange', this._handleVisibilityChange);
         ModeContext.addListener(this._handleModeChange);
         await this.check();

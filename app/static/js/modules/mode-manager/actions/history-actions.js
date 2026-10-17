@@ -40,7 +40,7 @@ function applyScrollRestore(scrollRestore, contextLabel) {
     // The server's history snapshot can also preserve the current anchor.
     // Compare after updating Y, since that transition clears the old anchor.
     if (!stateValuesEqual(ModeContext.getTabScrollAnchor(ModeContext.activeTabId), scrollAnchor)) {
-        ModeContext.updateActiveTabScrollAnchor(scrollAnchor, true);
+        ModeContext.updateActiveTabScrollAnchor(scrollAnchor);
     }
 
     const viewAnchorRootId = typeof scrollRestore.viewAnchorRootId === 'string' && scrollRestore.viewAnchorRootId.length > 0
