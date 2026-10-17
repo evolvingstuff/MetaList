@@ -159,7 +159,7 @@ def run(wheel: Path, *, repair: bool) -> None:
             if self.command != "HEAD":
                 self.wfile.write(body)
 
-        def log_message(self, *args):
+        def log_message(self, *args):  # shockharness: ignore[STUB001] reason="the empty override silences the test server's request log"
             pass
 
     with tempfile.TemporaryDirectory(prefix="metalist-update-smoke-") as temporary, ThreadingHTTPServer(("127.0.0.1", 0), Index) as index:

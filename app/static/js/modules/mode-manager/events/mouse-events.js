@@ -2003,7 +2003,7 @@ function handleTodoToggleClick(event) {
         throw new Error('handleTodoToggleClick called without an event object');
     }
     if (!event.target) {
-        throw new Error('Todo toggle click missing target element');
+        throw new Error('Todo toggle click missing target element');  // shockharness: ignore[STUB001] reason="Todo is the @todo toggle's name, not a TODO marker"
     }
 
     const toggleElement = event.target.closest(STATUS_TOGGLE_SELECTOR);
@@ -2017,7 +2017,7 @@ function handleTodoToggleClick(event) {
 
     const noteElement = toggleElement.closest('.note');
     if (!noteElement) {
-        throw new Error('Todo toggle missing parent note element');
+        throw new Error('Todo toggle missing parent note element');  // shockharness: ignore[STUB001] reason="Todo is the @todo toggle's name, not a TODO marker"
     }
     if (noteElement.classList.contains('locked') || noteElement.classList.contains('search-redacted')) {
         return false;
@@ -2033,7 +2033,7 @@ function handleTodoToggleClick(event) {
     }
     const noteId = noteElement.dataset.noteId;
     if (!noteId) {
-        throw new Error('Todo toggle note missing its note id');
+        throw new Error('Todo toggle note missing its note id');  // shockharness: ignore[STUB001] reason="Todo is the @todo toggle's name, not a TODO marker"
     }
 
     event.preventDefault();

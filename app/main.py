@@ -72,7 +72,7 @@ from app.api.routes.backups import router as api2_backup_router
 from app.api.routes.reminders import router as api2_reminders_router
 from app.api.routes.remote_images import router as api2_remote_images_router
 from app.api.routes.ai import router as api2_ai_router
-from app.api.routes.test import router as api2_test_router
+from app.api.routes.test import router as api2_test_router  # shockharness: ignore[STUB002] reason="mounted only when TEST_MODE is on, and the endpoint asserts it too"
 from app.api.transactions import transactional_route
 from app.config import API_PREFIX, TEST_MODE, V1_API_PREFIX
 from .models.database import SafeSession

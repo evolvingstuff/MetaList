@@ -66,7 +66,7 @@ env.API_PREFIX = '/api2';
 env.V1_API_PREFIX = '/api';
 const python = process.platform === 'win32' ? '.venv/Scripts/python.exe' : '.venv/bin/python';
 let logs = '';
-const server = spawn(resolve(python), ['serve_namespace.py','--namespace','default','--port',String(port)], {env, stdio:['ignore','pipe','pipe']});
+const server = spawn(resolve(python), ['serve_namespace.py','--namespace','default','--port',String(port)], {env, stdio:['ignore','pipe','pipe']});  // shockharness: ignore[IMPORT001] reason="the smoke runner is an entry script: its top-level code is the run"
 server.stdout.on('data', chunk => { logs += chunk; });
 server.stderr.on('data', chunk => { logs += chunk; });
 let browser;
@@ -76,7 +76,7 @@ try {
   for (let count=0; count<300; count++) {
     if (server.exitCode !== null) throw new Error(`Server exited: ${logs}`);
     let response = null;
-    try { response = await fetch(`${origin}/api2/auth/status`, {headers:{"X-Metalist-Tab-Id":"smoke-readiness"}}); }
+    try { response = await fetch(`${origin}/api2/auth/status`, {headers:{"X-Metalist-Tab-Id":"smoke-readiness"}}); }  // shockharness: ignore[IMPORT001] reason="the smoke runner is an entry script: its top-level code is the run"
     catch (error) { if (!(error instanceof TypeError)) throw error; if (error.cause?.code !== 'ECONNREFUSED') throw error; }
     if (response !== null) {
       if (response.ok) {ready=true; break;}
