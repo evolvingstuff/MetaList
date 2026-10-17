@@ -18,10 +18,10 @@ def _synchronized(func):
     return wrapped
 
 
-_update_uuid: str = uuid.uuid4().hex
-_locks: Dict[str, str] = {}
-_clipboards: Dict[str, list] = {}
-_clients_seen: Dict[str, float] = {}
+_update_uuid: str = uuid.uuid4().hex  # shockharness: ignore[STATE001] reason="every access holds _state_lock; rollback restores and the bulk apply are serialized by bulk_operation_guard.lock"
+_locks: Dict[str, str] = {}  # shockharness: ignore[STATE001] reason="every access holds _state_lock; rollback restores and the bulk apply are serialized by bulk_operation_guard.lock"
+_clipboards: Dict[str, list] = {}  # shockharness: ignore[STATE001] reason="every access holds _state_lock; rollback restores and the bulk apply are serialized by bulk_operation_guard.lock"
+_clients_seen: Dict[str, float] = {}  # shockharness: ignore[STATE001] reason="every access holds _state_lock; rollback restores and the bulk apply are serialized by bulk_operation_guard.lock"
 
 
 class ClipboardCapacityError(ValueError):

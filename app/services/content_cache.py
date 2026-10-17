@@ -21,10 +21,10 @@ from app.security.note_html import sanitize_note_html
 logger = logging.getLogger(__name__)
 
 # Global in-memory caches: {note_id: decrypted_string}
-_search_cache: Dict[str, str] = {}
-_tag_cache: Dict[str, str] = {}
-_proposed_tag_cache: Dict[str, str] = {}
-_text_cache: Dict[str, str] = {}
+_search_cache: Dict[str, str] = {}  # shockharness: ignore[STATE001] reason="touched only by write requests, which run one at a time, and by the bulk apply, which holds bulk_operation_guard.lock like the requests let through beside it; filled at startup before serving and by the hydration worker under bulk_operation_guard.lock"
+_tag_cache: Dict[str, str] = {}  # shockharness: ignore[STATE001] reason="touched only by write requests, which run one at a time, and by the bulk apply, which holds bulk_operation_guard.lock like the requests let through beside it; filled at startup before serving and by the hydration worker under bulk_operation_guard.lock"
+_proposed_tag_cache: Dict[str, str] = {}  # shockharness: ignore[STATE001] reason="touched only by write requests, which run one at a time, and by the bulk apply, which holds bulk_operation_guard.lock like the requests let through beside it; filled at startup before serving and by the hydration worker under bulk_operation_guard.lock"
+_text_cache: Dict[str, str] = {}  # shockharness: ignore[STATE001] reason="touched only by write requests, which run one at a time, and by the bulk apply, which holds bulk_operation_guard.lock like the requests let through beside it; filled at startup before serving and by the hydration worker under bulk_operation_guard.lock"
 
 _CACHE_TIMING_ENABLED = True
 # Startup timing is reported once per this many decrypted notes.

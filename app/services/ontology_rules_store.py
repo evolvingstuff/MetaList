@@ -36,7 +36,7 @@ class OntologyRulesState:
 
 
 _LOCK = RLock()
-_STATE: Optional[OntologyRulesState] = None
+_STATE: Optional[OntologyRulesState] = None  # shockharness: ignore[STATE001] reason="every read and read-modify-write holds _LOCK"
 # A backslash and the character it escapes.
 _ESCAPE_SEQUENCE_LENGTH = 2
 

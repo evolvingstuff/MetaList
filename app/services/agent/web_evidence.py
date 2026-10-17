@@ -166,7 +166,7 @@ class WebEvidenceStore:
 
     def _retained_locked(self, session_key: str) -> _WebSession:
         """What the session retained; a session that never fetched a page has nothing."""
-        if session_key not in self._sessions:
+        if session_key not in self._sessions:  # shockharness: ignore[DEF002] reason="a session that never fetched a page has retained nothing"
             return _new_web_session()
         return self._sessions[session_key]
 
@@ -177,7 +177,7 @@ class WebEvidenceStore:
             return None
         with self._lock:
             by_url = self._retained_locked(session_key).by_url
-            if normalized not in by_url:
+            if normalized not in by_url:  # shockharness: ignore[DEF002] reason="a URL the session never fetched has no evidence"
                 return None
             return by_url[normalized]
 

@@ -32,7 +32,7 @@ def prefer_existing_tag_case(term: str, preferred_by_casefold: Mapping[str, str]
     if not isinstance(term, str):
         raise TypeError(f"tag term must be a string, got {type(term)}")
     # A term no existing tag spells keeps its own case.
-    if term.casefold() not in preferred_by_casefold:
+    if term.casefold() not in preferred_by_casefold:  # shockharness: ignore[DEF002] reason="a term no existing tag spells keeps its own case"
         return term
     return preferred_by_casefold[term.casefold()]
 

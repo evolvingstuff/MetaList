@@ -23,7 +23,7 @@ from pathlib import Path
 from app.services.exception_capture import CapturedExceptionContext
 
 
-SHOCKHARNESS_REQUIREMENT = "shockharness==0.7.0"
+SHOCKHARNESS_REQUIREMENT = "shockharness==0.8.0"
 SHOCKHARNESS_INSTALL_HINT = f'.venv/bin/pip install "{SHOCKHARNESS_REQUIREMENT}" (needs Python 3.11+)'
 SHOCKHARNESS_REPORT_RELATIVE_PATH = Path("logs") / "shockharness" / "latest.json"
 # The overview names the rules and files with the most findings, this many of each.

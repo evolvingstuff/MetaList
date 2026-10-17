@@ -303,7 +303,7 @@ class _ClientUndo:
         self.limited = False
 
 
-_clients: Dict[str, _ClientUndo] = OrderedDict()
+_clients: Dict[str, _ClientUndo] = OrderedDict()  # shockharness: ignore[STATE001] reason="touched only by write requests, which run one at a time, and by the bulk apply, which holds bulk_operation_guard.lock like the requests let through beside it"
 
 
 def capture_undo_state() -> dict:

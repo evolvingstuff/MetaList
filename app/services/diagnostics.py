@@ -44,20 +44,20 @@ _SLOW_REQUEST_LOG_INTERVAL_SECONDS = 10.0
 _REQUEST_WATCH_INTERVAL_SECONDS = 2.0
 # Random bytes in the session id that names each authenticated log file.
 _LOG_SESSION_ID_RANDOM_BYTES = 8
-_diagnostic_file_handle = None
-_process_diagnostics_configured = False
-_request_watchdog_started = False
-_event_loop_watchdog_started = False
-_direct_append_log_recycler_started = False
-_authenticated_logging_active = False
+_diagnostic_file_handle = None  # shockharness: ignore[STATE001] reason="set once while the app is imported, before any server thread runs"
+_process_diagnostics_configured = False  # shockharness: ignore[STATE001] reason="checked and set only by configure_process_diagnostics, run once while the app is imported"
+_request_watchdog_started = False  # shockharness: ignore[STATE001] reason="started once, from configure_process_diagnostics while the app is imported"
+_event_loop_watchdog_started = False  # shockharness: ignore[STATE001] reason="set by the startup event, on the single event loop of the single server"
+_direct_append_log_recycler_started = False  # shockharness: ignore[STATE001] reason="started once, from configure_process_diagnostics while the app is imported"
+_authenticated_logging_active = False  # shockharness: ignore[STATE001] reason="written only under _authenticated_logging_lock; readers see one bool"
 _authenticated_logging_lock = threading.Lock()
-_authenticated_log_sink: EncryptedLogSink | None = None
-_authenticated_log_sink_id: int | None = None
-_authenticated_log_path: Path | None = None
-_authenticated_stdout: EncryptedTextStream | None = None
-_authenticated_stderr: EncryptedTextStream | None = None
-_plaintext_stdout = None
-_plaintext_stderr = None
+_authenticated_log_sink: EncryptedLogSink | None = None  # shockharness: ignore[STATE001] reason="every access holds _authenticated_logging_lock"
+_authenticated_log_sink_id: int | None = None  # shockharness: ignore[STATE001] reason="every access holds _authenticated_logging_lock"
+_authenticated_log_path: Path | None = None  # shockharness: ignore[STATE001] reason="every access holds _authenticated_logging_lock"
+_authenticated_stdout: EncryptedTextStream | None = None  # shockharness: ignore[STATE001] reason="every access holds _authenticated_logging_lock; the stream serializes its own writes and close"
+_authenticated_stderr: EncryptedTextStream | None = None  # shockharness: ignore[STATE001] reason="every access holds _authenticated_logging_lock; the stream serializes its own writes and close"
+_plaintext_stdout = None  # shockharness: ignore[STATE001] reason="every access holds _authenticated_logging_lock"
+_plaintext_stderr = None  # shockharness: ignore[STATE001] reason="every access holds _authenticated_logging_lock"
 
 
 @dataclass
@@ -91,7 +91,7 @@ class LogDiskUsage:
     largest_file_bytes: int
 
 
-_active_requests: dict[str, ActiveRequest] = {}
+_active_requests: dict[str, ActiveRequest] = {}  # shockharness: ignore[STATE001] reason="every access holds _active_requests_lock"
 _active_requests_lock = threading.Lock()
 
 
@@ -579,6 +579,8 @@ def begin_request(
         last_logged_at=started_at,
     )
     with _active_requests_lock:
+        if request_id in _active_requests:
+            raise RuntimeError(f"Request id {request_id} is already in flight")
         _active_requests[request_id] = request
 
 

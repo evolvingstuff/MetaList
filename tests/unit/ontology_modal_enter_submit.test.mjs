@@ -75,23 +75,29 @@ test('ontology search arrow repeats at the first and last suggestion do not requ
         style = { display: 'flex' };
         querySelectorAll() { return [{}]; }
     }
+    // The list on screen was built for the text in the box.
+    class Input { value = 'tag'; }
     const container = new Element();
     globalThis.HTMLElement = Element;
+    globalThis.HTMLInputElement = Input;
     globalThis.document = { getElementById: () => ({ querySelector: () => container }) };
-    t.after(() => { delete globalThis.HTMLElement; delete globalThis.document; });
+    t.after(() => { delete globalThis.HTMLElement; delete globalThis.HTMLInputElement; delete globalThis.document; });
     const modal = new OntologyModal();
     modal._searchSelectedIndex = 0;
+    modal._searchListBuiltForText = 'tag';
     modal._updateSearchSelection = () => {};
+    const input = new Input();
     for (const key of ['ArrowDown', 'ArrowDown', 'ArrowUp', 'ArrowUp']) {
-        modal._handleSearchKeydown(buildKeyboardEvent(key));
+        modal._handleSearchKeydown(buildKeyboardEvent(key, input));
     }
     assert.equal(modal._searchSelectedIndex, 0);
 });
 
 
-function buildKeyboardEvent(key) {
+function buildKeyboardEvent(key, target) {
     return {
         key,
+        target,
         preventDefaultCallCount: 0,
         stopPropagationCallCount: 0,
         stopImmediatePropagationCallCount: 0,

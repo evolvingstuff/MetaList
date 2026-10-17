@@ -7,8 +7,8 @@ from threading import RLock
 
 
 _lock = RLock()
-_enabled = True
-_clearers = []
+_enabled = True  # shockharness: ignore[STATE001] reason="every access holds the module _lock"
+_clearers = []  # shockharness: ignore[STATE001] reason="appended and iterated only under the module _lock"
 
 
 CacheInfo = namedtuple('CacheInfo', 'hits misses maxsize currsize')

@@ -53,7 +53,7 @@ class ViewCache:
     def get(self, *, client_id: str, tab_id: str) -> WarmView | None:
         key = self._key(client_id, tab_id)
         with self._lock:
-            if key not in self._views:
+            if key not in self._views:  # shockharness: ignore[DEF002] reason="a tab with no warm view yet has none"
                 return None
             return self._views[key]
 

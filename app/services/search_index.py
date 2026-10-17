@@ -44,7 +44,7 @@ def _add_posting(postings: Dict[str, Set[int]], key: str, note_int_id: int) -> N
 
 def _posting_or_empty(postings: Mapping[str, Set[int]], key: str) -> Set[int]:
     """The notes with this term; a term no note has has no posting."""
-    if key not in postings:
+    if key not in postings:  # shockharness: ignore[DEF002] reason="a term no note has has no posting"
         return set()
     return postings[key]
 

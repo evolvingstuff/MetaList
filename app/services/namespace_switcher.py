@@ -934,7 +934,7 @@ def _saved_profile_or_none(
     saved_profiles: Mapping[str, NamespaceLaunchProfile], namespace: str,
 ) -> NamespaceLaunchProfile | None:
     """The namespace's saved launch profile; None for one never launched or configured."""
-    if namespace not in saved_profiles:
+    if namespace not in saved_profiles:  # shockharness: ignore[DEF002] reason="a namespace never launched or configured has no saved profile"
         return None
     return saved_profiles[namespace]
 

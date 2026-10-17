@@ -5,8 +5,8 @@ from threading import RLock
 
 
 _lock = RLock()
-_generation = 0
-_tasks: set[asyncio.Task] = set()
+_generation = 0  # shockharness: ignore[STATE001] reason="every access holds _lock"
+_tasks: set[asyncio.Task] = set()  # shockharness: ignore[STATE001] reason="every access holds _lock"
 
 
 def current_generation() -> int:

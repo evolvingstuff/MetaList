@@ -244,12 +244,12 @@ class LoginNamespaceOpenResponse(BaseModel):
 
 _hydration_executor = ThreadPoolExecutor(max_workers=1)
 _hydration_lock = Lock()
-_hydration_future: Future | None = None
+_hydration_future: Future | None = None  # shockharness: ignore[STATE001] reason="read and written only under _hydration_lock"
 # No hydration has started in this process yet; real generations count up from 0.
 _NO_HYDRATION_GENERATION = -1
-_hydration_generation = _NO_HYDRATION_GENERATION
+_hydration_generation = _NO_HYDRATION_GENERATION  # shockharness: ignore[STATE001] reason="read and written only under _hydration_lock"
 _server_restart_lock = Lock()
-_server_restart_scheduled = False
+_server_restart_scheduled = False  # shockharness: ignore[STATE001] reason="checked and set under _server_restart_lock"
 
 
 def _active_diagnostics_namespace() -> str:

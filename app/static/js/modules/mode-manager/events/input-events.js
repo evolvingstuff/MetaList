@@ -2,7 +2,6 @@ import { half } from '../../half.js';
 import { ApplicationState } from '../../application-state.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import * as Logger from '../mode-logger.js';
-import { actionSelectNote } from '../actions/selection-actions.js';
 import { DOMUtils } from '../../dom-utils.js';
 import { enforceTagBarInputElement, validateAndRenderTagBar } from '../services/tag-bar-service.js';
 import { scrollWindowToYFastAnimated } from '../services/animated-scroll-service.js';
@@ -160,10 +159,10 @@ function handleInput(event) {
             throw new Error('Note element missing data-note-id attribute in input handler');
         }
 
-		if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
-			actionSelectNote(noteId, { initialCaretVisibility: 'hidden' });
-			return; 
-		}
+        // A note is editable only while it is edited, so typing reaches no other note.
+        if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
+            throw new Error(`Note input fired while not editing note ${noteId}`);
+        }
 
         noteDictationEditSeen();
         if (!ModeContext.editSessionHasEdits) ModeContext.markEditSessionHasEdits();

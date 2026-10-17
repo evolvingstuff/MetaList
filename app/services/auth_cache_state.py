@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from threading import Lock
 
-_cache_ready = False
+_cache_ready = False  # shockharness: ignore[STATE001] reason="every access holds _cache_lock"
 _cache_lock = Lock()
 
 

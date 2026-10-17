@@ -35,7 +35,7 @@ class FileEditSession:
     started_at: float
 
 
-_sessions: "OrderedDict[str, FileEditSession]" = OrderedDict()
+_sessions: "OrderedDict[str, FileEditSession]" = OrderedDict()  # shockharness: ignore[STATE001] reason="touched only by write requests, which run one at a time, and by the bulk apply, which holds bulk_operation_guard.lock like the requests let through beside it"
 
 
 def _prune_expired_sessions() -> None:

@@ -13,6 +13,7 @@ from app.services.note_store import store
 from app.services.ontology_rules_store import bootstrap_ontology_rules_store, ensure_rules_decrypted_and_compiled
 from app.services.reminders import reminder_store
 from app.services.search_history import search_history_store
+from app.services.session_timeout_service import reset_session_timeout_cache
 from app.services.tab_state import tab_state_store
 from app.services.view_cache import view_cache
 from app.services.sync import capture_sync_state, restore_sync_state
@@ -42,6 +43,8 @@ def register_runtime_recovery() -> None:
         restore_undo_state(undo)
         restore_sync_state(sync)
         view_cache.restore(warm_views)
+        # A failed save already cached its timeout: read it again from what was committed.
+        reset_session_timeout_cache()
         if not (state.did_write or state.recoveries):
             return
         recovered = False

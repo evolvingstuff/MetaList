@@ -43,6 +43,8 @@ import {checkTabSwitching} from './browser-tab-switch-regressions.mjs';
 import {checkAiChatRefusal} from './browser-ai-chat-refusal-regressions.mjs';
 import {checkSearchSuggestions} from './browser-search-suggestion-regressions.mjs';
 import {checkTagBarSuggestions} from './browser-tag-bar-suggestion-regressions.mjs';
+import {checkInputTarget} from './browser-input-target-regressions.mjs';
+import {checkOntologySearch} from './browser-ontology-search-regressions.mjs';
 import {checkBackupReminder} from './browser-backup-reminder-regressions.mjs';
 import {checkReminderSurfaceWhileEditing} from './browser-reminder-surface-regressions.mjs';
 import {checkFloatingControlsWhileEditing} from './browser-floating-control-regressions.mjs';
@@ -72,12 +74,12 @@ env.METALIST_HTTPS_PORT = String(httpsPort);
 env.API_PREFIX = '/api2';
 env.V1_API_PREFIX = '/api';
 const python = process.platform === 'win32' ? '.venv/Scripts/python.exe' : '.venv/bin/python';
-let logs = '';
+let logs = '';  // shockharness: ignore[STATE001] reason="single-threaded Node: the server output callbacks and the run share one event loop"
 const server = spawn(resolve(python), ['serve_namespace.py','--namespace','default','--port',String(port)], {env, stdio:['ignore','pipe','pipe']});
 server.stdout.on('data', chunk => { logs += chunk; });
 server.stderr.on('data', chunk => { logs += chunk; });
 let browser;
-const browserDiagnostics = [];
+const browserDiagnostics = [];  // shockharness: ignore[STATE001] reason="single-threaded Node: the page event callbacks and the run share one event loop"
 try {
   let ready = false;
   for (let count=0; count<300; count++) {
@@ -114,7 +116,7 @@ try {
   browser.on('targetdestroyed', target => lifecycle(`target destroyed ${target.type()} ${target.url()}`));
   browser.on('targetcreated', target => lifecycle(`target created ${target.type()} ${target.url()}`));
   const updateFixture = await prepareUpdateFixture(page);
-  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'move-to-bottom', 'list-edges', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews', 'image-menu', 'tag-suggestion-menu', 'paste-formats', 'ai-note-tags', 'robot-proposals', 'export-print', 'url-cleaning', 'reference-paste', 'click-caret', 'editable-embeds', 'delete-warning', 'collapse-outlines', 'backup-reminder', 'reminder-surface', 'floating-controls', 'tab-switching', 'ai-chat-refusal', 'search-suggestions', 'tag-bar-suggestions'].includes(process.env.BROWSER_TEST_SUITE)) {
+  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'move-to-bottom', 'list-edges', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews', 'image-menu', 'tag-suggestion-menu', 'paste-formats', 'ai-note-tags', 'robot-proposals', 'export-print', 'url-cleaning', 'reference-paste', 'click-caret', 'editable-embeds', 'delete-warning', 'collapse-outlines', 'backup-reminder', 'reminder-surface', 'floating-controls', 'tab-switching', 'ai-chat-refusal', 'search-suggestions', 'tag-bar-suggestions', 'input-target', 'ontology-search'].includes(process.env.BROWSER_TEST_SUITE)) {
     // The focused suite does not run checkAppUpdates, which normally releases
     // this intentionally held request. Avoid an unrelated update notice too.
     updateFixture.outage = true;
@@ -204,6 +206,14 @@ try {
     await checkDeleteWarning(page);
     assert.deepEqual(errors, []);
     console.log(`PASS delete warning regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'ontology-search') {
+    await checkOntologySearch(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS ontology search regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'input-target') {
+    await checkInputTarget(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS input target regressions in ${await browser.version()}`);
   } else if (process.env.BROWSER_TEST_SUITE === 'tag-bar-suggestions') {
     await checkTagBarSuggestions(page);
     assert.deepEqual(errors, []);

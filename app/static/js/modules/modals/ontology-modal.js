@@ -403,6 +403,9 @@ export class OntologyModal extends BaseModal {
         this._rulesCache = null;
         this._searchSelectedIndex = NO_SELECTION;
         this._suppressNextSearchResults = false;
+        // The search text the result list on screen was built for. Once the text
+        // changes, the list is for older text until the new one arrives.
+        this._searchListBuiltForText = '';
         this._shouldFocusSearchInput = true;
         this._dialogState = null;
         this._dialogAbortController = null;
@@ -722,7 +725,8 @@ export class OntologyModal extends BaseModal {
         }
         if (this._suppressNextSearchResults) this._suppressNextSearchResults = false;
         if (this.getModalState().searchQuery !== query) this.updateModalState({ searchQuery: query });
-        this.refreshTagSearch(query);
+        // Not awaited: each keystroke aborts the previous search, which drops its results.
+        void this.refreshTagSearch(query);
     }
 
     _handleSearchKeydown(event) {
@@ -736,7 +740,26 @@ export class OntologyModal extends BaseModal {
         if (hasContainer) {
             items = Array.from(container.querySelectorAll('.ontology-search-result'));
         }
-        const hasSuggestions = hasContainer && container.style.display !== 'none' && items.length > 0;
+        let hasSuggestions = hasContainer && container.style.display !== 'none' && items.length > 0;
+        // Only a list built for the text in the box is acted on: Enter on an older
+        // list opens the typed tag, and the arrows wait for the new list.
+        const input = event.target;
+        if (!(input instanceof HTMLInputElement)) {
+            throw new Error('Expected ontology search input element');
+        }
+        const isListForOlderText = hasSuggestions && input.value !== this._searchListBuiltForText;
+        if (isListForOlderText && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+            event.preventDefault();
+            return;
+        }
+        if (isListForOlderText && event.key === 'Enter') {
+            if (this._abortController) {
+                this._abortController.abort();
+                this._abortController = null;
+            }
+            this.renderTagSearchResults([]);
+            hasSuggestions = false;
+        }
 
         if (event.key === 'ArrowDown' && hasSuggestions) {
             event.preventDefault();
@@ -894,6 +917,8 @@ export class OntologyModal extends BaseModal {
                 return;
             }
 
+            // The same text can be searched again (the box was cleared and retyped).
+            if (this._searchListBuiltForText !== query) this._searchListBuiltForText = query;
             this.renderTagSearchResults(tags);
             this.renderTagCount(totalCount);
         })().catch((error) => {

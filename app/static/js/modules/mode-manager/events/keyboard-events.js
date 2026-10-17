@@ -551,7 +551,9 @@ function handleKeyDown(event) {
             break;
         case 'c':
             if (event.metaKey || event.ctrlKey) {
-                handleCopyNoteShortcut(event);
+                // Not awaited: it decides and prevents the default before its first await,
+                // and the copy itself runs under the CommandGate.
+                void handleCopyNoteShortcut(event);
             }
             break;
         case 'r':

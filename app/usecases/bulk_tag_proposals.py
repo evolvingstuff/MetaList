@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from app.db.notes_sql import update_note_fields_preserving_updated_at
 from app.db.session import begin_request_transaction, begin_writer
+from app.services.bulk_operation import bulk_operation_guard
 from app.security.encryption import encrypt
 from app.services.content_cache import cache_note_tags, cache_note_proposed_tags
 from app.services.content_formatting import _tokenize_tag_bar
@@ -60,32 +61,36 @@ def prepare_proposal_changes(note_ids, action, tag_filter, proposals):
 
 
 def apply_bulk_proposals(*, changes: dict[str, tuple[str, str]], token: str) -> str:
-    if not changes:
-        return get_current_sync_uuid()
-    # Prepare all encrypted fields before opening a write transaction.
-    encrypted = {}
-    previous_tags = {}
-    for note_id, (tags, proposed) in changes.items():
-        previous_tags[note_id] = store.get_note(note_id).tags
-        fields = {}
-        for name, value in (("tags", tags), ("proposed_tags", proposed)):
-            ciphertext, nonce, auth_tag = encrypt(value, token)
-            fields[name] = ciphertext
-            fields[f"{name}_encryption_nonce"] = nonce
-            fields[f"{name}_encryption_tag"] = auth_tag
-        encrypted[note_id] = fields
-    with begin_request_transaction():
-        with begin_writer() as connection:
-            for note_id, fields in encrypted.items():
-                update_note_fields_preserving_updated_at(connection, note_id, **fields)
-        record_explicit_tag_addition_batch(
-            tag_changes=tuple((previous_tags[note_id], tags) for note_id, (tags, _) in changes.items()),
-            token=token, interacted_on=current_local_date(),
-        )
-    # No await separates successful commit, publication, and history invalidation.
-    store.apply_bulk_tag_sources(changes)
-    for note_id, (tags, proposed) in changes.items():
-        cache_note_tags(note_id, tags)
-        cache_note_proposed_tags(note_id, proposed)
-    reset_all_undo_state()
-    return generate_new_uuid()
+    # The requests let through during a bulk operation hold this lock from capturing
+    # undo and sync state to any rollback: applying under it, the bulk change never
+    # clears undo history while one reads it, nor is undone by one that fails.
+    with bulk_operation_guard.lock:
+        if not changes:
+            return get_current_sync_uuid()
+        # Prepare all encrypted fields before opening a write transaction.
+        encrypted = {}
+        previous_tags = {}
+        for note_id, (tags, proposed) in changes.items():
+            previous_tags[note_id] = store.get_note(note_id).tags
+            fields = {}
+            for name, value in (("tags", tags), ("proposed_tags", proposed)):
+                ciphertext, nonce, auth_tag = encrypt(value, token)
+                fields[name] = ciphertext
+                fields[f"{name}_encryption_nonce"] = nonce
+                fields[f"{name}_encryption_tag"] = auth_tag
+            encrypted[note_id] = fields
+        with begin_request_transaction():
+            with begin_writer() as connection:
+                for note_id, fields in encrypted.items():
+                    update_note_fields_preserving_updated_at(connection, note_id, **fields)
+            record_explicit_tag_addition_batch(
+                tag_changes=tuple((previous_tags[note_id], tags) for note_id, (tags, _) in changes.items()),
+                token=token, interacted_on=current_local_date(),
+            )
+        # No await separates successful commit, publication, and history invalidation.
+        store.apply_bulk_tag_sources(changes)
+        for note_id, (tags, proposed) in changes.items():
+            cache_note_tags(note_id, tags)
+            cache_note_proposed_tags(note_id, proposed)
+        reset_all_undo_state()
+        return generate_new_uuid()
