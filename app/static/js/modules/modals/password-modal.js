@@ -807,9 +807,6 @@ class PasswordOperationModal extends BaseModal {
         }, SIMULATED_PROGRESS_STEP_INTERVAL_MS);
     }
     
-    shouldCloseOnClickOutside() {
-        return true;
-    }
 }
 
 

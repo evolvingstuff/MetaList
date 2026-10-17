@@ -35,9 +35,6 @@ export class ResetUpdatedAtModal extends BaseModal {
         };
     }
 
-    shouldCloseOnClickOutside() {
-        return true;
-    }
 
     validateCleanState() {
         if (ModeContext.isLoading) {

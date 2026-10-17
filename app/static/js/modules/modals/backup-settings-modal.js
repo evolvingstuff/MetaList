@@ -63,9 +63,6 @@ export class BackupSettingsModal extends BaseModal {
         };
     }
 
-    shouldCloseOnClickOutside() {
-        return true;
-    }
 
     _hasActiveOperation() {
         const state = this.getModalState();

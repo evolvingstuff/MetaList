@@ -159,10 +159,4 @@ export class HelpModal extends BaseModal {
         `;
     }
 
-    /**
-     * Allow click outside to close the modal.
-     */
-    shouldCloseOnClickOutside() {
-        return true;
-    }
 }

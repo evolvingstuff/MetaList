@@ -110,9 +110,6 @@ export class PrioritizeModal extends BaseModal {
         }
     }
 
-    shouldCloseOnClickOutside() {
-        return true;
-    }
 
     getElements() {
         const modalElement = document.getElementById(this.modalElementId);

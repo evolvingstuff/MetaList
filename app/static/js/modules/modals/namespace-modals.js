@@ -194,9 +194,6 @@ class NamespaceModalBase extends BaseModal {
         ApplicationState.own(this, 'NamespaceModalBase', new.target === NamespaceModalBase);
     }
 
-    shouldCloseOnClickOutside() {
-        return true;
-    }
 
     showModalElement() {
         let modalElement = document.getElementById(this.modalElementId);

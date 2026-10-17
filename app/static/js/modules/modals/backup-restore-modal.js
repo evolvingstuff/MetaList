@@ -139,9 +139,6 @@ export class BackupRestoreModal extends BaseModal {
         };
     }
 
-    shouldCloseOnClickOutside() {
-        return true;
-    }
 
     showModalElement() {
         let modalElement = document.getElementById(this.modalElementId);
