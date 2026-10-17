@@ -14,6 +14,7 @@ from app.security.encryption import clear_encryption_key
 from app.security.encryption import set_session_dek
 from app.security.encryption import get_encryption_service
 from app.services.client_state_service import ClientStateValidationError
+from app.services.client_state_service import _validate_client_preferences
 from app.services.client_state_service import load_client_preferences
 from app.services.client_state_service import load_client_state
 from app.services.client_state_service import load_command_palette_usage
@@ -498,3 +499,16 @@ def test_the_dictation_tag_phrase_is_words_of_letters(memory_settings_db) -> Non
         for invalid in ["", "t", "start  tags", " start tags", "tags1", "start-tags", "a" * 65]:
             with pytest.raises(ClientStateValidationError):
                 save_client_preferences(preferences={key: invalid}, token="")
+
+
+def test_settings_from_the_sound_effects_that_were_tried_and_not_kept_are_dropped():
+    saved = {
+        "pref.sound_effects": "typing",
+        "pref.sound_effects_volume": "medium",
+        "pref.sound_effects_enabled": "true",
+        "pref.sound_effects_keyboard": "kbsim-holypanda",
+        "pref.sound_effects_key_volume": "60",
+        "pref.sound_effects_action.drop": "false",
+        "pref.theme": "dark",
+    }
+    assert _validate_client_preferences(saved) == {"pref.theme": "dark"}

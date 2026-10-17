@@ -93,6 +93,20 @@ _ALLOWED_CLIENT_PREFERENCES = {
 
 _OBSOLETE_CLIENT_PREFERENCES = frozenset(
     {
+        # The interface sound effects tried in October 2026 and not kept: a namespace
+        # that tried them may still hold their settings.
+        "pref.sound_effects",
+        "pref.sound_effects_volume",
+        "pref.sound_effects_enabled",
+        "pref.sound_effects_typing",
+        "pref.sound_effects_keyboard",
+        "pref.sound_effects_key_volume",
+        "pref.sound_effects_action_volume",
+        "pref.sound_effects_action.click",
+        "pref.sound_effects_action.pick_up",
+        "pref.sound_effects_action.drop",
+        "pref.sound_effects_action.insert",
+        "pref.sound_effects_action.delete",
         "pref.ai.ollama_base_url",
         "pref.ai.ollama_model",
         "pref.ai.retrieval.max_page_approximate_tokens",
