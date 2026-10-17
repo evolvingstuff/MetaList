@@ -166,12 +166,12 @@ export function promptForImageFileInsertMode(options) {
 
         const cleanup = () => {
             modalElement.removeEventListener('click', handleClick);
-            document.removeEventListener('keydown', handleKeyDown, true);
+            document.removeEventListener('keydown', handleKeyDown, { capture: true });
         };
 
         moduleState.activeDialog = { resolve };
         modalElement.addEventListener('click', handleClick);
-        document.addEventListener('keydown', handleKeyDown, true);
+        document.addEventListener('keydown', handleKeyDown, { capture: true });
         window.setTimeout(() => {
             embedButton.focus();
         }, 0);

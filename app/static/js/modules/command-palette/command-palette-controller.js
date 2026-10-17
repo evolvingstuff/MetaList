@@ -1398,11 +1398,11 @@ class CommandPaletteController {
         ModeContext.resetTabDiffCache(activeTabId, { preserveRootAnchor: false });
         // Sort-mode changes often run while the view is already positioned at top.
         if (ModeContext.getTabScrollPosition(activeTabId) !== 0) {
-            ModeContext.updateTabScroll(activeTabId, 0, false);
+            ModeContext.updateTabScroll(activeTabId, 0, { emit: false });
         }
         // updateTabScroll and resetTabDiffCache both clear anchors for the sorted view.
         if (ModeContext.getTabScrollAnchor(activeTabId) !== null) {
-            ModeContext.updateTabScrollAnchor(activeTabId, null, false);
+            ModeContext.updateTabScrollAnchor(activeTabId, null, { emit: false });
         }
         // resetTabDiffCache clears the root anchor unless preserveRootAnchor is set.
         if (ModeContext.getRootAnchorId() !== null) {
@@ -1457,10 +1457,10 @@ class CommandPaletteController {
         ModeContext.clearTabRevealedRedactions(activeTabId);
         ModeContext.resetTabDiffCache(activeTabId, { preserveRootAnchor: false });
         if (ModeContext.getTabScrollPosition(activeTabId) !== 0) {
-            ModeContext.updateTabScroll(activeTabId, 0, false);
+            ModeContext.updateTabScroll(activeTabId, 0, { emit: false });
         }
         if (ModeContext.getTabScrollAnchor(activeTabId) !== null) {
-            ModeContext.updateTabScrollAnchor(activeTabId, null, false);
+            ModeContext.updateTabScrollAnchor(activeTabId, null, { emit: false });
         }
         if (ModeContext.getRootAnchorId() !== null) {
             ModeContext.setRootAnchorId(null);
@@ -1523,7 +1523,7 @@ class CommandPaletteController {
                     'Attach file did not start because another command is still running.',
                     'error',
                     ERROR_BANNER_SECONDS * MS_PER_SECOND,
-                    true,
+                    { closable: true },
                 );
             }
             return result;
@@ -1542,7 +1542,7 @@ class CommandPaletteController {
                 `Attach file failed: ${message}`,
                 'error',
                 ERROR_BANNER_SECONDS * MS_PER_SECOND,
-                true,
+                { closable: true },
             );
         }
     }
@@ -1651,7 +1651,7 @@ class CommandPaletteController {
                 'That input is not a valid tag token. This action only supports a single tag (no spaces, quotes, regex, or parentheses).',
                 'error',
                 ERROR_BANNER_SECONDS * MS_PER_SECOND,
-                true,
+                { closable: true },
             );
             return;
         }
@@ -1885,7 +1885,7 @@ class CommandPaletteController {
             }
             // updateActiveTabScroll and resetRootTracking leave anchors null.
             if (ModeContext.getTabScrollAnchor(ModeContext.activeTabId) !== null) {
-                ModeContext.updateActiveTabScrollAnchor(null, true);
+                ModeContext.updateActiveTabScrollAnchor(null);
             }
             // resetRootTracking clears the root anchor before refresh.
             if (ModeContext.getRootAnchorId() !== null) {

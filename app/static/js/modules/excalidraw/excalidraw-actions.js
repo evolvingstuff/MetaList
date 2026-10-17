@@ -26,12 +26,12 @@ function showDiagramInHostNote(closed) {
 }
 
 function reportBusy(action) {
-    ErrorHandler.showErrorBanner(`${action} did not start because another command is still running.`, 'error', BUSY_BANNER_SECONDS * MS_PER_SECOND, true);
+    ErrorHandler.showErrorBanner(`${action} did not start because another command is still running.`, 'error', BUSY_BANNER_SECONDS * MS_PER_SECOND, { closable: true });
 }
 
 function reportFailure(action, error) {
     const message = error instanceof UserInputRejected ? error.message : `${action} failed: ${error.message}`;
-    ErrorHandler.showErrorBanner(message, 'error', FAILURE_BANNER_SECONDS * MS_PER_SECOND, true);
+    ErrorHandler.showErrorBanner(message, 'error', FAILURE_BANNER_SECONDS * MS_PER_SECOND, { closable: true });
 }
 
 export async function openDiagramEditor(fileId, hostNoteId) {

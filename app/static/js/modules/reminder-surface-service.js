@@ -248,8 +248,8 @@ class ReminderSurfaceService {
 
         this._hasCompletedInitialEvaluation = false;
         this._ensureContainer();
-        document.addEventListener('pointerdown', this._handleInteraction, true);
-        document.addEventListener('keydown', this._handleInteraction, true);
+        document.addEventListener('pointerdown', this._handleInteraction, { capture: true });
+        document.addEventListener('keydown', this._handleInteraction, { capture: true });
         document.addEventListener('visibilitychange', this._handleVisibilityChange);
         document.addEventListener('metalist:modal-closed', this._handleModalClosed);
         this._unsubscribeStore = ReminderStore.subscribe(this._handleStoreSnapshot);
@@ -262,8 +262,8 @@ class ReminderSurfaceService {
             return;
         }
         this._started = false;
-        document.removeEventListener('pointerdown', this._handleInteraction, true);
-        document.removeEventListener('keydown', this._handleInteraction, true);
+        document.removeEventListener('pointerdown', this._handleInteraction, { capture: true });
+        document.removeEventListener('keydown', this._handleInteraction, { capture: true });
         document.removeEventListener('visibilitychange', this._handleVisibilityChange);
         document.removeEventListener('metalist:modal-closed', this._handleModalClosed);
         if (typeof this._unsubscribeStore === 'function') {

@@ -1267,7 +1267,7 @@ async function pasteAsSibling(actionName, requestPaste) {
             'The copied note is no longer available. Copy it again, then paste.',
             'error',
             COPIED_NOTE_MISSING_BANNER_SECONDS * MS_PER_SECOND,
-            true,
+            { closable: true },
         );
         return false;
     }
@@ -1319,7 +1319,7 @@ async function pasteAsChild(actionName, requestPaste) {
             'The copied note is no longer available. Copy it again, then paste.',
             'error',
             COPIED_NOTE_MISSING_BANNER_SECONDS * MS_PER_SECOND,
-            true,
+            { closable: true },
         );
         return false;
     }

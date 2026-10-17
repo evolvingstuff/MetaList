@@ -58,7 +58,6 @@ def test_purge_decrypted_runtime_state_clears_every_plaintext_store(monkeypatch)
 
     function_names = (
         "reset_sync_state",
-        "reset_legacy_sync_state",
         "reset_all_undo_state",
         "lock_ontology_rules_store",
         "clear_encryption_key",
@@ -89,7 +88,6 @@ def test_purge_decrypted_runtime_state_clears_every_plaintext_store(monkeypatch)
         "reminder_store",
         "search_history_store",
         "reset_sync_state",
-        "reset_legacy_sync_state",
         "reset_all_undo_state",
         "lock_ontology_rules_store",
         "clear_encryption_key",

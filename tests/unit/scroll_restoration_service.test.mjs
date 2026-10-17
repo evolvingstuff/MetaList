@@ -86,7 +86,7 @@ test('a new view cancels deferred scroll restoration from the previous view', as
         await Promise.resolve();
     }
     assert.deepEqual(scrollPositions, []);
-    context.updateTabScroll('scroll-test', 0, false);
+    context.updateTabScroll('scroll-test', 0, { emit: false });
     context.restoreScrollForActiveTab();
     assert.equal(callbacks.length, 0, 'top restoration must not schedule later adjustments');
     await Promise.resolve();

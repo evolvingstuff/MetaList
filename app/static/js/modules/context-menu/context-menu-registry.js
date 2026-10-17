@@ -303,7 +303,10 @@ function buildNoteContextItems(context, handlers) {
     // A right-click in the text of the note being edited, with a note copied.
     const canPasteReferenceHere = hasReferenceClipboard && context.canPasteReferenceHere === true;
     const isMac = requireNoteFlag(context, 'isMac');
-    const shortcut = (key, mod, shift) => formatMenuShortcut({ isMac, mod, shift, key });
+    // A menu item's shortcut: the key alone, with ⌘ (Ctrl), or with ⌘⇧ (Ctrl+Shift).
+    const plainKey = (key) => formatMenuShortcut({ isMac, mod: false, shift: false, key });
+    const commandKey = (key) => formatMenuShortcut({ isMac, mod: true, shift: false, key });
+    const commandShiftKey = (key) => formatMenuShortcut({ isMac, mod: true, shift: true, key });
 
     // What you clicked: the selection or the note.
     const copyItem = {
@@ -311,7 +314,7 @@ function buildNoteContextItems(context, handlers) {
         label: hasSelectedText ? 'Copy' : 'Copy Note',
         icon: 'copy',
         enabled: true,
-        shortcut: shortcut('C', true, false),
+        shortcut: commandKey('C'),
         onSelect: () => {
             if (hasSelectedText) {
                 onCopySelection(noteId);
@@ -345,14 +348,14 @@ function buildNoteContextItems(context, handlers) {
     const pasteEntries = [];
     if (hasNoteClipboard) {
         pasteEntries.push(
-            { id: 'paste-note', label: 'Paste Sibling Note', icon: 'paste', enabled: true, shortcut: shortcut('V', true, false), onSelect: () => onPasteNote(noteId) },
-            { id: 'paste-note-child', label: 'Paste Child Note', icon: 'paste_child', enabled: true, shortcut: shortcut('V', true, true), onSelect: () => onPasteNoteChild(noteId) },
+            { id: 'paste-note', label: 'Paste Sibling Note', icon: 'paste', enabled: true, shortcut: commandKey('V'), onSelect: () => onPasteNote(noteId) },
+            { id: 'paste-note-child', label: 'Paste Child Note', icon: 'paste_child', enabled: true, shortcut: commandShiftKey('V'), onSelect: () => onPasteNoteChild(noteId) },
         );
     }
     if (hasReferenceClipboard) {
         pasteEntries.push(
-            { id: 'paste-reference', label: 'Paste Sibling Reference', icon: 'link', enabled: true, shortcut: shortcut('R', true, false), onSelect: () => onPasteReference(noteId) },
-            { id: 'paste-reference-child', label: 'Paste Child Reference', icon: 'link_child', enabled: true, shortcut: shortcut('R', true, true), onSelect: () => onPasteReferenceChild(noteId) },
+            { id: 'paste-reference', label: 'Paste Sibling Reference', icon: 'link', enabled: true, shortcut: commandKey('R'), onSelect: () => onPasteReference(noteId) },
+            { id: 'paste-reference-child', label: 'Paste Child Reference', icon: 'link_child', enabled: true, shortcut: commandShiftKey('R'), onSelect: () => onPasteReferenceChild(noteId) },
         );
     }
     // With the other references: less common than pasting notes.
@@ -364,14 +367,14 @@ function buildNoteContextItems(context, handlers) {
     pushGroup(items, { id: 'paste', label: 'Paste', icon: 'paste', separated: false }, pasteEntries);
 
     const addEntries = [
-        { id: 'add-sibling-note', label: 'Add Sibling Note', icon: 'add_sibling', enabled: true, shortcut: shortcut('Enter', true, false), onSelect: () => onAddSiblingNote(noteId) },
-        { id: 'add-child-note', label: 'Add Child Note', icon: 'add_child', enabled: true, shortcut: shortcut('Enter', true, true), onSelect: () => onAddChildNote(noteId) },
+        { id: 'add-sibling-note', label: 'Add Sibling Note', icon: 'add_sibling', enabled: true, shortcut: commandKey('Enter'), onSelect: () => onAddSiblingNote(noteId) },
+        { id: 'add-child-note', label: 'Add Child Note', icon: 'add_child', enabled: true, shortcut: commandShiftKey('Enter'), onSelect: () => onAddChildNote(noteId) },
     ];
     if (context.canAddNoteAtTop === true) {
         if (typeof onAddNoteAtTop !== 'function') {
             throw new Error('Non-editing note context missing onAddNoteAtTop handler');
         }
-        addEntries.push({ id: 'add-note-at-top', label: 'Add Note at Top', icon: 'add_top', enabled: true, shortcut: shortcut('Enter', false, false), onSelect: () => onAddNoteAtTop() });
+        addEntries.push({ id: 'add-note-at-top', label: 'Add Note at Top', icon: 'add_top', enabled: true, shortcut: plainKey('Enter'), onSelect: () => onAddNoteAtTop() });
     }
     pushGroup(items, { id: 'add', label: 'Add', icon: 'add_sibling', separated: true }, addEntries);
 
@@ -389,8 +392,8 @@ function buildNoteContextItems(context, handlers) {
         focusEntries.push({ id: 'open-floating-note', label: 'Floating Window', inlineLabel: 'Open in Floating Window', icon: 'floating_window', enabled: true, onSelect: () => handlers.onOpenFloatingNote(noteId) });
     }
 
-    pushGroup(items, { id: 'move', label: 'Move', icon: 'arrow_up', separated: false }, buildMoveEntries(context, handlers, shortcut));
-    pushGroup(items, { id: 'outline', label: 'Outline', icon: 'outline', separated: false }, buildOutlineEntries(context, handlers, shortcut));
+    pushGroup(items, { id: 'move', label: 'Move', icon: 'arrow_up', separated: false }, buildMoveEntries(context, handlers, { commandKey, commandShiftKey }));
+    pushGroup(items, { id: 'outline', label: 'Outline', icon: 'outline', separated: false }, buildOutlineEntries(context, handlers, { commandKey }));
 
     pushGroup(items, { id: 'focus', label: 'Focus', icon: 'fullscreen', separated: false }, focusEntries);
 
@@ -428,7 +431,7 @@ function buildNoteContextItems(context, handlers) {
         if (typeof onRemoveFormatting !== 'function') {
             throw new Error('Editing note context missing onRemoveFormatting handler');
         }
-        editingItems.push({ id: 'remove-formatting', label: 'Remove Formatting', icon: 'clear_formatting', enabled: true, shortcut: shortcut('U', true, false), onSelect: () => onRemoveFormatting(noteId) });
+        editingItems.push({ id: 'remove-formatting', label: 'Remove Formatting', icon: 'clear_formatting', enabled: true, shortcut: commandKey('U'), onSelect: () => onRemoveFormatting(noteId) });
     }
     if (context.canAddDiagram === true) {
         if (typeof onAddDiagram !== 'function') {
@@ -451,7 +454,7 @@ function buildNoteContextItems(context, handlers) {
         icon: 'trash',
         enabled: true,
         separated: true,
-        shortcut: shortcut('Backspace', true, false),
+        shortcut: commandKey('Backspace'),
         onSelect: () => onDeleteNote(noteId),
     });
     items.push({
@@ -514,24 +517,24 @@ function buildFlaggedEntries(context, handlers, specs) {
 
 // The note's place in the list. Moves that cannot happen from here are hidden
 // (no siblings that way, a root while a sort order is active).
-function buildMoveEntries(context, handlers, shortcut) {
+function buildMoveEntries(context, handlers, { commandKey, commandShiftKey }) {
     return buildFlaggedEntries(context, handlers, [
-        ['canMoveToTop', 'move-note-to-top', 'Move to Top', 'arrow_top', 'onMoveNoteToTop', shortcut('↑', true, true)],
-        ['canMoveUp', 'move-note-up', 'Move Up', 'arrow_up', 'onMoveNoteUp', shortcut('↑', true, false)],
-        ['canMoveDown', 'move-note-down', 'Move Down', 'arrow_down', 'onMoveNoteDown', shortcut('↓', true, false)],
-        ['canMoveToBottom', 'move-note-to-bottom', 'Move to Bottom', 'arrow_bottom', 'onMoveNoteToBottom', shortcut('↓', true, true)],
+        ['canMoveToTop', 'move-note-to-top', 'Move to Top', 'arrow_top', 'onMoveNoteToTop', commandShiftKey('↑')],
+        ['canMoveUp', 'move-note-up', 'Move Up', 'arrow_up', 'onMoveNoteUp', commandKey('↑')],
+        ['canMoveDown', 'move-note-down', 'Move Down', 'arrow_down', 'onMoveNoteDown', commandKey('↓')],
+        ['canMoveToBottom', 'move-note-to-bottom', 'Move to Bottom', 'arrow_bottom', 'onMoveNoteToBottom', commandShiftKey('↓')],
     ]);
 }
 
 // The note's level in the outline: expanding its subtree, indenting, outdenting.
-function buildOutlineEntries(context, handlers, shortcut) {
+function buildOutlineEntries(context, handlers, { commandKey }) {
     const expandEntries = buildFlaggedEntries(context, handlers, [
         ['hasChildren', 'fully-expand-note', 'Fully Expand', 'expand_all', 'onFullyExpandNote', null],
         ['hasChildren', 'fully-collapse-note', 'Fully Collapse', 'collapse_all', 'onFullyCollapseNote', null],
     ]);
     const levelEntries = buildFlaggedEntries(context, handlers, [
-        ['canIndent', 'indent-note', 'Indent', 'indent', 'onIndentNote', shortcut('→', true, false)],
-        ['canOutdent', 'outdent-note', 'Outdent', 'outdent', 'onOutdentNote', shortcut('←', true, false)],
+        ['canIndent', 'indent-note', 'Indent', 'indent', 'onIndentNote', commandKey('→')],
+        ['canOutdent', 'outdent-note', 'Outdent', 'outdent', 'onOutdentNote', commandKey('←')],
     ]);
     if (expandEntries.length > 0 && levelEntries.length > 0) {
         levelEntries[0].separated = true;
@@ -712,20 +715,23 @@ function buildViewContextItems(context, handlers) {
     if (!['system', 'light', 'dark'].includes(context.theme)) {
         throw new Error('View context theme must be system, light or dark');
     }
-    const shortcut = (key, mod, shift) => formatMenuShortcut({ isMac, mod, shift, key });
+    // A menu item's shortcut: the key alone, with ⌘ (Ctrl), or with ⌘⇧ (Ctrl+Shift).
+    const plainKey = (key) => formatMenuShortcut({ isMac, mod: false, shift: false, key });
+    const commandKey = (key) => formatMenuShortcut({ isMac, mod: true, shift: false, key });
+    const commandShiftKey = (key) => formatMenuShortcut({ isMac, mod: true, shift: true, key });
 
     const items = [];
     if (!isEditing) {
         const onAddNoteAtTop = requireViewHandler(handlers, 'onAddNoteAtTop');
         items.push({
             id: 'add-note-at-top', label: 'Add Note at Top', icon: 'add_top', enabled: true,
-            shortcut: shortcut('Enter', false, false), onSelect: () => onAddNoteAtTop(),
+            shortcut: plainKey('Enter'), onSelect: () => onAddNoteAtTop(),
         });
         if (canPasteNoteAtTop) {
             const onPasteNoteAtTop = requireViewHandler(handlers, 'onPasteNoteAtTop');
             items.push({
                 id: 'paste-note-at-top', label: 'Paste Note at Top', icon: 'paste', enabled: true,
-                shortcut: shortcut('V', true, false), onSelect: () => onPasteNoteAtTop(),
+                shortcut: commandKey('V'), onSelect: () => onPasteNoteAtTop(),
             });
         }
         // While a note is edited, its own editor undoes typing (⌘Z).
@@ -734,11 +740,11 @@ function buildViewContextItems(context, handlers) {
         items.push(
             {
                 id: 'undo', label: 'Undo', icon: 'undo', enabled: true, separated: true,
-                shortcut: shortcut('Z', true, false), onSelect: () => onUndo(),
+                shortcut: commandKey('Z'), onSelect: () => onUndo(),
             },
             {
                 id: 'redo', label: 'Redo', icon: 'redo', enabled: true,
-                shortcut: shortcut('Z', true, true), onSelect: () => onRedo(),
+                shortcut: commandShiftKey('Z'), onSelect: () => onRedo(),
             },
         );
     }

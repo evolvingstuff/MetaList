@@ -169,7 +169,7 @@ export function initEditorToolbar() {
         event.preventDefault();
     }, { passive: false });
     moduleState.toolbarElement.addEventListener('click', handleToolbarClick);
-    document.addEventListener('selectionchange', unlessDiagramEditorOpen(handleSelectionChange), true);
+    document.addEventListener('selectionchange', unlessDiagramEditorOpen(handleSelectionChange), { capture: true });
     moduleState.toolbarElement.setAttribute('aria-hidden', 'true');
     moduleState.toolbarElement.style.pointerEvents = 'none';
     moduleState.initialized = true;

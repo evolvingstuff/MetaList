@@ -1100,6 +1100,9 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
             },
             onZoomImage: (targetImageContext) => {
                 void CommandGate.run('contextMenu.image.zoom', async () => {
+                    // Zoom is full screen: leave edit mode first as Escape does (saved,
+                    // place kept), as View Note Full Screen does (interaction principle 6).
+                    if (ModeContext.isEditing) await actionDeselectNote();
                     await zoomImageFromContext(targetImageContext);
                 });
             },

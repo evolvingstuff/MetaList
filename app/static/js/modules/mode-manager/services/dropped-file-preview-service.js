@@ -44,6 +44,6 @@ export async function addDroppedFilePreviews(attachedFiles) {
         await actionRefreshAndMaybeSelect({ startedAt, context: 'droppedFilePreviews' });
     }
     if (skippedMessages.length > 0) {
-        ErrorHandler.showErrorBanner(skippedMessages.join(' '), 'info', SKIPPED_PREVIEWS_BANNER_SECONDS * MS_PER_SECOND, true);
+        ErrorHandler.showErrorBanner(skippedMessages.join(' '), 'info', SKIPPED_PREVIEWS_BANNER_SECONDS * MS_PER_SECOND, { closable: true });
     }
 }

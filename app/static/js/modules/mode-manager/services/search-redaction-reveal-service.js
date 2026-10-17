@@ -162,12 +162,12 @@ function syncLocalScrollState() {
     const scrollY = Math.max(0, Math.round(window.scrollY));
     // Revealing redacted search content can preserve the same scroll Y after layout correction.
     if (ModeContext.getTabScrollPosition(tabId) !== scrollY) {
-        ModeContext.updateTabScroll(tabId, scrollY, false);
+        ModeContext.updateTabScroll(tabId, scrollY, { emit: false });
     }
     const nextScrollAnchor = computeScrollAnchor({ anchorBias: 'auto' });
     // Redaction reveal can preserve the same anchor after correcting layout around hidden content.
     if (!areScrollAnchorsEqual(ModeContext.getTabScrollAnchor(tabId), nextScrollAnchor)) {
-        ModeContext.updateTabScrollAnchor(tabId, nextScrollAnchor, false);
+        ModeContext.updateTabScrollAnchor(tabId, nextScrollAnchor, { emit: false });
     }
 }
 

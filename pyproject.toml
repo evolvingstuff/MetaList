@@ -49,11 +49,22 @@ dev = [
     # Static-analysis report at development startup (docs/testing/harness.md);
     # the analyzer runs on 3.11+, so a 3.10 development install goes without it.
     "shockharness==0.7.0; python_version >= '3.11'",
+    # Type checking against a baseline of known errors (scripts/check_types.py).
+    "mypy==2.4.0",
 ]
 
 [project.scripts]
 metalist = "main:cli"
 metalist-audit-encryption = "app.encryption_audit:cli"
+
+[tool.mypy]
+# The oldest supported Python, and one platform for every OS, so Windows, macOS and
+# Linux report the same errors against the one baseline (scripts/check_types.py).
+python_version = "3.10"
+platform = "linux"
+plugins = ["pydantic.mypy"]
+show_error_codes = true
+cache_dir = ".mypy-cache"
 
 [tool.setuptools]
 include-package-data = true

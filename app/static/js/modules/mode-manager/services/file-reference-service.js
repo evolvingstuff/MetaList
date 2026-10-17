@@ -341,7 +341,7 @@ function pickSingleFile() {
 
         const cleanup = () => {
             input.removeEventListener('change', handleChange);
-            window.removeEventListener('focus', handleFocus, true);
+            window.removeEventListener('focus', handleFocus, { capture: true });
             if (focusPollTimeoutId !== null) {
                 window.clearTimeout(focusPollTimeoutId);
                 focusPollTimeoutId = null;
@@ -400,7 +400,7 @@ function pickSingleFile() {
 
         input.value = '';
         input.addEventListener('change', handleChange);
-        window.addEventListener('focus', handleFocus, true);
+        window.addEventListener('focus', handleFocus, { capture: true });
         input.click();
     });
 }

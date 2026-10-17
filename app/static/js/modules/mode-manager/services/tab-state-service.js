@@ -243,7 +243,7 @@ function handleScrollEvent() {
             const effectiveTabId = moduleState.pendingTabId === null ? ModeContext.activeTabId : moduleState.pendingTabId;  // shockharness: ignore[DEF002] reason="null means no tab switch is pending"
             // A programmatic restore can update ModeContext before the browser scroll event lands.
             if (ModeContext.getTabScrollPosition(effectiveTabId) !== current) {
-                ModeContext.updateTabScroll(effectiveTabId, current, true);
+                ModeContext.updateTabScroll(effectiveTabId, current, { emit: true });
             }
         }
         moduleState.pendingTabId = null;
@@ -300,7 +300,7 @@ async function persistCurrentScroll() {
     const nextScrollAnchor = computeScrollAnchor({ anchorBias: 'auto' });
     // Polling can run when the view has no root notes, so computed and stored anchors are both null.
     if (!areScrollAnchorsEqual(ModeContext.getTabScrollAnchor(tabId), nextScrollAnchor)) {
-        ModeContext.updateActiveTabScrollAnchor(nextScrollAnchor, true);
+        ModeContext.updateActiveTabScrollAnchor(nextScrollAnchor);
     }
     await persistTabStateSnapshot();
     moduleState.lastPersistedScrollByTab[tabId] = current;

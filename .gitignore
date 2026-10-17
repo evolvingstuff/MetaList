@@ -55,3 +55,6 @@ certs/
 
 # ShockHarness per-file result cache (docs/testing/harness.md)
 .shockharness-cache/
+
+# mypy (scripts/check_types.py)
+.mypy-cache/

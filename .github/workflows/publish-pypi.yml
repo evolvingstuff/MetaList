@@ -126,6 +126,9 @@ jobs:
           assert_startup_sanity(Path.cwd());
           assert_startup_js_sanity(Path.cwd())"
 
+      - name: Type check against the known-error baseline
+        run: python scripts/check_types.py check
+
   installed-package:
     if: ${{ github.ref == 'refs/heads/main' }}
     name: Package and update (${{ matrix.os }}, ${{ matrix.python-version }})

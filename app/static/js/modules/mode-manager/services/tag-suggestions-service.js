@@ -411,10 +411,10 @@ export function initializeTagSuggestions() {
     }
     moduleState.initialized = true;
 
-    document.addEventListener('mousedown', unlessDiagramEditorOpen(handleDocumentMouseDown), true);
-    document.addEventListener('focusin', unlessDiagramEditorOpen(handleFocusIn), true);
-    document.addEventListener('focusout', unlessDiagramEditorOpen(handleFocusOut), true);
+    document.addEventListener('mousedown', unlessDiagramEditorOpen(handleDocumentMouseDown), { capture: true });
+    document.addEventListener('focusin', unlessDiagramEditorOpen(handleFocusIn), { capture: true });
+    document.addEventListener('focusout', unlessDiagramEditorOpen(handleFocusOut), { capture: true });
     document.addEventListener('keydown', unlessDiagramEditorOpen(handleKeyDown));
-    window.addEventListener('scroll', handleViewportChange, true);
+    window.addEventListener('scroll', handleViewportChange, { capture: true });
     window.addEventListener('resize', handleViewportChange);
 }

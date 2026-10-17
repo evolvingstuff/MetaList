@@ -487,7 +487,7 @@ function disconnectVisibilityTracking() {
     }
 
     if (moduleState.activeFallbackHandler) {
-        window.removeEventListener('scroll', moduleState.activeFallbackHandler, true);
+        window.removeEventListener('scroll', moduleState.activeFallbackHandler, { capture: true });
         window.removeEventListener('resize', moduleState.activeFallbackHandler);
         moduleState.activeFallbackHandler = null;
     }

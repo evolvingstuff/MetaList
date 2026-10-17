@@ -147,7 +147,7 @@ export function handleSearchInput(event) {
             }
             // updateActiveTabScroll clears the scroll anchor; repeated top searches leave it null.
             if (ModeContext.getTabScrollAnchor(ModeContext.activeTabId) !== null) {
-                ModeContext.updateActiveTabScrollAnchor(null, true);
+                ModeContext.updateActiveTabScrollAnchor(null);
             }
             // resetRootTracking clears the root anchor before the new search renders.
             if (ModeContext.getRootAnchorId() !== null) {
