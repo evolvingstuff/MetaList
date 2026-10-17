@@ -120,6 +120,13 @@ try {
   const pageFailure = new Promise((resolve, reject) => page.on('pageerror', reject));
   await page.goto(origin);
   await Promise.race([page.waitForSelector('[data-app-ready="true"]', {timeout:30000}), pageFailure]);
+  // The backup reminder is on by default and a fresh test namespace has no backup, so its
+  // card would float over whatever a check clicks near the bottom right, as the update
+  // notice would. Only its own suite (backup-reminder) wants it, and turns it on itself.
+  await page.evaluate(async () => {
+    const {CommandPalette} = await import('/static/js/modules/command-palette/command-palette-controller.js');
+    await CommandPalette.applyPreference('pref.backup_reminder', 'off');
+  });
   if (process.env.BROWSER_TEST_SUITE === 'ai-selected-note') {
     await checkAiSelectedNote(page);
     assert.deepEqual(errors, []);

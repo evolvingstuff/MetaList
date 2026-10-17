@@ -185,7 +185,7 @@ export async function checkBackupReminder(page) {
 
 async function checkReminderCases(page, noteId) {
   await setBackupTimes(page, []);
-  await setPreference(page, 'pref.backup_reminder', 'off');
+  // The harness starts every run with the reminder Off (browser-smoke.mjs).
   await reloadApp(page);
 
   // 1. Due when the app opens: the card floats; the note, scroll and focus are exactly

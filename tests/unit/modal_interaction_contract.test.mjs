@@ -224,8 +224,9 @@ test('formerly blocking modals allow outside-click closing', () => {
 test('delete namespace modal starts in loading state before its async onOpen hook', () => {
     const source = readModalSource('delete-namespace-modal.js');
     const initialStateStart = source.indexOf('    getInitialModalState() {');
-    // The method ends at the first line that closes it at method indentation.
-    const initialStateEnd = source.indexOf('\n    }\n', initialStateStart);
+    // The method ends at the first line that closes it at method indentation (LF or CRLF).
+    const closingBrace = source.slice(initialStateStart).search(/\r?\n    \}\r?\n/);
+    const initialStateEnd = closingBrace === -1 ? -1 : initialStateStart + closingBrace;
     assert.notEqual(initialStateStart, -1);
     assert.notEqual(initialStateEnd, -1);
     const initialStateSource = source.slice(initialStateStart, initialStateEnd);

@@ -491,12 +491,12 @@ async function noArrowCases(page) {
 }
 
 // --- Shading -------------------------------------------------------------
-// An embed is tinted blue, a shade deeper for each embed inside an embed (to
-// the third). A holder's own children take the tint of the level around it.
+// An embed is tinted grey (main.css --embed-tint-1..3), a shade deeper for each embed
+// inside an embed (to the third). A holder's own children take the tint of the level around it.
 
 const TINTS = {
-  light: ['rgb(175, 215, 251)', 'rgb(150, 200, 247)', 'rgb(125, 184, 242)'],
-  dark: ['rgb(23, 51, 80)', 'rgb(29, 63, 99)', 'rgb(36, 75, 118)'],
+  light: ['rgb(241, 243, 245)', 'rgb(229, 232, 235)', 'rgb(216, 220, 224)'],
+  dark: ['rgb(32, 34, 36)', 'rgb(42, 45, 48)', 'rgb(53, 57, 61)'],
 };
 
 async function inTheme(page, theme, check) {
