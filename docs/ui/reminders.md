@@ -130,6 +130,8 @@ This keeps the server authoritative while avoiding pointless server traffic duri
 
 `Add reminder` and `Save changes` always clear back to the default new-reminder form after a successful create/update.
 
+Editing a reminder keeps its history (how many times it has fired, when it last fired or was seen, missed and snoozed state) and where its schedule stands, as long as the schedule is unchanged: changing the title, details or pre-reminder neither restarts an "after N times" count nor moves a due occurrence on. Changing the schedule (one-time or recurring, date-time or date-only, the date or time, or the recurrence rule) makes a new schedule whose history starts over. Every request must send every reminder field, and a saved reminder must have every field; only reminders saved during development before details and pre-reminders existed load with those blank.
+
 A reminder needs a title (details are optional): `Add reminder` with an empty title sends nothing, says "Add a title for the reminder." under the buttons, and puts the cursor in the title field. The form's fields fire both `input` and `change`, so every form change is applied only when the value differs (the client state rejects redundant changes; before that, `Add reminder` silently did nothing). The release browser check adds a reminder through the dialog (`scripts/browser-validation/browser-startup.mjs`).
 
 `Clear form` discards the current form state.

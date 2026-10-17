@@ -46,7 +46,7 @@ async function createDueReminder(page, title) {
       note_id: null, title, details: '', attachment_type: 'unattached',
       schedule_kind: 'one_time', time_mode: 'date_time',
       scheduled_at: new Date(Date.now() - minute).toISOString(), scheduled_date: null,
-      recurrence_rule: null, persistence_mode: 'keep_until_seen', status: 'active',
+      recurrence_rule: null, pre_reminder: null, persistence_mode: 'keep_until_seen', status: 'active',
     });
     const matching = ReminderStore.snapshot().reminders.filter(reminder => reminder.title === title);
     if (matching.length !== 1) throw new Error(`Expected one reminder titled ${title}`);
