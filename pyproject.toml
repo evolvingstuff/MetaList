@@ -48,7 +48,7 @@ dev = [
     "pytest-cov==7.1.0",
     # Static-analysis report at development startup (docs/testing/harness.md);
     # the analyzer runs on 3.11+, so a 3.10 development install goes without it.
-    "shockharness==0.5.0; python_version >= '3.11'",
+    "shockharness==0.6.0; python_version >= '3.11'",
 ]
 
 [project.scripts]

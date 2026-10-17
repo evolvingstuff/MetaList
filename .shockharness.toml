@@ -74,6 +74,12 @@ nullish_fallbacks = "forbid"        # DEF004: x ?? v, x if x is not None else v
 configuration_fallbacks = "forbid"  # DEF006: os.getenv("X", v), process.env.X || v
 # DEF005 (a handler that returns a default) has no mode: it is always an error.
 
+# ASSERT001 (assert in production code) is off: AGENTS.md asks for asserts as
+# executable invariants, and MetaList never runs Python with -O, which is what
+# would strip them.
+[tool.shockharness.rules.assertions]
+enabled = false
+
 # Complexity metrics and the call graph (CPLX001-CPLX005): advisory warnings, reported
 # under metrics.complexity and metrics.graph, never failing a plain `check`. Each
 # threshold is compared per unit (function, method, lambda, class body, module body).
