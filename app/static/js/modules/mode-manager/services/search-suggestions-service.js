@@ -21,6 +21,9 @@ const moduleState = ApplicationState.createFields('search-suggestions-service', 
     requestSerial: 0,
     selectedIndex: NO_SELECTION,
     suppressSuggestionsUntilInputInteraction: false,
+    // The search text the list on screen was built for. Once the text changes,
+    // the list is for older text until the new one arrives.
+    listBuiltForText: '',
 });
 
 
@@ -342,7 +345,10 @@ function requireSuggestionReasons(reasonsByTag, tag) {
     return reasons;
 }
 
-function renderSuggestions(searchInput, suggestions, personalizedSuggestions, showWindowLabels, reasonsByTag) {
+function renderSuggestions(searchInput, builtForText, suggestions, personalizedSuggestions, showWindowLabels, reasonsByTag) {
+    if (typeof builtForText !== 'string') {
+        throw new Error('renderSuggestions requires the text the list was built for');
+    }
     const container = getSearchSuggestionsContainer();
     if (!Array.isArray(suggestions) || suggestions.length === 0) {
         hideSuggestions();
@@ -368,6 +374,8 @@ function renderSuggestions(searchInput, suggestions, personalizedSuggestions, sh
         .join('');
 
     container.innerHTML = items;
+    // The same text can be suggested for again (the box was clicked).
+    if (moduleState.listBuiltForText !== builtForText) moduleState.listBuiltForText = builtForText;
     container.hidden = false;
     container.style.display = 'flex';
     // A new result snapshot can retain the first-item selection index.
@@ -501,6 +509,7 @@ export function updateSearchSuggestions(searchInput, options) {
         }
         renderSuggestions(
             searchInput,
+            rawValue,
             response.suggestions,
             response.personalizedSuggestions,
             getShowSearchSuggestionWindowLabels(),
@@ -551,6 +560,18 @@ export function initializeSearchSuggestions() {
         }
         const items = Array.from(container.querySelectorAll('.search-suggestion'));
         if (items.length === 0) {
+            return;
+        }
+        // Only a list built for the text in the box is acted on: Enter on an older
+        // list searches what was typed, and the arrows wait for the new list.
+        const isListForOlderText = searchInput.value !== moduleState.listBuiltForText;
+        if (isListForOlderText && event.key === 'Enter') {
+            clearPendingSuggestionRequest();
+            hideSuggestions();
+            return;
+        }
+        if (isListForOlderText && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+            event.preventDefault();
             return;
         }
         if (event.key === 'ArrowDown') {

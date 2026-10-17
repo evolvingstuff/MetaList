@@ -43,6 +43,7 @@
 - Stop no longer ends in a fatal error: the "Cancelling request" activity carries the fields every activity needs.
 - The AI remembers a failed request and the explanation you saw, so you can follow up
   with "try that again" or ask why it failed (`docs/design/agent-harness.md`).
+- A Send that MetaList refuses before the AI starts (the AI is not set up, the active tab changed, a message it rejects) stays in the chat with the reason, so the message is not lost and the reason says what to fix. The server keeps no record of such a turn, so the chat is not reloaded from it after the refusal.
 
 ## Web access
 
