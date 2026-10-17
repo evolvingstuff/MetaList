@@ -97,6 +97,23 @@ def transactional_route(func: Callable[P, R] | Callable[P, Awaitable[R]]) -> Cal
     return sync_wrapper
 
 
+def serialized_read_route(func: Callable[P, R]) -> Callable[P, R]:
+    """A read that walks the note tree in several steps (an export, backlinks):
+    it holds the lock synchronous writes hold, so no write lands between its steps."""
+    if inspect.iscoroutinefunction(func):
+        raise TypeError(f"serialized_read_route needs a synchronous route: {func.__name__}")
+    resolved_signature = _resolved_signature(cast(Callable[..., Any], func))
+
+    @wraps(func)
+    def serialized_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        with bulk_operation_guard.lock:
+            return func(*args, **kwargs)
+
+    # FastAPI reads the route's parameters from its signature.
+    setattr(serialized_wrapper, "__signature__", resolved_signature)
+    return serialized_wrapper
+
+
 def assert_mutation_routes_wrapped(app: FastAPI) -> None:
     violations: list[str] = []
 

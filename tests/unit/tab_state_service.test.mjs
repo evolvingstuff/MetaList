@@ -85,7 +85,7 @@ test('scroll changed during a slow save is persisted by the following poll', asy
     const skipped = h.poll();
     const settled = Promise.allSettled([first, skipped]);
     for (const request of h.requests) request.complete();
-    await settled;
+    assert.deepEqual((await settled).map(result => result.status), ['fulfilled', 'fulfilled']);
     assert.equal(h.requests.length, 1);
     const next = h.poll();
     assert.equal(h.requests[1].sent.tabs.first.scrollY, 250);

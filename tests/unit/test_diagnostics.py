@@ -225,3 +225,17 @@ def test_authenticated_logging_encrypts_process_streams_and_diagnostic_sink(
     )
     assert diagnostics.sys.stdout is plaintext_stdout
     assert diagnostics.sys.stderr is plaintext_stderr
+
+
+def test_a_second_request_with_an_id_already_in_flight_fails_loudly() -> None:
+    """Two requests in flight under one id would share one tracking entry, and
+    the second to finish would find none: starting the second one fails at once."""
+    request = {"method": "GET", "path": "/api2/auth/status", "has_query": False,
+               "client": "127.0.0.1", "user_agent": "pytest", "started_at": 1.0}
+    diagnostics.begin_request(request_id="same-id", **request)
+    try:
+        with pytest.raises(RuntimeError, match="already in flight"):
+            diagnostics.begin_request(request_id="same-id", **request)
+    finally:
+        diagnostics.finish_request(request_id="same-id", ended_at=2.0)
+    assert "same-id" not in diagnostics.snapshot_active_requests()

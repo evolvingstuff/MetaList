@@ -21,7 +21,7 @@ from app.services.exception_capture import CapturedExceptionContext
 
 _CHECK_INTERVAL_SECONDS = 5.0
 _guard_lock = threading.Lock()
-_guard_started = False
+_guard_started = False  # shockharness: ignore[STATE001] reason="checked and set under _guard_lock"
 
 
 @dataclass(frozen=True)

@@ -5,6 +5,7 @@ It now uses the token-based DEK system for encryption operations.
 """
 
 import logging
+from threading import RLock
 from types import SimpleNamespace
 from typing import Optional, Tuple
 
@@ -15,9 +16,14 @@ from app.services.encryption import EncryptionService
 from app.services.tokens import token_service
 
 # Global encryption service instance (per-request)
-_encryption_service: Optional[EncryptionService] = None
-_current_token: Optional[str] = None
-_encryption_required: bool = False
+_encryption_service: Optional[EncryptionService] = None  # shockharness: ignore[STATE001] reason="every access holds _service_lock"
+_current_token: Optional[str] = None  # shockharness: ignore[STATE001] reason="every access holds _service_lock"
+_encryption_required: bool = False  # shockharness: ignore[STATE001] reason="set only by startup, restore, rollback recovery and the password changes, which are serialized; readers see one bool"
+# Guards the cached service and its token. A request filling the cache holds it
+# while it reads the token's key, so a lock clearing the key waits for that
+# request and the key never comes back after the lock. A service is published
+# only once its key is set.
+_service_lock = RLock()
 
 logger = logging.getLogger(__name__)
 
@@ -32,25 +38,24 @@ def get_encryption_service_with_token(token: str) -> Optional[EncryptionService]
         EncryptionService instance with DEK loaded or None
     """
     global _encryption_service, _current_token
-    
-    # If we have a cached service for this token, return it
-    if _encryption_service and _current_token == token and token:
-        return _encryption_service
-    
+
     if not token:
         return None
-        
-    # Get DEK from token
-    dek = token_service.get_dek(token)
-    if dek is None:
-        return None
-    
-    # Create new encryption service with keys
-    _encryption_service = EncryptionService()
-    _encryption_service.dek = dek
-    _current_token = token
-    
-    return _encryption_service
+    with _service_lock:
+        # If we have a cached service for this token, return it
+        if _encryption_service and _current_token == token:
+            return _encryption_service
+
+        # Get DEK from token
+        dek = token_service.get_dek(token)
+        if dek is None:
+            return None
+
+        service = EncryptionService()
+        service.dek = dek
+        _encryption_service = service
+        _current_token = token
+        return service
 
 
 def get_encryption_service() -> Optional[EncryptionService]:
@@ -60,8 +65,8 @@ def get_encryption_service() -> Optional[EncryptionService]:
         EncryptionService instance or None if no encryption available
     """
     # This is kept for backward compatibility but requires active session
-    global _encryption_service
-    return _encryption_service
+    with _service_lock:
+        return _encryption_service
 
 
 def set_encryption_required(required: bool) -> None:
@@ -146,10 +151,12 @@ def set_session_dek(dek: bytes) -> None:
     global _encryption_service, _current_token
     if not dek:
         raise ValueError("DEK must be provided")
-    _encryption_service = EncryptionService()
-    _encryption_service.master_key = None
-    _encryption_service.dek = dek
-    _current_token = None
+    service = EncryptionService()
+    service.master_key = None
+    service.dek = dek
+    with _service_lock:
+        _encryption_service = service
+        _current_token = None
     enable_sensitive_caches()
 
 
@@ -159,10 +166,11 @@ def clear_encryption_key() -> None:
     This clears the global encryption service.
     """
     global _encryption_service, _current_token
-    if _encryption_service:
-        _encryption_service.clear_keys()
-    _encryption_service = None
-    _current_token = None
+    with _service_lock:
+        if _encryption_service:
+            _encryption_service.clear_keys()
+        _encryption_service = None
+        _current_token = None
 
 
 def is_encryption_available(token: str) -> bool:
@@ -197,11 +205,12 @@ def get_encryption_status() -> dict:
         else:
             settings = None
 
+        service = get_encryption_service()
         return {
             "encryption_enabled": settings.encryption_enabled if settings else False,
             "has_dek": bool(settings and settings.encrypted_dek),
             "algorithm": settings.encryption_algorithm if settings else None,
-            "global_service_active": _encryption_service is not None and _encryption_service.dek is not None
+            "global_service_active": service is not None and service.dek is not None
         }
     finally:
         db.close()

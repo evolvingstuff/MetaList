@@ -106,7 +106,7 @@ class _RetryRun:
 
 
 _state_lock = Lock()
-_current_run: list[_RetryRun] = []
+_current_run: list[_RetryRun] = []  # shockharness: ignore[STATE001] reason="every access holds _state_lock"
 
 
 def _latest_run() -> _RetryRun | None:

@@ -62,7 +62,7 @@ from app.api.note_requests import (
     PasteChildEndpointRequest,
     PasteReferenceEndpointRequest,
 )
-from app.api.transactions import transactional_route
+from app.api.transactions import serialized_read_route, transactional_route
 from app.services.sync import touch_client
 from app.services.snapshot import build_view_state
 from app.services.snapshot import resolve_search_scope
@@ -715,6 +715,7 @@ def search_tag_details(request: Request, payload: SearchTagDetailsRequest) -> Di
 
 
 @router.get("/notes/export-summary")
+@serialized_read_route
 def export_summary(request: Request) -> Dict[str, object]:
     """What an export or print of a note (with its children) or of the view holds,
     for its dialog: the title it starts with, and how many passwords and usernames it shows."""
@@ -744,6 +745,7 @@ def export_summary(request: Request) -> Dict[str, object]:
 
 
 @router.get("/notes/export-html")
+@serialized_read_route
 def export_notes_html(request: Request) -> Response:
     token = _require_bearer_token(request)
     search_query = _required_query_param(request, "search_query")
@@ -832,6 +834,7 @@ def note_floating_window(note_id: str, revision: str) -> dict[str, str]:
 
 
 @router.get("/notes/{note_id}/backlinks")
+@serialized_read_route
 def backlinks(request: Request, note_id: str) -> Dict[str, object]:
     _require_note_present(note_id, context="notes.backlinks")
 

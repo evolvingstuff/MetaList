@@ -142,14 +142,16 @@ class EncryptedTextStream:
         raise RuntimeError("Raw file-descriptor access is disabled during authenticated logging")
 
     def write(self, message: str) -> int:
-        if self._closed:
-            raise RuntimeError("Encrypted text stream is closed")
-        if not isinstance(message, str):
-            raise TypeError(f"message must be a string, got {type(message)}")
-        if message == "":
-            return 0
-        envelope = encrypt_log_record(plaintext=message, dek=self._dek).decode("ascii")
+        # Under the lock from the check to the write: a close (at logout) waits for a
+        # write already under way, and a write after it finds the stream closed.
         with self._lock:
+            if self._closed:
+                raise RuntimeError("Encrypted text stream is closed")
+            if not isinstance(message, str):
+                raise TypeError(f"message must be a string, got {type(message)}")
+            if message == "":
+                return 0
+            envelope = encrypt_log_record(plaintext=message, dek=self._dek).decode("ascii")
             self._destination.write(envelope)
             self._destination.flush()
         return len(message)

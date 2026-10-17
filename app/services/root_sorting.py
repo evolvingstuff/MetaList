@@ -183,7 +183,7 @@ class _RootMetrics:
         assert len(self.roots) == len(self.children[None])
 
 
-_metric_state = None
+_metric_state = None  # shockharness: ignore[STATE001] reason="every access holds _metric_lock"
 
 
 def _metrics(*, include_text):

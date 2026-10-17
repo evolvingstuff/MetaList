@@ -110,15 +110,16 @@ class AuthService:
         self.encryption = EncryptionService()
 
     def get_settings(self) -> Optional[SimpleNamespace]:
-        """Fetch application settings from the database."""
+        """Fetch application settings from the database.
+
+        Only the changes that turn encryption on or off (and startup, restore and
+        rollback recovery) set the "encryption required" flag: this read can run
+        beside a password change and see the row from before it commits."""
         with SafeSession.allow_reads("auth:get_settings"):
             row = fetch_settings(self.db.connection())
         if not row:
-            set_encryption_required(False)
             return None
-        settings = SimpleNamespace(**row)
-        set_encryption_required(bool(settings.encryption_enabled))
-        return settings
+        return SimpleNamespace(**row)
 
     def initialize_settings(self) -> SimpleNamespace:
         """Ensure settings exist before continuing."""

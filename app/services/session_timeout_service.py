@@ -11,7 +11,7 @@ from app.models.database import SafeSession
 MIN_SESSION_TIMEOUT_MINUTES = 0
 MAX_SESSION_TIMEOUT_MINUTES = 1_440
 
-_cached_session_timeout_minutes: int | None = None
+_cached_session_timeout_minutes: int | None = None  # shockharness: ignore[STATE001] reason="first filled under token_service's lock at login; later set only by a write request and cleared on its rollback; an int is replaced whole"
 
 
 def _validate_session_timeout_minutes(*, timeout_minutes: object, source: str) -> int:

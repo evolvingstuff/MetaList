@@ -147,6 +147,7 @@ Implementation note (DOM):
 - While typing, results prioritize **prefix matches**, then substring matches, then fuzzy (subsequence) matches.
 - Each suggestion shows a count badge with the number of notes containing that tag.
 - Arrow keys move selection (first item is selected by default); `Enter` applies the selected suggestion, fills the input, and blurs the field.
+- Enter and the arrow keys act only on a result list built for the text in the box. While the list for what you just typed is on its way, the one on screen is for older text: Enter then closes it and opens the tag you typed, and the arrows wait for the new list.
 
 ### Relationship dialogs
 

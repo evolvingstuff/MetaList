@@ -136,7 +136,8 @@ class PasswordOperationModal extends BaseModal {
             if (submitButton.disabled) {
                 return;
             }
-            this.handleSubmit();
+            // Not awaited: handleSubmit marks the dialog busy before its first await.
+            void this.handleSubmit();
         }
         
         // Escape handled by BaseModal (will close modal)
@@ -526,7 +527,8 @@ class PasswordOperationModal extends BaseModal {
         if (form) {
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
-                this.handleSubmit();
+                // Not awaited: handleSubmit marks the dialog busy before its first await.
+                void this.handleSubmit();
             });
         }
         

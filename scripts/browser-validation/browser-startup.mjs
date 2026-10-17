@@ -43,7 +43,7 @@ const browser = await puppeteer.launch({
 });
 const version = await browser.version();
 console.log(`Release browser: ${browserName}; executable: ${executablePath}; version: ${version}`);
-const diagnostics = [];
+const diagnostics = [];  // shockharness: ignore[STATE001] reason="single-threaded Node: the page event callbacks and the run share one event loop"
 
 async function checkPage(context, origin, coldRun) {
   const page = await context.newPage();
@@ -486,7 +486,7 @@ try {
   for (let coldRun = 0; coldRun < coldRuns; coldRun += 1) {
     const context = await browser.createBrowserContext();
     try {
-      const outcomes = await Promise.allSettled(origins.map(origin => checkPage(context, origin, coldRun)));
+      const outcomes = await Promise.allSettled(origins.map(origin => checkPage(context, origin, coldRun)));  // shockharness: ignore[ASYNC003] reason="the next line throws the first rejected outcome"
       for (const outcome of outcomes) if (outcome.status === 'rejected') throw outcome.reason;
     } finally {
       await context.close();

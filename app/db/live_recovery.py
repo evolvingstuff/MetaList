@@ -23,7 +23,7 @@ else:
 
 
 _lock = RLock()
-_active: set[Path] = set()
+_active: set[Path] = set()  # shockharness: ignore[STATE001] reason="every access holds the module _lock, taken in begin() and released in _finish()"
 # The recovery snapshot directory is readable and writable by its owner only.
 _SNAPSHOT_DIRECTORY_MODE = 0o700
 

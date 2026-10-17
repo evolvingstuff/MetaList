@@ -545,24 +545,20 @@ class LinkTitleFetcher:
     def submit(self, normalized_url: str, generation: int) -> None:
         if not isinstance(normalized_url, str) or normalized_url == "":
             raise TypeError("normalized_url must be a non-empty string")
-        _executor().submit(_run_fetch_job, normalized_url, generation)
+        _FETCHER_EXECUTOR.submit(_run_fetch_job, normalized_url, generation)
 
     def submit_job(self, job: Callable[..., None], *args: object) -> None:
         """Run a lookup job on the title-lookup workers (manual retries)."""
         if not callable(job):
             raise TypeError("job must be callable")
-        _executor().submit(job, *args)
+        _FETCHER_EXECUTOR.submit(job, *args)
 
 
-_FETCHER_EXECUTOR = None
 _FETCHER_WORKER_COUNT = 3
-
-
-def _executor():
-    global _FETCHER_EXECUTOR
-    if _FETCHER_EXECUTOR is None:
-        _FETCHER_EXECUTOR = ThreadPoolExecutor(max_workers=_FETCHER_WORKER_COUNT, thread_name_prefix="link-title")
-    return _FETCHER_EXECUTOR
+# Made once, when the module loads: page renders in several threads start lookups,
+# so creating it on first use could make two pools. Its threads start only with
+# the first lookup.
+_FETCHER_EXECUTOR = ThreadPoolExecutor(max_workers=_FETCHER_WORKER_COUNT, thread_name_prefix="link-title")
 
 
 def normalize_url_for_link_title(url: str) -> str | None:
