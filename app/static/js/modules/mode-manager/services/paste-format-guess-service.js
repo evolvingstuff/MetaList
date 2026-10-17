@@ -13,6 +13,39 @@ const RUNNER_UP_SHARE = 0.6;
 // Text whose lines do not look like code (SQL, shell, YAML, Dockerfile) still
 // counts as code with this strong a score and no sentences.
 const STRONG_LANGUAGE_SCORE = 8;
+// Weights of signs that hint at a language without settling it: weak signs
+// are shared with other languages, fair signs lean toward one.
+const WEAK_SIGN_WEIGHT = 2;
+const FAIR_SIGN_WEIGHT = 3;
+// Weights of signs that point to one language. A strong sign needs company to
+// reach MIN_LANGUAGE_SCORE; a distinctive or defining sign reaches it alone; a
+// decisive sign (a shebang, a doctype, an XML declaration) reaches
+// STRONG_LANGUAGE_SCORE alone.
+const STRONG_SIGN_WEIGHT = 4;
+const DISTINCTIVE_SIGN_WEIGHT = 5;
+const DEFINING_SIGN_WEIGHT = 6;
+const DECISIVE_SIGN_WEIGHT = 8;
+
+// A sentence has at least this many words.
+const MIN_SENTENCE_WORDS = 5;
+// A CSV cell is short: at most this many words and characters.
+const MAX_CSV_CELL_WORDS = 8;
+const MAX_CSV_CELL_CHARACTERS = 80;
+// Text is code when at least this share of its lines read as code.
+const MIN_CODE_LINE_SHARE = 0.6;
+// YAML is mostly `key: value` lines: at least this share of them.
+const MIN_YAML_KEY_LINE_SHARE = 0.6;
+
+// CSV: at least this many lines, each with at least this many cells.
+const MIN_CSV_LINES = 3;
+const MIN_CSV_COLUMNS = 2;
+// Markdown: a list is at least this many items; a bare code fence is an
+// opening and a closing line; plain text needs this many kinds of signs.
+const MIN_LIST_LINES = 2;
+const FENCE_LINES = 2;
+const MIN_MARKDOWN_SIGN_KINDS = 2;
+// YAML: at least this many `key: value` lines.
+const MIN_YAML_KEY_LINES = 3;
 
 const LANGUAGES = Object.freeze([
     { tag: '@code=sql', label: 'SQL' },
@@ -38,79 +71,79 @@ const LANGUAGES = Object.freeze([
 // often it matches; distinctive signs weigh more.
 const LANGUAGE_SIGNS = Object.freeze({
     '@code=sql': [
-        [/^\s*SELECT\b[\s\S]+?\bFROM\b/im, 6], [/^\s*INSERT\s+INTO\b/im, 6], [/^\s*UPDATE\s+\w+\s+SET\b/im, 6],
-        [/^\s*CREATE\s+(?:TABLE|INDEX|VIEW|DATABASE)\b/im, 6], [/^\s*DELETE\s+FROM\b/im, 6], [/^\s*ALTER\s+TABLE\b/im, 6],
-        [/\bWHERE\b/i, 1], [/\b(?:GROUP|ORDER)\s+BY\b/i, 2], [/\b(?:INNER|LEFT|RIGHT|OUTER)?\s*JOIN\b[\s\S]+?\bON\b/i, 2],
+        [/^\s*SELECT\b[\s\S]+?\bFROM\b/im, DEFINING_SIGN_WEIGHT], [/^\s*INSERT\s+INTO\b/im, DEFINING_SIGN_WEIGHT], [/^\s*UPDATE\s+\w+\s+SET\b/im, DEFINING_SIGN_WEIGHT],
+        [/^\s*CREATE\s+(?:TABLE|INDEX|VIEW|DATABASE)\b/im, DEFINING_SIGN_WEIGHT], [/^\s*DELETE\s+FROM\b/im, DEFINING_SIGN_WEIGHT], [/^\s*ALTER\s+TABLE\b/im, DEFINING_SIGN_WEIGHT],
+        [/\bWHERE\b/i, 1], [/\b(?:GROUP|ORDER)\s+BY\b/i, WEAK_SIGN_WEIGHT], [/\b(?:INNER|LEFT|RIGHT|OUTER)?\s*JOIN\b[\s\S]+?\bON\b/i, WEAK_SIGN_WEIGHT],
     ],
     '@code=python': [
-        [/^\s*def\s+\w+\s*\([^)]*\)\s*(?:->\s*[^:]+)?:\s*$/m, 6], [/^\s*class\s+\w+(?:\([^)]*\))?:\s*$/m, 5],
-        [/^\s*(?:from\s+[\w.]+\s+import\s+\w+|import\s+[\w.]+(?:\s+as\s+\w+)?)\s*$/m, 4], [/\belif\b/, 4],
-        [/\bself\.\w+/, 3], [/__\w+__/, 3], [/\bf"[^"\n]*\{[^}\n]+\}/, 3], [/\blambda\s+\w*\s*:/, 3],
-        [/\b(?:None|True|False)\b/, 1], [/^\s*(?:if|for|while|with|try|else|except)\b[^\n{;]*:\s*$/m, 2],
+        [/^\s*def\s+\w+\s*\([^)]*\)\s*(?:->\s*[^:]+)?:\s*$/m, DEFINING_SIGN_WEIGHT], [/^\s*class\s+\w+(?:\([^)]*\))?:\s*$/m, DISTINCTIVE_SIGN_WEIGHT],
+        [/^\s*(?:from\s+[\w.]+\s+import\s+\w+|import\s+[\w.]+(?:\s+as\s+\w+)?)\s*$/m, STRONG_SIGN_WEIGHT], [/\belif\b/, STRONG_SIGN_WEIGHT],
+        [/\bself\.\w+/, FAIR_SIGN_WEIGHT], [/__\w+__/, FAIR_SIGN_WEIGHT], [/\bf"[^"\n]*\{[^}\n]+\}/, FAIR_SIGN_WEIGHT], [/\blambda\s+\w*\s*:/, FAIR_SIGN_WEIGHT],
+        [/\b(?:None|True|False)\b/, 1], [/^\s*(?:if|for|while|with|try|else|except)\b[^\n{;]*:\s*$/m, WEAK_SIGN_WEIGHT],
         [/\bprint\(/, 1],
     ],
     '@code=ruby': [
-        [/^\s*def\s+\w+[?!]?(?:\s*\([^)]*\))?\s*$/m, 4], [/^\s*end\s*$/m, 3], [/\bputs\b/, 3],
-        [/\bdo\s*\|[^|\n]*\|/, 5], [/\.each(?:_with_index)?\b/, 2], [/@\w+\s*=/, 3], [/\brequire\s+['"]/, 3],
-        [/\bnil\b/, 2], [/\belsif\b/, 4], [/\battr_(?:accessor|reader|writer)\b/, 5], [/#\{[^}\n]+\}/, 2],
+        [/^\s*def\s+\w+[?!]?(?:\s*\([^)]*\))?\s*$/m, STRONG_SIGN_WEIGHT], [/^\s*end\s*$/m, FAIR_SIGN_WEIGHT], [/\bputs\b/, FAIR_SIGN_WEIGHT],
+        [/\bdo\s*\|[^|\n]*\|/, DISTINCTIVE_SIGN_WEIGHT], [/\.each(?:_with_index)?\b/, WEAK_SIGN_WEIGHT], [/@\w+\s*=/, FAIR_SIGN_WEIGHT], [/\brequire\s+['"]/, FAIR_SIGN_WEIGHT],
+        [/\bnil\b/, WEAK_SIGN_WEIGHT], [/\belsif\b/, STRONG_SIGN_WEIGHT], [/\battr_(?:accessor|reader|writer)\b/, DISTINCTIVE_SIGN_WEIGHT], [/#\{[^}\n]+\}/, WEAK_SIGN_WEIGHT],
     ],
     '@code=javascript': [
-        [/\b(?:const|let|var)\s+\w+\s*=/, 3], [/=>/, 2], [/\bfunction\s*\w*\s*\([^)]*\)\s*\{/, 4],
-        [/\bconsole\.\w+\(/, 4], [/^\s*import\s+[\s\S]+?\s+from\s+['"]/m, 4], [/\brequire\(\s*['"]/, 3],
-        [/[!=]==/, 3], [/\b(?:document|window)\.\w+/, 2], [/\bundefined\b/, 2], [/\bawait\s+\w+/, 1],
+        [/\b(?:const|let|var)\s+\w+\s*=/, FAIR_SIGN_WEIGHT], [/=>/, WEAK_SIGN_WEIGHT], [/\bfunction\s*\w*\s*\([^)]*\)\s*\{/, STRONG_SIGN_WEIGHT],
+        [/\bconsole\.\w+\(/, STRONG_SIGN_WEIGHT], [/^\s*import\s+[\s\S]+?\s+from\s+['"]/m, STRONG_SIGN_WEIGHT], [/\brequire\(\s*['"]/, FAIR_SIGN_WEIGHT],
+        [/[!=]==/, FAIR_SIGN_WEIGHT], [/\b(?:document|window)\.\w+/, WEAK_SIGN_WEIGHT], [/\bundefined\b/, WEAK_SIGN_WEIGHT], [/\bawait\s+\w+/, 1],
         [/;\s*$/m, 1],
     ],
     '@code=bash': [
-        [/^#!.*\b(?:ba|z|k)?sh\b/, 8], [/^\s*\$\s+\S/m, 3], [/\|\s*(?:grep|awk|sed|xargs|sort|uniq|head|tail|wc)\b/, 4],
-        [/^\s*(?:sudo|apt(?:-get)?|brew|npm|pip3?|git|cd|ls|echo|export|curl|wget|chmod|mkdir|rm|cp|mv|source)\s/m, 3],
-        [/^\s*(?:fi|done|esac)\s*$/m, 4], [/^\s*if\s+\[\[?\s/m, 4], [/\$\{?\w+\}?/, 1], [/\s(?:&&|\|\|)\s/, 1],
+        [/^#!.*\b(?:ba|z|k)?sh\b/, DECISIVE_SIGN_WEIGHT], [/^\s*\$\s+\S/m, FAIR_SIGN_WEIGHT], [/\|\s*(?:grep|awk|sed|xargs|sort|uniq|head|tail|wc)\b/, STRONG_SIGN_WEIGHT],
+        [/^\s*(?:sudo|apt(?:-get)?|brew|npm|pip3?|git|cd|ls|echo|export|curl|wget|chmod|mkdir|rm|cp|mv|source)\s/m, FAIR_SIGN_WEIGHT],
+        [/^\s*(?:fi|done|esac)\s*$/m, STRONG_SIGN_WEIGHT], [/^\s*if\s+\[\[?\s/m, STRONG_SIGN_WEIGHT], [/\$\{?\w+\}?/, 1], [/\s(?:&&|\|\|)\s/, 1],
     ],
     '@code=html': [
-        [/<!DOCTYPE\s+html>/i, 8], [/<\/?(?:html|head|body|div|span|p|a|ul|ol|li|table|tr|td|script|style|section|header|footer|nav)\b[^>]*>/i, 5],
-        [/<\w+\s+(?:class|id|href|src)=["']/i, 3],
+        [/<!DOCTYPE\s+html>/i, DECISIVE_SIGN_WEIGHT], [/<\/?(?:html|head|body|div|span|p|a|ul|ol|li|table|tr|td|script|style|section|header|footer|nav)\b[^>]*>/i, DISTINCTIVE_SIGN_WEIGHT],
+        [/<\w+\s+(?:class|id|href|src)=["']/i, FAIR_SIGN_WEIGHT],
     ],
     '@code=xml': [
-        [/^\s*<\?xml\b/, 8], [/<(\w+:)?\w+(?:\s+[\w:]+="[^"]*")*\s*\/?>[\s\S]*<\/(\w+:)?\w+>/, 2], [/\bxmlns(?::\w+)?=/, 4],
+        [/^\s*<\?xml\b/, DECISIVE_SIGN_WEIGHT], [/<(\w+:)?\w+(?:\s+[\w:]+="[^"]*")*\s*\/?>[\s\S]*<\/(\w+:)?\w+>/, WEAK_SIGN_WEIGHT], [/\bxmlns(?::\w+)?=/, STRONG_SIGN_WEIGHT],
     ],
     '@code=css': [
-        [/[\w.#\-[\]="':>*\s]+\{\s*[\w-]+\s*:\s*[^;{}]+;[^{}]*\}/, 6], [/@media\b[^{]*\{/, 5],
-        [/^\s*(?:color|margin|padding|display|font-(?:size|family|weight)|background(?:-color)?|border|width|height)\s*:/m, 2],
+        [/[\w.#\-[\]="':>*\s]+\{\s*[\w-]+\s*:\s*[^;{}]+;[^{}]*\}/, DEFINING_SIGN_WEIGHT], [/@media\b[^{]*\{/, DISTINCTIVE_SIGN_WEIGHT],
+        [/^\s*(?:color|margin|padding|display|font-(?:size|family|weight)|background(?:-color)?|border|width|height)\s*:/m, WEAK_SIGN_WEIGHT],
     ],
     '@code=java': [
-        [/\bpublic\s+(?:static\s+)?(?:final\s+)?(?:class|void|int|String|boolean)\b/, 5], [/\bSystem\.out\.print(?:ln)?\(/, 6],
-        [/^\s*import\s+java\./m, 6], [/@Override\b/, 4], [/\bString\[\]\s+\w+/, 3], [/\bnew\s+[A-Z]\w*\s*[(<]/, 1],
+        [/\bpublic\s+(?:static\s+)?(?:final\s+)?(?:class|void|int|String|boolean)\b/, DISTINCTIVE_SIGN_WEIGHT], [/\bSystem\.out\.print(?:ln)?\(/, DEFINING_SIGN_WEIGHT],
+        [/^\s*import\s+java\./m, DEFINING_SIGN_WEIGHT], [/@Override\b/, STRONG_SIGN_WEIGHT], [/\bString\[\]\s+\w+/, FAIR_SIGN_WEIGHT], [/\bnew\s+[A-Z]\w*\s*[(<]/, 1],
     ],
     '@code=c': [
-        [/^\s*#include\s*[<"]/m, 6], [/\bint\s+main\s*\(/, 5], [/\bprintf\s*\(/, 3], [/\b(?:malloc|free|sizeof)\s*\(/, 3],
+        [/^\s*#include\s*[<"]/m, DEFINING_SIGN_WEIGHT], [/\bint\s+main\s*\(/, DISTINCTIVE_SIGN_WEIGHT], [/\bprintf\s*\(/, FAIR_SIGN_WEIGHT], [/\b(?:malloc|free|sizeof)\s*\(/, FAIR_SIGN_WEIGHT],
     ],
     '@code=cpp': [
-        [/\bstd::\w+/, 6], [/\b(?:cout|cin|cerr)\s*(?:<<|>>)/, 6], [/\bnullptr\b/, 4], [/\btemplate\s*</, 4],
-        [/^\s*#include\s*<\w+>/m, 2], [/\bnamespace\s+\w+\s*\{/, 2],
+        [/\bstd::\w+/, DEFINING_SIGN_WEIGHT], [/\b(?:cout|cin|cerr)\s*(?:<<|>>)/, DEFINING_SIGN_WEIGHT], [/\bnullptr\b/, STRONG_SIGN_WEIGHT], [/\btemplate\s*</, STRONG_SIGN_WEIGHT],
+        [/^\s*#include\s*<\w+>/m, WEAK_SIGN_WEIGHT], [/\bnamespace\s+\w+\s*\{/, WEAK_SIGN_WEIGHT],
     ],
     '@code=csharp': [
-        [/^\s*using\s+System(?:\.\w+)*\s*;/m, 6], [/\bConsole\.Write(?:Line)?\(/, 6], [/\bpublic\s+(?:async\s+)?Task\b/, 4],
-        [/\bnamespace\s+[\w.]+/, 2], [/\bvar\s+\w+\s*=\s*new\b/, 2], [/\{\s*get;\s*(?:set;)?\s*\}/, 5],
+        [/^\s*using\s+System(?:\.\w+)*\s*;/m, DEFINING_SIGN_WEIGHT], [/\bConsole\.Write(?:Line)?\(/, DEFINING_SIGN_WEIGHT], [/\bpublic\s+(?:async\s+)?Task\b/, STRONG_SIGN_WEIGHT],
+        [/\bnamespace\s+[\w.]+/, WEAK_SIGN_WEIGHT], [/\bvar\s+\w+\s*=\s*new\b/, WEAK_SIGN_WEIGHT], [/\{\s*get;\s*(?:set;)?\s*\}/, DISTINCTIVE_SIGN_WEIGHT],
     ],
     '@code=go': [
-        [/^\s*package\s+\w+\s*$/m, 5], [/\bfunc\s+(?:\(\w+\s+\*?\w+\)\s*)?\w+\s*\(/, 5], [/:=/, 3], [/\bfmt\.\w+\(/, 5],
-        [/^\s*import\s*\(/m, 2],
+        [/^\s*package\s+\w+\s*$/m, DISTINCTIVE_SIGN_WEIGHT], [/\bfunc\s+(?:\(\w+\s+\*?\w+\)\s*)?\w+\s*\(/, DISTINCTIVE_SIGN_WEIGHT], [/:=/, FAIR_SIGN_WEIGHT], [/\bfmt\.\w+\(/, DISTINCTIVE_SIGN_WEIGHT],
+        [/^\s*import\s*\(/m, WEAK_SIGN_WEIGHT],
     ],
     '@code=rust': [
-        [/\bfn\s+\w+\s*(?:<[^>]*>)?\s*\(/, 4], [/\blet\s+mut\b/, 5], [/\bimpl\b(?:\s*<[^>]*>)?\s+\w+/, 3],
-        [/\b\w+!\(/, 2], [/\bprintln!\(/, 5], [/&(?:mut\s+)?str\b|\bVec</, 3], [/\bpub\s+(?:fn|struct|enum)\b/, 4],
+        [/\bfn\s+\w+\s*(?:<[^>]*>)?\s*\(/, STRONG_SIGN_WEIGHT], [/\blet\s+mut\b/, DISTINCTIVE_SIGN_WEIGHT], [/\bimpl\b(?:\s*<[^>]*>)?\s+\w+/, FAIR_SIGN_WEIGHT],
+        [/\b\w+!\(/, WEAK_SIGN_WEIGHT], [/\bprintln!\(/, DISTINCTIVE_SIGN_WEIGHT], [/&(?:mut\s+)?str\b|\bVec</, FAIR_SIGN_WEIGHT], [/\bpub\s+(?:fn|struct|enum)\b/, STRONG_SIGN_WEIGHT],
     ],
     '@code=yaml': [
-        [/^---\s*$/m, 2], [/^\s*-\s+[\w"']/m, 1],
+        [/^---\s*$/m, WEAK_SIGN_WEIGHT], [/^\s*-\s+[\w"']/m, 1],
     ],
     '@code=docker': [
-        [/^FROM\s+\S+/m, 4], [/^(?:RUN|CMD|COPY|ADD|ENTRYPOINT|WORKDIR|ENV|EXPOSE|ARG|USER|VOLUME)\s+\S/m, 4],
+        [/^FROM\s+\S+/m, STRONG_SIGN_WEIGHT], [/^(?:RUN|CMD|COPY|ADD|ENTRYPOINT|WORKDIR|ENV|EXPOSE|ARG|USER|VOLUME)\s+\S/m, STRONG_SIGN_WEIGHT],
     ],
 });
 
 // TypeScript is JavaScript with types: these signs add to its JavaScript score.
 const TYPESCRIPT_SIGNS = Object.freeze([
-    [/:\s*(?:string|number|boolean|any|void|unknown|never)(?:\[\])?\s*[,)=;{]/, 5], [/\binterface\s+\w+\s*\{/, 5],
-    [/^\s*type\s+\w+\s*=/m, 4], [/\bimplements\s+\w+/, 2], [/\b(?:private|public|readonly)\s+\w+\s*:/, 3],
+    [/:\s*(?:string|number|boolean|any|void|unknown|never)(?:\[\])?\s*[,)=;{]/, DISTINCTIVE_SIGN_WEIGHT], [/\binterface\s+\w+\s*\{/, DISTINCTIVE_SIGN_WEIGHT],
+    [/^\s*type\s+\w+\s*=/m, STRONG_SIGN_WEIGHT], [/\bimplements\s+\w+/, WEAK_SIGN_WEIGHT], [/\b(?:private|public|readonly)\s+\w+\s*:/, FAIR_SIGN_WEIGHT],
 ]);
 
 function nonEmptyLines(text) {
@@ -120,7 +153,7 @@ function nonEmptyLines(text) {
 // A sentence: starts with a capital, five words or more, ends like a sentence.
 function isSentence(line) {
     const trimmed = line.trim();
-    return /^[A-Z]/.test(trimmed) && /[.!?]["')]?$/.test(trimmed) && trimmed.split(/\s+/).length >= 5;
+    return /^[A-Z]/.test(trimmed) && /[.!?]["')]?$/.test(trimmed) && trimmed.split(/\s+/).length >= MIN_SENTENCE_WORDS;
 }
 
 // --- CSV --------------------------------------------------------------------
@@ -161,7 +194,7 @@ function splitCsvLine(line) {
 // more), short cells rather than sentences.
 export function looksLikeCsv(text) {
     const lines = nonEmptyLines(text);
-    if (lines.length < 3) {
+    if (lines.length < MIN_CSV_LINES) {
         return false;
     }
     const rows = lines.map(splitCsvLine);
@@ -169,14 +202,14 @@ export function looksLikeCsv(text) {
         return false;
     }
     const columns = rows[0].length;
-    if (columns < 2 || rows.some((cells) => cells.length !== columns)) {
+    if (columns < MIN_CSV_COLUMNS || rows.some((cells) => cells.length !== columns)) {
         return false;
     }
     if (lines.some(isSentence)) {
         return false;
     }
     const cells = rows.flat().map((cell) => cell.trim());
-    return cells.every((cell) => cell.split(/\s+/).length <= 8 && cell.length <= 80);
+    return cells.every((cell) => cell.split(/\s+/).length <= MAX_CSV_CELL_WORDS && cell.length <= MAX_CSV_CELL_CHARACTERS);
 }
 
 // --- Markdown ---------------------------------------------------------------
@@ -190,13 +223,13 @@ export function markdownSignKinds(text) {
     const kinds = new Set();
     if (lines.some((line) => /^#{1,6}\s+\S/.test(line))) kinds.add('heading');
     const listLines = lines.filter((line) => /^\s*(?:[-*+]|\d+[.)])\s+\S/.test(line));
-    if (listLines.length >= 2) kinds.add('list');
+    if (listLines.length >= MIN_LIST_LINES) kinds.add('list');
     if (/(\*\*|__)(?=\S)[^\n]*?\S\1/.test(text)) kinds.add('emphasis');
     if (/`[^`\n]+`/.test(text)) kinds.add('inline-code');
     if (/!?\[[^\]\n]+\]\((?:https?:\/\/|\/|#|mailto:)[^)\s]*\)/.test(text)) kinds.add('link');
     if (lines.some((line) => /^>\s?\S/.test(line))) kinds.add('quote');
     if (lines.some((line, index) => index > 0 && TABLE_SEPARATOR_RE.test(line) && lines[index - 1].includes('|'))) kinds.add('table');
-    if (lines.filter((line) => /^```\s*$/.test(line.trim())).length >= 2) kinds.add('fence');
+    if (lines.filter((line) => /^```\s*$/.test(line.trim())).length >= FENCE_LINES) kinds.add('fence');
     return kinds;
 }
 
@@ -204,7 +237,7 @@ function looksLikeMarkdown(kinds) {
     if (kinds.has('table')) {
         return true;
     }
-    return kinds.size >= 2;
+    return kinds.size >= MIN_MARKDOWN_SIGN_KINDS;
 }
 
 // --- Code -------------------------------------------------------------------
@@ -228,7 +261,7 @@ function looksLikeCode(text) {
         return false;
     }
     const codeLines = lines.filter(isCodeLine).length;
-    return codeLines / lines.length >= 0.6;
+    return codeLines / lines.length >= MIN_CODE_LINE_SHARE;
 }
 
 function scoreSigns(text, signs) {
@@ -242,7 +275,7 @@ function yamlScore(text) {
     const lines = nonEmptyLines(text).filter((line) => !/^\s*#/.test(line));
     const keyLines = lines.filter((line) => /^\s*-?\s*[\w"'.-]+:(?:\s+\S|\s*$)/.test(line)).length;
     const isNested = lines.some((line) => /^\s+\S|^\s*-\s+\S/.test(line));
-    if (keyLines < 3 || !isNested || keyLines / lines.length < 0.6 || lines.some((line) => /[;{}]\s*$|=>|\(\)/.test(line))) {
+    if (keyLines < MIN_YAML_KEY_LINES || !isNested || keyLines / lines.length < MIN_YAML_KEY_LINE_SHARE || lines.some((line) => /[;{}]\s*$|=>|\(\)/.test(line))) {
         return 0;
     }
     return STRONG_LANGUAGE_SCORE + scoreSigns(text, LANGUAGE_SIGNS['@code=yaml']);

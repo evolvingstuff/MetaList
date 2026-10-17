@@ -19,6 +19,8 @@ const DIRECTION_CURSOR_CLASSES = {
     indent: 'note-drag-cursor-indent',
     outdent: 'note-drag-cursor-outdent',
 };
+// The insertion line is this thick, drawn from 1px above the drop position.
+const DROP_LINE_THICKNESS_PX = 2;
 // Only a move a release would make gets an icon; otherwise the cursor stays
 // the plain grabbing hand.
 function applyDirectionCursor(kind) {
@@ -103,7 +105,7 @@ export function renderNoteDragIndicators({ ghost, drop, cursor }) {
         throw new Error('renderNoteDragIndicators drop must be null or describe a target and line');
     }
     placeOverlay(overlays.target, drop.targetRect);
-    placeOverlay(overlays.line, { left: drop.line.left, top: drop.line.top - 1, width: drop.line.width, height: 2 });
+    placeOverlay(overlays.line, { left: drop.line.left, top: drop.line.top - 1, width: drop.line.width, height: DROP_LINE_THICKNESS_PX });
 }
 
 export function hideNoteDragIndicators() {

@@ -23,6 +23,10 @@ from app.services.tag_term_matching import note_text_for_tag_matching
 from app.services.tag_term_matching import quote_content_match
 from app.services.tag_term_matching import split_tag_term_segments_preserving_case
 
+# Overlapping notes' shared tags: one set, or a second when they differ.
+_MAX_SHARED_CASEFOLD_SETS = 2
+# The count said as "twice" rather than "2 times".
+_TWICE_COUNT = 2
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,7 +55,7 @@ class ContextOverlap:
 
     def __post_init__(self) -> None:
         assert self.shared_count > 0 and self.note_count > 0
-        assert 1 <= len(self.shared_casefold_sets) <= 2
+        assert 1 <= len(self.shared_casefold_sets) <= _MAX_SHARED_CASEFOLD_SETS
         assert all(len(shared) == self.shared_count for shared in self.shared_casefold_sets)
 
 
@@ -105,7 +109,7 @@ def count_times(count: int) -> str:
     assert count > 0
     if count == 1:
         return "once"
-    if count == 2:
+    if count == _TWICE_COUNT:
         return "twice"
     return f"{count:,} times"
 

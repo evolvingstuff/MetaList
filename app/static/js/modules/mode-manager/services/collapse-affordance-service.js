@@ -8,6 +8,12 @@ const CAN_COLLAPSE_DATA_KEY = 'canCollapse';
 const MULTILINE_HEIGHT_TOLERANCE = 1.35;
 const LINE_BOX_TOP_TOLERANCE_PX = 1.5;
 const SAME_LINE_VERTICAL_OVERLAP_RATIO = 0.5;
+// A `line-height: normal` is taken as this multiple of the font size.
+const NORMAL_LINE_HEIGHT_FONT_SIZE_RATIO = 1.2;
+// Rects this thin or thinner hold no visible text and are not line boxes.
+const MAX_EMPTY_RECT_EXTENT_PX = 0.5;
+// Counting rendered lines stops here: enough to tell one line from several.
+const RENDERED_LINE_COUNT_LIMIT = 2;
 
 function parsePixelValue(value) {
     if (typeof value !== 'string') {
@@ -41,7 +47,7 @@ function resolveLineHeightPx(contentElement) {
     if (fontSize === null) {
         throw new Error(`Cannot resolve collapse line height from font-size: ${styles.fontSize}`);
     }
-    return fontSize * 1.2;
+    return fontSize * NORMAL_LINE_HEIGHT_FONT_SIZE_RATIO;
 }
 
 function rectsShareRenderedLine(firstRect, secondRect) {
@@ -71,8 +77,8 @@ function countRenderedLineBoxesUpToTwo(contentElement) {
         return rect
             && typeof rect.width === 'number'
             && typeof rect.height === 'number'
-            && rect.width > 0.5
-            && rect.height > 0.5;
+            && rect.width > MAX_EMPTY_RECT_EXTENT_PX
+            && rect.height > MAX_EMPTY_RECT_EXTENT_PX;
     });
     if (typeof range.detach === 'function') {
         range.detach();
@@ -90,8 +96,8 @@ function countRenderedLineBoxesUpToTwo(contentElement) {
             renderedLines[matchingLineIndex].push(rect);
         } else {
             renderedLines.push([rect]);
-            if (renderedLines.length === 2) {
-                return 2;
+            if (renderedLines.length === RENDERED_LINE_COUNT_LIMIT) {
+                return RENDERED_LINE_COUNT_LIMIT;
             }
         }
     }

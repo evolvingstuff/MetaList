@@ -1,5 +1,6 @@
 import { NotesAPI } from '../../api-client.js';
 import { ErrorHandler } from '../../error-handler.js';
+import { MS_PER_SECOND } from '../../time-units.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import { actionRefreshAndMaybeSelect } from '../actions/ui-actions.js';
 
@@ -10,6 +11,7 @@ const SKIPPED_PREVIEW_REASONS = {
     too_large: 'is too large to preview',
     not_text: 'is not UTF-8 text, so it has no preview',
 };
+const SKIPPED_PREVIEWS_BANNER_SECONDS = 6;
 
 /**
  * Adds the preview child notes for files a drop attached, in drop order.
@@ -42,6 +44,6 @@ export async function addDroppedFilePreviews(attachedFiles) {
         await actionRefreshAndMaybeSelect({ startedAt, context: 'droppedFilePreviews' });
     }
     if (skippedMessages.length > 0) {
-        ErrorHandler.showErrorBanner(skippedMessages.join(' '), 'info', 6000, true);
+        ErrorHandler.showErrorBanner(skippedMessages.join(' '), 'info', SKIPPED_PREVIEWS_BANNER_SECONDS * MS_PER_SECOND, true);
     }
 }

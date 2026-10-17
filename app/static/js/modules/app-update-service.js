@@ -1,4 +1,6 @@
 import { ApplicationState } from './application-state.js';
+import { MS_PER_SECOND } from './time-units.js';
+import { appNoticeStack } from './app-notice-stack.js';
 import { CONFIG } from './config.js';
 import { buildSessionHeaders } from './session-auth.js';
 import { HttpRequestError, rethrowUnexpectedError } from './expected-errors.js';
@@ -6,6 +8,7 @@ import { HttpRequestError, rethrowUnexpectedError } from './expected-errors.js';
 const state = ApplicationState.createFields('app-update-service', { pageCheck: null, job: null });
 const releasePattern = /^[0-9]+\.[0-9]+\.[0-9]+$/;
 const updateUrl = CONFIG.API.AUTH.APP_UPDATE;
+const UPDATE_REQUEST_TIMEOUT_SECONDS = 15;
 
 export async function updateRequest(path, body) {
     const options = { cache: 'no-store' };
@@ -16,7 +19,7 @@ export async function updateRequest(path, body) {
     }
     const controller = new AbortController();
     options.signal = controller.signal;
-    const timeout = setTimeout(() => controller.abort(), 15000);
+    const timeout = setTimeout(() => controller.abort(), UPDATE_REQUEST_TIMEOUT_SECONDS * MS_PER_SECOND);
     return fetch(`${updateUrl}${path}`, options).then(async response => {
         if (!response.ok) {
             const payload = await response.json();
@@ -75,7 +78,7 @@ export async function showUpdateNotice(preferences, openVersionInfo) {
     dismiss.setAttribute('aria-label', 'Dismiss update notification');
     dismiss.addEventListener('click', () => notice.remove());
     notice.append(label, view, dismiss);
-    document.body.appendChild(notice);
+    appNoticeStack().append(notice);
     // Remember a version only after its notice is displayed, using existing encrypted preferences.
     try {
         await persistUpdateNotice(preferences, release.target_version);

@@ -16,6 +16,13 @@ import { hasRootsBelowLoadedWindow, resetInfiniteScrollState } from '../services
 import {
     captureEditingFocus, captureViewportRoot, holdViewportRoot, placeCaretAtClickAnchor, restoreEditingFocus,
 } from '../services/viewport-hold-service.js';
+import { MS_PER_SECOND } from '../../time-units.js';
+
+const PERF_LOG_MS_DECIMALS = 2;
+// waitForViewRequestIdle fails loudly once a notes.view request has blocked this long.
+const VIEW_REQUEST_IDLE_TIMEOUT_SECONDS = 5;
+const VIEW_REQUEST_IDLE_TIMEOUT_MS = VIEW_REQUEST_IDLE_TIMEOUT_SECONDS * MS_PER_SECOND;
+const VIEW_REQUEST_IDLE_POLL_MS = 25;
 
 const moduleState = ApplicationState.createFields('ui-actions', {
     viewRequestInFlight: false,
@@ -66,11 +73,11 @@ export async function waitForViewRequestIdle() {
     const waitStartedAt = performance.now();
     while (moduleState.viewRequestInFlight) {
         const waitedMs = performance.now() - waitStartedAt;
-        if (waitedMs > 5000) {
-            throw new Error('notes.view blocked >5s waiting for in-flight request');
+        if (waitedMs > VIEW_REQUEST_IDLE_TIMEOUT_MS) {
+            throw new Error(`notes.view blocked >${VIEW_REQUEST_IDLE_TIMEOUT_SECONDS}s waiting for in-flight request`);
         }
         await new Promise((resolve) => {
-            window.setTimeout(resolve, 25);
+            window.setTimeout(resolve, VIEW_REQUEST_IDLE_POLL_MS);
         });
     }
 }
@@ -127,12 +134,20 @@ export async function actionRefreshAndMaybeSelect(options) {
     // The edited note's focus and caret (its text's or its tag bar's) stay where
     // they are, instead of the caret going to the note's start or end.
     const keepEditingFocus = options.keepEditingFocus === true;
+    // What asked for this view, for logs: the caller's name for it, or a refresh.
+    let requestContext = 'refresh';
+    if (options.context !== undefined) {
+        if (typeof options.context !== 'string' || options.context === '') {
+            throw new Error('A view request context must be a non-empty string');
+        }
+        requestContext = options.context;
+    }
 
     if (moduleState.viewRequestInFlight) {
         if (!requireExecution) {
             Logger.logNoop('notes.view ignored while view request in-flight', {
                 activeTabId: ModeContext.activeTabId,
-                context: options.context || 'refresh'
+                context: requestContext,
             });
             return null;
         }
@@ -190,7 +205,7 @@ export async function actionRefreshAndMaybeSelect(options) {
         const roundtripMs = performance.now() - requestStartedAt;
         if (CONFIG.DEBUG.LOG_API_CALLS) {
             console.log(' [PERF] notes.view roundtrip:', {
-                ms: Number(roundtripMs.toFixed(2))
+                ms: Number(roundtripMs.toFixed(PERF_LOG_MS_DECIMALS))
             });
         }
 
@@ -300,7 +315,7 @@ export async function actionRefreshAndMaybeSelect(options) {
 
         const renderEndedAt = performance.now();
         const renderMs = renderEndedAt - renderStartedAt;
-        const context = options.context ? options.context : 'refresh';
+        const context = requestContext;
 
         const vdom_ops = Number.isInteger(diffResult.vdomOperations) ? diffResult.vdomOperations : 0;
 
@@ -317,7 +332,7 @@ export async function actionRefreshAndMaybeSelect(options) {
 
         if (options.startedAt) {  // otherwise called by background polling or palette actions
             console.log(' [PERF] notes.view render:', {
-                ms: Number(renderMs.toFixed(2))
+                ms: Number(renderMs.toFixed(PERF_LOG_MS_DECIMALS))
             });
         }
 

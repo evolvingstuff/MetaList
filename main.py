@@ -62,12 +62,15 @@ from app.services.windows_process_control import find_listening_pids_for_port as
 from app.services.windows_process_control import is_process_running as is_windows_process_running
 from app.services.windows_process_control import stop_process as stop_windows_process
 
+# A socket address starts with host and port; IPv6 adds flowinfo and scope_id after them.
+_SOCKET_ADDRESS_HOST_AND_PORT_COUNT = 2
+
 
 class _HttpsProxyServer(BoundedProxyServer):
     def server_bind(self) -> None:
         # The proxy needs its bound address, not a potentially blocking reverse DNS lookup.
         TCPServer.server_bind(self)
-        self.server_name, self.server_port = self.server_address[:2]
+        self.server_name, self.server_port = self.server_address[:_SOCKET_ADDRESS_HOST_AND_PORT_COUNT]
 
 
 @dataclass(frozen=True)
@@ -82,6 +85,8 @@ _KILL_GRACE_SECONDS = 5.0
 # A port of a process stopped just before (a namespace restart) is released by
 # the OS a moment later: how long the HTTPS proxy waits for it before failing.
 _PORT_RELEASE_WAIT_SECONDS = 10.0
+_HIGHEST_PORT = 65535
+_AUDIT_WARNING_BORDER_WIDTH = 96
 _EXPLICIT_NAMESPACE_LAUNCH_ENV_NAMES = (
     "METALIST_NAMESPACE",
     "METALIST_PORT",
@@ -167,7 +172,7 @@ def _run_startup_encryption_audit(
 
     rendered_report = report.render_text()
 
-    warning_border = "!" * 96
+    warning_border = "!" * _AUDIT_WARNING_BORDER_WIDTH
     if report.startup_allowed:
         print(warning_border, file=sys.stderr, flush=True)
         print(
@@ -280,7 +285,7 @@ def _read_prompted_port(*, namespace: str, service: str, suggested_port: object)
     if not value.isdigit():
         raise RuntimeError(f"{namespace} {service} port must be numeric, got: {value!r}")
     port = int(value)
-    if not 0 < port < 65536:
+    if not 0 < port <= _HIGHEST_PORT:
         raise RuntimeError(f"{namespace} {service} port must be between 1 and 65535, got: {port}")
     return port
 
@@ -502,7 +507,7 @@ def _stop_process(*, pid: int) -> None:
 def _find_listening_pids_for_port(*, port: int) -> list[int]:
     if not isinstance(port, int):
         raise TypeError(f"port must be an int, got {type(port)}")
-    if port <= 0 or port > 65535:
+    if port <= 0 or port > _HIGHEST_PORT:
         raise ValueError(f"port must be between 1 and 65535, got: {port}")
     if sys.platform == "win32":
         return find_windows_listening_pids_for_port(port=port)

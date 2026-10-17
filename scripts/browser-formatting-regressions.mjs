@@ -136,15 +136,23 @@ export async function checkPastedHeadingFormatting(page) {
     selection.addRange(range);
   }, noteId);
   await removeSelectedFormattingFromMenu(page);
-  const after = await page.$eval(`[data-note-id="${noteId}"] > .note-content`, editor => ({
-    text: editor.textContent,
-    heading: editor.querySelector('h1')?.outerHTML ?? null,
-    emphasis: editor.querySelector('em')?.outerHTML ?? null,
-    journal: editor.querySelector('p').outerHTML,
-    abstract: editor.querySelector('h2').outerHTML,
-    body: editor.querySelector('p:last-child').outerHTML,
-    link: editor.querySelector('a')?.getAttribute('href'),
-  }));
+  const after = await page.$eval(`[data-note-id="${noteId}"] > .note-content`, editor => {
+    // Formatting the removal took away has no element left: null.
+    const outer = selector => {
+      const element = editor.querySelector(selector);
+      if (element === null) return null;
+      return element.outerHTML;
+    };
+    return {
+      text: editor.textContent,
+      heading: outer('h1'),
+      emphasis: outer('em'),
+      journal: editor.querySelector('p').outerHTML,
+      abstract: editor.querySelector('h2').outerHTML,
+      body: editor.querySelector('p:last-child').outerHTML,
+      link: editor.querySelector('a')?.getAttribute('href'),
+    };
+  });
   assert.equal(after.heading, null, 'Selected title must lose heading-level formatting');
   assert.equal(after.emphasis, null);
   assert.equal(after.text, before.text);

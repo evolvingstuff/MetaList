@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.utils.tcp_ports import HIGHEST_PORT
+from http import HTTPStatus
 import secrets
 import shutil
 import sqlite3
@@ -54,6 +56,10 @@ from app.services.encryption import EncryptionService
 
 router = APIRouter(prefix="/backup", tags=["backup2"])
 _FOLDER_PATH_REQUIRED_MESSAGE = "Folder backups require an absolute folder path."
+# A folder backup id is "folder::<namespace>::<filename>".
+_FOLDER_BACKUP_ID_SEPARATOR = "::"
+_FOLDER_BACKUP_ID_PART_COUNT = 3
+_RESTART_AFTER_RESTORE_DELAY_SECONDS = 0.5
 
 
 class BackupSettingsResponse(BaseModel):
@@ -85,6 +91,11 @@ class BackupListEntryResponse(BaseModel):
 
 class BackupListResponse(BaseModel):
     backups: list[BackupListEntryResponse]
+
+
+class BackupTimesResponse(BaseModel):
+    # When each of this namespace's backups in the backup folder was made, newest first.
+    backup_times: list[str]
 
 
 class BackupRunDestinationResponse(BaseModel):
@@ -174,7 +185,7 @@ def _verify_token(
 
 def _require_auth(token: Annotated[str | None, Depends(_verify_token)]) -> str:
     if not token:
-        raise HTTPException(status_code=401, detail="Authentication required")
+        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED, detail="Authentication required")
     return token
 
 
@@ -229,10 +240,10 @@ def _normalize_folder_backup_path(*, folder_path: str) -> Path:
         raise TypeError("folder_path must be a string")
     stripped_folder_path = folder_path.strip()
     if stripped_folder_path == "":
-        raise HTTPException(status_code=400, detail=_FOLDER_PATH_REQUIRED_MESSAGE)
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=_FOLDER_PATH_REQUIRED_MESSAGE)
     normalized_path = Path(stripped_folder_path).expanduser()
     if not normalized_path.is_absolute():
-        raise HTTPException(status_code=400, detail=_FOLDER_PATH_REQUIRED_MESSAGE)
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=_FOLDER_PATH_REQUIRED_MESSAGE)
     return normalized_path
 
 
@@ -243,7 +254,7 @@ def _prepare_folder_backup_directory_for_settings(*, folder_path: str) -> str:
     folder_directory.mkdir(parents=True, exist_ok=True)
     if not folder_directory.is_dir():
         raise HTTPException(
-            status_code=400,
+            status_code=HTTPStatus.BAD_REQUEST,
             detail=f"Folder backup path is not a directory: {folder_directory}",
         )
     return str(folder_directory)
@@ -290,7 +301,7 @@ def _normalize_selected_namespaces(*, selected_namespaces: list[str]) -> list[st
         raise TypeError("selected_namespaces must be a list")
     normalized_selected_namespaces = _order_namespaces(namespaces=selected_namespaces)
     if len(normalized_selected_namespaces) == 0:
-        raise HTTPException(status_code=400, detail="Select at least one namespace to back up")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Select at least one namespace to back up")
     return normalized_selected_namespaces
 
 
@@ -299,7 +310,7 @@ def _require_existing_selected_namespaces(*, selected_namespaces: list[str]) -> 
     for namespace in normalized_selected_namespaces:
         database_path = resolve_namespaced_database_path(namespace=namespace)
         if not database_path.is_file():
-            raise HTTPException(status_code=400, detail=f"Selected namespace has no database yet: {namespace}")
+            raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"Selected namespace has no database yet: {namespace}")
     return normalized_selected_namespaces
 
 
@@ -312,7 +323,7 @@ def _filter_deleted_selected_namespaces(*, selected_namespaces: list[str]) -> li
             existing_selected_namespaces.append(namespace)
     if len(existing_selected_namespaces) == 0:
         raise HTTPException(
-            status_code=400,
+            status_code=HTTPStatus.BAD_REQUEST,
             detail="None of the selected backup namespaces still exist",
         )
     return existing_selected_namespaces
@@ -405,14 +416,14 @@ def _folder_backup_id(*, namespace: str, filename: str) -> str:
 
 def _parse_folder_backup_id(backup_id: str) -> tuple[str, str]:
     if not isinstance(backup_id, str) or backup_id == "":
-        raise HTTPException(status_code=400, detail="backup_id must be a non-empty string")
-    parts = backup_id.split("::", 2)
-    if len(parts) != 3 or parts[0] != "folder":
-        raise HTTPException(status_code=400, detail="Invalid folder backup_id")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="backup_id must be a non-empty string")
+    parts = backup_id.split(_FOLDER_BACKUP_ID_SEPARATOR, _FOLDER_BACKUP_ID_PART_COUNT - 1)
+    if len(parts) != _FOLDER_BACKUP_ID_PART_COUNT or parts[0] != "folder":
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Invalid folder backup_id")
     namespace = validate_namespace(namespace=parts[1])
-    filename = parts[2]
+    filename = parts[-1]
     if filename == "":
-        raise HTTPException(status_code=400, detail="Invalid folder backup_id filename")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Invalid folder backup_id filename")
     return namespace, filename
 
 
@@ -572,7 +583,7 @@ def _verify_target_namespace_password(*, target_namespace: str, password: str) -
     if not _target_auth_settings_have_password(settings=settings):
         return
     if password == "":
-        raise HTTPException(status_code=400, detail="Target namespace password is required")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Target namespace password is required")
 
     assert settings is not None
     auth_salt = settings["auth_salt"]
@@ -599,7 +610,7 @@ def _verify_target_namespace_password(*, target_namespace: str, password: str) -
         parallelism,
     ).hex()
     if not secrets.compare_digest(candidate, auth_verifier):
-        raise HTTPException(status_code=403, detail="Target namespace password is incorrect")
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Target namespace password is incorrect")
 
 
 def _collect_import_profile_port_conflicts(
@@ -640,7 +651,7 @@ def _assert_import_profile_ports_do_not_conflict(
         return
     first_conflict = conflicts[0]
     raise HTTPException(
-        status_code=409,
+        status_code=HTTPStatus.CONFLICT,
         detail=first_conflict.replace(" conflicts with ", " from backup conflicts with ", 1),
     )
 
@@ -649,9 +660,9 @@ def _next_available_port(*, start_port: int, occupied_ports: set[int]) -> int:
     port = start_port
     while port in occupied_ports:
         port += 1
-    if port > 65535:
+    if port > HIGHEST_PORT:
         raise HTTPException(
-            status_code=409,
+            status_code=HTTPStatus.CONFLICT,
             detail=f"No available port found at or above {start_port}",
         )
     return port
@@ -773,7 +784,7 @@ def _assert_import_profile_has_no_internal_overlap(*, profile: BackupLaunchProfi
             continue
         other_service = seen_ports[port]
         raise HTTPException(
-            status_code=400,
+            status_code=HTTPStatus.BAD_REQUEST,
             detail=f"{service} port {port} conflicts with {other_service} port in the import profile",
         )
 
@@ -869,6 +880,16 @@ def list_backups(token: Annotated[str, Depends(_require_auth)]):
     return BackupListResponse(backups=backups)
 
 
+@router.get("/times", response_model=BackupTimesResponse)
+def list_backup_times(token: Annotated[str, Depends(_require_auth)]):
+    """When this namespace was backed up into the backup folder (the backup reminder's clock)."""
+    if ACTIVE_NAMESPACE is None:
+        raise RuntimeError("Backup times need an active namespace")
+    folder_backups = list_backups(token=token).backups
+    backup_times = [backup.created_at for backup in folder_backups if backup.namespace == ACTIVE_NAMESPACE]
+    return BackupTimesResponse(backup_times=backup_times)
+
+
 @router.post("/run", response_model=BackupRunResponse)
 @transactional_route
 def run_backup(
@@ -932,15 +953,15 @@ def restore_backup_preflight(
     token: Annotated[str, Depends(_require_auth)],
 ):
     if payload.source != "folder":
-        raise HTTPException(status_code=400, detail="source must be folder")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="source must be folder")
     backup_namespace = validate_namespace(namespace=payload.backup_namespace)
     target_namespace = validate_namespace(namespace=payload.target_namespace)
 
     folder_namespace, folder_filename = _parse_folder_backup_id(payload.backup_id)
     if folder_namespace != backup_namespace:
-        raise HTTPException(status_code=400, detail="folder backup namespace does not match payload")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="folder backup namespace does not match payload")
     if folder_filename != payload.backup_filename:
-        raise HTTPException(status_code=400, detail="folder backup filename does not match payload")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="folder backup filename does not match payload")
     settings = load_backup_settings(token=token)
     folder_path = settings["folder_path"]
     if not isinstance(folder_path, str):
@@ -948,7 +969,7 @@ def restore_backup_preflight(
     folder_directory = _normalize_folder_backup_path(folder_path=folder_path)
     backup_path = folder_directory / folder_filename
     if not backup_path.exists():
-        raise HTTPException(status_code=404, detail=f"Backup not found: {folder_filename}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Backup not found: {folder_filename}")
 
     restored_profile = read_backup_launch_profile(
         backup_path,
@@ -994,12 +1015,12 @@ def restore_backup(
     token: Annotated[str, Depends(_require_auth)],
 ):
     if payload.source != "folder":
-        raise HTTPException(status_code=400, detail="source must be folder")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="source must be folder")
     backup_namespace = validate_namespace(namespace=payload.backup_namespace)
     target_namespace = validate_namespace(namespace=payload.target_namespace)
     if target_namespace != backup_namespace:
         raise HTTPException(
-            status_code=400,
+            status_code=HTTPStatus.BAD_REQUEST,
             detail="Different-name restore must use /api2/backup/restore/import",
         )
 
@@ -1009,9 +1030,9 @@ def restore_backup(
 
     folder_namespace, folder_filename = _parse_folder_backup_id(payload.backup_id)
     if folder_namespace != backup_namespace:
-        raise HTTPException(status_code=400, detail="folder backup namespace does not match payload")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="folder backup namespace does not match payload")
     if folder_filename != payload.backup_filename:
-        raise HTTPException(status_code=400, detail="folder backup filename does not match payload")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="folder backup filename does not match payload")
     settings = load_backup_settings(token=token)
     folder_path = settings["folder_path"]
     if not isinstance(folder_path, str):
@@ -1019,7 +1040,7 @@ def restore_backup(
     folder_directory = _normalize_folder_backup_path(folder_path=folder_path)
     backup_path = folder_directory / folder_filename
     if not backup_path.exists():
-        raise HTTPException(status_code=404, detail=f"Backup not found: {folder_filename}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Backup not found: {folder_filename}")
     target_exists = _restore_target_exists(target_namespace=target_namespace)
     launch_profile = _resolve_same_name_restore_launch_profile(
         backup_path=backup_path,
@@ -1039,7 +1060,7 @@ def restore_backup(
             _reset_runtime_state_after_restore()
         finally:
             maintenance_service.exit_maintenance()
-        _schedule_server_restart_after_restore(delay_seconds=0.5)
+        _schedule_server_restart_after_restore(delay_seconds=_RESTART_AFTER_RESTORE_DELAY_SECONDS)
         active_namespace_restarted = True
         open_namespace_suggested = False
     else:
@@ -1070,16 +1091,16 @@ def import_backup(
     token: Annotated[str, Depends(_require_auth)],
 ):
     if payload.source != "folder":
-        raise HTTPException(status_code=400, detail="source must be folder")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="source must be folder")
     backup_namespace = validate_namespace(namespace=payload.backup_namespace)
     target_namespace = validate_namespace(namespace=payload.target_namespace)
     if target_namespace == backup_namespace:
-        raise HTTPException(status_code=400, detail="Same-name restore must use /api2/backup/restore")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Same-name restore must use /api2/backup/restore")
 
     target_exists = _restore_target_exists(target_namespace=target_namespace)
     if target_exists and not payload.overwrite_existing_target:
         raise HTTPException(
-            status_code=409,
+            status_code=HTTPStatus.CONFLICT,
             detail=f"Target namespace already exists: {target_namespace}",
         )
     if target_exists:
@@ -1091,9 +1112,9 @@ def import_backup(
     target_database_path = resolve_namespaced_database_path(namespace=target_namespace)
     folder_namespace, folder_filename = _parse_folder_backup_id(payload.backup_id)
     if folder_namespace != backup_namespace:
-        raise HTTPException(status_code=400, detail="folder backup namespace does not match payload")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="folder backup namespace does not match payload")
     if folder_filename != payload.backup_filename:
-        raise HTTPException(status_code=400, detail="folder backup filename does not match payload")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="folder backup filename does not match payload")
     settings = load_backup_settings(token=token)
     folder_path = settings["folder_path"]
     if not isinstance(folder_path, str):
@@ -1101,7 +1122,7 @@ def import_backup(
     folder_directory = _normalize_folder_backup_path(folder_path=folder_path)
     backup_path = folder_directory / folder_filename
     if not backup_path.exists():
-        raise HTTPException(status_code=404, detail=f"Backup not found: {folder_filename}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Backup not found: {folder_filename}")
 
     if target_exists:
         launch_profile = _required_existing_target_launch_profile(
@@ -1132,7 +1153,7 @@ def import_backup(
             _reset_runtime_state_after_restore()
         finally:
             maintenance_service.exit_maintenance()
-        _schedule_server_restart_after_restore(delay_seconds=0.5)
+        _schedule_server_restart_after_restore(delay_seconds=_RESTART_AFTER_RESTORE_DELAY_SECONDS)
     else:
         stop_namespace_for_restore(namespace=target_namespace)
         _restore_import_to_target(

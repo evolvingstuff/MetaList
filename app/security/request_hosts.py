@@ -6,10 +6,12 @@ import ipaddress
 import re
 
 from app.services.exception_capture import CapturedExceptionContext
+from app.utils.sent_fields import sent_or_none
 
 
 _LOOPBACK_REQUEST_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 _WILDCARD_BIND_HOSTS = frozenset({"0.0.0.0", "::"})
+_DEFAULT_BIND_HOST = "127.0.0.1"
 _DNS_HOSTNAME_PATTERN = re.compile(
     r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$"
 )
@@ -65,14 +67,17 @@ def _normalize_configured_hostname(*, raw_value: str) -> str:
 
 def resolve_allowed_request_hosts(*, environ: Mapping[str, str]) -> frozenset[str]:
     allowed_hosts = set(_LOOPBACK_REQUEST_HOSTS)
-    bind_host = environ.get("METALIST_HOST", "127.0.0.1").strip()
+    # Unset, MetaList binds to loopback only (server_runtime does the same).
+    bind_host = _DEFAULT_BIND_HOST
+    if "METALIST_HOST" in environ:
+        bind_host = environ["METALIST_HOST"].strip()
     if bind_host == "":
         raise RuntimeError("METALIST_HOST must not be empty")
     normalized_bind_host = _normalize_configured_hostname(raw_value=bind_host)
     if normalized_bind_host not in _WILDCARD_BIND_HOSTS:
         allowed_hosts.add(normalized_bind_host)
 
-    configured_hosts = environ.get("METALIST_ALLOWED_HOSTS")
+    configured_hosts = sent_or_none(environ, "METALIST_ALLOWED_HOSTS")
     if configured_hosts is not None:
         if configured_hosts.strip() == "":
             raise RuntimeError("METALIST_ALLOWED_HOSTS must not be empty when set")

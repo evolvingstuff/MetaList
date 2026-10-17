@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from app.security.crypto_sizes import AES_256_KEY_BYTES, GCM_NONCE_BYTES, GCM_TAG_BYTES, SALT_BYTES
 import argparse
+from collections import Counter
 import base64
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,8 +15,8 @@ import sys
 from app.db.version import CURRENT_DATABASE_VERSION
 
 
-_NONCE_BYTES = 12
-_TAG_BYTES = 16
+# The data encryption key is AES-256; GCM ciphertext is as long as its plaintext.
+_ENCRYPTED_DEK_BYTES = AES_256_KEY_BYTES
 _DEFAULT_NAMESPACES_DIRECTORY = Path.home() / "MetaList" / "namespaces"
 _CANONICAL_BASE64_PATTERN = re.compile(
     r"^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
@@ -147,7 +149,7 @@ class _AuditState:
         self.namespace = namespace
         self.database_path = database_path
         self.checked_payload_count = 0
-        self._finding_counts: dict[tuple[Path, str, str, str, bool], int] = {}
+        self._finding_counts: Counter[tuple[Path, str, str, str, bool]] = Counter()
         self._used_nonces: dict[bytes, tuple[Path, str, str]] = {}
 
     def add_finding(
@@ -159,7 +161,7 @@ class _AuditState:
         message: str,
     ) -> None:
         key = (database_path, table, field, message, False)
-        self._finding_counts[key] = self._finding_counts.get(key, 0) + 1
+        self._finding_counts[key] += 1
 
     def add_migration_finding(
         self,
@@ -170,7 +172,7 @@ class _AuditState:
         message: str,
     ) -> None:
         key = (database_path, table, field, message, True)
-        self._finding_counts[key] = self._finding_counts.get(key, 0) + 1
+        self._finding_counts[key] += 1
 
     def record_nonce(
         self,
@@ -180,11 +182,10 @@ class _AuditState:
         table: str,
         field: str,
     ) -> None:
-        previous = self._used_nonces.get(nonce)
-        if previous is None:
+        if nonce not in self._used_nonces:
             self._used_nonces[nonce] = (database_path, table, field)
             return
-        previous_database_path, previous_table, previous_field = previous
+        previous_database_path, previous_table, previous_field = self._used_nonces[nonce]
         self.add_finding(
             database_path=database_path,
             table=table,
@@ -339,6 +340,20 @@ _ATTACHMENT_COLUMNS = frozenset(
 _FILE_REVISION_COLUMN = "content_revision"
 _FILE_PREVIEWS_TABLE = "file_previews"
 _EDITABLE_FILES_DATABASE_VERSION = 10
+# Migration 1→2 added the namespace_content_migrations table.
+_CONTENT_MIGRATIONS_DATABASE_VERSION = 2
+# Migration 2→3 replaced legacy deterministic search history with opaque columns.
+_OPAQUE_SEARCH_HISTORY_DATABASE_VERSION = 3
+# Migration 4→5 added the OpenAI credential columns.
+_OPENAI_CREDENTIALS_DATABASE_VERSION = 5
+# Migration 5→6 added the proposed-tag columns.
+_PROPOSED_TAGS_DATABASE_VERSION = 6
+# Migration 6→7 created embedded_documents; migration 7→8 dropped it.
+_EMBEDDED_DOCUMENTS_DATABASE_VERSION = 7
+_EMBEDDED_DOCUMENTS_RETIRED_DATABASE_VERSION = 8
+# Migration 8→9 retired the files-database sounds table.
+_SOUNDS_RETIRED_DATABASE_VERSION = 9
+_EXPECTED_VAULT_VERSION = 3
 
 _FILE_SCHEMA = {
     "files": _ATTACHMENT_COLUMNS | {_FILE_REVISION_COLUMN},
@@ -442,8 +457,11 @@ _FILE_PAYLOADS = tuple(
     ),
 )
 
-_MIGRATION_DEFERRED_PLAINTEXT_FIELDS_BY_DATABASE_VERSION = {
-    0: frozenset(
+# Plaintext fields a not-yet-migrated database may still hold, one entry per
+# database version in order (the entry at position N is version N).
+_MIGRATION_DEFERRED_PLAINTEXT_FIELDS_BY_DATABASE_VERSION = dict(enumerate((
+    # version 0
+    frozenset(
         {
             ("app_settings", "client_preferences_json"),
             ("app_settings", "command_palette_usage_json"),
@@ -451,16 +469,25 @@ _MIGRATION_DEFERRED_PLAINTEXT_FIELDS_BY_DATABASE_VERSION = {
             ("notes", "proposed_tags"),
         }
     ),
-    1: frozenset({("notes", "proposed_tags")}),
-    2: frozenset({("notes", "proposed_tags")}),
-    3: frozenset({("notes", "proposed_tags")}),
-    4: frozenset({("notes", "proposed_tags")}),
-    5: frozenset({("notes", "proposed_tags")}),
-    6: frozenset(),
-    7: frozenset(),
-    8: frozenset(),
-    9: frozenset(),
-}
+    # version 1
+    frozenset({("notes", "proposed_tags")}),
+    # version 2
+    frozenset({("notes", "proposed_tags")}),
+    # version 3
+    frozenset({("notes", "proposed_tags")}),
+    # version 4
+    frozenset({("notes", "proposed_tags")}),
+    # version 5
+    frozenset({("notes", "proposed_tags")}),
+    # version 6
+    frozenset(),
+    # version 7
+    frozenset(),
+    # version 8
+    frozenset(),
+    # version 9
+    frozenset(),
+)))
 
 
 def _migration_deferred_plaintext_fields(
@@ -490,12 +517,14 @@ def _main_schema_for_database_version(
         raise ValueError("database_version is outside the supported audit range")
     resolved_schema = expected_schema
     # Read-only audits must still validate retired payloads before the live 7→8 migration.
-    if database_version < 8 and (database_version == 7 or "embedded_documents" in actual_tables):
+    if database_version < _EMBEDDED_DOCUMENTS_RETIRED_DATABASE_VERSION and (
+        database_version == _EMBEDDED_DOCUMENTS_DATABASE_VERSION or "embedded_documents" in actual_tables
+    ):
         resolved_schema = {
             **resolved_schema,
             "embedded_documents": frozenset({"id", "payload", "nonce", "tag"}),
         }
-    if database_version < 6 and _PROPOSED_TAG_COLUMNS.isdisjoint(actual_notes_columns):
+    if database_version < _PROPOSED_TAGS_DATABASE_VERSION and _PROPOSED_TAG_COLUMNS.isdisjoint(actual_notes_columns):
         note_columns = resolved_schema["notes"]
         if not _PROPOSED_TAG_COLUMNS.issubset(note_columns):
             raise RuntimeError("Current audit schema is missing proposed-tag columns")
@@ -503,7 +532,7 @@ def _main_schema_for_database_version(
             **resolved_schema,
             "notes": note_columns - _PROPOSED_TAG_COLUMNS,
         }
-    if database_version >= 5 or not _OPENAI_CREDENTIAL_COLUMNS.isdisjoint(
+    if database_version >= _OPENAI_CREDENTIALS_DATABASE_VERSION or not _OPENAI_CREDENTIAL_COLUMNS.isdisjoint(
         actual_app_settings_columns
     ):
         return resolved_schema
@@ -641,12 +670,12 @@ def _audit_payload_row(
             message="sensitive value has incomplete encryption metadata",
         )
         return
-    if not isinstance(nonce, bytes) or len(nonce) != _NONCE_BYTES:
+    if not isinstance(nonce, bytes) or len(nonce) != GCM_NONCE_BYTES:
         state.add_finding(
             database_path=database_path,
             table=spec.table,
             field=spec.nonce_column,
-            message=f"AES-GCM nonce must be a {_NONCE_BYTES}-byte BLOB",
+            message=f"AES-GCM nonce must be a {GCM_NONCE_BYTES}-byte BLOB",
         )
     else:
         state.record_nonce(
@@ -655,12 +684,12 @@ def _audit_payload_row(
             table=spec.table,
             field=spec.value_column,
         )
-    if not isinstance(tag, bytes) or len(tag) != _TAG_BYTES:
+    if not isinstance(tag, bytes) or len(tag) != GCM_TAG_BYTES:
         state.add_finding(
             database_path=database_path,
             table=spec.table,
             field=spec.tag_column,
-            message=f"AES-GCM tag must be a {_TAG_BYTES}-byte BLOB",
+            message=f"AES-GCM tag must be a {GCM_TAG_BYTES}-byte BLOB",
         )
     if spec.storage_kind == "text" and not _is_valid_base64_ciphertext(value):
         state.add_finding(
@@ -773,7 +802,7 @@ def _audit_vault_metadata_values(
     state: _AuditState,
 ) -> None:
     exact_values = {
-        "vault_version": 3,
+        "vault_version": _EXPECTED_VAULT_VERSION,
         "kdf_algorithm": "ARGON2ID",
         "encryption_algorithm": "AES-256-GCM",
     }
@@ -786,11 +815,11 @@ def _audit_vault_metadata_values(
                 message=f"expected current encrypted-vault value {expected!r}",
             )
     byte_lengths = {
-        "auth_salt": 32,
-        "kek_salt": 32,
-        "encrypted_dek": 32,
-        "dek_nonce": _NONCE_BYTES,
-        "dek_tag": _TAG_BYTES,
+        "auth_salt": SALT_BYTES,
+        "kek_salt": SALT_BYTES,
+        "encrypted_dek": _ENCRYPTED_DEK_BYTES,
+        "dek_nonce": GCM_NONCE_BYTES,
+        "dek_tag": GCM_TAG_BYTES,
     }
     for field, expected_length in byte_lengths.items():
         value = row[field]
@@ -889,7 +918,9 @@ def _file_schema_for_database_version(
     database_version: int,
 ) -> dict[str, frozenset[str]]:
     resolved_schema = {
-        name: columns for name, columns in _FILE_SCHEMA.items() if name != "sounds" or database_version < 9
+        name: columns
+        for name, columns in _FILE_SCHEMA.items()
+        if name != "sounds" or database_version < _SOUNDS_RETIRED_DATABASE_VERSION
     }
     if database_version >= _EDITABLE_FILES_DATABASE_VERSION:
         return resolved_schema
@@ -950,7 +981,7 @@ def _audit_namespace(*, namespace: str, database_path: Path) -> NamespaceAuditRe
             findings=(),
         )
     uses_legacy_search_history = (
-        database_version < 3
+        database_version < _OPAQUE_SEARCH_HISTORY_DATABASE_VERSION
         and search_history_columns == _LEGACY_SEARCH_HISTORY_COLUMNS
     )
     expected_main_schema = _OPAQUE_MAIN_SCHEMA_BEFORE_CONTENT_MIGRATIONS
@@ -971,14 +1002,17 @@ def _audit_namespace(*, namespace: str, database_path: Path) -> NamespaceAuditRe
                 "database migration"
             ),
         )
-    elif database_version in (2, 3) and search_history_columns == _OPAQUE_SEARCH_HISTORY_COLUMNS:
+    elif (
+        database_version in (_CONTENT_MIGRATIONS_DATABASE_VERSION, _OPAQUE_SEARCH_HISTORY_DATABASE_VERSION)
+        and search_history_columns == _OPAQUE_SEARCH_HISTORY_COLUMNS
+    ):
         state.add_migration_finding(
             database_path=database_path,
             table="search_interaction_history",
             field="*",
             message="authenticated live-database tag-activity reset has not completed",
         )
-    if database_version >= 2 or "namespace_content_migrations" in main_table_names:
+    if database_version >= _CONTENT_MIGRATIONS_DATABASE_VERSION or "namespace_content_migrations" in main_table_names:
         if uses_legacy_search_history:
             expected_main_schema = _MAIN_SCHEMA
         else:
@@ -1008,7 +1042,11 @@ def _audit_namespace(*, namespace: str, database_path: Path) -> NamespaceAuditRe
                 file_database_path=file_database_path,
                 database_version=database_version,
             ),
-            payload_specs=tuple(spec for spec in _FILE_PAYLOADS if spec.table != "sounds" or database_version < 9),
+            payload_specs=tuple(
+                spec
+                for spec in _FILE_PAYLOADS
+                if spec.table != "sounds" or database_version < _SOUNDS_RETIRED_DATABASE_VERSION
+            ),
             state=state,
             is_main_database=False,
             migration_deferred_plaintext_fields=frozenset(),

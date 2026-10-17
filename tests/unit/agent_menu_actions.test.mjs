@@ -74,3 +74,27 @@ test('cancellation during opening sends no stale acknowledgement', async () => {
         signal: controller.signal, openMenu: async () => { controller.abort(); return {status: 'opened', detail: ''}; },
         acknowledge: async () => assert.fail('Cancelled operation acknowledged')});
 });
+
+test('opening a namespace with no other one reports the Create namespace dialog it opened', async () => withCatalog(async () => {
+    // With no other namespace, Open/Switch namespace opens Create namespace instead.
+    const shown = new Set(['#create-namespace-modal']);
+    const result = await openAgentMenu({
+        menuId: 'form.open_namespace',
+        endpoints: catalog.map(entry => ({ id: entry.id, execute: async () => {} })),
+        isCurrent: () => true, hasOpenModal: () => false,
+        queryElement: selector => ({ getClientRects: () => (shown.has(selector) ? [1] : []) }),
+        showMenuEntry: async () => {}, signal: new AbortController().signal,
+    });
+    assert.deepEqual(result, { status: 'opened', detail: 'Create namespace' });
+}));
+
+test('a dialog that opened neither of its forms is reported as not opened', async () => withCatalog(async () => {
+    const result = await openAgentMenu({
+        menuId: 'form.open_namespace',
+        endpoints: catalog.map(entry => ({ id: entry.id, execute: async () => {} })),
+        isCurrent: () => true, hasOpenModal: () => false,
+        queryElement: () => ({ getClientRects: () => [] }),
+        showMenuEntry: async () => {}, signal: new AbortController().signal,
+    });
+    assert.equal(result.status, 'unavailable');
+}));

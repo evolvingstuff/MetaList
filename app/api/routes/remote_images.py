@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from http import HTTPStatus
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
@@ -13,12 +14,14 @@ from app.services.remote_image_proxy import (
 )
 from app.services.input_errors import InputRejected, ResourceNotFound
 
+# The most remote images one request may ask about.
+_MAX_SOURCE_URLS_PER_REQUEST = 100
 
 router = APIRouter(prefix="/remote-images", tags=["remote-images"])
 
 
 class RemoteImageRegistrationRequest(BaseModel):
-    source_urls: list[str] = Field(min_length=1, max_length=100)
+    source_urls: list[str] = Field(min_length=1, max_length=_MAX_SOURCE_URLS_PER_REQUEST)
 
 
 class RemoteImageRegistrationEntryResponse(BaseModel):
@@ -45,7 +48,7 @@ def register_remote_images(
             token = remote_image_proxy_registry.register(source_url)
         if registration_capture.captured_exception is not None:
             raise HTTPException(
-                status_code=422,
+                status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
                 detail="Remote image URL must use HTTP or HTTPS",
             )
         if token is None:
@@ -67,7 +70,7 @@ def proxy_remote_image(request: Request, proxy_token: str) -> Response:
     with resolve_capture:
         source_url = remote_image_proxy_registry.resolve(proxy_token)
     if resolve_capture.captured_exception is not None:
-        raise HTTPException(status_code=404, detail="Remote image reference not found")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Remote image reference not found")
     if source_url is None:
         raise RuntimeError("Remote image proxy resolution completed without a source URL")
 
@@ -76,7 +79,7 @@ def proxy_remote_image(request: Request, proxy_token: str) -> Response:
     with fetch_capture:
         payload = fetch_remote_image(source_url)
     if fetch_capture.captured_exception is not None:
-        raise HTTPException(status_code=502, detail="Remote image unavailable")
+        raise HTTPException(status_code=HTTPStatus.BAD_GATEWAY, detail="Remote image unavailable")
     if payload is None:
         raise RuntimeError("Remote image fetch completed without a payload")
     return Response(

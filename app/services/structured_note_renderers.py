@@ -26,6 +26,13 @@ _CSV_IMAGE_PLACEHOLDER_PREFIX = "MLCSVIMAGEPLACEHOLDER"
 
 _CSV_IMAGE_PLACEHOLDER_SUFFIX = "TOKEN"
 
+# Rows are numbered from 1 in messages; the header is row 1.
+_CSV_HEADER_ROW_NUMBER = 1
+# A backslash and the character it escapes.
+_JSON_ESCAPE_LENGTH = 2
+# `python -m json.tool` indents each level by this many spaces.
+_JSON_TOOL_INDENT_SPACES = 4
+
 
 def _render_json_meta(*, content_html: str, formatting_tags: FrozenSet[str], extra_classes: str, size_style_attr: str) -> str:
     raw_text = _extract_plain_text(content_html)
@@ -111,10 +118,10 @@ def _normalize_json_indent(text: str) -> str:
         if leading_spaces == 0:
             adjusted_lines.append(line)
             continue
-        if leading_spaces % 4 != 0:
+        if leading_spaces % _JSON_TOOL_INDENT_SPACES != 0:
             adjusted_lines.append(line)
             continue
-        indent_level = leading_spaces // 4
+        indent_level = leading_spaces // _JSON_TOOL_INDENT_SPACES
         adjusted_lines.append(("  " * indent_level) + stripped)
 
     return "\n".join(adjusted_lines)
@@ -338,7 +345,7 @@ def _parse_csv_rows(
     if expected_len == 0:
         return [], "CSV has no columns"
 
-    for idx, row in enumerate(rows[1:], start=2):
+    for idx, row in enumerate(rows[1:], start=_CSV_HEADER_ROW_NUMBER + 1):
         if _is_full_width_csv_media_row(
             row=row,
             full_width_cell_tokens=full_width_cell_tokens,
@@ -430,7 +437,7 @@ def _consume_json_string(text: str, start: int) -> tuple[str, int]:
     while index < length:
         char = text[index]
         if char == "\\":
-            index += 2
+            index += _JSON_ESCAPE_LENGTH
             continue
         if char == '"':
             index += 1

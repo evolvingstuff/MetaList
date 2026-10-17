@@ -45,6 +45,10 @@ EXCALIDRAW_FILE_EXTENSION = ".excalidraw"
 FILE_PREVIEW_MIME_TYPE = "image/svg+xml"
 # Only files MetaList edits itself may be replaced in place; other attachments stay immutable.
 _EDITABLE_THUMBNAIL_KINDS = {"excalidraw"}
+_XML_DECLARATION_END = "?>"
+# A new file ID is drawn at most this many times before giving up on finding
+# one that no note or file already uses.
+_UNIQUE_FILE_ID_ATTEMPTS = 100
 
 
 class FileRevisionConflict(Exception):
@@ -666,7 +670,7 @@ def decrypt_all_files_for_plaintext(*, encryption_service: object) -> int:
 
 
 def _generate_unique_file_id() -> str:
-    for _ in range(100):
+    for _ in range(_UNIQUE_FILE_ID_ATTEMPTS):
         candidate = str(uuid.uuid4())
         if note_store.has_note(candidate):
             continue
@@ -826,9 +830,9 @@ def _validate_editable_content(*, thumbnail_kind: str, content_bytes: bytes) -> 
         scene = json.loads(text)
     except json.JSONDecodeError as exc:
         raise InvalidFileContent("Excalidraw scene must be valid JSON") from exc
-    if not isinstance(scene, dict) or scene.get("type") != "excalidraw":
+    if not isinstance(scene, dict) or "type" not in scene or scene["type"] != "excalidraw":
         raise InvalidFileContent("Excalidraw scene must be a JSON object with type 'excalidraw'")
-    if not isinstance(scene.get("elements"), list):
+    if "elements" not in scene or not isinstance(scene["elements"], list):
         raise InvalidFileContent("Excalidraw scene must contain an elements list")
 
 
@@ -839,9 +843,9 @@ def _validate_svg_preview(*, svg_bytes: bytes, variant: str) -> None:
         raise ValueError("Attachment exceeds the configured size limit")
     text = _decode_utf8_strict(svg_bytes, description=f"{variant} preview").strip()
     if text.startswith("<?xml"):
-        if "?>" not in text:
+        if _XML_DECLARATION_END not in text:
             raise InvalidFileContent(f"{variant} preview has an unterminated XML declaration")
-        text = text[text.index("?>") + 2:].lstrip()
+        text = text[text.index(_XML_DECLARATION_END) + len(_XML_DECLARATION_END):].lstrip()
     if not text.startswith("<svg") or not text.endswith("</svg>"):
         raise InvalidFileContent(f"{variant} preview must be an SVG document")
 
@@ -1013,8 +1017,7 @@ def _decrypt_blob_field(
 def _coerce_encryption_service(encryption_service: object):
     if encryption_service is None:
         return None
-    dek = getattr(encryption_service, "dek", None)
-    if not isinstance(dek, bytes):
+    if not isinstance(encryption_service.dek, bytes):
         return None
     return encryption_service
 

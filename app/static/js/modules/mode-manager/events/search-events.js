@@ -17,6 +17,12 @@ import {
     isViewingReferenceSource,
 } from '../services/reference-source-navigation-service.js';
 import { handleDictationPasteEvent, isDictationRawInsertInProgress } from '../services/dictation-paste-service.js';
+import { MS_PER_SECOND } from '../../time-units.js';
+
+// A search waits for a busy CommandGate, rechecking this often, and fails loudly
+// if the gate stays busy past the limit.
+const SEARCH_COMMAND_GATE_RECHECK_MS = 50;
+const SEARCH_COMMAND_GATE_MAX_WAIT_SECONDS = 5;
 
 export function resetActiveTabForSearchExecution(searchQuery, options) {
     if (typeof searchQuery !== 'string') {
@@ -109,10 +115,10 @@ export function handleSearchInput(event) {
     const executeSearchWhenIdle = () => {
         const waitedMs = performance.now() - searchRequestedAt;
         if (CommandGate.isBusy()) {
-            if (waitedMs > 5000) {
-                throw new Error('Search execution delayed >5s waiting for CommandGate');
+            if (waitedMs > SEARCH_COMMAND_GATE_MAX_WAIT_SECONDS * MS_PER_SECOND) {
+                throw new Error(`Search execution delayed >${SEARCH_COMMAND_GATE_MAX_WAIT_SECONDS}s waiting for CommandGate`);
             }
-            scheduleDebouncedSearchExecution(50, executeSearchWhenIdle);
+            scheduleDebouncedSearchExecution(SEARCH_COMMAND_GATE_RECHECK_MS, executeSearchWhenIdle);
             return;
         }
 

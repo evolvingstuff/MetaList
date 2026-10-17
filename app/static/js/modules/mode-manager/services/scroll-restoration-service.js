@@ -1,5 +1,7 @@
+import { clampNumber, getScrollMaxY, getViewportReferenceY, getViewportTopInset, VIEWPORT_TOP_BUFFER_PX } from './viewport-reference.js';
 import { ApplicationState } from '../../application-state.js';
 import { scrollWindowToYFastAnimated } from './animated-scroll-service.js';
+
 
 const moduleState = ApplicationState.createFields('scroll-restoration-service', {
     pendingScrollNoteIntoViewAnimationFrame: null,
@@ -7,50 +9,10 @@ const moduleState = ApplicationState.createFields('scroll-restoration-service', 
 });
 
 
-function clampNumber(value, min, max) {
-    if (typeof value !== 'number' || Number.isNaN(value)) {
-        throw new Error('clampNumber requires a number');
-    }
-    if (value < min) return min;
-    if (value > max) return max;
-    return value;
-}
-
-function getViewportReferenceY(anchorBias) {
-    const topInset = getViewportTopInset();
-    if (anchorBias === 'center') {
-        return topInset + (window.innerHeight - topInset) / 2;
-    }
-    if (anchorBias === 'top') {
-        return topInset;
-    }
-    throw new Error(`Unsupported anchorBias: ${anchorBias}`);
-}
-
-// Top of the usable viewport: just below the sticky search controls.
-// Space kept between the sticky search controls and the first visible note.
-const VIEWPORT_TOP_BUFFER_PX = 8;
-
-export function getViewportTopInset() {
-    const controls = document.querySelector('.controls');
-    if (!controls) {
-        return 0;
-    }
-    const rect = controls.getBoundingClientRect();
-    if (rect.height <= 0 || rect.width <= 0) {
-        return 0;
-    }
-    if (rect.bottom <= 0) {
-        return 0;
-    }
-    return Math.max(0, Math.round(rect.bottom + VIEWPORT_TOP_BUFFER_PX));
-}
-
-function getScrollMaxY() {
-    const doc = document.documentElement;
-    const max = doc.scrollHeight - window.innerHeight;
-    return Math.max(0, Math.round(max));
-}
+// Space kept around a note scrolled into view, unless the caller asks for other.
+const DEFAULT_REVEAL_PADDING_PX = 12;
+// The second, settling scroll after a note is scrolled into view.
+const DEFAULT_FOLLOW_UP_DELAY_MS = 180;
 
 function escapeNoteId(noteId) {
     if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
@@ -84,7 +46,7 @@ function getOrderedRootNoteIds() {
 		const normalized = (typeof rawParent === 'string' ? rawParent : '').trim().toLowerCase();
 		const isRoot = rootParentSentinels.has(normalized);
 		if (!isRoot) continue;
-		const noteId = (element?.dataset?.noteId || '').toString();
+		const noteId = element.dataset.noteId;
 		if (!noteId) continue;
 		rootIds.push(noteId);
 	}
@@ -92,7 +54,7 @@ function getOrderedRootNoteIds() {
 }
 
 function pickFirstExistingId(noteIds) {
-    for (const noteId of noteIds || []) {
+    for (const noteId of noteIds) {
         if (typeof noteId !== 'string' || noteId.length === 0) continue;
         if (getNoteElementById(noteId)) {
             return noteId;
@@ -201,7 +163,7 @@ export function restoreScrollFromAnchor(savedAnchor, options) {
     }
 
     if (!targetId) {
-        const beltCandidate = pickFirstExistingId([...(savedAnchor.beltPrev || []), ...(savedAnchor.beltNext || [])]);
+        const beltCandidate = pickFirstExistingId([...savedAnchor.beltPrev, ...savedAnchor.beltNext]);
         if (beltCandidate) {
             targetId = beltCandidate;
         }
@@ -249,7 +211,7 @@ export function scrollNoteIntoView(noteId, options) {
     }
 
     const topInset = getViewportTopInset();
-    const padding = typeof options.padding === 'number' && options.padding >= 0 ? options.padding : 12;
+    const padding = typeof options.padding === 'number' && options.padding >= 0 ? options.padding : DEFAULT_REVEAL_PADDING_PX;
     let align = 'top';
     if (Object.prototype.hasOwnProperty.call(options, 'align')) {
         align = options.align;
@@ -308,7 +270,7 @@ export function scheduleScrollNoteIntoView(noteId, options) {
         throw new Error('scheduleScrollNoteIntoView requires a non-empty noteId');
     }
 
-    let followUpDelayMs = 180;
+    let followUpDelayMs = DEFAULT_FOLLOW_UP_DELAY_MS;
     if (Object.prototype.hasOwnProperty.call(options, 'followUpDelayMs')) {
         followUpDelayMs = options.followUpDelayMs;
     }

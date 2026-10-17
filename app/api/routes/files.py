@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from http import HTTPStatus
 from io import BytesIO
 from typing import Annotated
 from urllib.parse import quote
@@ -66,7 +67,7 @@ def _require_bearer_token(request: Request) -> str:
 
 def _require_known_file(file_id: str) -> None:
     if not file_registry.has_file(file_id):
-        raise HTTPException(status_code=404, detail=f"File not found: {file_id}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"File not found: {file_id}")
 
 
 @router.post("/upload", response_model=UploadedFileResponse)
@@ -77,9 +78,9 @@ async def upload_file_endpoint(
 ):
     token = _require_bearer_token(request)
     if not isinstance(file.filename, str) or file.filename == "":
-        raise HTTPException(status_code=400, detail="Uploaded file must include a filename")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Uploaded file must include a filename")
     if not isinstance(file.content_type, str) or file.content_type == "":
-        raise HTTPException(status_code=400, detail="Uploaded file must include a non-empty MIME type")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Uploaded file must include a non-empty MIME type")
 
     content_bytes = await read_attachment(file)
 
@@ -104,7 +105,7 @@ async def upload_file_endpoint(
 def download_file_endpoint(request: Request, file_id: str):
     token = _require_bearer_token(request)
     if not file_registry.has_file(file_id):
-        raise HTTPException(status_code=404, detail=f"File not found: {file_id}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"File not found: {file_id}")
 
     downloaded = download_file(file_id, token)
     quoted_filename = quote(downloaded.record.original_filename, safe="")
@@ -171,7 +172,7 @@ def download_file_preview_endpoint(request: Request, file_id: str, variant: str)
     token = _require_bearer_token(request)
     _require_known_file(file_id)
     if variant not in FILE_PREVIEW_VARIANTS:
-        raise HTTPException(status_code=404, detail=f"Unknown preview variant: {variant}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Unknown preview variant: {variant}")
     preview = get_file_preview(file_id=file_id, variant=variant, token=token)
     return Response(
         content=preview.content_bytes,
@@ -201,7 +202,7 @@ def finish_file_edit_session_endpoint(
     _require_known_file(file_id)
     host_note_id = body["hostNoteId"]
     if not note_store.has_note(host_note_id):
-        raise HTTPException(status_code=404, detail=f"Note not found: {host_note_id}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Note not found: {host_note_id}")
     return CmdFinishFileEditSession(
         file_id=file_id,
         session_id=session_id,

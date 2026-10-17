@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 import app.services.note_store as note_store_module
+from app.services.note_store import NotePosition
 from app.services.note_store import NoteStore
 from app.services.search_index import SearchIndex
 from app.services.tag_ontology import TagOntology
@@ -44,9 +45,9 @@ def _load_store(
 
 def test_bulk_parent_proposal_reaches_unseen_sibling_without_disclosing_it(monkeypatch):
     rows = [
-        {"id": "a", "parent_id": None, "prev_id": None, "next_id": None, "is_collapsed": 0},
-        {"id": "b", "parent_id": "a", "prev_id": None, "next_id": "c", "is_collapsed": 0},
-        {"id": "c", "parent_id": "a", "prev_id": "b", "next_id": None, "is_collapsed": 0},
+        {"id": "a", "parent_id": None, "prev_id": None, "next_id": None, "is_collapsed": 0, "created_at": None, "updated_at": None},
+        {"id": "b", "parent_id": "a", "prev_id": None, "next_id": "c", "is_collapsed": 0, "created_at": None, "updated_at": None},
+        {"id": "c", "parent_id": "a", "prev_id": "b", "next_id": None, "is_collapsed": 0, "created_at": None, "updated_at": None},
     ]
     store, index = _load_store(monkeypatch, rows=rows,
         content_by_id={"a": "Parent knowledge", "b": "Visible child", "c": "Hidden sibling"},
@@ -76,9 +77,9 @@ def test_implicit_tag_inheritance_excludes_meta_and_comments(monkeypatch: pytest
     content_by_id = {"a": "<div>a</div>", "b": "<div>b</div>", "c": "<div>c</div>"}
     tags_by_id = {"a": "@monospace x /*secret*/", "b": "y", "c": "z"}
     rows = [
-        {"id": "a", "parent_id": None, "prev_id": None, "next_id": None, "is_collapsed": 0},
-        {"id": "b", "parent_id": "a", "prev_id": None, "next_id": None, "is_collapsed": 0},
-        {"id": "c", "parent_id": "b", "prev_id": None, "next_id": None, "is_collapsed": 0},
+        {"id": "a", "parent_id": None, "prev_id": None, "next_id": None, "is_collapsed": 0, "created_at": None, "updated_at": None},
+        {"id": "b", "parent_id": "a", "prev_id": None, "next_id": None, "is_collapsed": 0, "created_at": None, "updated_at": None},
+        {"id": "c", "parent_id": "b", "prev_id": None, "next_id": None, "is_collapsed": 0, "created_at": None, "updated_at": None},
     ]
     _, index = _load_store(
         monkeypatch,
@@ -104,14 +105,14 @@ def test_local_effective_tags_exclude_ancestor_inheritance(
             "parent_id": None,
             "prev_id": None,
             "next_id": None,
-            "is_collapsed": 0,
+            "is_collapsed": 0, "created_at": None, "updated_at": None,
         },
         {
             "id": "child",
             "parent_id": "root",
             "prev_id": None,
             "next_id": None,
-            "is_collapsed": 0,
+            "is_collapsed": 0, "created_at": None, "updated_at": None,
         },
     ]
     store, index = _load_store(
@@ -139,9 +140,9 @@ def test_implicit_tag_inheritance_updates_when_ancestor_tags_change(monkeypatch:
     content_by_id = {"a": "<div>a</div>", "b": "<div>b</div>", "c": "<div>c</div>"}
     tags_by_id = {"a": "x", "b": "y", "c": "z"}
     rows = [
-        {"id": "a", "parent_id": None, "prev_id": None, "next_id": None, "is_collapsed": 0},
-        {"id": "b", "parent_id": "a", "prev_id": None, "next_id": None, "is_collapsed": 0},
-        {"id": "c", "parent_id": "b", "prev_id": None, "next_id": None, "is_collapsed": 0},
+        {"id": "a", "parent_id": None, "prev_id": None, "next_id": None, "is_collapsed": 0, "created_at": None, "updated_at": None},
+        {"id": "b", "parent_id": "a", "prev_id": None, "next_id": None, "is_collapsed": 0, "created_at": None, "updated_at": None},
+        {"id": "c", "parent_id": "b", "prev_id": None, "next_id": None, "is_collapsed": 0, "created_at": None, "updated_at": None},
     ]
     store, index = _load_store(
         monkeypatch,
@@ -153,7 +154,7 @@ def test_implicit_tag_inheritance_updates_when_ancestor_tags_change(monkeypatch:
 
     assert index.query_note_ids("x y z") == {"c"}
 
-    store.update_note_from_db(SimpleNamespace(id="a"), "<div>a</div>", "x2", "")
+    store.update_note_content(note_id="a", plaintext="<div>a</div>", tags="x2", proposed_tags="", updated_at=store.get_note("a").updated_at)
     assert index.query_note_ids("x y z") == set()
     assert index.query_note_ids("x2 y z") == {"c"}
 
@@ -172,10 +173,10 @@ def test_implicit_tag_inheritance_updates_when_notes_move(monkeypatch: pytest.Mo
     }
     tags_by_id = {"a": "x", "d": "", "b": "y", "c": "z"}
     rows = [
-        {"id": "a", "parent_id": None, "prev_id": None, "next_id": "d", "is_collapsed": 0},
-        {"id": "d", "parent_id": None, "prev_id": "a", "next_id": None, "is_collapsed": 0},
-        {"id": "b", "parent_id": "d", "prev_id": None, "next_id": None, "is_collapsed": 0},
-        {"id": "c", "parent_id": "b", "prev_id": None, "next_id": None, "is_collapsed": 0},
+        {"id": "a", "parent_id": None, "prev_id": None, "next_id": "d", "is_collapsed": 0, "created_at": None, "updated_at": None},
+        {"id": "d", "parent_id": None, "prev_id": "a", "next_id": None, "is_collapsed": 0, "created_at": None, "updated_at": None},
+        {"id": "b", "parent_id": "d", "prev_id": None, "next_id": None, "is_collapsed": 0, "created_at": None, "updated_at": None},
+        {"id": "c", "parent_id": "b", "prev_id": None, "next_id": None, "is_collapsed": 0, "created_at": None, "updated_at": None},
     ]
     store, index = _load_store(
         monkeypatch,
@@ -187,10 +188,7 @@ def test_implicit_tag_inheritance_updates_when_notes_move(monkeypatch: pytest.Mo
 
     assert index.query_note_ids("x y z") == set()
 
-    store.update_metadata_from_db(
-        SimpleNamespace(id="b", parent_id="a", prev_id=None, next_id=None),
-        rebuild=False,
-    )
+    store.move_note(NotePosition(note_id="b", parent_id="a", prev_id=None, next_id=None))
 
     assert index.query_note_ids("x y z") == {"c"}
 
@@ -207,14 +205,14 @@ def test_proposed_tags_are_searchable_and_inherited_but_meta_proposals_are_not(
             "parent_id": None,
             "prev_id": None,
             "next_id": None,
-            "is_collapsed": 0,
+            "is_collapsed": 0, "created_at": None, "updated_at": None,
         },
         {
             "id": "child",
             "parent_id": "root",
             "prev_id": None,
             "next_id": None,
-            "is_collapsed": 0,
+            "is_collapsed": 0, "created_at": None, "updated_at": None,
         },
     ]
     store, index = _load_store(
@@ -230,11 +228,12 @@ def test_proposed_tags_are_searchable_and_inherited_but_meta_proposals_are_not(
     assert index.query_note_ids("@red") == {"root"}
     assert index.query_untagged_note_ids() == set()
 
-    store.update_note_from_db(
-        SimpleNamespace(id="root"),
-        "<div>root</div>",
-        "human-root",
-        "",
+    store.update_note_content(
+        note_id="root",
+        plaintext="<div>root</div>",
+        tags="human-root",
+        proposed_tags="",
+        updated_at=store.get_note("root").updated_at,
     )
     assert index.query_note_ids("robot-root") == set()
     assert index.query_note_ids("human-child robot-child") == {"child"}

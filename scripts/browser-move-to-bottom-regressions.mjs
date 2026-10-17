@@ -124,7 +124,7 @@ async function moveToBottomFromMenu(page, prefix) {
   }, prefix);
   await page.mouse.click(point.x, point.y, {button: 'right'});
   await page.waitForSelector('.context-menu-item');
-  const find = label => page.evaluateHandle(label => [...document.querySelectorAll('.context-menu-item')]
+  const find = label => page.evaluateHandle(label => [...document.querySelectorAll('.context-menu-item')]  // shockharness: ignore[DEF003] reason="no matching menu item is null, as the assertion after it expects"
     .filter(item => item.offsetParent !== null).find(item => item.textContent.trim().startsWith(label)) || null, label);
   const moveGroup = (await find('Move')).asElement();
   if (moveGroup !== null && (await moveGroup.evaluate(node => node.textContent.trim())).startsWith('Move›')) {

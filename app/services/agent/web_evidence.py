@@ -134,29 +134,41 @@ class WebEvidenceCapacityError(RuntimeError):
     """The configured in-memory evidence budget cannot retain another page."""
 
 
+@dataclass
+class _WebSession:
+    """The pages one authenticated session has retained."""
+    by_url: dict[str, WebPageEvidence]
+    by_id: dict[str, WebPageEvidence]
+    references_by_id: dict[str, WebCitationReference]
+    # Short numbers the model cites as [[web:N]]: long ids are easy to miscopy.
+    short_numbers: dict[str, int]
+
+
+def _new_web_session() -> _WebSession:
+    return _WebSession(by_url={}, by_id={}, references_by_id={}, short_numbers={})
+
+
 class WebEvidenceStore:
     def __init__(self) -> None:
-        self._sessions: dict[str, dict[str, WebPageEvidence]] = {}
-        self._evidence_by_id: dict[str, dict[str, WebPageEvidence]] = {}
-        self._references_by_id: dict[str, dict[str, WebCitationReference]] = {}
-        # Short per-session numbers the model cites as [[web:N]]: long ids are easy to miscopy.
-        self._short_numbers: dict[str, dict[str, int]] = {}
+        self._sessions: dict[str, _WebSession] = {}
         self._lock = Lock()
 
     def reset(self) -> None:
         with self._lock:
             self._sessions.clear()
-            self._evidence_by_id.clear()
-            self._references_by_id.clear()
-            self._short_numbers.clear()
 
     def clear_session(self, *, session_key: str) -> None:
         _validate_session_key(session_key)
         with self._lock:
-            self._sessions.pop(session_key, None)
-            self._evidence_by_id.pop(session_key, None)
-            self._references_by_id.pop(session_key, None)
-            self._short_numbers.pop(session_key, None)
+            # A session that never fetched a page has nothing to clear.
+            if session_key in self._sessions:
+                del self._sessions[session_key]
+
+    def _retained_locked(self, session_key: str) -> _WebSession:
+        """What the session retained; a session that never fetched a page has nothing."""
+        if session_key not in self._sessions:
+            return _new_web_session()
+        return self._sessions[session_key]
 
     def find_by_url(self, *, session_key: str, url: str) -> WebPageEvidence | None:
         _validate_session_key(session_key)
@@ -164,7 +176,10 @@ class WebEvidenceStore:
         if normalized is None:
             return None
         with self._lock:
-            return self._sessions.get(session_key, {}).get(normalized)
+            by_url = self._retained_locked(session_key).by_url
+            if normalized not in by_url:
+                return None
+            return by_url[normalized]
 
     def retain_success(
         self,
@@ -176,9 +191,12 @@ class WebEvidenceStore:
         if not isinstance(result, WebPageFetchResult) or result.status != "ok":
             raise ValueError("Only successful page fetches can become web evidence")
         with self._lock:
-            by_url = self._sessions.setdefault(session_key, {})
-            by_id = self._evidence_by_id.setdefault(session_key, {})
-            references_by_id = self._references_by_id.setdefault(session_key, {})
+            if session_key not in self._sessions:
+                self._sessions[session_key] = _new_web_session()
+            session = self._sessions[session_key]
+            by_url = session.by_url
+            by_id = session.by_id
+            references_by_id = session.references_by_id
             existing = None
             if result.requested_url in by_url:
                 existing = by_url[result.requested_url]
@@ -232,7 +250,7 @@ class WebEvidenceStore:
             references_by_id.update(
                 (reference.evidence_id, reference) for reference in references
             )
-            short_numbers = self._short_numbers.setdefault(session_key, {})
+            short_numbers = session.short_numbers
             for reference in references:
                 assert reference.evidence_id not in short_numbers
                 short_numbers[reference.evidence_id] = len(short_numbers) + 1
@@ -242,25 +260,24 @@ class WebEvidenceStore:
         """The [[web:N]] token the model cites for a retained page or link."""
         _validate_session_key(session_key)
         with self._lock:
-            return f"[[web:{self._short_numbers[session_key][evidence_id]}]]"
+            return f"[[web:{self._sessions[session_key].short_numbers[evidence_id]}]]"
 
     def evidence_ids_by_short_number(self, *, session_key: str) -> dict[int, str]:
         """Every short citation number of the session, mapped to its full evidence id."""
         _validate_session_key(session_key)
         with self._lock:
-            if session_key not in self._short_numbers:
-                return {}
-            return {number: evidence_id for evidence_id, number in self._short_numbers[session_key].items()}
+            short_numbers = self._retained_locked(session_key).short_numbers
+            return {number: evidence_id for evidence_id, number in short_numbers.items()}
 
     def get(self, *, session_key: str, evidence_id: str) -> WebPageEvidence:
         _validate_session_key(session_key)
         if not isinstance(evidence_id, str) or evidence_id == "":
             raise ValueError("Web evidence id must be non-empty")
         with self._lock:
-            evidence = self._evidence_by_id.get(session_key, {}).get(evidence_id)
-            if evidence is None:
+            by_id = self._retained_locked(session_key).by_id
+            if evidence_id not in by_id:
                 raise KeyError(f"Unknown web evidence id: {evidence_id}")
-            return evidence
+            return by_id[evidence_id]
 
     def get_reference(
         self,
@@ -272,10 +289,10 @@ class WebEvidenceStore:
         if not isinstance(evidence_id, str) or evidence_id == "":
             raise ValueError("Web citation reference id must be non-empty")
         with self._lock:
-            reference = self._references_by_id.get(session_key, {}).get(evidence_id)
-            if reference is None:
+            references_by_id = self._retained_locked(session_key).references_by_id
+            if evidence_id not in references_by_id:
                 raise KeyError(f"Unknown web citation reference id: {evidence_id}")
-            return reference
+            return references_by_id[evidence_id]
 
     def available_for_ids(
         self,
@@ -294,7 +311,7 @@ class WebEvidenceStore:
         if len(set(evidence_ids)) != len(evidence_ids):
             raise ValueError("Web evidence ids must be unique")
         with self._lock:
-            by_id = self._evidence_by_id.get(session_key, {})
+            by_id = self._retained_locked(session_key).by_id
             return tuple(
                 by_id[evidence_id]
                 for evidence_id in evidence_ids
@@ -318,7 +335,7 @@ class WebEvidenceStore:
         if len(set(evidence_ids)) != len(evidence_ids):
             raise ValueError("Web citation reference ids must be unique")
         with self._lock:
-            by_id = self._references_by_id.get(session_key, {})
+            by_id = self._retained_locked(session_key).references_by_id
             return tuple(
                 by_id[evidence_id]
                 for evidence_id in evidence_ids
@@ -328,12 +345,12 @@ class WebEvidenceStore:
     def retained_urls(self, *, session_key: str) -> tuple[str, ...]:
         _validate_session_key(session_key)
         with self._lock:
-            return tuple(self._sessions.get(session_key, {}))
+            return tuple(self._retained_locked(session_key).by_url)
 
     def evidence(self, *, session_key: str) -> tuple[WebPageEvidence, ...]:
         _validate_session_key(session_key)
         with self._lock:
-            return tuple(self._evidence_by_id.get(session_key, {}).values())
+            return tuple(self._retained_locked(session_key).by_id.values())
 
     def prompt_evidence(
         self,
@@ -342,9 +359,7 @@ class WebEvidenceStore:
     ) -> tuple[tuple[WebPageEvidence, ...], int]:
         _validate_session_key(session_key)
         with self._lock:
-            all_evidence = tuple(
-                self._evidence_by_id.get(session_key, {}).values()
-            )
+            all_evidence = tuple(self._retained_locked(session_key).by_id.values())
         selected_newest_first: list[WebPageEvidence] = []
         retained_characters = 0
         for evidence in reversed(all_evidence):

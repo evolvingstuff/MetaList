@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from http import HTTPStatus
 from datetime import date, datetime
 
 from fastapi import APIRouter, HTTPException, Request
@@ -23,16 +24,16 @@ def _request_token(request: Request) -> str:
 
 def _require_body_object(payload: dict[str, object]) -> dict[str, object]:
     if not isinstance(payload, dict):
-        raise HTTPException(status_code=400, detail="Request body must be an object")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Request body must be an object")
     return payload
 
 
 def _require_string(payload: dict[str, object], field_name: str) -> str:
     if field_name not in payload:
-        raise HTTPException(status_code=400, detail=f"{field_name} is required")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{field_name} is required")
     value = payload[field_name]
     if not isinstance(value, str) or value == "":
-        raise HTTPException(status_code=400, detail=f"{field_name} must be a non-empty string")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{field_name} must be a non-empty string")
     return value
 
 
@@ -42,9 +43,9 @@ def _parse_datetime_field(payload: dict[str, object], field_name: str) -> dateti
     with capture:
         parsed = datetime.fromisoformat(raw)
     if capture.captured_exception is not None:
-        raise HTTPException(status_code=400, detail=f"{field_name} must be an ISO datetime") from capture.captured_exception
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{field_name} must be an ISO datetime") from capture.captured_exception
     if parsed.tzinfo is None:
-        raise HTTPException(status_code=400, detail=f"{field_name} must include timezone")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{field_name} must include timezone")
     return parsed
 
 
@@ -54,7 +55,7 @@ def _parse_date_field(payload: dict[str, object], field_name: str) -> date:
     with capture:
         parsed = date.fromisoformat(raw)
     if capture.captured_exception is not None:
-        raise HTTPException(status_code=400, detail=f"{field_name} must be an ISO date") from capture.captured_exception
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{field_name} must be an ISO date") from capture.captured_exception
     return parsed
 
 
@@ -80,9 +81,9 @@ def _decorate_payload(payload: dict[str, object]) -> dict[str, object]:
 
 def _raise_service_http(exc: BaseException) -> None:
     if isinstance(exc, ResourceNotFound):
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(exc)) from exc
     if isinstance(exc, InputRejected):
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)) from exc
     raise RuntimeError(f"Unexpected reminder service exception type: {type(exc)}") from exc
 
 

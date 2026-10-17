@@ -1,10 +1,14 @@
+import { NOT_IN_TAB_ORDER } from '../../dom-focus.js';
+
+const FLOATING_NOTE_TITLE_MAX_CHARS = 120;
+
 export function createFloatingNoteElements(id) {
     const element = document.createElement('section');
     element.className = 'floating-note-window';
     element.dataset.floatingNoteId = id;
     element.setAttribute('role', 'dialog');
     element.setAttribute('aria-label', 'Floating note');
-    element.tabIndex = -1;
+    element.tabIndex = NOT_IN_TAB_ORDER;
 
     const shadow = element.attachShadow({mode: 'open'});
     const sharedStyles = document.createElement('link');
@@ -63,7 +67,9 @@ export function getFloatingNoteTitle(tree) {
     for (const password of preview.querySelectorAll('.meta-credential-password')) password.textContent = '••••';
     const text = preview.textContent.replace(/\s+/g, ' ').trim();
     if (text.length === 0) return 'Untitled note';
-    return text.length > 120 ? `${text.slice(0, 120)}…` : text;
+    return text.length > FLOATING_NOTE_TITLE_MAX_CHARS
+        ? `${text.slice(0, FLOATING_NOTE_TITLE_MAX_CHARS)}…`
+        : text;
 }
 
 export function applyFloatingNoteRect(element, rect) {

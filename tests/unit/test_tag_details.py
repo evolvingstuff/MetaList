@@ -164,11 +164,11 @@ def test_the_routes_pass_the_tag_and_return_its_lines(monkeypatch: pytest.Monkey
     monkeypatch.setattr(notes_route, "current_local_date", lambda: date(2026, 10, 12))
     monkeypatch.setattr(
         notes_route, "describe_tag_bar_tag",
-        lambda **kwargs: captured.update(tag_bar=kwargs) or ("Only on this note",),
+        lambda **kwargs: captured.update(tag_bar=kwargs) or ("Only on this note",),  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
     )
     monkeypatch.setattr(
         notes_route, "describe_search_tag",
-        lambda **kwargs: captured.update(search=kwargs) or ("Searching for it finds 3 notes",),
+        lambda **kwargs: captured.update(search=kwargs) or ("Searching for it finds 3 notes",),  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
     )
 
     assert notes_route.tag_details(

@@ -1,3 +1,6 @@
+import { parseDecimalInteger } from '../decimal-integer.js';
+import { MS_PER_SECOND } from '../time-units.js';
+import { HIGHEST_PORT, LOWEST_PORT, PORT_RANGE_TEXT, isTcpPort } from '../tcp-ports.js';
 import { UserInputRejected, HttpRequestError } from '../expected-errors.js';
 import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
@@ -17,6 +20,7 @@ import { selectNamespacePortsEditorProfile } from './namespace-ports-profile.js'
 import { buildNamespaceRenamePayload } from './namespace-rename-validation.js';
 
 
+const STATUS_BANNER_SECONDS = 5;
 const NAMESPACE_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 
@@ -94,9 +98,9 @@ function parsePort(rawValue, label) {
     if (!/^[0-9]+$/.test(trimmed)) {
         throw new UserInputRejected(`${label} must be numeric`);
     }
-    const parsed = Number.parseInt(trimmed, 10);
-    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
-        throw new UserInputRejected(`${label} must be between 1 and 65535`);
+    const parsed = parseDecimalInteger(trimmed);
+    if (!isTcpPort(parsed)) {
+        throw new UserInputRejected(`${label} must be ${PORT_RANGE_TEXT}`);
     }
     return parsed;
 }
@@ -190,9 +194,6 @@ class NamespaceModalBase extends BaseModal {
         ApplicationState.own(this, 'NamespaceModalBase', new.target === NamespaceModalBase);
     }
 
-    shouldCloseOnClickOutside() {
-        return true;
-    }
 
     showModalElement() {
         let modalElement = document.getElementById(this.modalElementId);
@@ -610,12 +611,12 @@ export class CreateNamespaceModal extends NamespaceModalBase {
                 <div class="namespace-modal-port-grid">
                     <div class="form-group">
                         <label for="create-namespace-http-port">HTTP Port</label>
-                        <input id="create-namespace-http-port" type="number" min="1" max="65535" value="${escapeHtml(port)}" ${submitting ? 'disabled' : ''}>
+                        <input id="create-namespace-http-port" type="number" min="${LOWEST_PORT}" max="${HIGHEST_PORT}" value="${escapeHtml(port)}" ${submitting ? 'disabled' : ''}>
                     </div>
                     ${supportsHttps ? `
                         <div class="form-group">
                             <label for="create-namespace-https-port">HTTPS Port</label>
-                            <input id="create-namespace-https-port" type="number" min="1" max="65535" value="${escapeHtml(httpsPort)}" ${submitting ? 'disabled' : ''}>
+                            <input id="create-namespace-https-port" type="number" min="${LOWEST_PORT}" max="${HIGHEST_PORT}" value="${escapeHtml(httpsPort)}" ${submitting ? 'disabled' : ''}>
                         </div>
                     ` : ''}
                 </div>
@@ -988,8 +989,8 @@ export class ManageNamespacePortsModal extends NamespaceModalBase {
                             ${currentBadge}
                         </div>
                     </th>
-                    <td><input class="namespace-ports-input" data-namespace="${escapeHtml(row.namespace)}" data-field="port" type="number" min="1" max="65535" value="${escapeHtml(row.port)}" ${saving ? 'disabled' : ''}></td>
-                    ${supportsHttps ? `<td><input class="namespace-ports-input" data-namespace="${escapeHtml(row.namespace)}" data-field="httpsPort" type="number" min="1" max="65535" value="${escapeHtml(row.httpsPort)}" ${saving ? 'disabled' : ''}></td>` : ''}
+                    <td><input class="namespace-ports-input" data-namespace="${escapeHtml(row.namespace)}" data-field="port" type="number" min="${LOWEST_PORT}" max="${HIGHEST_PORT}" value="${escapeHtml(row.port)}" ${saving ? 'disabled' : ''}></td>
+                    ${supportsHttps ? `<td><input class="namespace-ports-input" data-namespace="${escapeHtml(row.namespace)}" data-field="httpsPort" type="number" min="${LOWEST_PORT}" max="${HIGHEST_PORT}" value="${escapeHtml(row.httpsPort)}" ${saving ? 'disabled' : ''}></td>` : ''}
                     <td>${escapeHtml(note)}</td>
                 </tr>
             `;
@@ -1188,7 +1189,7 @@ export class ManageNamespacePortsModal extends NamespaceModalBase {
         const statusMessage = typeof response.message === 'string' && response.message.length > 0
             ? response.message
             : 'Saved namespace ports.';
-        ErrorHandler.showInfoBanner(statusMessage, 5000);
+        ErrorHandler.showInfoBanner(statusMessage, STATUS_BANNER_SECONDS * MS_PER_SECOND);
         await this.loadCatalog();
         this.updateModalState({
             status: statusMessage,

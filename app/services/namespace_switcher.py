@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.utils.tcp_ports import PORT_RANGE_TEXT, is_tcp_port
+from http import HTTPStatus
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from http.client import HTTPConnection
@@ -39,7 +41,8 @@ from app.services.windows_process_control import stop_process as stop_windows_pr
 from app.services.input_errors import NamespaceInputRejected
 
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# This file is <project>/app/services/namespace_switcher.py.
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLACEHOLDER_NEW_NAMESPACE = "new-namespace"
 _LAUNCH_READY_TIMEOUT_SECONDS = 120.0
 _LAUNCH_PROGRESS_INTERVAL_SECONDS = 5.0
@@ -114,9 +117,8 @@ class NamespacePortsSaveResult:
 
 
 def _resolve_main_launch_command(*, environ: Mapping[str, str]) -> list[str]:
-    recorded_entrypoint = environ.get("METALIST_SELF_EXECUTABLE")
-    if recorded_entrypoint is not None:
-        stripped_entrypoint = recorded_entrypoint.strip()
+    if "METALIST_SELF_EXECUTABLE" in environ:
+        stripped_entrypoint = environ["METALIST_SELF_EXECUTABLE"].strip()
         if stripped_entrypoint == "":
             raise NamespaceInputRejected("METALIST_SELF_EXECUTABLE must not be empty")
         entrypoint_path = Path(stripped_entrypoint).expanduser()
@@ -168,7 +170,7 @@ def build_namespace_catalog(
             current_profile=current_profile,
             ignore_namespace=namespace,
         )
-        saved_profile = saved_profiles.get(namespace)
+        saved_profile = _saved_profile_or_none(saved_profiles, namespace)
         default_profile = _build_default_profile(
             namespace=namespace,
             saved_profile=saved_profile,
@@ -234,7 +236,7 @@ def open_or_launch_namespace(
     )
     supports_https = _supports_https(environ=environ)
     saved_profiles = _load_saved_profiles_by_namespace()
-    saved_profile = saved_profiles.get(normalized_namespace)
+    saved_profile = _saved_profile_or_none(saved_profiles, normalized_namespace)
     if saved_profile is None:
         legacy_mcp_port = None
     else:
@@ -357,9 +359,9 @@ def open_or_launch_all_namespaces(
     )
     saved_profiles = _load_saved_profiles_by_namespace()
     for profile in profiles:
-        saved_profile = saved_profiles.get(profile.namespace)
-        if saved_profile is None:
+        if profile.namespace not in saved_profiles:
             raise NamespaceInputRejected(f"Namespace {profile.namespace} launch profile disappeared")
+        saved_profile = saved_profiles[profile.namespace]
         if saved_profile == profile:
             continue
         save_namespace_launch_profile(
@@ -451,7 +453,7 @@ def _resolve_conflict_free_profiles_for_all_namespaces(
     for entry in raw_namespaces:
         _assert_catalog_entry_has_launch_profile(entry=entry)
         catalog_profile = _catalog_default_profile(entry=entry)
-        persisted_profile = saved_profiles.get(catalog_profile.namespace)
+        persisted_profile = _saved_profile_or_none(saved_profiles, catalog_profile.namespace)
         legacy_mcp_port = None
         if persisted_profile is not None:
             legacy_mcp_port = persisted_profile.mcp_port
@@ -538,7 +540,7 @@ def save_namespace_port_profiles(
         if not isinstance(requested_profile, NamespaceLaunchProfile):
             raise TypeError("requested_profiles must contain NamespaceLaunchProfile values")
         requested_namespace = validate_namespace(namespace=requested_profile.namespace)
-        saved_profile = saved_profiles.get(requested_namespace)
+        saved_profile = _saved_profile_or_none(saved_profiles, requested_namespace)
         legacy_mcp_port = None
         if saved_profile is not None:
             legacy_mcp_port = saved_profile.mcp_port
@@ -598,7 +600,7 @@ def build_login_namespace_catalog(
     for entry in raw_namespaces:
         if not isinstance(entry, dict):
             raise RuntimeError("Namespace catalog entry must be an object")
-        namespace = entry.get("namespace")
+        namespace = _catalog_field(entry, "namespace", owner="Namespace catalog entry")
         if not isinstance(namespace, str) or namespace == "":
             raise RuntimeError("Namespace catalog entry missing namespace")
         if namespace in seen_namespaces:
@@ -851,7 +853,7 @@ def _delete_inactive_namespace(
         raise RuntimeError(f"Namespace path is not a directory: {namespace_directory}")
 
     saved_profiles = _load_saved_profiles_by_namespace()
-    saved_profile = saved_profiles.get(normalized_namespace)
+    saved_profile = _saved_profile_or_none(saved_profiles, normalized_namespace)
     if saved_profile is not None:
         _stop_processes_for_namespace_profile(profile=saved_profile)
     shutil.rmtree(namespace_directory)
@@ -921,23 +923,47 @@ def _serialize_profile(*, profile: NamespaceLaunchProfile) -> dict[str, object]:
     }
 
 
+def _catalog_field(fields: dict, name: str, *, owner: str) -> object:
+    """A field the namespace catalog always writes: a missing one is a broken catalog."""
+    if name not in fields:
+        raise RuntimeError(f"{owner} is missing {name}")
+    return fields[name]
+
+
+def _saved_profile_or_none(
+    saved_profiles: Mapping[str, NamespaceLaunchProfile], namespace: str,
+) -> NamespaceLaunchProfile | None:
+    """The namespace's saved launch profile; None for one never launched or configured."""
+    if namespace not in saved_profiles:
+        return None
+    return saved_profiles[namespace]
+
+
+def _status_names_namespace(status_payload: dict | None, namespace: str) -> bool:
+    """Whether a port's status answer comes from this namespace's server (an answer
+    from another program may have no namespace at all)."""
+    if status_payload is None or "namespace" not in status_payload:
+        return False
+    return status_payload["namespace"] == namespace
+
+
 def _catalog_default_profile(*, entry: object) -> NamespaceLaunchProfile:
     if not isinstance(entry, dict):
         raise RuntimeError("Namespace catalog entry must be an object")
 
-    namespace = entry.get("namespace")
+    namespace = _catalog_field(entry, "namespace", owner="Namespace catalog entry")
     if not isinstance(namespace, str) or namespace == "":
         raise RuntimeError("Namespace catalog entry missing namespace")
 
-    raw_profile = entry.get("default_profile")
+    raw_profile = _catalog_field(entry, "default_profile", owner=f"Namespace {namespace}")
     if not isinstance(raw_profile, dict):
         raise RuntimeError(f"Namespace {namespace} is missing default profile")
 
-    port = raw_profile.get("port")
+    port = _catalog_field(raw_profile, "port", owner=f"Namespace {namespace} profile")
     if not isinstance(port, int):
         raise RuntimeError(f"Namespace {namespace} profile missing port")
 
-    https_port = raw_profile.get("https_port")
+    https_port = _catalog_field(raw_profile, "https_port", owner=f"Namespace {namespace} profile")
     if https_port is not None and not isinstance(https_port, int):
         raise RuntimeError(f"Namespace {namespace} profile has invalid https_port")
 
@@ -952,11 +978,10 @@ def _catalog_default_profile(*, entry: object) -> NamespaceLaunchProfile:
 def _assert_catalog_entry_has_launch_profile(*, entry: object) -> None:
     if not isinstance(entry, dict):
         raise RuntimeError("Namespace catalog entry must be an object")
-    namespace = entry.get("namespace")
+    namespace = _catalog_field(entry, "namespace", owner="Namespace catalog entry")
     if not isinstance(namespace, str) or namespace == "":
         raise RuntimeError("Namespace catalog entry missing namespace")
-    has_launch_profile = entry.get("has_launch_profile")
-    if has_launch_profile is True:
+    if _catalog_field(entry, "has_launch_profile", owner=f"Namespace {namespace}") is True:
         return
     raise RuntimeError(
         f"Namespace {namespace} has no launch profile. "
@@ -1219,8 +1244,8 @@ def _build_requested_profile(
 def _validate_required_port(*, name: str, value: int) -> int:
     if not isinstance(value, int):
         raise TypeError(f"{name} must be an int, got {type(value)}")
-    if not 0 < value < 65536:
-        raise NamespaceInputRejected(f"{name} must be between 1 and 65535, got: {value}")
+    if not is_tcp_port(value):
+        raise NamespaceInputRejected(f"{name} must be {PORT_RANGE_TEXT}, got: {value}")
     return value
 
 
@@ -1349,10 +1374,7 @@ def _find_running_namespace_port(
             port=candidate_port,
             api_prefix=api_prefix,
         )
-        if status_payload is None:
-            continue
-        payload_namespace = status_payload.get("namespace")
-        if payload_namespace == namespace:
+        if _status_names_namespace(status_payload, namespace):
             return candidate_port
     return None
 
@@ -1441,8 +1463,8 @@ def _stop_process(*, pid: int) -> None:
 def _find_listening_pids_for_port(*, port: int) -> list[int]:
     if not isinstance(port, int):
         raise TypeError(f"port must be an int, got {type(port)}")
-    if port <= 0 or port > 65535:
-        raise ValueError(f"port must be between 1 and 65535, got: {port}")
+    if not is_tcp_port(port):
+        raise ValueError(f"port must be {PORT_RANGE_TEXT}, got: {port}")
     if sys.platform == "win32":
         return find_windows_listening_pids_for_port(port=port)
 
@@ -1520,8 +1542,7 @@ def _assert_ports_are_available_for_launch(
         api_prefix=api_prefix,
     )
     if http_status is not None:
-        running_namespace = http_status.get("namespace")
-        if running_namespace == namespace:
+        if _status_names_namespace(http_status, namespace):
             return
         if not _port_is_owned_by_allowed_pids(port=chosen_profile.port):
             raise RuntimeError(f"HTTP port {chosen_profile.port} is already in use")
@@ -1717,9 +1738,9 @@ def _poll_namespace_readiness(
     connect_host = resolve_backend_connect_host(host=main_server_config.host)
     api_prefix = resolve_api_prefix(environ=environ)
     started_at = time.monotonic()
-    timeout_text = environ.get("METALIST_STARTUP_TIMEOUT_SECONDS")
     timeout = _LAUNCH_READY_TIMEOUT_SECONDS
-    if timeout_text is not None:
+    if "METALIST_STARTUP_TIMEOUT_SECONDS" in environ:
+        timeout_text = environ["METALIST_STARTUP_TIMEOUT_SECONDS"]
         if not timeout_text.isascii() or not timeout_text.isdigit() or int(timeout_text) <= 0:
             raise ValueError("METALIST_STARTUP_TIMEOUT_SECONDS must be a positive integer")
         timeout = float(timeout_text)
@@ -1745,7 +1766,7 @@ def _poll_namespace_readiness(
             port=port,
             api_prefix=api_prefix,
         )
-        if status_payload is not None and status_payload.get("namespace") == namespace:
+        if _status_names_namespace(status_payload, namespace):
             return
         time.sleep(_READY_POLL_INTERVAL_SECONDS)
     log_tail = _read_namespace_launch_log_tail(
@@ -1766,7 +1787,7 @@ def _status_payload(connection: HTTPConnection, *, api_prefix: str) -> bytes | N
         headers={"X-Metalist-Tab-Id": _PROBE_TAB_ID},
     )
     response = connection.getresponse()
-    if response.status != 200:
+    if response.status != HTTPStatus.OK:
         return None
     return response.read()
 
@@ -1854,7 +1875,7 @@ def _resolve_catalog_profile(
     for entry in namespaces:
         if not isinstance(entry, dict):
             continue
-        if entry.get("namespace") != normalized_namespace:
+        if _catalog_field(entry, "namespace", owner="Namespace catalog entry") != normalized_namespace:
             continue
         _assert_catalog_entry_has_launch_profile(entry=entry)
         return _catalog_default_profile(entry=entry)

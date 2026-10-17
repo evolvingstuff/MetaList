@@ -6,6 +6,16 @@ import { reorderTabOrderToHoveredSlot } from './services/tab-drag-service.js';
 import { createUuid } from '../uuid.js';
 import { stateValuesEqual, ApplicationState, immutableSnapshot } from '../application-state.js';
 
+// Loaded roots from the end within which an anchor counts as near it, by default.
+const DEFAULT_ANCHOR_NEAR_END_DISTANCE = 3;
+// The browser asks to move a band edge once the viewport is within half the server's margin.
+const ROOT_BAND_REFETCH_MARGIN_DIVISOR = 2;
+// A later scroll-restore pass is skipped once the page has moved more than this
+// from where the restore put it (the user scrolled in between).
+const SCROLL_RESTORE_USER_MOVE_PX = 60;
+// The last scroll-restore pass, after late layout shifts such as images loading.
+const LATE_SCROLL_RESTORE_DELAY_MS = 250;
+
 class ModeContext {
     constructor() {
         this._modalScopes = new Map();
@@ -515,8 +525,8 @@ class ModeContext {
 		const tabs = this._tabs;
 		const noteHashesByTab = this._tabNoteHashes;
 		const tabIds = new Set([
-			...Object.keys(tabs ? tabs : {}),
-			...Object.keys(noteHashesByTab ? noteHashesByTab : {}),
+			...Object.keys(tabs),
+			...Object.keys(noteHashesByTab),
 		]);
 		for (const tabId of tabIds) {
 			this.clearTabViewCache(tabId);
@@ -1139,7 +1149,7 @@ class ModeContext {
 
 	isAnchorNearEnd(anchorId, distance) {
 		if (typeof distance === 'undefined') {
-			distance = 3;
+			distance = DEFAULT_ANCHOR_NEAR_END_DISTANCE;
 		}
 		if (typeof anchorId !== 'string' || !anchorId) {
 			return false;
@@ -1207,7 +1217,7 @@ class ModeContext {
     // Distance, in loaded roots, at which the browser asks the server to move a
     // band edge: the server keeps an edge until the viewport is this close.
     getRootBandRefetchDistance() {
-        return Math.floor(this._tabRootWindows[this._activeTabId].margin / 2);
+        return Math.floor(this._tabRootWindows[this._activeTabId].margin / ROOT_BAND_REFETCH_MARGIN_DIVISOR);
     }
 
     isAnchorNearStart(anchorId, distance) {
@@ -1377,7 +1387,7 @@ class ModeContext {
         if (tabOrder.length !== Object.keys(tabs).length) {
             throw new Error('hydrateTabState tabOrder length mismatch');
         }
-		const previousRootAnchors = this._tabRootAnchors ? this._tabRootAnchors : Object.create(null);
+		const previousRootAnchors = this._tabRootAnchors;
 		const nextRootAnchors = Object.create(null);
         const normalized = {};
         const tabIds = Object.keys(tabs);
@@ -1481,22 +1491,20 @@ class ModeContext {
             normalizedOrder.push(tabId);
         }
 		const tabIdsList = Object.keys(normalized);
-		const previousHashCaches = this._tabNoteHashes ? this._tabNoteHashes : Object.create(null);
+		const previousHashCaches = this._tabNoteHashes;
 		const nextHashCaches = Object.create(null);
-		const previousKnownRoots = this._tabKnownRootIds ? this._tabKnownRootIds : Object.create(null);
+		const previousKnownRoots = this._tabKnownRootIds;
 		const nextKnownRoots = Object.create(null);
-		const previousSeenRoots = this._tabSeenRootIds ? this._tabSeenRootIds : Object.create(null);
+		const previousSeenRoots = this._tabSeenRootIds;
 		const nextSeenRoots = Object.create(null);
-        const previousRevealedRedactions = this._tabRevealedRedactions ? this._tabRevealedRedactions : Object.create(null);
+        const previousRevealedRedactions = this._tabRevealedRedactions;
         const nextRevealedRedactions = Object.create(null);
 
 		for (const tabId of tabIdsList) {
-			const existingHashes = previousHashCaches[tabId];
-			nextHashCaches[tabId] = existingHashes ? existingHashes : new Map();
-			const existingKnownRoots = previousKnownRoots[tabId];
-			nextKnownRoots[tabId] = existingKnownRoots ? existingKnownRoots : new Set();
-			const existingSeenRoots = previousSeenRoots[tabId];
-			nextSeenRoots[tabId] = existingSeenRoots ? existingSeenRoots : new Set();
+			// A tab new to this state starts with empty caches.
+			nextHashCaches[tabId] = tabId in previousHashCaches ? previousHashCaches[tabId] : new Map();  // shockharness: ignore[DEF002] reason="a tab new to this state has no cache yet"
+			nextKnownRoots[tabId] = tabId in previousKnownRoots ? previousKnownRoots[tabId] : new Set();  // shockharness: ignore[DEF002] reason="a tab new to this state has no cache yet"
+			nextSeenRoots[tabId] = tabId in previousSeenRoots ? previousSeenRoots[tabId] : new Set();  // shockharness: ignore[DEF002] reason="a tab new to this state has no cache yet"
             const existingRevealedRedactions = previousRevealedRedactions[tabId];
             nextRevealedRedactions[tabId] = existingRevealedRedactions instanceof Set
                 ? existingRevealedRedactions
@@ -1644,7 +1652,7 @@ class ModeContext {
             }
             if (lastProgrammaticScrollY !== null) {
                 const current = Math.max(0, Math.round(window.scrollY));
-                if (Math.abs(current - lastProgrammaticScrollY) > 60) {
+                if (Math.abs(current - lastProgrammaticScrollY) > SCROLL_RESTORE_USER_MOVE_PX) {
                     return;
                 }
             }
@@ -1665,7 +1673,7 @@ class ModeContext {
             });
             window.setTimeout(() => {
                 maybeApplyRestore();
-            }, 250);
+            }, LATE_SCROLL_RESTORE_DELAY_MS);
         });
     }
 

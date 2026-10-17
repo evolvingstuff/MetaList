@@ -78,7 +78,10 @@ function paste(page, noteId, text, html) {
     const content = document.querySelector(`[data-note-id="${noteId}"] .note-content`);
     content.focus();
     const range = document.createRange();
-    range.selectNodeContents(content.lastElementChild ?? content);
+    // The caret goes at the end: inside the last line, or in the note itself when it is empty.
+    let caretHost = content;
+    if (content.lastElementChild !== null) caretHost = content.lastElementChild;
+    range.selectNodeContents(caretHost);
     range.collapse(false);
     window.getSelection().removeAllRanges();
     window.getSelection().addRange(range);
@@ -101,10 +104,13 @@ function state(page, noteId) {
       if (rects.length > 0) caret = {top: rects[rects.length - 1].top, bottom: rects[rects.length - 1].bottom};
     }
     const cardRect = card === null ? null : card.getBoundingClientRect();
+    // While the note is edited its tags are in the tag bar; otherwise on the note.
+    let tags = note.dataset.noteTags.trim();
+    if (note.querySelector('.note-tag-bar-input') !== null) tags = note.querySelector('.note-tag-bar-input').value.trim();
     return {
       isEditing: mode.isEditing && mode.currentNoteId === noteId,
       text: note.querySelector('.note-content').innerText.replace(/ /g, ' ').trim(),
-      tags: note.querySelector('.note-tag-bar-input') === null ? note.dataset.noteTags.trim() : note.querySelector('.note-tag-bar-input').value.trim(),
+      tags,
       card: card === null ? null : [...card.querySelectorAll('button, .paste-format-offer-prompt')].map(element => element.textContent),
       cardTop: cardRect === null ? null : cardRect.top,
       cardBottom: cardRect === null ? null : cardRect.bottom,

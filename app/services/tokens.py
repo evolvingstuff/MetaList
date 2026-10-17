@@ -8,6 +8,10 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 from app.services.session_timeout_service import get_session_timeout_minutes
+from app.utils.time_units import SECONDS_PER_MINUTE
+
+# Random bytes in each authentication token (256 bits).
+_TOKEN_RANDOM_BYTES = 32
 
 
 def _synchronized(method):
@@ -68,7 +72,7 @@ class TokenService:
             self.tokens.clear()
 
         # Generate cryptographically secure token
-        token = secrets.token_urlsafe(32)
+        token = secrets.token_urlsafe(_TOKEN_RANDOM_BYTES)
         token_hash = self._hash_token(token)
         now = datetime.now(timezone.utc)
 
@@ -124,10 +128,9 @@ class TokenService:
             return False
 
         token_hash = self._hash_token(token)
-        token_info = self.tokens.get(token_hash)
-        if not token_info:
+        if token_hash not in self.tokens:
             return False
-        return token_info["owner_tab_id"] == owner_tab_id
+        return self.tokens[token_hash]["owner_tab_id"] == owner_tab_id
 
     @_synchronized
     def claim_token_for_tab(self, token: str, owner_tab_id: str) -> bool:
@@ -137,9 +140,9 @@ class TokenService:
             return False
 
         token_hash = self._hash_token(token)
-        token_info = self.tokens.get(token_hash)
-        if not token_info:
+        if token_hash not in self.tokens:
             return False
+        token_info = self.tokens[token_hash]
 
         token_info["owner_tab_id"] = owner_tab_id
         token_info["last_activity"] = datetime.now(timezone.utc)
@@ -281,12 +284,9 @@ class TokenService:
             return None
 
         token_hash = self._hash_token(token)
-        token_info = self.tokens.get(token_hash)
-
-        if not token_info:
+        if token_hash not in self.tokens:
             return None
-
-        return token_info["dek"]
+        return self.tokens[token_hash]["dek"]
 
     @_synchronized
     def list_active_sessions(self) -> list:
@@ -305,7 +305,7 @@ class TokenService:
             expires_in_minutes = None
             if expires_at is not None:
                 expires_in_minutes = int(
-                    (expires_at - now).total_seconds() / 60
+                    (expires_at - now).total_seconds() / SECONDS_PER_MINUTE
                 )
             sessions.append({
                 "client_info": info["client_info"],

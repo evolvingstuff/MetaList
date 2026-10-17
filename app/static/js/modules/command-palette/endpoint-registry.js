@@ -1,3 +1,9 @@
+import {
+    BACKUP_REMINDER_DEFAULT,
+    BACKUP_REMINDER_OPTIONS,
+    BACKUP_REMINDER_PREFERENCE,
+} from '../backup-reminder-schedule.js';
+
 function requireAction(actions, key) {
     if (!actions || typeof actions !== 'object') {
         throw new Error('Endpoint registry requires actions object');
@@ -412,6 +418,15 @@ export function buildCommandPaletteEndpoints(deps) {
             kind: 'action',
             label: 'Create backup now',
             execute: async () => createBackup(),
+        },
+        {
+            id: 'pref.backup_reminder',
+            kind: 'select',
+            label: 'Backup reminder',
+            persistenceKey: BACKUP_REMINDER_PREFERENCE,
+            defaultValue: BACKUP_REMINDER_DEFAULT,
+            options: BACKUP_REMINDER_OPTIONS,
+            apply: (next) => applyPreference(BACKUP_REMINDER_PREFERENCE, next),
         },
         {
             id: 'form.restore_backup',

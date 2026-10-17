@@ -262,9 +262,9 @@ test('agent debugger retains the latest trace and toggles exact detail visibilit
     assert.match(debugView, /payload\.has_trace/);
     assert.match(debugView, /run\.events/);
     assert.match(debugView, /document\.createElement\('details'\)/);
-    assert.match(debugView, /JSON\.stringify\(event\.detail, null, 2\)/);
+    assert.match(debugView, /JSON\.stringify\(event\.detail, null, DEBUG_JSON_INDENT\)/);
     assert.match(debugView, /navigator\.clipboard\.writeText/);
-    assert.match(debugView, /JSON\.stringify\(this\._snapshot\.run, null, 2\)/);
+    assert.match(debugView, /JSON\.stringify\(this\._snapshot\.run, null, DEBUG_JSON_INDENT\)/);
     assert.match(debugView, /Copied complete trace to clipboard/);
     assert.match(debugView, /Latest trace recorded\. Enable exact details to inspect payloads/);
     assert.match(debugView, /this\._renderRun\(payload\.run, payload\.enabled\)/);
@@ -709,7 +709,8 @@ test('streaming thinking renders honest progress and only discloses real reasoni
     assert.match(controller, /createElement\(hasThinkingText \? 'details' : 'div'\)/);
     assert.match(controller, /hasThinkingText \? 'summary' : 'div'/);
     assert.match(controller, /ai-chat-thinking-dots/);
-    assert.match(controller, /index < 3/);
+    assert.match(controller, /const THINKING_DOT_COUNT = 3;/);
+    assert.match(controller, /index < THINKING_DOT_COUNT/);
     assert.match(controller, /ai-chat-thinking-elapsed/);
     assert.match(controller, /assistantMessage\.rendered_thinking = event\.rendered_text/);
     assert.match(controller, /assistantMessage\.rendered_content = event\.rendered_text/);

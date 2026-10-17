@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from http import HTTPStatus
 import asyncio
 import codecs
 from dataclasses import dataclass, replace
@@ -23,6 +24,7 @@ from app.services.public_http import PinnedPublicHTTPTransport
 from app.services.public_http import PublicHttpTargetRejected
 from app.services.public_http import ResolvedPublicHttpTarget
 from app.services.public_http import normalize_public_http_url
+from app.utils.sent_fields import sent_or_none
 from app.services.public_http import resolve_public_http_target
 
 
@@ -34,6 +36,9 @@ MAX_WEB_PAGE_TEXT_CHARACTERS = 120_000
 MAX_WEB_BATCH_TEXT_CHARACTERS = 480_000
 MAX_WEB_PDF_PAGES = 100
 MAX_WEB_PAGE_OUTGOING_LINKS = 256
+_OUTGOING_LINK_FIELD_COUNT = 2  # (title, URL)
+MAX_WEB_LINK_LABEL_CHARACTERS = 300
+MAX_WEB_PAGE_TITLE_CHARACTERS = 300
 WEB_FETCH_TIMEOUT_SECONDS = 10.0
 _WEB_USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -81,7 +86,7 @@ class WebPageFetchResult:
             raise TypeError("Web fetch outgoing_links must be a tuple")
         outgoing_urls: list[str] = []
         for link in self.outgoing_links:
-            if not isinstance(link, tuple) or len(link) != 2:
+            if not isinstance(link, tuple) or len(link) != _OUTGOING_LINK_FIELD_COUNT:
                 raise TypeError("Web fetch outgoing link must be a (title, URL) tuple")
             link_title, link_url = link
             if not isinstance(link_title, str) or link_title == "":
@@ -104,6 +109,14 @@ class _DownloadedWebResponse:
     encoding: str
     truncated: bool
     error_kind: str
+
+
+def _meta_tag_kind(attrs_by_name: dict[str, str]) -> str:
+    """What a meta tag describes, by property= (Open Graph) or name=; empty when neither."""
+    for kind_attribute in ("property", "name"):
+        if kind_attribute in attrs_by_name and attrs_by_name[kind_attribute] != "":
+            return attrs_by_name[kind_attribute].casefold()
+    return ""
 
 
 class _ReadableHtmlParser(HTMLParser):
@@ -143,9 +156,9 @@ class _ReadableHtmlParser(HTMLParser):
                 for name, value in attrs
                 if isinstance(value, str)
             }
-            key = (attrs_by_name.get("property") or attrs_by_name.get("name") or "").casefold()
-            if key in {"og:title", "twitter:title"} and self._metadata_title == "":
-                self._metadata_title = attrs_by_name.get("content", "")
+            key = _meta_tag_kind(attrs_by_name)
+            if key in {"og:title", "twitter:title"} and self._metadata_title == "" and "content" in attrs_by_name:
+                self._metadata_title = attrs_by_name["content"]
             return
         if normalized_tag == "a":
             attrs_by_name = {
@@ -155,7 +168,10 @@ class _ReadableHtmlParser(HTMLParser):
             }
             normalized_link = ""
             if self._suppressed_depth == 0:
-                href = attrs_by_name.get("href", "")
+                # A link without href= points at the page itself, as before.
+                href = ""
+                if "href" in attrs_by_name:
+                    href = attrs_by_name["href"]
                 join_capture = CapturedExceptionContext(
                     ValueError,
                     boundary='app/services/agent/web_fetch.py:handle_starttag:join_capture',
@@ -185,7 +201,7 @@ class _ReadableHtmlParser(HTMLParser):
                 normalized_link, label_parts = self._active_links.pop()
                 if normalized_link != "" and self._suppressed_depth == 0:
                     self._text_parts.append(f" ({normalized_link})")
-                    label = _clean_single_line("".join(label_parts), maximum=300)
+                    label = _clean_single_line("".join(label_parts), maximum=MAX_WEB_LINK_LABEL_CHARACTERS)
                     if (
                         label != ""
                         and normalized_link not in self._outgoing_link_urls
@@ -217,7 +233,7 @@ class _ReadableHtmlParser(HTMLParser):
         candidate = self._metadata_title
         if candidate == "":
             candidate = "".join(self._title_parts)
-        return _clean_single_line(candidate, maximum=300)
+        return _clean_single_line(candidate, maximum=MAX_WEB_PAGE_TITLE_CHARACTERS)
 
     @property
     def readable_text(self) -> str:
@@ -366,8 +382,8 @@ def _exchange_web_request(url: str, target: ResolvedPublicHttpTarget) -> _Downlo
         },
     ) as client:
         with client.stream("GET", url) as response:
-            if 300 <= response.status_code < 400:
-                location = response.headers.get("location")
+            if httpx.codes.is_redirect(response.status_code):
+                location = sent_or_none(response.headers, "location")
                 if location is None or location.strip() == "":
                     return _download_error(url, "redirect_without_location")
                 next_url = normalize_public_http_url(str(httpx.URL(url).join(location)))
@@ -382,10 +398,14 @@ def _exchange_web_request(url: str, target: ResolvedPublicHttpTarget) -> _Downlo
                     truncated=False,
                     error_kind="",
                 )
-            if response.status_code >= 400:
+            if response.status_code >= HTTPStatus.BAD_REQUEST:
                 return _download_error(url, f"http_{response.status_code}")
-            media_type = response.headers.get("content-type", "").split(";", 1)[0].strip().casefold()
-            content_length = response.headers.get("content-length")
+            # A response without a content type is judged by its bytes below.
+            content_type = sent_or_none(response.headers, "content-type")
+            media_type = ""
+            if content_type is not None:
+                media_type = content_type.split(";", 1)[0].strip().casefold()
+            content_length = sent_or_none(response.headers, "content-length")
             if content_length is not None and content_length.isdecimal():
                 if int(content_length) > MAX_WEB_RESPONSE_BYTES:
                     return _download_error(url, "response_too_large")
@@ -492,7 +512,7 @@ def _read_pdf(content: bytes) -> tuple[str, str, bool, str]:
         return "", "", False, "encrypted_pdf"
     title = ""
     if reader.metadata is not None and isinstance(reader.metadata.title, str):
-        title = _clean_single_line(reader.metadata.title, maximum=300)
+        title = _clean_single_line(reader.metadata.title, maximum=MAX_WEB_PAGE_TITLE_CHARACTERS)
     page_text: list[str] = []
     truncated_pages = len(reader.pages) > MAX_WEB_PDF_PAGES
     for page in reader.pages[:MAX_WEB_PDF_PAGES]:

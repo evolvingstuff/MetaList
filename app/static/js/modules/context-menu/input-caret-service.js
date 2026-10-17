@@ -1,3 +1,5 @@
+import { half } from '../half.js';
+
 const MEASURE_CANVAS = document.createElement('canvas');
 const MEASURE_CONTEXT = MEASURE_CANVAS.getContext('2d');
 
@@ -126,7 +128,7 @@ export function getInputCaretIndexFromPoint(input, clientX) {
     let low = 0;
     let high = rawValue.length;
     while (low < high) {
-        const mid = Math.floor((low + high) / 2);
+        const mid = Math.floor(half(low + high));
         const width = measureTextWidth(rawValue.slice(0, mid), letterSpacing);
         if (width < textX) {
             low = mid + 1;

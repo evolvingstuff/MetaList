@@ -13,9 +13,12 @@ from app.services.tag_case import (
     prefer_existing_tag_case,
 )
 
+_FIRST_PRINTABLE_ASCII = ord(" ")
+_LAST_PRINTABLE_ASCII = ord("~")
+
 
 def _is_ascii_printable(text: str) -> bool:
-    return all(32 <= ord(ch) <= 126 for ch in text)
+    return all(_FIRST_PRINTABLE_ASCII <= ord(ch) <= _LAST_PRINTABLE_ASCII for ch in text)
 
 
 def _dedupe_preserve_order(values: Sequence[str]) -> list[str]:

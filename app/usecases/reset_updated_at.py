@@ -115,7 +115,7 @@ class CmdResetUpdatedAtToCreatedAt(QueryCommand):
                 f"expected={len(changed_updates)} actual={changed_count}"
             )
 
-        store.bulk_update_metadata(changed_updates, rebuild=True)
+        store.set_updated_ats({update.id: update.updated_at for update in changed_updates})
         reset_undo_stack(self.client_id, self.undo_context)
 
         return {

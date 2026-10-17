@@ -6,6 +6,7 @@ URL to our disposable index, and invokes the extracted standalone repair ZIP.
 """
 from __future__ import annotations
 
+from http import HTTPStatus
 import base64
 import csv
 import hashlib
@@ -42,6 +43,22 @@ _REPAIR_SPEC.loader.exec_module(repair_archive)
 REPAIR_BASELINE_VERSION = "0.7.1"
 REPAIR_BASELINE_URL = "https://files.pythonhosted.org/packages/05/a1/11778f70740ff305d47c2e194b267f3ec6e57f0db0b2c25a19f7072ec47e/metalist-0.7.1-py3-none-any.whl"
 REPAIR_BASELINE_SHA256 = "3e14d8d0d16408e4092cbf10a37432c0c19c71a8bc1867e9a67bacc7fe7d8137"
+# sys.version_info[:N] is (major, minor), the interpreter an update must keep.
+_MAJOR_MINOR_PARTS = 2
+_BROWSER_RELOADS = 2
+# Command line: script, wheel path, optional --repair.
+_ARGC_WITHOUT_REPAIR = 2
+_ARGC_WITH_REPAIR = 3
+_REPAIR_FLAG_INDEX = 2
+_BASELINE_DOWNLOAD_TIMEOUT_SECONDS = 120
+_TOOL_INSTALL_TIMEOUT_SECONDS = 600
+_FIRST_START_TIMEOUT_SECONDS = 300
+_UPDATE_TIMEOUT_SECONDS = 600
+_UPDATED_NAMESPACES_READY_TIMEOUT_SECONDS = 300
+_READY_POLL_INTERVAL_SECONDS = 0.5
+_INDEX_THREAD_JOIN_TIMEOUT_SECONDS = 5
+# How much of the end of the update log to print.
+_LOG_TAIL_CHARACTERS = 20000
 
 
 def _path_without_uv(path_value: str) -> str:
@@ -66,9 +83,10 @@ def _old_version_fixture(wheel: Path, directory: Path, metadata_url: str, *, rep
     fixture_version = "0.0.0"
     wheel_body = wheel.read_bytes()
     if repair:
-        with urlopen(REPAIR_BASELINE_URL, timeout=120) as response:
+        with urlopen(REPAIR_BASELINE_URL, timeout=_BASELINE_DOWNLOAD_TIMEOUT_SECONDS) as response:
             wheel_body = response.read()
-        assert hashlib.sha256(wheel_body).hexdigest() == REPAIR_BASELINE_SHA256
+        if hashlib.sha256(wheel_body).hexdigest() != REPAIR_BASELINE_SHA256:
+            raise RuntimeError("Downloaded repair baseline wheel does not match its pinned SHA-256")
         version = fixture_version = REPAIR_BASELINE_VERSION
     with zipfile.ZipFile(io.BytesIO(wheel_body)) as archive:
         members = {name: archive.read(name) for name in archive.namelist() if not name.endswith("/RECORD")}
@@ -78,7 +96,8 @@ def _old_version_fixture(wheel: Path, directory: Path, metadata_url: str, *, rep
         members[metadata] = members[metadata].replace(f"Version: {version}\n".encode(), b"Version: 0.0.0\n", 1)
         members["app/version.py"] = b'__version__ = "0.0.0"\n'
     updater = "app/services/self_update.py"
-    assert members[updater].count(b'https://pypi.org/pypi/metalist/json') == 1
+    if members[updater].count(b'https://pypi.org/pypi/metalist/json') != 1:
+        raise RuntimeError("The updater must name the PyPI metadata URL exactly once")
     members[updater] = members[updater].replace(b'https://pypi.org/pypi/metalist/json', metadata_url.encode())
     record = io.StringIO(newline="")
     writer = csv.writer(record)
@@ -107,7 +126,7 @@ def _has_updated_namespace(*, port: int, namespace: str, version: str) -> bool:
         )
     if probe_capture.captured_exception is not None:
         return False  # Expected while this disposable server is restarting.
-    if response.status_code != 200:
+    if response.status_code != HTTPStatus.OK:
         return False
     status = response.json()
     return status["namespace"] == namespace and status["version"] == version
@@ -150,16 +169,16 @@ def run(wheel: Path, *, repair: bool) -> None:
                 body = wheel_body
                 content_type = "application/octet-stream"
             else:
-                self.send_error(404)
+                self.send_error(HTTPStatus.NOT_FOUND)
                 return
-            self.send_response(200)
+            self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             if self.command != "HEAD":
                 self.wfile.write(body)
 
-        def log_message(self, *args):
+        def log_message(self, *args):  # shockharness: ignore[STUB001] reason="the empty override silences the test server's request log"
             pass
 
     with tempfile.TemporaryDirectory(prefix="metalist-update-smoke-") as temporary, ThreadingHTTPServer(("127.0.0.1", 0), Index) as index:
@@ -195,12 +214,13 @@ def run(wheel: Path, *, repair: bool) -> None:
         with log_path.open("w", encoding="utf-8") as log:
             try:
                 subprocess.run([uv, "tool", "install", "--python", sys._base_executable, str(fixture)],
-                               env=environment, cwd=launch_directory, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=600)
+                               env=environment, cwd=launch_directory, stdout=log, stderr=subprocess.STDOUT, check=True,
+                               timeout=_TOOL_INSTALL_TIMEOUT_SECONDS)
                 if not repair:
                     environment["PATH"] = _path_without_uv(environment["PATH"])
                 smoke._seed_namespaces(directory=launch_directory, environment=environment, profiles=profiles)
                 subprocess.run([str(executable)], env=environment, cwd=launch_directory, stdout=log,
-                               stderr=subprocess.STDOUT, check=True, timeout=300)
+                               stderr=subprocess.STDOUT, check=True, timeout=_FIRST_START_TIMEOUT_SECONDS)
                 certificate = directory / 'data/certs/metalist-cert.pem'
                 tls_context = ssl.create_default_context(cafile=str(certificate))
                 for namespace, port, https_port in profiles:
@@ -210,7 +230,8 @@ def run(wheel: Path, *, repair: bool) -> None:
                     executable=executable, environment=environment, directory=launch_directory,
                     profiles=profiles, version=old_version, tls_context=tls_context, log=log)
                 subprocess.run(update_command, env=environment, cwd=launch_directory, stdout=log,
-                               stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, check=True, timeout=600)
+                               stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, check=True,
+                               timeout=_UPDATE_TIMEOUT_SECONDS)
                 if sys.platform == "win32":
                     managed_installers = list(
                         (directory / "local-app-data/MetaList/update-tools").glob("uv-*/uv.exe")
@@ -224,7 +245,7 @@ def run(wheel: Path, *, repair: bool) -> None:
                         (directory / "cache/metalist/update-tools").glob("uv-*/uv")
                     )
                 assert managed_installers, "The update must use MetaList's managed uv"
-                deadline = time.monotonic() + 300
+                deadline = time.monotonic() + _UPDATED_NAMESPACES_READY_TIMEOUT_SECONDS
                 while time.monotonic() < deadline:
                     ready = 0
                     for namespace, port, _ in profiles:
@@ -232,7 +253,7 @@ def run(wheel: Path, *, repair: bool) -> None:
                             ready += 1
                     if ready == len(profiles):
                         break
-                    time.sleep(0.5)
+                    time.sleep(_READY_POLL_INTERVAL_SECONDS)
                 else:
                     raise AssertionError("Updated namespaces did not become ready")
                 for namespace, port, https_port in profiles:
@@ -244,23 +265,23 @@ def run(wheel: Path, *, repair: bool) -> None:
                 scripts = directory / "tools/metalist" / ("Scripts" if os.name == "nt" else "bin")
                 python = scripts / ("python.exe" if os.name == "nt" else "python")
                 identity = subprocess.check_output([str(python), "-I", "-c", "import sys,json; print(json.dumps(list(sys.version_info[:2])))"], text=True)
-                assert json.loads(identity) == list(sys.version_info[:2]), identity
+                assert json.loads(identity) == list(sys.version_info[:_MAJOR_MINOR_PARTS]), identity
                 if repair:
                     for browser_name in ('chrome', 'firefox'):
                         smoke._verify_browser_startup(
                             certificate=certificate, host='127.0.0.1', profiles=profiles,
                             browser_name=browser_name, use_https=False,
-                            cold_runs=1, reloads=2, validate_encrypted_login=True,
+                            cold_runs=1, reloads=_BROWSER_RELOADS, validate_encrypted_login=True,
                         )
                     smoke._verify_browser_startup(
                         certificate=certificate, host=lan_host, profiles=profiles,
                         browser_name='edge', use_https=True,
-                        cold_runs=1, reloads=2, validate_encrypted_login=True,
+                        cold_runs=1, reloads=_BROWSER_RELOADS, validate_encrypted_login=True,
                     )
                 print(f"Real uv update, backups, offline installation, interpreter preservation, and two-namespace restart passed on {sys.platform} Python {sys.version.split()[0]}.")
             finally:
                 log.flush()
-                print(log_path.read_text(encoding="utf-8", errors="replace")[-20000:])
+                print(log_path.read_text(encoding="utf-8", errors="replace")[-_LOG_TAIL_CHARACTERS:])
                 try:
                     smoke._stop_namespace_children(executable=executable, profiles=profiles)
                 finally:
@@ -269,12 +290,14 @@ def run(wheel: Path, *, repair: bool) -> None:
                             startup_log=log_path, data_directory=directory / 'data',
                         )
                     index.shutdown()
-                    thread.join(timeout=5)
+                    thread.join(timeout=_INDEX_THREAD_JOIN_TIMEOUT_SECONDS)
 
 
 if __name__ == "__main__":
-    assert len(sys.argv) in (2, 3), "Expected built wheel path and optional --repair"
-    is_repair = len(sys.argv) == 3
+    if len(sys.argv) not in (_ARGC_WITHOUT_REPAIR, _ARGC_WITH_REPAIR):
+        raise SystemExit("Expected built wheel path and optional --repair")
+    is_repair = len(sys.argv) == _ARGC_WITH_REPAIR
     if is_repair:
-        assert sys.argv[2] == "--repair"
+        if sys.argv[_REPAIR_FLAG_INDEX] != "--repair":
+            raise SystemExit(f"Expected --repair, got {sys.argv[_REPAIR_FLAG_INDEX]!r}")
     run(Path(sys.argv[1]).resolve(), repair=is_repair)

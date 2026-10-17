@@ -36,6 +36,9 @@ from app.version import __version__
 MAX_WEB_PAGES_PER_CALL = 8
 MAX_OVERVIEW_PREVIEW_CHARACTERS = 120
 MAX_SEARCH_MATCH_IDS = 200
+MAX_READ_NOTE_IDS = 200
+MAX_SEARCH_QUERY_CHARACTERS = 500
+MAX_TAG_FILTER_CHARACTERS = 256
 # The overview lists root trees until this share of the evidence budget is used.
 OVERVIEW_BUDGET_DIVISOR = 4
 
@@ -64,7 +67,7 @@ class ReadViewNotesArguments(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     note_ids: list[str] = Field(
-        ..., max_length=200,
+        ..., max_length=MAX_READ_NOTE_IDS,
         description=(
             "Ids of notes whose whole trees to read; any note in a tree selects that tree. "
             "An empty list reads the view from its first tree."
@@ -76,7 +79,7 @@ class SearchViewNotesArguments(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     query: str = Field(
-        ..., min_length=1, max_length=500,
+        ..., min_length=1, max_length=MAX_SEARCH_QUERY_CHARACTERS,
         description="Words that must all appear in a note's text or tags (case-insensitive).",
     )
 
@@ -131,7 +134,7 @@ class ProposeTagReviewArguments(BaseModel):
         ..., description="current_view unless the user explicitly asked for the whole namespace.",
     )
     tag_filter: str = Field(
-        ..., max_length=256,
+        ..., max_length=MAX_TAG_FILTER_CHARACTERS,
         description=("The tag the user named (e.g. 'seedling' for 'accept the seedling proposals'). "
                      "Empty only when the user means every pending proposal, whatever its tag."),
     )

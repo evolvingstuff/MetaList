@@ -329,7 +329,7 @@ test('buildContextMenuItems prepends image actions for note image context', () =
         filename: null,
     };
     const items = buildContextMenuItems(
-        buildNoteContext({ imageContext, canResizeImage: true }),
+        buildNoteContext({ imageContext }),
         {
             ...buildNoteHandlers(calls),
             onCopyImage: (context) => calls.push(['copyImage', context]),
@@ -370,40 +370,6 @@ test('buildContextMenuItems prepends image actions for note image context', () =
         ['zoomImage', imageContext],
         ['openImage', imageContext],
     ]);
-});
-
-test('buildContextMenuItems hides image sizing actions while editing', () => {
-    const calls = [];
-    const imageContext = {
-        sourceKind: 'inline',
-        fileId: null,
-        hostNoteId: 'note-123',
-        occurrenceIndex: 0,
-        src: 'data:image/png;base64,AAAA',
-        alt: 'Diagram',
-        filename: null,
-    };
-    const items = buildContextMenuItems(
-        buildNoteContext({ imageContext, canResizeImage: false }),
-        {
-            ...buildNoteHandlers(calls),
-            onCopyImage: (context) => calls.push(['copyImage', context]),
-            onSaveImage: (context) => calls.push(['saveImage', context]),
-            onZoomImage: (context) => calls.push(['zoomImage', context]),
-            onOpenImageInNewTab: (context) => calls.push(['openImage', context]),
-        },
-    );
-
-    assert.equal(items.some((item) => item.id === 'make-image-bigger'), false);
-    assert.equal(items.some((item) => item.id === 'make-image-smaller'), false);
-    assert.equal(items.some((item) => item.id === 'reset-image-size'), false);
-    assert.deepEqual(items.slice(0, 4).map((item) => item.id), [
-        'copy-image',
-        'save-image',
-        'zoom-image',
-        'open-image-new-tab',
-    ]);
-    assert.equal(items[0].separated, undefined);
 });
 
 test('buildContextMenuItems shows text copy when selected text is present', () => {
@@ -793,7 +759,7 @@ test('buildContextMenuItems gives a rendered diagram edit, size, zoom, and save 
         onZoomImage: (context) => calls.push(['zoomImage', context]),
     };
     const items = buildContextMenuItems(
-        buildNoteContext({ imageContext: diagramContext, canResizeImage: true, canEditDiagram: true }),
+        buildNoteContext({ imageContext: diagramContext, canEditDiagram: true }),
         handlers,
     );
 
@@ -818,16 +784,20 @@ test('buildContextMenuItems gives a rendered diagram edit, size, zoom, and save 
     ]);
     assert.ok(calls.every(([, context]) => context === diagramContext));
 
-    const whileEditing = buildContextMenuItems(
-        buildNoteContext({ imageContext: diagramContext, canResizeImage: false, canEditDiagram: false }),
+    // A diagram that cannot be edited here still resizes, zooms and saves.
+    const notEditable = buildContextMenuItems(
+        buildNoteContext({ imageContext: diagramContext, canEditDiagram: false }),
         handlers,
     );
-    assert.deepEqual(whileEditing.slice(0, 3).map((item) => ({ id: item.id, enabled: item.enabled })), [
+    assert.deepEqual(notEditable.slice(0, 6).map((item) => ({ id: item.id, enabled: item.enabled })), [
         { id: 'edit-diagram', enabled: false },
+        { id: 'make-image-bigger', enabled: true },
+        { id: 'make-image-smaller', enabled: true },
+        { id: 'reset-image-size', enabled: true },
         { id: 'zoom-diagram', enabled: true },
         { id: 'save-diagram', enabled: true },
     ]);
-    assert.equal(whileEditing[1].separated, false);
+    assert.equal(notEditable[4].separated, true);
 });
 
 test('buildContextMenuItems offers Add Excalidraw Diagram only to the editing note', () => {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.utils.not_found import NOT_FOUND
 from collections import Counter
 from dataclasses import dataclass
 from app.services.tag_ontology import TagOntology
@@ -27,6 +28,20 @@ from app.services.tag_term_matching import slice_tag_term_segments
 from app.services.tag_term_matching import split_tag_term_segments
 from app.services.tag_term_matching import split_tag_term_segments_preserving_case
 from app.services.tag_term_matching import tag_term_matches_prefix
+
+_UNMATCHED_SEGMENT_PENALTY = 10
+_PHRASE_MATCH_BONUS = 1000
+_PARTIAL_PHRASE_MATCH_BONUS = 750
+_MATCHED_SEGMENT_BONUS = 100
+# A match at the start of the text earns this much; each later position earns one less, down to none.
+_EARLY_POSITION_BONUS = 100
+# Every term named in the note's own text starts from this score.
+_NOTE_TEXT_MATCH_BASE_SCORE = 20000
+_MIN_DIRECT_LITERAL_TERM_LENGTH = 2
+# A term of at least this many segments, one of them a number, needs only one matched segment.
+_MIN_NUMBERED_TERM_SEGMENT_COUNT = 3
+# A suggestion reason quotes at most this many sets of shared tags (ContextOverlap).
+_MAX_SHARED_TAG_SETS = 2
 
 
 def _preferred_display_term_sort_key(
@@ -106,7 +121,9 @@ def _build_equivalent_term_representatives(
     grouped_terms: Dict[Tuple[str, ...], List[str]] = {}
     for term in terms:
         group_key = _equivalent_suggestion_group_key(term=term, ontology=ontology)
-        group_terms = grouped_terms.setdefault(group_key, [])
+        if group_key not in grouped_terms:
+            grouped_terms[group_key] = []
+        group_terms = grouped_terms[group_key]
         if term in group_terms:
             continue
         group_terms.append(term)
@@ -141,7 +158,10 @@ def _collapse_equivalent_suggestions(
             collapsed.append(term)
             sources[term] = [term]
             continue
-        representative = representative_by_term.get(term, term)
+        # A term in no equivalence group stands for itself.
+        representative = term
+        if term in representative_by_term:
+            representative = representative_by_term[term]
         representative_casefold = representative.casefold()
         if representative_casefold in shown_by_casefold:
             shown = shown_by_casefold[representative_casefold]
@@ -249,9 +269,9 @@ def _collect_cooccurrence_candidates(
     filtered: List[str] = []
     seen_casefold: set[str] = set()
     for term in ranked_terms:
-        canonical_term = candidate_by_casefold.get(term.casefold())
-        if canonical_term is None:
+        if term.casefold() not in candidate_by_casefold:
             continue
+        canonical_term = candidate_by_casefold[term.casefold()]
         canonical_casefold = canonical_term.casefold()
         if canonical_casefold in seen_casefold:
             continue
@@ -270,9 +290,9 @@ def _collect_cooccurrence_candidates(
             limit=max(1, len(all_terms)),
         )
         overlap_terms = frozenset(
-            canonical_term
+            candidate_by_casefold[term.casefold()]
             for term in ranked_overlap_terms
-            if (canonical_term := candidate_by_casefold.get(term.casefold())) is not None
+            if term.casefold() in candidate_by_casefold
         )
     return filtered, {term: index for index, term in enumerate(filtered)}, overlap_terms, query_anchors
 
@@ -286,12 +306,12 @@ def _score_content_match(match: TagContentMatch) -> int:
 
     score = 0
     if match.phrase_match:
-        score += 1000
+        score += _PHRASE_MATCH_BONUS
     if match.raw_partial_phrase_match:
-        score += 750
-    score += match.matched_segment_count * 100
-    score -= unmatched_segment_count * 10
-    score += max(0, 100 - min(match.first_position, 100))
+        score += _PARTIAL_PHRASE_MATCH_BONUS
+    score += match.matched_segment_count * _MATCHED_SEGMENT_BONUS
+    score -= unmatched_segment_count * _UNMATCHED_SEGMENT_PENALTY
+    score += max(0, _EARLY_POSITION_BONUS - min(match.first_position, _EARLY_POSITION_BONUS))
     score += match.normalized_length
     return score
 
@@ -485,12 +505,13 @@ def _collect_direct_standalone_literal_terms(
 
     direct_terms: set[str] = set()
     for term in candidate_terms:
-        if len(normalize_tag_match_text(term)) < 2:
+        if len(normalize_tag_match_text(term)) < _MIN_DIRECT_LITERAL_TERM_LENGTH:
             continue
-        equivalent_terms = ontology.scc_members_by_tag.get(term, frozenset())
-        equivalent_casefolds = {equivalent.casefold() for equivalent in equivalent_terms}
-        if len(equivalent_casefolds) > 1:
-            continue
+        # A tag no rule names has no equivalents.
+        if term in ontology.scc_members_by_tag:
+            equivalent_casefolds = {equivalent.casefold() for equivalent in ontology.scc_members_by_tag[term]}
+            if len(equivalent_casefolds) > 1:
+                continue
         raw_segments = split_tag_term_segments(term)
         if not raw_segments:
             continue
@@ -514,7 +535,7 @@ def _build_prefix_content_remainder(*, term: str, prefix: str) -> str:
     if not prefix_segments:
         return slice_tag_term_segments(term=term, first=0, last=len(raw_segments) - 1)
 
-    matched_segment_index = -1
+    matched_segment_index = NOT_FOUND
     if term.casefold().startswith(prefix.casefold()):
         matched_segment_index = len(prefix_segments) - 1
         assert matched_segment_index < len(raw_segments)
@@ -636,7 +657,7 @@ def _term_has_required_content_overlap(*, term: str, content_token_set: FrozenSe
     if matched_segment_count >= required_matched_segment_count:
         return True
     has_numeric_segment = any(segment.isdigit() for segment in raw_segments)
-    return raw_segment_count >= 3 and has_numeric_segment and matched_segment_count > 0
+    return raw_segment_count >= _MIN_NUMBERED_TERM_SEGMENT_COUNT and has_numeric_segment and matched_segment_count > 0
 
 
 def _collect_undercovered_content_overlap_terms(
@@ -685,7 +706,7 @@ def _rank_terms_by_local_context(
         ontology=ontology,
     )
     for term, match in current_note_content_matches.items():
-        local_scores[term] += 20000 + _score_content_match(match)
+        local_scores[term] += _NOTE_TEXT_MATCH_BASE_SCORE + _score_content_match(match)
 
     # Only this note's own text counts. Tags used, or words written, on its
     # children, siblings or ancestors get no boost: a tag on two of three
@@ -739,9 +760,9 @@ def _rank_terms_by_context_overlap(
             continue
 
         for explicit_tag in record.non_meta_tag_terms:
-            canonical_term = candidate_by_casefold.get(explicit_tag.casefold())
-            if canonical_term is None:
+            if explicit_tag.casefold() not in candidate_by_casefold:
                 continue
+            canonical_term = candidate_by_casefold[explicit_tag.casefold()]
             previous_max = 0
             if canonical_term in overlap_max_by_term:
                 previous_max = overlap_max_by_term[canonical_term]
@@ -753,7 +774,7 @@ def _rank_terms_by_context_overlap(
             if overlap_count == previous_max:
                 overlap_support_by_term[canonical_term] += 1
                 shared_sets = overlap_shared_by_term[canonical_term]
-                if shared_casefold not in shared_sets and len(shared_sets) < 2:
+                if shared_casefold not in shared_sets and len(shared_sets) < _MAX_SHARED_TAG_SETS:
                     shared_sets.append(shared_casefold)
 
     ranked_terms = list(overlap_max_by_term.keys())
@@ -975,7 +996,9 @@ def _expand_exact_synonyms(
         if term_casefold not in seen_content_first_casefold:
             content_first_with_exact_synonyms.append(term)
             seen_content_first_casefold.add(term_casefold)
-        for synonym_match in exact_synonym_content_hits.get(term, []):
+        if term not in exact_synonym_content_hits:
+            continue
+        for synonym_match in exact_synonym_content_hits[term]:
             synonym = synonym_match.term
             synonym_casefold = synonym.casefold()
             if synonym_casefold in seen_content_first_casefold:

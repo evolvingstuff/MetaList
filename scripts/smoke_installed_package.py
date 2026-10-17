@@ -1,6 +1,7 @@
 """Exercise the installed CLI and namespace children against disposable data."""
 from __future__ import annotations
 
+from http import HTTPStatus
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack, suppress
@@ -26,17 +27,46 @@ from uuid import uuid4
 
 from app.services.exception_capture import CapturedExceptionContext
 
+PORTS_PER_PROFILE = 2  # HTTP and HTTPS
+PS_TIMEOUT_SECONDS = 10
+PS_FIELD_COUNT = 2  # pid=,args=
+FAULT_STACK_WAIT_SECONDS = 2
+FAULT_LOG_STABLE_SAMPLES = 3
+ASSET_CONNECTION_TIMEOUT_SECONDS = 10
+# Each asset is fetched this many times over one kept-alive connection.
+ASSET_BATCH_ROUNDS = 3
+JSON_INDENT = 2
+SERVER_TERMINATE_GRACE_SECONDS = 10
+SERVER_EXIT_WAIT_SECONDS = 10
+SERVER_EXIT_POLL_SECONDS = 0.1
+REQUEST_TIMEOUT_SECONDS = 5
+ERROR_BODY_PREVIEW_BYTES = 500
+SEED_NAMESPACES_TIMEOUT_SECONDS = 30
+POWERSHELL_TIMEOUT_SECONDS = 30
+NAMESPACE_STOP_TIMEOUT_SECONDS = 15
+NAMESPACE_STOP_POLL_SECONDS = 0.2
+FAULT_LOG_POLL_SECONDS = 0.1
+# Parallel kept-alive connections, each fetching an interleaved share of the
+# assets; at least this many assets are needed for every connection to carry one.
+ASSET_CONNECTION_COUNT = 6
+CERTUTIL_TIMEOUT_SECONDS = 30
+BROWSER_STARTUP_TIMEOUT_SECONDS = 240
+# Any port works for the route probe: connecting a UDP socket sends nothing.
+ROUTE_PROBE_PORT = 80
+CLI_RUN_TIMEOUT_SECONDS = 180
+NAMESPACE_STARTUP_TIMEOUT_SECONDS = 120
+
 
 def _request(port: int, path: str, *, host: str, use_https: bool, tls_context: ssl.SSLContext) -> bytes:
     if use_https:
-        connection = http.client.HTTPSConnection(host, port, timeout=5, context=tls_context)
+        connection = http.client.HTTPSConnection(host, port, timeout=REQUEST_TIMEOUT_SECONDS, context=tls_context)
     else:
-        connection = http.client.HTTPConnection(host, port, timeout=5)
+        connection = http.client.HTTPConnection(host, port, timeout=REQUEST_TIMEOUT_SECONDS)
     try:
         connection.request("GET", path, headers={"X-Metalist-Tab-Id": "00000000-0000-4000-8000-000000000001"})
         response = connection.getresponse()
         body = response.read()
-        assert response.status == 200, f"{path}: HTTP {response.status}: {body[:500]!r}"
+        assert response.status == HTTPStatus.OK, f"{path}: HTTP {response.status}: {body[:ERROR_BODY_PREVIEW_BYTES]!r}"
         return body
     finally:
         connection.close()
@@ -48,7 +78,7 @@ def _profiles_with_free_ports() -> list[tuple[str, int, int]]:
     with ExitStack() as reservations:
         for suffix in ("first", "second"):
             ports = []
-            for _ in range(2):
+            for _ in range(PORTS_PER_PROFILE):
                 listener = reservations.enter_context(socket.socket())
                 listener.bind(("127.0.0.1", 0))
                 ports.append(listener.getsockname()[1])
@@ -72,7 +102,7 @@ def _seed_namespaces(*, directory: Path, environment: dict[str, str], profiles: 
             "for namespace, http_port, https_port in json.loads(sys.argv[1]):\n"
             "    save_namespace_launch_profile(namespace=namespace, port=http_port, https_port=https_port, mcp_port=None)\n"
         ), json.dumps(profiles)],
-        cwd=directory, env=environment, check=True, timeout=30,
+        cwd=directory, env=environment, check=True, timeout=SEED_NAMESPACES_TIMEOUT_SECONDS,
     )
 
 
@@ -87,18 +117,18 @@ def _namespace_processes(*, executable: Path, profiles: list[tuple[str, int, int
                 "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new(); "
                 "@(Get-CimInstance Win32_Process | Select-Object ProcessId, CommandLine) | ConvertTo-Json -Compress"
             )],
-            capture_output=True, encoding="utf-8", check=True, timeout=30,
+            capture_output=True, encoding="utf-8", check=True, timeout=POWERSHELL_TIMEOUT_SECONDS,
         )
         processes = [(entry["ProcessId"], entry["CommandLine"]) for entry in json.loads(completed.stdout)]
     else:
         completed = subprocess.run(
             ["ps", "-axww", "-o", "pid=,args="], capture_output=True,
-            encoding="utf-8", errors="replace", check=True, timeout=10,
+            encoding="utf-8", errors="replace", check=True, timeout=PS_TIMEOUT_SECONDS,
         )
         processes = []
         for line in completed.stdout.splitlines():
             fields = line.strip().split(maxsplit=1)
-            if len(fields) == 2:
+            if len(fields) == PS_FIELD_COUNT:
                 processes.append((int(fields[0]), fields[1]))
     owned_pids = set()
     for pid, command in processes:
@@ -132,11 +162,11 @@ def _stop_namespace_children(*, executable: Path, profiles: list[tuple[str, int,
             continue
         with suppress(ProcessLookupError):
             os.kill(pid, signal.SIGTERM)
-    deadline = time.monotonic() + 15
+    deadline = time.monotonic() + NAMESPACE_STOP_TIMEOUT_SECONDS
     while time.monotonic() < deadline:
         if not _namespace_processes(executable=executable, profiles=profiles):
             return
-        time.sleep(0.2)
+        time.sleep(NAMESPACE_STOP_POLL_SECONDS)
     raise RuntimeError(f"Smoke namespace processes did not stop: {sorted(owned_pids)}")
 
 
@@ -163,17 +193,17 @@ def _dump_failed_namespace_stacks(*, executable: Path, profiles: list[tuple[str,
             fault_sizes[fault_path] = fault_path.stat().st_size
             with suppress(ProcessLookupError):
                 os.kill(pid, signal.SIGUSR1)
-    deadline = time.monotonic() + 2
+    deadline = time.monotonic() + FAULT_STACK_WAIT_SECONDS
     previous_sizes = fault_sizes.copy()
     stable_samples = 0
     while fault_sizes and time.monotonic() < deadline:
-        time.sleep(0.1)
+        time.sleep(FAULT_LOG_POLL_SECONDS)
         current_sizes = {path: path.stat().st_size for path in fault_sizes}
         if current_sizes == previous_sizes and all(current_sizes[path] > size for path, size in fault_sizes.items()):
             stable_samples += 1
         else:
             stable_samples = 0
-        if stable_samples >= 3:
+        if stable_samples >= FAULT_LOG_STABLE_SAMPLES:
             break
         previous_sizes = current_sizes
     for fault_path in sorted(fault_sizes):
@@ -183,19 +213,19 @@ def _dump_failed_namespace_stacks(*, executable: Path, profiles: list[tuple[str,
 
 def _verify_asset_batch(*, port: int, use_https: bool, tls_context: ssl.SSLContext, assets: list[tuple[str, bytes]]) -> None:
     if use_https:
-        connection = http.client.HTTPSConnection('127.0.0.1', port, context=tls_context, timeout=10)
+        connection = http.client.HTTPSConnection('127.0.0.1', port, context=tls_context, timeout=ASSET_CONNECTION_TIMEOUT_SECONDS)
     else:
-        connection = http.client.HTTPConnection('127.0.0.1', port, timeout=10)
+        connection = http.client.HTTPConnection('127.0.0.1', port, timeout=ASSET_CONNECTION_TIMEOUT_SECONDS)
     try:
         connection.connect()
         original_socket = connection.sock
         assert original_socket is not None
-        for _ in range(3):
+        for _ in range(ASSET_BATCH_ROUNDS):
             for path, expected in assets:
                 connection.request('GET', path, headers={'Accept-Encoding': 'gzip'})
                 response = connection.getresponse()
                 body = response.read()
-                assert response.status == 200, f'{path}: HTTP {response.status}'
+                assert response.status == HTTPStatus.OK, f'{path}: HTTP {response.status}'
                 encoding = response.getheader('Content-Encoding')
                 assert encoding in (None, 'gzip'), f'{path}: unexpected encoding {encoding}'
                 if encoding == 'gzip':
@@ -213,24 +243,25 @@ def _verify_installed_assets(*, static_directory: Path, http_port: int, https_po
     assets = [('/static/' + path.relative_to(static_directory).as_posix(), path.read_bytes())
               for path in sorted(static_directory.rglob('*'))
               if path.is_file() and path.suffix in {'.js', '.css', '.json', '.ico'}]
-    assert len(assets) >= 6, 'Installed application has too few startup assets'
+    if len(assets) < ASSET_CONNECTION_COUNT:
+        raise RuntimeError('Installed application has too few startup assets')
     for port, use_https in ((http_port, False), (https_port, True)):
-        with ThreadPoolExecutor(max_workers=6) as executor:
+        with ThreadPoolExecutor(max_workers=ASSET_CONNECTION_COUNT) as executor:
             futures = [executor.submit(_verify_asset_batch, port=port, use_https=use_https,
-                                       tls_context=tls_context, assets=assets[index::6])
-                       for index in range(6)]
+                                       tls_context=tls_context, assets=assets[index::ASSET_CONNECTION_COUNT])
+                       for index in range(ASSET_CONNECTION_COUNT)]
             for future in futures:
                 future.result()
     print(f'PASS {len(assets)} installed assets, HTTP and verified HTTPS, six connections, three passes')
 
 
 def _verify_remote_http_redirect(*, host: str, http_port: int, https_port: int, path: str) -> None:
-    connection = http.client.HTTPConnection(host, http_port, timeout=5)
+    connection = http.client.HTTPConnection(host, http_port, timeout=REQUEST_TIMEOUT_SECONDS)
     try:
         connection.request('GET', path)
         response = connection.getresponse()
         response.read()
-        assert response.status == 307, f'Expected remote HTTP redirect: {response.status}'
+        assert response.status == HTTPStatus.TEMPORARY_REDIRECT, f'Expected remote HTTP redirect: {response.status}'
         assert response.getheader('Location') == f'https://{host}:{https_port}{path}'
     finally:
         connection.close()
@@ -283,7 +314,8 @@ def _verify_browser_startup(*, certificate: Path, host: str,
                             profiles: list[tuple[str, int, int]], browser_name: str,
                             use_https: bool, cold_runs: int, reloads: int,
                             validate_encrypted_login: bool) -> None:
-    assert os.environ['RUNNER_ENVIRONMENT'] == 'github-hosted', 'Release browser validation requires a disposable GitHub-hosted runner'
+    if os.environ['RUNNER_ENVIRONMENT'] != 'github-hosted':
+        raise RuntimeError('Release browser validation requires a disposable GitHub-hosted runner')
     assert not use_https or os.name == 'nt', 'Browser HTTPS trust setup is currently implemented for Windows'
     assert cold_runs >= 1
     assert reloads >= 1
@@ -306,7 +338,7 @@ def _verify_browser_startup(*, certificate: Path, host: str,
             # store avoids the interactive confirmation required by the user store.
             diagnostics['stage'] = 'trusting generated certificate'
             subprocess.run(['certutil', '-addstore', 'Root', str(certificate)],
-                           stdin=subprocess.DEVNULL, check=True, timeout=30)
+                           stdin=subprocess.DEVNULL, check=True, timeout=CERTUTIL_TIMEOUT_SECONDS)
             trusted = True
         diagnostics['stage'] = f'running {browser_name} startup checks'
         script = Path(__file__).resolve().parent / 'browser-validation' / 'browser-startup.mjs'
@@ -325,15 +357,15 @@ def _verify_browser_startup(*, certificate: Path, host: str,
             node, str(script), browser_name, str(executable), str(output_directory),
             str(cold_runs), str(reloads), validate_login_text, *urls,
         ],
-                       cwd=script.parent, check=True, timeout=240)
+                       cwd=script.parent, check=True, timeout=BROWSER_STARTUP_TIMEOUT_SECONDS)
         diagnostics['passed'] = True
     finally:
         try:
             if trusted:
                 subprocess.run(['certutil', '-delstore', 'Root', thumbprint],
-                               stdin=subprocess.DEVNULL, check=True, timeout=30)
+                               stdin=subprocess.DEVNULL, check=True, timeout=CERTUTIL_TIMEOUT_SECONDS)
         finally:
-            (output_directory / 'setup-results.json').write_text(json.dumps(diagnostics, indent=2), encoding='utf-8')
+            (output_directory / 'setup-results.json').write_text(json.dumps(diagnostics, indent=JSON_INDENT), encoding='utf-8')
 
 
 def _verify_remembered_network_settings(*, executable: Path, environment: dict[str, str],
@@ -344,16 +376,16 @@ def _verify_remembered_network_settings(*, executable: Path, environment: dict[s
     else:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
             # Match automatic certificate interface detection; no datagram is sent.
-            probe.connect(('8.8.8.8', 80))
+            probe.connect(('8.8.8.8', ROUTE_PROBE_PORT))
             host = probe.getsockname()[0]
     assert not host.startswith('127.'), 'LAN persistence check requires a non-loopback interface'
     configured = dict(environment, METALIST_HOST='0.0.0.0', METALIST_ALLOWED_HOSTS=host)
     subprocess.run([str(executable)], cwd=directory, env=configured,
-                   stdout=log, stderr=subprocess.STDOUT, check=True, timeout=180)
+                   stdout=log, stderr=subprocess.STDOUT, check=True, timeout=CLI_RUN_TIMEOUT_SECONDS)
     fresh = {key: value for key, value in environment.items()
              if key not in {'METALIST_HOST', 'METALIST_ALLOWED_HOSTS'}}
     subprocess.run([str(executable)], cwd=directory, env=fresh,
-                   stdout=log, stderr=subprocess.STDOUT, check=True, timeout=180)
+                   stdout=log, stderr=subprocess.STDOUT, check=True, timeout=CLI_RUN_TIMEOUT_SECONDS)
     for namespace, http_port, https_port in profiles:
         _verify_namespace(host=host, namespace=namespace, http_port=http_port, https_port=https_port,
                           version=version, tls_context=tls_context)
@@ -416,7 +448,7 @@ def smoke_installed_package(*, browsers: list[str], https_browsers: list[str],
             )
             is_successful = False
             try:
-                assert process.wait(timeout=120) == 0, "Installed CLI namespace startup failed"
+                assert process.wait(timeout=NAMESPACE_STARTUP_TIMEOUT_SECONDS) == 0, "Installed CLI namespace startup failed"
                 certificate = data_directory / 'certs' / 'metalist-cert.pem'
                 tls_context = ssl.create_default_context(cafile=str(certificate))
                 for namespace, http_port, https_port in profiles:
@@ -445,12 +477,12 @@ def smoke_installed_package(*, browsers: list[str], https_browsers: list[str],
             finally:
                 if process.poll() is None:
                     process.terminate()
-                    deadline = time.monotonic() + 10
+                    deadline = time.monotonic() + SERVER_TERMINATE_GRACE_SECONDS
                     while process.poll() is None and time.monotonic() < deadline:
-                        time.sleep(0.1)
+                        time.sleep(SERVER_EXIT_POLL_SECONDS)
                     if process.poll() is None:
                         process.kill()
-                    process.wait(timeout=10)
+                    process.wait(timeout=SERVER_EXIT_WAIT_SECONDS)
                 if not is_successful:
                     _dump_failed_namespace_stacks(executable=executable, profiles=profiles, data_directory=data_directory)
                 try:

@@ -1,3 +1,4 @@
+import { NO_SELECTION } from '../../list-selection.js';
 import { ApplicationState } from '../../application-state.js';
 import { isContextMenuOpen, isMacControlClick } from '../../context-menu/context-menu-service.js';
 import { NotesAPI } from '../../api-client.js';
@@ -13,10 +14,12 @@ import {
 
 const SUGGESTION_DEBOUNCE_MS = 50;
 const HOVER_DISMISS_BOTTOM_BUFFER_PX = 25;
+// A backslash and the character it escapes.
+const ESCAPE_SEQUENCE_LENGTH = 2;
 const moduleState = ApplicationState.createFields('search-suggestions-service', {
     pendingTimer: null,
     requestSerial: 0,
-    selectedIndex: -1,
+    selectedIndex: NO_SELECTION,
     suppressSuggestionsUntilInputInteraction: false,
 });
 
@@ -59,7 +62,7 @@ function parseSuggestionContext(rawValue, cursorIndex) {
         if (char === '\\' && index + 1 < cursorIndex) {
             const nextChar = rawValue[index + 1];
             if (quoteChar && (nextChar === quoteChar || nextChar === '\\')) {
-                index += 2;
+                index += ESCAPE_SEQUENCE_LENGTH;
                 continue;
             }
         }
@@ -91,13 +94,14 @@ function parseSuggestionContext(rawValue, cursorIndex) {
     if (!token) {
         return {
             partialPrefix: '',
-            prefixModifier: null,
+            prefixModifier: '',
             replaceStart: cursorIndex,
             replaceEnd: cursorIndex,
         };
     }
 
-    let prefixModifier = null;
+    // The modifier typed before the term (such as -), or none.
+    let prefixModifier = '';
     let prefixValue = token;
     if (prefixValue[0] === '+' || prefixValue[0] === '-') {
         prefixModifier = prefixValue[0];
@@ -145,7 +149,7 @@ function hideSuggestions(options) {
     container.style.display = 'none';
     container.innerHTML = '';
     // Rendering or dismissing an empty result list can observe no selection.
-        if (moduleState.selectedIndex !== -1) moduleState.selectedIndex = -1;
+        if (moduleState.selectedIndex !== NO_SELECTION) moduleState.selectedIndex = NO_SELECTION;
 }
 
 function shouldHideForVerticalPointerPosition(container, pointerClientY) {
@@ -280,7 +284,7 @@ export async function applySearchSuggestion(searchInput, suggestion) {
         return;
     }
 
-    const prefixText = context.prefixModifier ? context.prefixModifier : '';
+    const prefixText = context.prefixModifier;
     const before = rawValue.slice(0, context.replaceStart);
     const after = rawValue.slice(context.replaceEnd);
     const replacement = `${prefixText}${suggestion}`;
@@ -306,7 +310,7 @@ function updateSelectedSuggestion(container) {
     const items = Array.from(container.querySelectorAll('.search-suggestion'));
     if (items.length === 0) {
         // Rendering or dismissing an empty result list can observe no selection.
-        if (moduleState.selectedIndex !== -1) moduleState.selectedIndex = -1;
+        if (moduleState.selectedIndex !== NO_SELECTION) moduleState.selectedIndex = NO_SELECTION;
         return;
     }
     if (moduleState.selectedIndex < 0 || moduleState.selectedIndex >= items.length) {

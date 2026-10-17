@@ -9,6 +9,8 @@ import { DELIBERATE_SCROLL_EVENT } from './animated-scroll-service.js';
 const SCROLL_PIXELS_PER_MS = 20;
 const MIN_SCROLL_DURATION_MS = 120;
 const MAX_SCROLL_DURATION_MS = 240;
+// Cubic ease-out.
+const SCROLL_EASING_EXPONENT = 3;
 
 // Each scroll the arrow makes is deliberate: a viewport hold keeping the place
 // the user left (after leaving edit mode, or a refresh that lands meanwhile)
@@ -102,7 +104,7 @@ function initializeListEdgeButton(edge, { hasRootsBeyondWindow, jumpBeyondWindow
         const tick = (now) => {
             const elapsed = now - startTime;
             const t = Math.max(0, Math.min(1, elapsed / durationMs));
-            const eased = 1 - Math.pow(1 - t, 3);
+            const eased = 1 - Math.pow(1 - t, SCROLL_EASING_EXPONENT);
             scrollDeliberatelyTo(Math.round(startY + (targetY - startY) * eased));
             if (t < 1) {
                 activeAnimationFrame = window.requestAnimationFrame(tick);

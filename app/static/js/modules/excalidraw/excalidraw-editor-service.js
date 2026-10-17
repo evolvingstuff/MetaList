@@ -12,6 +12,7 @@ import { AUTOSAVE_STATUS, createAutosaveController } from './excalidraw-autosave
 import { isExcalidrawEditorOpen, setExcalidrawEditorOpen } from './excalidraw-editor-state.js';
 import { loadExcalidraw } from './excalidraw-loader.js';
 import { refreshExcalidrawEmbeds } from './excalidraw-preview-service.js';
+import { MS_PER_SECOND } from '../time-units.js';
 import {
     EXCALIDRAW_AUTOSAVE_DELAY_MS,
     EXCALIDRAW_MIME_TYPE,
@@ -32,6 +33,9 @@ const STATUS_TEXT = Object.freeze({
 });
 const DISCARD_CONFIRM_MS = 4000;
 const EDITOR_START_TIMEOUT_MS = 10000;
+const EDITOR_START_POLL_MS = 25;
+const UNDO_HISTORY_PROBLEM_BANNER_SECONDS = 8;
+const DIAGRAM_SAVE_PROBLEM_BANNER_SECONDS = 10;
 
 function element(tag, className, text) {
     const node = document.createElement(tag);
@@ -191,7 +195,7 @@ function startEditorSession(setup) {
             () => FilesAPI.finishEditSession(fileId, sessionId, hostNoteId, session.revision, isNewDiagram),
         );
         if (!settled.ok) {
-            ErrorHandler.showErrorBanner('The diagram is saved, but this edit could not be added to undo history.', 'error', 8000, true);
+            ErrorHandler.showErrorBanner('The diagram is saved, but this edit could not be added to undo history.', 'error', UNDO_HISTORY_PROBLEM_BANNER_SECONDS * MS_PER_SECOND, true);
             return;
         }
         adoptRevision(settled.value.contentRevision);
@@ -223,7 +227,7 @@ function startEditorSession(setup) {
         setButtonsDisabled(true);
         const status = await controller.flush();
         if (status === AUTOSAVE_STATUS.CONFLICT) {
-            ErrorHandler.showErrorBanner('The diagram was changed in another window, so your latest edits were not saved.', 'error', 10000, true);
+            ErrorHandler.showErrorBanner('The diagram was changed in another window, so your latest edits were not saved.', 'error', DIAGRAM_SAVE_PROBLEM_BANNER_SECONDS * MS_PER_SECOND, true);
             await endSession();
             close();
             return;
@@ -270,9 +274,9 @@ function startEditorSession(setup) {
             adoptRevision(settled.value.contentRevision);
         } else if (settled.error instanceof FileRevisionConflictError) {
             adoptRevision(settled.error.currentRevision);
-            ErrorHandler.showErrorBanner('The diagram was changed in another window, so it was left as that window saved it.', 'error', 10000, true);
+            ErrorHandler.showErrorBanner('The diagram was changed in another window, so it was left as that window saved it.', 'error', DIAGRAM_SAVE_PROBLEM_BANNER_SECONDS * MS_PER_SECOND, true);
         } else {
-            ErrorHandler.showErrorBanner('The original diagram could not be restored; your edits are still saved.', 'error', 10000, true);
+            ErrorHandler.showErrorBanner('The original diagram could not be restored; your edits are still saved.', 'error', DIAGRAM_SAVE_PROBLEM_BANNER_SECONDS * MS_PER_SECOND, true);
         }
         close();
     }
@@ -331,7 +335,7 @@ function startEditorSession(setup) {
                 reject(new Error('Excalidraw editor did not start'));
                 return;
             }
-            window.setTimeout(poll, 25);
+            window.setTimeout(poll, EDITOR_START_POLL_MS);
         };
         poll();
     });

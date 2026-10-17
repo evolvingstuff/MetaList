@@ -37,6 +37,8 @@ class OntologyRulesState:
 
 _LOCK = RLock()
 _STATE: Optional[OntologyRulesState] = None
+# A backslash and the character it escapes.
+_ESCAPE_SEQUENCE_LENGTH = 2
 
 
 def _require_rule_text(text: str) -> str:
@@ -68,7 +70,7 @@ def _replace_tag_tokens_in_line(*, line: str, old: str, new: str) -> str:
             if ch == "\\":
                 if i + 1 < len(line):
                     out += line[i + 1]
-                    i += 2
+                    i += _ESCAPE_SEQUENCE_LENGTH
                     continue
             if ch == in_quote:
                 in_quote = None
@@ -80,7 +82,7 @@ def _replace_tag_tokens_in_line(*, line: str, old: str, new: str) -> str:
             if ch == "\\":
                 if i + 1 < len(line):
                     out += line[i + 1]
-                    i += 2
+                    i += _ESCAPE_SEQUENCE_LENGTH
                     continue
             if ch == "/":
                 in_regex = False

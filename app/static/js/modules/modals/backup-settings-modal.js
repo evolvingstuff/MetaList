@@ -1,3 +1,4 @@
+import { parseDecimalInteger } from '../decimal-integer.js';
 import { ApplicationState } from '../application-state.js';
 import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
@@ -62,9 +63,6 @@ export class BackupSettingsModal extends BaseModal {
         };
     }
 
-    shouldCloseOnClickOutside() {
-        return true;
-    }
 
     _hasActiveOperation() {
         const state = this.getModalState();
@@ -419,7 +417,7 @@ export class BackupSettingsModal extends BaseModal {
         if (!/^[0-9]+$/.test(raw)) {
             throw new Error('Retention count must be a whole number.');
         }
-        const retentionCount = Number.parseInt(raw, 10);
+        const retentionCount = parseDecimalInteger(raw);
         if (!Number.isInteger(retentionCount) || retentionCount <= 0) {
             throw new Error('Retention count must be greater than zero.');
         }

@@ -107,8 +107,9 @@ export class DictationSettingsModal extends BaseModal {
                 return `${field.label}: use words of letters only (2 to 64 characters), such as "start tags" or "armadillo".`;
             }
         }
-        const distinct = new Set([phrases.quoteOpen, phrases.quoteClose, phrases.negate].map((phrase) => phrase.toLowerCase()));
-        if (distinct.size !== 3) {
+        const mustDiffer = [phrases.quoteOpen, phrases.quoteClose, phrases.negate];
+        const distinct = new Set(mustDiffer.map((phrase) => phrase.toLowerCase()));
+        if (distinct.size !== mustDiffer.length) {
             return 'The quote and exclusion phrases must all differ.';
         }
         return '';

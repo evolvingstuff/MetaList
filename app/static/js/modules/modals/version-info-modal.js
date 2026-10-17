@@ -6,6 +6,9 @@ import { HttpRequestError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
 import { CONFIG } from '../config.js';
 import { buildSessionHeaders } from '../session-auth.js';
+import { MS_PER_SECOND } from '../time-units.js';
+
+const UPDATE_POLL_INTERVAL_SECONDS = 2;
 
 
 function escapeHtml(value) {
@@ -290,7 +293,7 @@ export class VersionInfoModal extends BaseModal {
         this._updateTimer = setTimeout(async () => {
             this._updateTimer = null;
             await this.pollUpdate(generation, job);
-        }, 2000);
+        }, UPDATE_POLL_INTERVAL_SECONDS * MS_PER_SECOND);
     }
 
     async pollUpdate(generation, previousJob) {

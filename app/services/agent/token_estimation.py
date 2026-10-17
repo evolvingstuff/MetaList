@@ -5,6 +5,15 @@ from __future__ import annotations
 import json
 import unicodedata
 
+_LETTERS_PER_TOKEN = 4
+# Added before dividing a letter run, so it rounds to the nearest token.
+_LETTER_RUN_ROUNDING = 2
+_DIGITS_PER_TOKEN = 3
+_UTF8_BYTES_PER_TOKEN = 3
+# Chat framing: the reply is primed with a few tokens, and each message adds its own.
+REPLY_PRIMING_TOKENS = 3
+PER_MESSAGE_OVERHEAD_TOKENS = 3
+
 
 def estimate_text_tokens(text: str) -> int:
     """Estimate tokenizer cost without binding the harness to one model family."""
@@ -22,7 +31,7 @@ def estimate_text_tokens(text: str) -> int:
             while end < len(text) and text[end].isascii() and text[end].isalpha():
                 end += 1
             run_length = end - index
-            estimate += max(1, (run_length + 2) // 4)
+            estimate += max(1, (run_length + _LETTER_RUN_ROUNDING) // _LETTERS_PER_TOKEN)
             index = end
             continue
         if character.isascii() and character.isdecimal():
@@ -30,7 +39,8 @@ def estimate_text_tokens(text: str) -> int:
             while end < len(text) and text[end].isascii() and text[end].isdecimal():
                 end += 1
             run_length = end - index
-            estimate += (run_length + 2) // 3
+            # Rounds a partial token up.
+            estimate += (run_length + _DIGITS_PER_TOKEN - 1) // _DIGITS_PER_TOKEN
             index = end
             continue
         if character.isspace():
@@ -52,7 +62,7 @@ def estimate_text_tokens(text: str) -> int:
                 break
             end += 1
         utf8_byte_count = len(text[index:end].encode("utf-8"))
-        estimate += max(1, (utf8_byte_count + 2) // 3)
+        estimate += max(1, (utf8_byte_count + _UTF8_BYTES_PER_TOKEN - 1) // _UTF8_BYTES_PER_TOKEN)
         index = end
 
     return max(1, estimate)
@@ -73,7 +83,7 @@ def estimate_message_tokens(messages: list[dict[str, str]]) -> int:
     """Estimate decoded chat messages without counting HTTP JSON escaping."""
     if not isinstance(messages, list) or not messages:
         raise ValueError("Message token estimation requires a non-empty message list")
-    estimate = 3
+    estimate = REPLY_PRIMING_TOKENS
     for message in messages:
         if not isinstance(message, dict):
             raise TypeError("Each estimated message must be an object")
@@ -85,7 +95,7 @@ def estimate_message_tokens(messages: list[dict[str, str]]) -> int:
             raise ValueError("Estimated message role must be non-empty text")
         if not isinstance(content, str):
             raise TypeError("Estimated message content must be text")
-        estimate += 3
+        estimate += PER_MESSAGE_OVERHEAD_TOKENS
         estimate += estimate_text_tokens(role)
         estimate += estimate_text_tokens(content)
     return estimate

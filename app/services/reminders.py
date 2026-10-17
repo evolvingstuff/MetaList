@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import date, datetime, time, timezone
+from types import MappingProxyType
 import calendar
 import json
 from threading import RLock
@@ -22,6 +23,7 @@ from app.security.encryption import (
     get_encryption_service_with_token,
     is_encryption_required,
 )
+from app.utils.time_units import DAYS_PER_WEEK
 
 
 REMINDER_STATUS_ACTIVE = "active"
@@ -38,6 +40,14 @@ REMINDER_STATUSES = frozenset(
 ATTACHMENT_ATTACHED = "attached"
 ATTACHMENT_UNATTACHED = "unattached"
 ATTACHMENT_TYPES = frozenset({ATTACHMENT_ATTACHED, ATTACHMENT_UNATTACHED})
+# HH:MM has an hour part and a minute part.
+_TIME_OF_DAY_PARTS = 2
+_MONTHS_PER_YEAR = 12
+_MAX_DAY_OF_MONTH = 31
+# Weekdays as date.weekday() numbers them: Monday is 0, Sunday is 6.
+_LAST_WEEKDAY = DAYS_PER_WEEK - 1
+# The most days the weekly recurrence search steps through before giving up.
+_WEEKLY_SEARCH_GUARD_DAYS = 3710
 
 SCHEDULE_ONE_TIME = "one_time"
 SCHEDULE_RECURRING = "recurring"
@@ -60,6 +70,19 @@ DATE_TRIGGER_ON_FIRST_NON_IDLE_USE = "on_first_non_idle_use"
 RECURRENCE_FREQUENCIES = frozenset({"daily", "weekly", "monthly", "yearly"})
 RECURRENCE_END_TYPES = frozenset({"never", "on_date", "after_count"})
 PRE_REMINDER_UNITS = frozenset({"minutes", "hours", "days"})
+
+
+# A reminder that no longer fires sorts after every scheduled one.
+_NEVER_FIRES_SORT_KEY = "9999-12-31T23:59:59+00:00"
+
+
+def _next_fire_sort_key(reminder: dict[str, object]) -> object:
+    """When a reminder next fires, for ordering: its time, else its date."""
+    if reminder["next_fire_at"] is not None:
+        return reminder["next_fire_at"]
+    if reminder["next_fire_date"] is not None:
+        return reminder["next_fire_date"]
+    return _NEVER_FIRES_SORT_KEY
 
 
 @dataclass(frozen=True)
@@ -97,7 +120,7 @@ def _parse_time_of_day(value: object, *, field_name: str) -> time:
     if not isinstance(value, str):
         raise InputRejected(f"{field_name} must be HH:MM string")
     parts = value.split(":")
-    if len(parts) != 2:
+    if len(parts) != _TIME_OF_DAY_PARTS:
         raise InputRejected(f"{field_name} must be HH:MM string")
     hour = int(parts[0])
     minute = int(parts[1])
@@ -136,6 +159,34 @@ def _required_mapping_value(mapping: Mapping[str, object], key: str) -> object:
     if key in mapping:
         return mapping[key]
     raise InputRejected(f"{key} is required")
+
+
+# Kept by the server, never sent by the browser: a reminder's history and where its
+# schedule stands. A new reminder starts with these values; an edit that keeps the
+# schedule keeps them; a changed schedule starts them over.
+_NEW_REMINDER_STATE: Mapping[str, object] = MappingProxyType({
+    "next_fire_at": None,
+    "next_fire_date": None,
+    "pre_reminder_last_seen_key": None,
+    "last_fired_at": None,
+    "last_fired_date": None,
+    "last_seen_at": None,
+    "is_currently_missed": False,
+    "missed_since": None,
+    "missed_count": 0,
+    "snoozed_until": None,
+    "occurrence_count": 0,
+})
+# Reminders saved during development on 2026-06-06, before details and pre-reminders
+# existed (the first release with reminders, 0.3.0, already had them), load with these.
+# Every other saved field, and every field of a request, is required.
+_FIELDS_ADDED_AFTER_FIRST_REMINDERS: Mapping[str, object] = MappingProxyType({
+    "details": "",
+    "pre_reminder": None,
+    "pre_reminder_last_seen_key": None,
+})
+# Changing any of these makes a new schedule.
+_SCHEDULE_FIELDS = ("schedule_kind", "time_mode", "scheduled_at", "scheduled_date", "recurrence_rule")
 
 
 def _mapping_value_or(mapping: Mapping[str, object], key: str, default_value: object) -> object:
@@ -213,8 +264,8 @@ def _add_months(value: date, months: int) -> date:
     if not isinstance(months, int) or months <= 0:
         raise InputRejected("months must be a positive integer")
     month_index = value.month - 1 + months
-    year = value.year + month_index // 12
-    month = month_index % 12 + 1
+    year = value.year + month_index // _MONTHS_PER_YEAR
+    month = month_index % _MONTHS_PER_YEAR + 1
     day = min(value.day, calendar.monthrange(year, month)[1])
     return date(year, month, day)
 
@@ -279,8 +330,8 @@ def _normalize_recurrence_rule(raw_rule: object, *, time_mode: str) -> dict[str,
                     field_name="recurrence_rule.weekdays[]",
                     min_value=0,
                 )
-                if weekday > 6:
-                    raise InputRejected("recurrence_rule.weekdays[] must be between 0 and 6")
+                if weekday > _LAST_WEEKDAY:
+                    raise InputRejected(f"recurrence_rule.weekdays[] must be between 0 and {_LAST_WEEKDAY}")
                 if weekday not in weekdays:
                     weekdays.append(weekday)
             weekdays.sort()
@@ -291,8 +342,8 @@ def _normalize_recurrence_rule(raw_rule: object, *, time_mode: str) -> dict[str,
             field_name="recurrence_rule.day_of_month",
             min_value=1,
         )
-        if day_of_month > 31:
-            raise InputRejected("recurrence_rule.day_of_month must be between 1 and 31")
+        if day_of_month > _MAX_DAY_OF_MONTH:
+            raise InputRejected(f"recurrence_rule.day_of_month must be between 1 and {_MAX_DAY_OF_MONTH}")
         normalized["day_of_month"] = day_of_month
     if frequency == "yearly":
         if "month" in raw_rule:
@@ -301,13 +352,13 @@ def _normalize_recurrence_rule(raw_rule: object, *, time_mode: str) -> dict[str,
                 field_name="recurrence_rule.month",
                 min_value=1,
             )
-            if month > 12:
-                raise InputRejected("recurrence_rule.month must be between 1 and 12")
+            if month > _MONTHS_PER_YEAR:
+                raise InputRejected(f"recurrence_rule.month must be between 1 and {_MONTHS_PER_YEAR}")
             normalized["month"] = month
         if "day" in raw_rule:
             day = _require_int(_required_mapping_value(raw_rule, "day"), field_name="recurrence_rule.day", min_value=1)
-            if day > 31:
-                raise InputRejected("recurrence_rule.day must be between 1 and 31")
+            if day > _MAX_DAY_OF_MONTH:
+                raise InputRejected(f"recurrence_rule.day must be between 1 and {_MAX_DAY_OF_MONTH}")
             normalized["day"] = day
     if time_mode == TIME_MODE_DATE_TIME:
         if "time_of_day" in raw_rule and _required_mapping_value(raw_rule, "time_of_day") is not None:
@@ -380,8 +431,8 @@ def _next_recurrence_date(
         if not weekdays:
             weekdays = [anchor_date.weekday()]
         candidate = date.fromordinal(after_date.toordinal() + 1)
-        for _ in range(0, 3710):
-            weeks_since_anchor = (candidate - anchor_date).days // 7
+        for _ in range(0, _WEEKLY_SEARCH_GUARD_DAYS):
+            weeks_since_anchor = (candidate - anchor_date).days // DAYS_PER_WEEK
             if weeks_since_anchor >= 0 and weeks_since_anchor % interval == 0 and candidate.weekday() in weekdays:
                 if not _end_allows_date(rule, candidate, occurrence_count):
                     return None
@@ -429,7 +480,7 @@ def compute_next_date_only_occurrence(
         raise RuntimeError("recurring reminder requires recurrence_rule")
     anchor_date = _parse_date(reminder["scheduled_date"], field_name="scheduled_date")
     occurrence_count = _require_int(
-        _mapping_value_or(reminder, "occurrence_count", 0),
+        reminder["occurrence_count"],
         field_name="occurrence_count",
         min_value=0,
     )
@@ -455,7 +506,7 @@ def _date_is_recurrence_occurrence(*, reminder: Mapping[str, object], candidate:
     anchor_date = _parse_date(reminder["scheduled_date"], field_name="scheduled_date")
     previous_date = date.fromordinal(candidate.toordinal() - 1)
     occurrence_count = _require_int(
-        _mapping_value_or(reminder, "occurrence_count", 0),
+        reminder["occurrence_count"],
         field_name="occurrence_count",
         min_value=0,
     )
@@ -479,7 +530,7 @@ def compute_next_date_time_occurrence(
     scheduled_at = _parse_dt(reminder["scheduled_at"], field_name="scheduled_at")
     anchor_date = _local_date_from_dt(scheduled_at)
     occurrence_count = _require_int(
-        _mapping_value_or(reminder, "occurrence_count", 0),
+        reminder["occurrence_count"],
         field_name="occurrence_count",
         min_value=0,
     )
@@ -563,7 +614,7 @@ def normalize_reminder_payload(
 ) -> dict[str, object]:
     if not isinstance(raw, Mapping):
         raise TypeError("reminder payload must be a mapping")
-    reminder_id = _require_string(_mapping_value_or(raw, "id", str(uuid4())), field_name="id", allow_blank=False)
+    reminder_id = _require_string(_required_mapping_value(raw, "id"), field_name="id", allow_blank=False)
     attachment_type = _require_choice(
         _required_mapping_value(raw, "attachment_type"),
         field_name="attachment_type",
@@ -575,10 +626,10 @@ def normalize_reminder_payload(
     if attachment_type == ATTACHMENT_UNATTACHED and note_id is not None:
         raise InputRejected("unattached reminder requires note_id null")
 
-    title = _require_string(_mapping_value_or(raw, "title", ""), field_name="title", allow_blank=True)
+    title = _require_string(_required_mapping_value(raw, "title"), field_name="title", allow_blank=True)
     if attachment_type == ATTACHMENT_UNATTACHED and title == "":
         raise InputRejected("standalone reminder requires non-empty title")
-    details = _require_string(_mapping_value_or(raw, "details", ""), field_name="details", allow_blank=True)
+    details = _require_string(_required_mapping_value(raw, "details"), field_name="details", allow_blank=True)
 
     schedule_kind = _require_choice(
         _required_mapping_value(raw, "schedule_kind"),
@@ -586,8 +637,8 @@ def normalize_reminder_payload(
         choices=SCHEDULE_KINDS,
     )
     time_mode = _require_choice(_required_mapping_value(raw, "time_mode"), field_name="time_mode", choices=TIME_MODES)
-    status = _require_choice(_mapping_value_or(raw, "status", REMINDER_STATUS_ACTIVE), field_name="status", choices=REMINDER_STATUSES)
-    pre_reminder = _normalize_pre_reminder(_mapping_value_or(raw, "pre_reminder", None), time_mode=time_mode)
+    status = _require_choice(_required_mapping_value(raw, "status"), field_name="status", choices=REMINDER_STATUSES)
+    pre_reminder = _normalize_pre_reminder(_required_mapping_value(raw, "pre_reminder"), time_mode=time_mode)
     persistence_mode = _require_choice(
         _required_mapping_value(raw, "persistence_mode"),
         field_name="persistence_mode",
@@ -597,7 +648,7 @@ def normalize_reminder_payload(
     recurrence_rule: Optional[dict[str, object]] = None
     if schedule_kind == SCHEDULE_RECURRING:
         recurrence_rule = _normalize_recurrence_rule(_required_mapping_value(raw, "recurrence_rule"), time_mode=time_mode)
-    elif _mapping_value_or(raw, "recurrence_rule", None) is not None:
+    elif _required_mapping_value(raw, "recurrence_rule") is not None:
         raise InputRejected("one-time reminder requires recurrence_rule null")
 
     scheduled_at: Optional[str] = None
@@ -605,25 +656,16 @@ def normalize_reminder_payload(
     date_trigger_policy: Optional[str] = None
     if time_mode == TIME_MODE_DATE_TIME:
         scheduled_at = _serialize_dt(_parse_dt(_required_mapping_value(raw, "scheduled_at"), field_name="scheduled_at"))
-        if _mapping_value_or(raw, "scheduled_date", None) is not None or _mapping_value_or(raw, "next_fire_date", None) is not None:
+        if _required_mapping_value(raw, "scheduled_date") is not None or _required_mapping_value(raw, "next_fire_date") is not None:
             raise InputRejected("date-time reminders require date-only fields to be null")
     else:
         scheduled_date = _serialize_date(_parse_date(_required_mapping_value(raw, "scheduled_date"), field_name="scheduled_date"))
         date_trigger_policy = DATE_TRIGGER_ON_FIRST_NON_IDLE_USE
-        if _mapping_value_or(raw, "scheduled_at", None) is not None or _mapping_value_or(raw, "next_fire_at", None) is not None:
+        if _required_mapping_value(raw, "scheduled_at") is not None or _required_mapping_value(raw, "next_fire_at") is not None:
             raise InputRejected("date-only reminders require date-time fields to be null")
 
-    created_at = _mapping_value_or(raw, "created_at", None)
-    if created_at is None:
-        created_at_text = _serialize_dt(now)
-    else:
-        created_at_text = _serialize_dt(_parse_dt(created_at, field_name="created_at"))
-
-    updated_at = _mapping_value_or(raw, "updated_at", None)
-    if updated_at is None:
-        updated_at_text = _serialize_dt(now)
-    else:
-        updated_at_text = _serialize_dt(_parse_dt(updated_at, field_name="updated_at"))
+    created_at_text = _serialize_dt(_parse_dt(_required_mapping_value(raw, "created_at"), field_name="created_at"))
+    updated_at_text = _serialize_dt(_parse_dt(_required_mapping_value(raw, "updated_at"), field_name="updated_at"))
 
     reminder: dict[str, object] = {
         "id": reminder_id,
@@ -639,21 +681,21 @@ def normalize_reminder_payload(
         "next_fire_date": None,
         "pre_reminder": pre_reminder,
         "pre_reminder_last_seen_key": _coerce_nullable_str(
-            _mapping_value_or(raw, "pre_reminder_last_seen_key", None),
+            _required_mapping_value(raw, "pre_reminder_last_seen_key"),
             field_name="pre_reminder_last_seen_key",
         ),
         "date_trigger_policy": date_trigger_policy,
         "recurrence_rule": recurrence_rule,
         "persistence_mode": persistence_mode,
         "status": status,
-        "last_fired_at": _coerce_nullable_str(_mapping_value_or(raw, "last_fired_at", None), field_name="last_fired_at"),
-        "last_fired_date": _coerce_nullable_str(_mapping_value_or(raw, "last_fired_date", None), field_name="last_fired_date"),
-        "last_seen_at": _coerce_nullable_str(_mapping_value_or(raw, "last_seen_at", None), field_name="last_seen_at"),
-        "is_currently_missed": bool(_mapping_value_or(raw, "is_currently_missed", False)),
-        "missed_since": _coerce_nullable_str(_mapping_value_or(raw, "missed_since", None), field_name="missed_since"),
-        "missed_count": _require_int(_mapping_value_or(raw, "missed_count", 0), field_name="missed_count", min_value=0),
-        "snoozed_until": _coerce_nullable_str(_mapping_value_or(raw, "snoozed_until", None), field_name="snoozed_until"),
-        "occurrence_count": _require_int(_mapping_value_or(raw, "occurrence_count", 0), field_name="occurrence_count", min_value=0),
+        "last_fired_at": _coerce_nullable_str(_required_mapping_value(raw, "last_fired_at"), field_name="last_fired_at"),
+        "last_fired_date": _coerce_nullable_str(_required_mapping_value(raw, "last_fired_date"), field_name="last_fired_date"),
+        "last_seen_at": _coerce_nullable_str(_required_mapping_value(raw, "last_seen_at"), field_name="last_seen_at"),
+        "is_currently_missed": _require_bool(_required_mapping_value(raw, "is_currently_missed"), field_name="is_currently_missed"),
+        "missed_since": _coerce_nullable_str(_required_mapping_value(raw, "missed_since"), field_name="missed_since"),
+        "missed_count": _require_int(_required_mapping_value(raw, "missed_count"), field_name="missed_count", min_value=0),
+        "snoozed_until": _coerce_nullable_str(_required_mapping_value(raw, "snoozed_until"), field_name="snoozed_until"),
+        "occurrence_count": _require_int(_required_mapping_value(raw, "occurrence_count"), field_name="occurrence_count", min_value=0),
         "created_at": created_at_text,
         "updated_at": updated_at_text,
     }
@@ -661,7 +703,7 @@ def normalize_reminder_payload(
         _compute_initial_next_fields(reminder, now=now)
     else:
         if time_mode == TIME_MODE_DATE_TIME:
-            reminder["next_fire_at"] = _coerce_nullable_str(_mapping_value_or(raw, "next_fire_at", None), field_name="next_fire_at")
+            reminder["next_fire_at"] = _coerce_nullable_str(_required_mapping_value(raw, "next_fire_at"), field_name="next_fire_at")
             reminder["next_fire_date"] = None
             if reminder["next_fire_at"] is not None:
                 reminder["next_fire_at"] = _serialize_dt(
@@ -669,7 +711,7 @@ def normalize_reminder_payload(
                 )
         else:
             reminder["next_fire_at"] = None
-            reminder["next_fire_date"] = _coerce_nullable_str(_mapping_value_or(raw, "next_fire_date", None), field_name="next_fire_date")
+            reminder["next_fire_date"] = _coerce_nullable_str(_required_mapping_value(raw, "next_fire_date"), field_name="next_fire_date")
             if reminder["next_fire_date"] is not None:
                 reminder["next_fire_date"] = _serialize_date(
                     _parse_date(reminder["next_fire_date"], field_name="next_fire_date")
@@ -683,7 +725,21 @@ def _deserialize_payload_json(payload_json: str) -> dict[str, object]:
     parsed = json.loads(payload_json)
     if not isinstance(parsed, dict):
         raise RuntimeError("reminder payload_json must decode to an object")
-    return normalize_reminder_payload(parsed, now=_utc_now(), recompute_next=False)
+    return normalize_reminder_payload({**_FIELDS_ADDED_AFTER_FIRST_REMINDERS, **parsed}, now=_utc_now(), recompute_next=False)
+
+
+def _edited_reminder(*, existing: Mapping[str, object], payload: Mapping[str, object], now: datetime) -> dict[str, object]:
+    """The reminder after an edit. A new schedule starts its history over; otherwise its
+    history and where its schedule stands carry over, so editing a title neither restarts
+    an "after N times" count nor moves a due occurrence on (docs/ui/reminders.md)."""
+    identity = {"id": existing["id"], "created_at": existing["created_at"], "updated_at": _serialize_dt(now)}
+    restarted = normalize_reminder_payload({**payload, **_NEW_REMINDER_STATE, **identity}, now=now, recompute_next=True)
+    if any(restarted[field] != existing[field] for field in _SCHEDULE_FIELDS):
+        return restarted
+    kept_state = {key: existing[key] for key in _NEW_REMINDER_STATE}
+    # Pausing or resuming in the edit form still needs its next fire time worked out.
+    status_changed = restarted["status"] != existing["status"]
+    return normalize_reminder_payload({**payload, **kept_state, **identity}, now=now, recompute_next=status_changed)
 
 
 def _serialize_payload(reminder: Mapping[str, object]) -> str:
@@ -787,10 +843,7 @@ class ReminderStore:
         if not isinstance(token, str):
             raise TypeError("token must be a string")
         now = _utc_now()
-        raw = dict(payload)
-        raw["id"] = str(uuid4())
-        raw["created_at"] = _serialize_dt(now)
-        raw["updated_at"] = _serialize_dt(now)
+        raw = {**payload, **_NEW_REMINDER_STATE, "id": str(uuid4()), "created_at": _serialize_dt(now), "updated_at": _serialize_dt(now)}
         reminder = normalize_reminder_payload(raw, now=now, recompute_next=True)
         if reminder["status"] == REMINDER_STATUS_DONE:
             raise InputRejected("done reminders are deleted, not stored")
@@ -816,11 +869,7 @@ class ReminderStore:
             if reminder_id not in self._reminders:
                 raise ResourceNotFound(f"Reminder not found: {reminder_id}")
             existing = self._reminders[reminder_id]
-            raw = dict(payload)
-            raw["id"] = reminder_id
-            raw["created_at"] = existing["created_at"]
-            raw["updated_at"] = _serialize_dt(_utc_now())
-            reminder = normalize_reminder_payload(raw, now=_utc_now(), recompute_next=True)
+            reminder = _edited_reminder(existing=existing, payload=payload, now=_utc_now())
             if reminder["status"] == REMINDER_STATUS_DONE:
                 raise InputRejected("done reminders are deleted, not stored")
             self._reminders[reminder_id] = deepcopy(reminder)
@@ -1087,9 +1136,7 @@ class ReminderStore:
             if require_success:
                 raise RuntimeError("reminder decryption requires an active DEK")
             return
-        decrypt_fn = getattr(service, "decrypt_from_storage", None)
-        if not callable(decrypt_fn):
-            raise TypeError("encryption service must expose decrypt_from_storage")
+        decrypt_fn = service.decrypt_from_storage
 
         decrypted: dict[str, dict[str, object]] = {}
         for row in self._encrypted_rows.values():
@@ -1128,10 +1175,7 @@ class ReminderStore:
                 explicit_service=encryption_service,
             )
             if service is not None:
-                encrypt_fn = getattr(service, "encrypt_for_storage", None)
-                if not callable(encrypt_fn):
-                    raise TypeError("encryption service must expose encrypt_for_storage")
-                stored_json, nonce, tag = encrypt_fn(payload_json)
+                stored_json, nonce, tag = service.encrypt_for_storage(payload_json)
             elif is_encryption_required():
                 raise RuntimeError("reminder persistence requires an active DEK")
         created_at = _parse_dt(reminder["created_at"], field_name="created_at")
@@ -1163,8 +1207,7 @@ class ReminderStore:
 
     def _resolve_encryption_service(self, *, token: str, explicit_service: object | None):
         if explicit_service is not None:
-            dek = getattr(explicit_service, "dek", None)
-            if dek is None:
+            if explicit_service.dek is None:
                 raise RuntimeError("explicit encryption service must have an active DEK")
             return explicit_service
         if token:
@@ -1175,7 +1218,7 @@ class ReminderStore:
         return sorted(
             self._reminders.values(),
             key=lambda reminder: (
-                reminder["next_fire_at"] or reminder["next_fire_date"] or "9999-12-31T23:59:59+00:00",
+                _next_fire_sort_key(reminder),
                 reminder["created_at"],
                 reminder["id"],
             ),
@@ -1185,7 +1228,7 @@ class ReminderStore:
 def _advance_recurring_reminder(*, reminder: dict[str, object], now: datetime) -> None:
     if reminder["schedule_kind"] != SCHEDULE_RECURRING:
         raise InputRejected("advance requires recurring reminder")
-    reminder["occurrence_count"] = int(_mapping_value_or(reminder, "occurrence_count", 0)) + 1
+    reminder["occurrence_count"] = int(reminder["occurrence_count"]) + 1
     if reminder["time_mode"] == TIME_MODE_DATE_TIME:
         base = now
         current_next = reminder["next_fire_at"]

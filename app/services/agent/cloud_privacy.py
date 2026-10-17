@@ -70,10 +70,10 @@ def resolve_cloud_privacy_boundary(
 ) -> CloudPrivacyBoundary:
     if not isinstance(preferences, dict):
         raise TypeError("preferences must be a dict")
-    raw_policy = preferences.get(CLOUD_PRIVACY_POLICY_PREFERENCE_KEY)
+    # A user who never set a privacy policy has the empty one.
     policy = EMPTY_CLOUD_PRIVACY_POLICY
-    if raw_policy is not None:
-        policy = parse_cloud_privacy_policy_preference(raw_policy)
+    if CLOUD_PRIVACY_POLICY_PREFERENCE_KEY in preferences:
+        policy = parse_cloud_privacy_policy_preference(preferences[CLOUD_PRIVACY_POLICY_PREFERENCE_KEY])
     return CloudPrivacyBoundary(
         provider=provider,
         apply_cloud_policy=is_cloud_inference_provider(provider),

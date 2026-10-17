@@ -57,7 +57,11 @@ _OPEN_TO_CLOSE = {
 }
 _CLOSE_TO_OPEN = {value: key for key, value in _OPEN_TO_CLOSE.items()}
 
-_MAX_DELIMITER_DEPTH = 3
+MAX_DELIMITER_DEPTH = 3
+# A wrapped tag token has an opener run and an equally long closer run.
+_WRAPPER_RUNS_PER_TOKEN = 2
+COMMENT_OPEN = "/*"
+COMMENT_CLOSE = "*/"
 
 _META_TAG_TO_CLASS = {
     "footnote": "meta-footnote",
@@ -98,7 +102,8 @@ _REMOVABLE_FORMATTING_TAGS = frozenset(set(_META_TAG_TO_CLASS) | set(_RENDERER_T
 _CREDENTIAL_TAGS = frozenset({"username", "password"})
 # A hidden password or username shows this, whatever its length, so the length
 # stays hidden too.
-CREDENTIAL_MASK = "\u2022" * 8
+_CREDENTIAL_MASK_LENGTH = 8
+CREDENTIAL_MASK = "\u2022" * _CREDENTIAL_MASK_LENGTH
 _EMAIL_TAGS = frozenset({"email"})
 
 _CREDENTIAL_META = {
@@ -172,13 +177,14 @@ _PLAIN_URL_RE = re.compile(r"https?://[^\s<]+", re.IGNORECASE)
 _HTML_TAG_SPLIT_RE = re.compile(r"(<[^>]+>)")
 _ANCHOR_START_TAG_RE = re.compile(r"<\s*a\b", re.IGNORECASE)
 _ANCHOR_END_TAG_RE = re.compile(r"<\s*/\s*a\s*>", re.IGNORECASE)
-_ANCHOR_HREF_ATTR_RE = re.compile(r'(\bhref\s*=\s*)(["\'])(.*?)\2', re.IGNORECASE)
+_ANCHOR_HREF_ATTR_RE = re.compile(r'(\bhref\s*=\s*)(["\'])(?P<value>.*?)\2', re.IGNORECASE)
 _ANCHOR_TARGET_ATTR_RE = re.compile(r'(\btarget\s*=\s*)(["\'])(.*?)\2', re.IGNORECASE)
-_ANCHOR_REL_ATTR_RE = re.compile(r'(\brel\s*=\s*)(["\'])(.*?)\2', re.IGNORECASE)
+_ANCHOR_REL_ATTR_RE = re.compile(r'(\brel\s*=\s*)(["\'])(?P<value>.*?)\2', re.IGNORECASE)
 _URL_LABEL_ANCHOR_RE = re.compile(
     r'(?P<opener><a\b[^>]*>)(?P<label>https?://[^<]*)</a\s*>', re.IGNORECASE,
 )
 _NEW_TAB_REL_TOKENS = ("noopener", "noreferrer")
+_SELF_CLOSING_TAG_END = "/>"
 _BLOCK_HTML_TAG_RE = re.compile(
     r"<(?:blockquote|div|dl|fieldset|figure|figcaption|footer|form|h[1-6]|header|hr|li|ol|p|pre|section|table|tbody|td|tfoot|th|thead|tr|ul)\b",
     re.IGNORECASE,
@@ -335,7 +341,7 @@ def remove_formatting_scope_delimiters(
     for opener, depth in wrappers_to_remove:
         if opener not in _OPEN_TO_CLOSE:
             raise ValueError(f"Unsupported formatting scope opener: {opener}")
-        if not isinstance(depth, int) or not 1 <= depth <= _MAX_DELIMITER_DEPTH:
+        if not isinstance(depth, int) or not 1 <= depth <= MAX_DELIMITER_DEPTH:
             raise ValueError(f"Unsupported formatting scope depth: {depth}")
 
     return _apply_scoped_meta_tags(
@@ -716,7 +722,7 @@ def _render_footnote_url_title_match(match: re.Match[str]) -> str:
     href_match = _ANCHOR_HREF_ATTR_RE.search(match.group("opener"))
     if href_match is None:
         return match.group(0)
-    href = html.unescape(href_match.group(3))
+    href = html.unescape(href_match.group("value"))
     label = html.unescape(match.group("label"))
     if label != href:
         return match.group(0)
@@ -828,7 +834,7 @@ def _normalize_anchor_tag(tag_html: str) -> str:
     href_match = _ANCHOR_HREF_ATTR_RE.search(tag_html)
     if href_match is None:
         return tag_html
-    href_value = href_match.group(3)
+    href_value = href_match.group("value")
     if href_value.startswith("#"):
         return tag_html
 
@@ -840,15 +846,15 @@ def _normalize_anchor_tag(tag_html: str) -> str:
 def _ensure_anchor_target_attr(tag_html: str) -> str:
     if _ANCHOR_TARGET_ATTR_RE.search(tag_html):
         return _ANCHOR_TARGET_ATTR_RE.sub(r'\1\2_blank\2', tag_html, count=1)
-    if tag_html.endswith("/>"):
-        return f'{tag_html[:-2]} target="_blank"/>'
+    if tag_html.endswith(_SELF_CLOSING_TAG_END):
+        return f'{tag_html[:-len(_SELF_CLOSING_TAG_END)]} target="_blank"/>'
     return f'{tag_html[:-1]} target="_blank">'
 
 
 def _ensure_anchor_rel_attr(tag_html: str) -> str:
     rel_match = _ANCHOR_REL_ATTR_RE.search(tag_html)
     if rel_match is not None:
-        existing_tokens = rel_match.group(3).split()
+        existing_tokens = rel_match.group("value").split()
         merged_tokens = list(existing_tokens)
         for token in _NEW_TAB_REL_TOKENS:
             if token not in merged_tokens:
@@ -859,8 +865,8 @@ def _ensure_anchor_rel_attr(tag_html: str) -> str:
             tag_html,
             count=1,
         )
-    if tag_html.endswith("/>"):
-        return f'{tag_html[:-2]} rel="noopener noreferrer"/>'
+    if tag_html.endswith(_SELF_CLOSING_TAG_END):
+        return f'{tag_html[:-len(_SELF_CLOSING_TAG_END)]} rel="noopener noreferrer"/>'
     return f'{tag_html[:-1]} rel="noopener noreferrer">'
 
 
@@ -1415,11 +1421,11 @@ def _scan_tag_bar_tokens(tags: str) -> List[str]:
         if index >= len(tags):
             break
 
-        if tags.startswith("/*", index):
-            end = tags.find("*/", index + 2)
+        if tags.startswith(COMMENT_OPEN, index):
+            end = tags.find(COMMENT_CLOSE, index + len(COMMENT_OPEN))
             if end == -1:
                 break
-            index = end + 2
+            index = end + len(COMMENT_CLOSE)
             continue
 
         start = index
@@ -1428,7 +1434,7 @@ def _scan_tag_bar_tokens(tags: str) -> List[str]:
             opener_run = 1
             while index + opener_run < len(tags) and tags[index + opener_run] == opener:
                 opener_run += 1
-            if opener_run <= _MAX_DELIMITER_DEPTH:
+            if opener_run <= MAX_DELIMITER_DEPTH:
                 closer = _OPEN_TO_CLOSE[opener]
                 needle = closer * opener_run
                 close_at = tags.find(needle, index + opener_run)
@@ -1466,12 +1472,12 @@ def _tokenize_tag_bar_preserving_comments(tags: str) -> List[str]:
             break
 
         start = index
-        if tags.startswith("/*", index):
-            end = tags.find("*/", index + 2)
+        if tags.startswith(COMMENT_OPEN, index):
+            end = tags.find(COMMENT_CLOSE, index + len(COMMENT_OPEN))
             if end == -1:
                 tokens.append(tags[start:])
                 break
-            index = end + 2
+            index = end + len(COMMENT_CLOSE)
             tokens.append(tags[start:index])
             continue
 
@@ -1480,7 +1486,7 @@ def _tokenize_tag_bar_preserving_comments(tags: str) -> List[str]:
             opener_run = 1
             while index + opener_run < len(tags) and tags[index + opener_run] == opener:
                 opener_run += 1
-            if opener_run <= _MAX_DELIMITER_DEPTH:
+            if opener_run <= MAX_DELIMITER_DEPTH:
                 closer = _OPEN_TO_CLOSE[opener]
                 needle = closer * opener_run
                 close_at = tags.find(needle, index + opener_run)
@@ -1506,12 +1512,12 @@ def _unwrap_tag_token(token: str) -> Tuple[str, Tuple[str, int] | None]:
     opener_run = 1
     while opener_run < len(token) and token[opener_run] == opener:
         opener_run += 1
-    if opener_run > _MAX_DELIMITER_DEPTH:
+    if opener_run > MAX_DELIMITER_DEPTH:
         return token, None
     depth = opener_run
 
     closer = _OPEN_TO_CLOSE[opener]
-    if len(token) < depth * 2:
+    if len(token) < depth * _WRAPPER_RUNS_PER_TOKEN:
         return token, None
 
     if token[-1] != closer:
@@ -1672,7 +1678,7 @@ def _process_text_segment(
             if char in _OPEN_TO_CLOSE or char in _CLOSE_TO_OPEN:
                 run = _count_run(text=text, index=index, char=char)
             if char in _CLOSE_TO_OPEN:
-                if run <= _MAX_DELIMITER_DEPTH:
+                if run <= MAX_DELIMITER_DEPTH:
                     if active_renderer.closer == char and active_renderer.depth == run:
                         _close_active_renderer(
                             output=output,
@@ -1695,7 +1701,7 @@ def _process_text_segment(
             continue
         if char in _OPEN_TO_CLOSE:
             run = _count_run(text=text, index=index, char=char)
-            if run <= _MAX_DELIMITER_DEPTH and (char, run) in wrappers_to_consume:
+            if run <= MAX_DELIMITER_DEPTH and (char, run) in wrappers_to_consume:
                 key = (char, run)
                 open_html = ""
                 block_open_html = ""
@@ -1761,7 +1767,7 @@ def _process_text_segment(
 
         if char in _CLOSE_TO_OPEN:
             run = _count_run(text=text, index=index, char=char)
-            if run <= _MAX_DELIMITER_DEPTH and stack:
+            if run <= MAX_DELIMITER_DEPTH and stack:
                 matching_index = None
                 for stack_index in range(len(stack) - 1, -1, -1):
                     candidate = stack[stack_index]
@@ -1988,7 +1994,7 @@ def _extract_wrapper_placeholders(
         if char in _OPEN_TO_CLOSE:
             run = _count_run(text=text, index=index, char=char)
             key = (char, run)
-            if run <= _MAX_DELIMITER_DEPTH and key in wrappers_to_consume:
+            if run <= MAX_DELIMITER_DEPTH and key in wrappers_to_consume:
                 stack.append({
                     "opener": char,
                     "closer": _OPEN_TO_CLOSE[char],
@@ -2000,7 +2006,7 @@ def _extract_wrapper_placeholders(
 
         if char in _CLOSE_TO_OPEN:
             run = _count_run(text=text, index=index, char=char)
-            if run <= _MAX_DELIMITER_DEPTH and stack:
+            if run <= MAX_DELIMITER_DEPTH and stack:
                 top = stack[-1]
                 if top["closer"] == char and top["depth"] == run:
                     stack.pop()

@@ -84,7 +84,7 @@ function installOverlayDom(t, {
     globalThis.window = {
         innerWidth: 1024,
         getComputedStyle() {
-            return { display: searchContextsList.style.display || 'none' };
+            return { display: searchContextsList.style.display || 'none' };  // shockharness: ignore[DEF003] reason="the fake answers like a browser: an unset display reads as hidden"
         },
     };
 

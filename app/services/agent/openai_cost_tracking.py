@@ -8,7 +8,9 @@ from threading import Lock
 
 
 OPENAI_LONG_CONTEXT_INPUT_TOKEN_THRESHOLD = 272_000
-_ONE_MILLION = Decimal(1_000_000)
+# OpenAI quotes prices per million tokens.
+_TOKENS_PER_PRICE_QUOTE = 1_000_000
+_ONE_MILLION = Decimal(_TOKENS_PER_PRICE_QUOTE)
 
 
 @dataclass(frozen=True, slots=True)

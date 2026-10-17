@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { ApplicationState, stateValuesEqual } from '../../app/static/js/modules/application-state.js';
+import { MS_PER_SECOND } from '../../app/static/js/modules/time-units.js';
+import * as AI_CHAT_SIZE_LIMITS from '../../app/static/js/modules/ai-chat/ai-chat-size-limits.js';
 
 function moduleSource(path) {
     return readFileSync(new URL(`../../app/static/js/modules/${path}`, import.meta.url), 'utf8')
@@ -60,6 +62,7 @@ function chatHarness(events) {
         streamAiChat: async ({ onEvent }) => { for (const event of events) onEvent(event); },
         clearAiChatSession: async () => {},
         closeBulkProgress: bulk.close, handleBulkEvent: bulk.event,
+        MS_PER_SECOND,
     };
     const panel = new Function(...Object.keys(dependencies), `${moduleSource('ai-chat/ai-chat-panel-controller.js')}
         captureActiveAgentScope = () => ({}); return AiChatPanel;`)(...Object.values(dependencies));
@@ -75,8 +78,8 @@ function chatHarness(events) {
 
 function composerPointerHarness() {
     const window = new EventTarget();
-    const panel = new Function('ApplicationState', 'window',
-        `${moduleSource('ai-chat/ai-chat-panel-controller.js')}\nreturn AiChatPanel;`)(ApplicationState, window);
+    const panel = new Function('ApplicationState', 'window', ...Object.keys(AI_CHAT_SIZE_LIMITS),
+        `${moduleSource('ai-chat/ai-chat-panel-controller.js')}\nreturn AiChatPanel;`)(ApplicationState, window, ...Object.values(AI_CHAT_SIZE_LIMITS));
     let height = 100;
     const saved = [];
     class Input { getBoundingClientRect() { return {height}; } }

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from app.utils.byte_sizes import MIB
+from http import HTTPStatus
 import json
 import math
 from collections.abc import AsyncIterator
@@ -13,6 +15,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 from typing_extensions import Self
 
+from app.api.note_requests import MAX_NOTE_CONTENT_CHARS
 from app.api.request_auth import require_request_auth_token
 from app.api.transactions import transactional_route
 from app.models.utils import note_data_to_html
@@ -64,7 +67,7 @@ from app.services.agent.summary_batch_store import summary_batch_store
 from app.services.agent.tagging import TAGGING_POLICY_KEY
 from app.usecases.bulk_tag_proposals import apply_bulk_proposals, prepare_proposal_changes
 from app.services.bulk_operation import bulk_operation_guard
-from app.services.tab_state import tab_state_store
+from app.services.tab_state import MAX_TAB_ID_LENGTH, tab_state_store
 from app.services.tokens import token_service
 from app.services.agent.inference import InferenceProviderError
 from app.services.agent.note_tag_suggestions import build_note_tag_request
@@ -79,9 +82,17 @@ from app.services.html_export import resolve_export_scope
 from app.services.ai_setup import describe_ai_setup
 from app.services.input_errors import InputRejected
 from app.utils.text_utils import strip_html
+from app.services.preference_values import preference_or_default
 
 
 router = APIRouter(prefix="/ai", tags=["ai"])
+
+_MAX_PRIVACY_PREVIEW_NOTE_IDS = 20_000
+_MAX_CHAT_MESSAGE_CHARS = 32_000
+_MAX_SELECTED_NOTE_ID_LENGTH = 128
+_MAX_EXPORTED_NOTE_ID_LENGTH = 256
+_MAX_CLIENT_ID_LENGTH = 128
+_MAX_TAG_FILTER_LENGTH = 256
 
 agent_context_builder = AgentContextBuilder()
 
@@ -92,7 +103,7 @@ def _require_ai_connection(*, provider: AiProvider, token: str, session_key: str
         return connect_to_ai(provider=provider, token=token, session_key=session_key)
     # lint: allow-PY001 rationale="the user removed or never added the AI's key: an expected 409, not a defect"
     except AiNotSetUp as exc:
-        raise HTTPException(status_code=409, detail="The AI is not set up: add its API key in AI settings") from exc
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail="The AI is not set up: add its API key in AI settings") from exc
 
 
 def _agent_runtime(*, inference: InferenceAdapter) -> AgentRuntime:
@@ -138,7 +149,7 @@ class CloudPrivacyPreviewRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     provider: Literal["openai"]
-    note_ids: list[str] = Field(..., max_length=20_000)
+    note_ids: list[str] = Field(..., max_length=_MAX_PRIVACY_PREVIEW_NOTE_IDS)
 
     @field_validator("note_ids")
     @classmethod
@@ -162,9 +173,9 @@ class AiChatRequest(BaseModel):
     model: str
     thinking_level: Literal["off", "low", "medium", "high"]
     show_diagnostics: bool
-    message: str = Field(..., max_length=32_000)
+    message: str = Field(..., max_length=_MAX_CHAT_MESSAGE_CHARS)
     scope: AgentScopeDescriptor
-    selected_note_id: str = Field(..., max_length=128, pattern=r"^(?:\S+)?$")
+    selected_note_id: str = Field(..., max_length=_MAX_SELECTED_NOTE_ID_LENGTH, pattern=r"^(?:\S+)?$")
 
     @field_validator("model")
     @classmethod
@@ -192,8 +203,8 @@ class NoteTagSuggestionAvailabilityRequest(BaseModel):
 
     provider: AiProvider
     # The note as it is being edited, unsaved changes included.
-    tags: str = Field(..., max_length=1024 * 1024)
-    content_html: str = Field(..., max_length=16 * 1024 * 1024)
+    tags: str = Field(..., max_length=MIB)
+    content_html: str = Field(..., max_length=MAX_NOTE_CONTENT_CHARS)
 
 
 class NoteTagSuggestionAvailabilityResponse(BaseModel):
@@ -209,8 +220,8 @@ class NoteTagSuggestionRequest(BaseModel):
     # The note alone, or it and the notes below it the view shows.
     include_children: bool
     # The view the note is in ('' for no search).
-    search: str = Field(..., max_length=1024 * 1024)
-    tab_id: str = Field(..., min_length=1, max_length=256)
+    search: str = Field(..., max_length=MIB)
+    tab_id: str = Field(..., min_length=1, max_length=MAX_TAB_ID_LENGTH)
     is_untagged_view: bool
 
     @model_validator(mode="after")
@@ -225,12 +236,12 @@ class ExportTitleScope(BaseModel):
 
     provider: AiProvider
     # The view exported or printed, or the one its note is in ('' for no search).
-    search: str = Field(..., max_length=1024 * 1024)
-    tab_id: str = Field(..., min_length=1, max_length=256)
+    search: str = Field(..., max_length=MIB)
+    tab_id: str = Field(..., min_length=1, max_length=MAX_TAB_ID_LENGTH)
     is_untagged_view: bool
     # A note with its children ("note"), or the view as it is shown ("view", note_id '').
     exported: Literal["note", "view"]
-    note_id: str = Field(..., max_length=256)
+    note_id: str = Field(..., max_length=_MAX_EXPORTED_NOTE_ID_LENGTH)
 
     @model_validator(mode="after")
     def validate_exported_note(self) -> Self:
@@ -307,7 +318,7 @@ class AiDebugSnapshotResponse(BaseModel):
 
 
 class AiCopyMessageRequest(BaseModel):
-    client_id: str = Field(..., min_length=1, max_length=128)
+    client_id: str = Field(..., min_length=1, max_length=_MAX_CLIENT_ID_LENGTH)
 
     @field_validator("client_id")
     @classmethod
@@ -395,7 +406,7 @@ def put_openai_credential(
         api_key = validate_openai_api_key(submitted_api_key)
     # lint: allow-PY001 rationale="return a concise validation error without echoing the secret"
     except OpenAICredentialInputError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise HTTPException(status_code=HTTPStatus.UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     status = openai_credential_store.configure(
         token=token,
         session_key=session_key,
@@ -439,7 +450,7 @@ def note_tag_suggestion_availability(
     """Whether "Suggest Tags with AI" applies: an AI is set up and may see the note as edited."""
     response.headers["Cache-Control"] = "no-store"
     if not note_store.has_note(note_id):
-        raise HTTPException(status_code=404, detail=f"Note not found: {note_id}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Note not found: {note_id}")
     session_key = token_service.get_session_key(token)
     if not describe_ai_setup(token=token, session_key=session_key).is_ready_for(payload.provider):
         return NoteTagSuggestionAvailabilityResponse(is_available=False)
@@ -471,7 +482,7 @@ def suggest_tags_for_note_with_ai(
     (POST /notes/{id}/tag-proposals/add), one undo step.
     """
     if not note_store.has_note(note_id):
-        raise HTTPException(status_code=404, detail=f"Note not found: {note_id}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Note not found: {note_id}")
     session_key = token_service.get_session_key(token)
     connection = _require_ai_connection(provider=payload.provider, token=token, session_key=session_key)
     preferences = load_client_preferences(token=token)
@@ -486,7 +497,7 @@ def suggest_tags_for_note_with_ai(
         is_untagged_view=payload.is_untagged_view,
     )
     if note_id not in scope.allowed_note_ids:
-        raise HTTPException(status_code=409, detail="The note is not in this view any more")
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail="The note is not in this view any more")
     request = build_note_tag_request(
         note_id=note_id, include_children=payload.include_children, boundary=boundary,
         tag_skill=DEFAULT_AGENT_SKILLS.for_action("tag_proposals"), scope_note_ids=scope.allowed_note_ids,
@@ -507,10 +518,14 @@ async def _note_tag_suggestion_events(
     *, request: NoteTagRequest, connection: AiConnection, payload: NoteTagSuggestionRequest,
     web_settings: AgentWebSettings, session_key: str,
 ) -> AsyncIterator[str]:
+    # Its own run in the session's trace (diagnostics, AI history), as a chat answer has.
+    run_id = agent_trace_store.start_run(
+        session_key=session_key, model=payload.model, user_message="Suggest Tags with AI",
+    )
     events = suggest_note_tags(
         request=request, inference=connection.inference, base_url=connection.base_url,
         model=payload.model, thinking_level=payload.thinking_level,
-        web_settings=web_settings, session_key=session_key,
+        web_settings=web_settings, session_key=session_key, run_id=run_id,
     )
     # lint: allow-PY001 rationale="the AI provider failed or kept answering unusably: the client shows why"
     try:
@@ -518,7 +533,10 @@ async def _note_tag_suggestion_events(
             yield json.dumps(event) + "\n"
     # lint: allow-PY001 rationale="the AI provider failed or kept answering unusably: the client shows why"
     except InferenceProviderError as exc:
+        agent_trace_store.fail_run(session_key=session_key, run_id=run_id, error=str(exc))
         yield json.dumps({"type": "failed", "message": str(exc)}) + "\n"
+    else:
+        agent_trace_store.complete_run(session_key=session_key, run_id=run_id)
     finally:
         await events.aclose()
 
@@ -529,7 +547,7 @@ def _export_title_request(scope: ExportTitleScope, token: str) -> ExportTitleReq
     if scope.exported == "note":
         note_id = scope.note_id
         if not note_store.has_note(note_id):
-            raise HTTPException(status_code=404, detail=f"Note not found: {note_id}")
+            raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Note not found: {note_id}")
     search = None
     if scope.search != "":
         search = scope.search
@@ -647,7 +665,7 @@ def preview_cloud_privacy(
     ]
     if missing_note_ids:
         raise HTTPException(
-            status_code=409,
+            status_code=HTTPStatus.CONFLICT,
             detail="Visible note set changed before privacy preview",
         )
     preferences = load_client_preferences(token=token)
@@ -790,7 +808,7 @@ def copy_ai_message(
     token: Annotated[str, Depends(require_request_auth_token)],
 ) -> AiCopyMessageResponse:
     if message_id.strip() == "":
-        raise HTTPException(status_code=404, detail="AI response not found")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="AI response not found")
     session_key = token_service.get_session_key(token)
     snapshot = ai_chat_store.snapshot(session_key=session_key)
     matching_messages = [
@@ -799,16 +817,16 @@ def copy_ai_message(
         if message["id"] == message_id and message["role"] == "assistant"
     ]
     if len(matching_messages) == 0:
-        raise HTTPException(status_code=404, detail="AI response not found")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="AI response not found")
     if len(matching_messages) != 1:
         raise RuntimeError("AI chat session contains duplicate message ids")
 
     message = matching_messages[0]
     if message["status"] != "complete":
-        raise HTTPException(status_code=409, detail="AI response is not complete")
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail="AI response is not complete")
     content = message["content"]
     if content == "":
-        raise HTTPException(status_code=409, detail="AI response is empty")
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail="AI response is empty")
 
     tags = "@llm"
     note_content = _render_ai_response_note_content(
@@ -861,7 +879,7 @@ def stream_ai_chat(
     authoritative_active_tab_id = tab_state_store.get_active_tab_id()
     if payload.scope.active_tab_id != authoritative_active_tab_id:
         raise HTTPException(
-            status_code=409,
+            status_code=HTTPStatus.CONFLICT,
             detail="Active MetaList tab changed before Send",
         )
     authoritative_search_query = tab_state_store.get_search_query(
@@ -965,7 +983,7 @@ async def acknowledge_menu_result(payload: MenuResult, token: Annotated[str, Dep
         menu_action_store.acknowledge(session_key=session_key, result=payload)
     # lint: allow-PY001 rationale="reject invalid external menu acknowledgment with a conflict response"
     except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail=str(exc)) from exc
     return {"acknowledged": True}
 
 
@@ -999,7 +1017,7 @@ async def answer_bulk_question(payload: BulkAnswerRequest, token: Annotated[str,
         bulk_operation_guard.answer(session_key, payload.question_id, payload.value)
     # lint: allow-PY001 rationale="invalid or stale user answers are expected request failures"
     except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail=str(exc)) from exc
     return {"status": "answered"}
 
 
@@ -1008,16 +1026,16 @@ class BulkManageRequest(BaseModel):
     action: Literal["accept", "remove"]
     scope: AgentScopeDescriptor
     target: Literal["current", "namespace"]
-    tag_filter: str = Field(..., max_length=256)
+    tag_filter: str = Field(..., max_length=_MAX_TAG_FILTER_LENGTH)
 
 
 @router.post("/proposals/manage")
 @transactional_route
 def manage_bulk_proposals(payload: BulkManageRequest, token: Annotated[str, Depends(require_request_auth_token)]):
     if payload.scope.active_tab_id != tab_state_store.get_active_tab_id():
-        raise HTTPException(status_code=409, detail="Active tab changed")
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail="Active tab changed")
     if payload.scope.search_query != tab_state_store.get_search_query(tab_id=payload.scope.scope_tab_id):
-        raise HTTPException(status_code=409, detail="Search context changed")
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail="Search context changed")
     async def execute():
         with bulk_operation_guard.acquire(token_service.get_session_key(token)):
             note_ids = proposal_scope_ids(payload.scope)
@@ -1037,4 +1055,4 @@ def manage_bulk_proposals(payload: BulkManageRequest, token: Annotated[str, Depe
 @router.get("/proposals/settings")
 def get_tagging_settings(token: Annotated[str, Depends(require_request_auth_token)]):
     preferences = load_client_preferences(token=token)
-    return {"policy": preferences.get(TAGGING_POLICY_KEY, "")}
+    return {"policy": preference_or_default(preferences, TAGGING_POLICY_KEY, default="")}

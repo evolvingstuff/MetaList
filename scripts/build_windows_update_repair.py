@@ -3,6 +3,9 @@ from pathlib import Path
 import sys
 import zipfile
 
+# The script name and the output ZIP path.
+_EXPECTED_ARGV_LENGTH = 2
+
 
 def build_repair_archive(destination: Path) -> None:
     root = Path(__file__).resolve().parents[1]
@@ -20,5 +23,6 @@ def build_repair_archive(destination: Path) -> None:
 
 
 if __name__ == "__main__":
-    assert len(sys.argv) == 2, "Expected output ZIP path"
+    if len(sys.argv) != _EXPECTED_ARGV_LENGTH:
+        raise SystemExit("Expected output ZIP path")
     build_repair_archive(Path(sys.argv[1]))

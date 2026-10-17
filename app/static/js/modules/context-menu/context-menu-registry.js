@@ -46,9 +46,6 @@ function buildDiagramItems(context, imageContext, handlers) {
             throw new Error(`Diagram context missing ${name} handler`);
         }
     }
-    if (typeof context.canResizeImage !== 'boolean') {
-        throw new Error('Diagram context missing canResizeImage boolean');
-    }
     const items = [{
         id: 'edit-diagram',
         label: 'Edit Diagram',
@@ -56,33 +53,31 @@ function buildDiagramItems(context, imageContext, handlers) {
         enabled: context.canEditDiagram === true,
         onSelect: () => handlers.onEditDiagram(imageContext),
     }];
-    if (context.canResizeImage) {
-        items.push({
-            id: 'make-image-bigger',
-            label: 'Make Bigger',
-            icon: 'zoom_in',
-            enabled: true,
-            onSelect: () => handlers.onMakeImageBigger(imageContext),
-        }, {
-            id: 'make-image-smaller',
-            label: 'Make Smaller',
-            icon: 'zoom_out',
-            enabled: true,
-            onSelect: () => handlers.onMakeImageSmaller(imageContext),
-        }, {
-            id: 'reset-image-size',
-            label: 'Reset Size',
-            icon: 'restart_alt',
-            enabled: true,
-            onSelect: () => handlers.onResetImageSize(imageContext),
-        });
-    }
+    items.push({
+        id: 'make-image-bigger',
+        label: 'Make Bigger',
+        icon: 'zoom_in',
+        enabled: true,
+        onSelect: () => handlers.onMakeImageBigger(imageContext),
+    }, {
+        id: 'make-image-smaller',
+        label: 'Make Smaller',
+        icon: 'zoom_out',
+        enabled: true,
+        onSelect: () => handlers.onMakeImageSmaller(imageContext),
+    }, {
+        id: 'reset-image-size',
+        label: 'Reset Size',
+        icon: 'restart_alt',
+        enabled: true,
+        onSelect: () => handlers.onResetImageSize(imageContext),
+    });
     items.push({
         id: 'zoom-diagram',
         label: 'Zoom Diagram',
         icon: 'zoom',
         enabled: true,
-        separated: context.canResizeImage,
+        separated: true,
         onSelect: () => handlers.onZoomImage(imageContext),
     }, {
         id: 'save-diagram',
@@ -224,11 +219,9 @@ function buildNoteContextItems(context, handlers) {
             onEditDiagram, onSaveDiagram, onZoomImage, onMakeImageBigger, onMakeImageSmaller, onResetImageSize,
         }));
     }
+    // An image's size changes in view and edit mode alike (in the edited note, the
+    // tag bar and the braces around it update).
     if (!isDiagram && imageContext !== null && typeof imageContext === 'object') {
-        const canResizeImage = context.canResizeImage;
-        if (typeof canResizeImage !== 'boolean') {
-            throw new Error('Image note context missing canResizeImage boolean');
-        }
         if (typeof onCopyImage !== 'function') {
             throw new Error('Image note context missing onCopyImage handler');
         }
@@ -241,47 +234,43 @@ function buildNoteContextItems(context, handlers) {
         if (typeof onOpenImageInNewTab !== 'function') {
             throw new Error('Image note context missing onOpenImageInNewTab handler');
         }
-        if (canResizeImage) {
-            if (typeof onMakeImageBigger !== 'function') {
-                throw new Error('Image note context missing onMakeImageBigger handler');
-            }
-            if (typeof onMakeImageSmaller !== 'function') {
-                throw new Error('Image note context missing onMakeImageSmaller handler');
-            }
-            if (typeof onResetImageSize !== 'function') {
-                throw new Error('Image note context missing onResetImageSize handler');
-            }
-            items.push({
-                id: 'make-image-bigger',
-                label: 'Make Bigger',
-                icon: 'zoom_in',
-                enabled: true,
-                onSelect: () => onMakeImageBigger(imageContext),
-            }, {
-                id: 'make-image-smaller',
-                label: 'Make Smaller',
-                icon: 'zoom_out',
-                enabled: true,
-                onSelect: () => onMakeImageSmaller(imageContext),
-            }, {
-                id: 'reset-image-size',
-                label: 'Reset Size',
-                icon: 'restart_alt',
-                enabled: true,
-                onSelect: () => onResetImageSize(imageContext),
-            });
+        if (typeof onMakeImageBigger !== 'function') {
+            throw new Error('Image note context missing onMakeImageBigger handler');
         }
+        if (typeof onMakeImageSmaller !== 'function') {
+            throw new Error('Image note context missing onMakeImageSmaller handler');
+        }
+        if (typeof onResetImageSize !== 'function') {
+            throw new Error('Image note context missing onResetImageSize handler');
+        }
+        items.push({
+            id: 'make-image-bigger',
+            label: 'Make Bigger',
+            icon: 'zoom_in',
+            enabled: true,
+            onSelect: () => onMakeImageBigger(imageContext),
+        }, {
+            id: 'make-image-smaller',
+            label: 'Make Smaller',
+            icon: 'zoom_out',
+            enabled: true,
+            onSelect: () => onMakeImageSmaller(imageContext),
+        }, {
+            id: 'reset-image-size',
+            label: 'Reset Size',
+            icon: 'restart_alt',
+            enabled: true,
+            onSelect: () => onResetImageSize(imageContext),
+        });
 
         const copyImageItem = {
             id: 'copy-image',
             label: 'Copy Image',
             icon: 'image',
             enabled: true,
+            separated: true,
             onSelect: () => onCopyImage(imageContext),
         };
-        if (canResizeImage) {
-            copyImageItem.separated = true;
-        }
         items.push(
             copyImageItem,
             {
@@ -678,7 +667,9 @@ export function formatMenuShortcut({ isMac, mod, shift, key }) {
         throw new Error('formatMenuShortcut requires key');
     }
     if (isMac) {
-        const macKey = MAC_KEY_SYMBOLS[key] === undefined ? key : MAC_KEY_SYMBOLS[key];
+        // Keys with a Mac symbol (Enter ↩, arrows) show it; letters show themselves.
+        let macKey = key;
+        if (Object.hasOwn(MAC_KEY_SYMBOLS, key)) macKey = MAC_KEY_SYMBOLS[key];
         return `${shift ? '⇧' : ''}${mod ? '⌘' : ''}${macKey}`;
     }
     return [mod ? 'Ctrl' : '', shift ? 'Shift' : '', key].filter((part) => part !== '').join('+');

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.utils.not_found import NOT_FOUND
 import html
 from dataclasses import dataclass
 
@@ -34,6 +35,10 @@ _LATEX_CONVERSION_ERRORS = (
     NoAvailableTokensError,
     NumeratorNotFoundError,
 )
+
+_DISPLAY_MATH_DELIMITER = "$$"
+# Backslashes pair up into escaped backslashes; an odd one out escapes what follows.
+_BACKSLASHES_PER_ESCAPED_BACKSLASH = 2
 
 
 @dataclass(frozen=True, slots=True)
@@ -166,7 +171,7 @@ def _is_escaped(text: str, index: int) -> bool:
     while cursor >= 0 and text[cursor] == "\\":
         count += 1
         cursor -= 1
-    return count % 2 == 1
+    return count % _BACKSLASHES_PER_ESCAPED_BACKSLASH == 1
 
 
 def _find_closing_delimiter(text: str, start_index: int, delimiter: str) -> int:
@@ -182,7 +187,7 @@ def _find_closing_delimiter(text: str, start_index: int, delimiter: str) -> int:
         if text.startswith(delimiter, cursor) and not _is_escaped(text, cursor):
             return cursor
         cursor += 1
-    return -1
+    return NOT_FOUND
 
 
 def _find_inline_closing(text: str, start_index: int) -> int:
@@ -200,7 +205,7 @@ def _find_inline_closing(text: str, start_index: int) -> int:
         ):
             return cursor
         cursor += 1
-    return -1
+    return NOT_FOUND
 
 
 def _parse_latex_segments(text: str) -> list[_LatexSegment]:
@@ -222,17 +227,19 @@ def _parse_latex_segments(text: str) -> list[_LatexSegment]:
             )
 
     while cursor < len(text):
-        if text.startswith("$$", cursor) and not _is_escaped(text, cursor):
-            close_index = _find_closing_delimiter(text, cursor + 2, "$$")
-            if close_index != -1:
+        if text.startswith(_DISPLAY_MATH_DELIMITER, cursor) and not _is_escaped(text, cursor):
+            close_index = _find_closing_delimiter(
+                text, cursor + len(_DISPLAY_MATH_DELIMITER), _DISPLAY_MATH_DELIMITER
+            )
+            if close_index != NOT_FOUND:
                 flush_text(cursor)
                 segments.append(
                     _LatexSegment(
                         segment_type="display",
-                        value=text[cursor + 2:close_index],
+                        value=text[cursor + len(_DISPLAY_MATH_DELIMITER):close_index],
                     )
                 )
-                cursor = close_index + 2
+                cursor = close_index + len(_DISPLAY_MATH_DELIMITER)
                 last_text_start = cursor
                 continue
 
@@ -242,7 +249,7 @@ def _parse_latex_segments(text: str) -> list[_LatexSegment]:
             and (cursor + 1 >= len(text) or text[cursor + 1] != "$")
         ):
             close_index = _find_inline_closing(text, cursor + 1)
-            if close_index != -1:
+            if close_index != NOT_FOUND:
                 flush_text(cursor)
                 segments.append(
                     _LatexSegment(

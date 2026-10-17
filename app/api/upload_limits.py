@@ -1,5 +1,6 @@
 """Enforce limits before multipart spooling and before creating a complete blob."""
 
+from http import HTTPStatus
 from threading import BoundedSemaphore
 
 from fastapi import HTTPException, UploadFile
@@ -8,6 +9,8 @@ from starlette.responses import JSONResponse
 
 from app.upload_limits import MAX_ATTACHMENT_BYTES, MAX_UPLOAD_REQUEST_BYTES, UPLOAD_CHUNK_BYTES
 
+# Attachment uploads and downloads in flight at once; more are answered 429.
+MAX_CONCURRENT_ATTACHMENT_TRANSFERS = 4
 
 async def read_attachment(file: UploadFile) -> bytes:
     content = bytearray()
@@ -18,7 +21,7 @@ async def read_attachment(file: UploadFile) -> bytes:
                 return bytes(content)
             content.extend(chunk)
             if len(content) > MAX_ATTACHMENT_BYTES:
-                raise HTTPException(status_code=413, detail='Attachment exceeds the configured size limit')
+                raise HTTPException(status_code=HTTPStatus.REQUEST_ENTITY_TOO_LARGE, detail='Attachment exceeds the configured size limit')
     finally:
         await file.close()
 
@@ -38,7 +41,7 @@ def _is_upload_request(scope) -> bool:
 class UploadLimitMiddleware:
     def __init__(self, app):
         self.app = app
-        self._slots = BoundedSemaphore(4)
+        self._slots = BoundedSemaphore(MAX_CONCURRENT_ATTACHMENT_TRANSFERS)
 
     async def __call__(self, scope, receive, send):
         if scope['type'] != 'http':
@@ -50,7 +53,7 @@ class UploadLimitMiddleware:
             await self.app(scope, receive, send)
             return
         if not self._slots.acquire(blocking=False):
-            await JSONResponse({'detail': 'Too many attachment transfers; retry after another finishes'}, status_code=429)(scope, receive, send)
+            await JSONResponse({'detail': 'Too many attachment transfers; retry after another finishes'}, status_code=HTTPStatus.TOO_MANY_REQUESTS)(scope, receive, send)
             return
         try:
             if is_upload:
@@ -63,7 +66,7 @@ class UploadLimitMiddleware:
     async def _receive_upload(self, scope, receive, send):
         lengths = [value for key, value in scope['headers'] if key == b'content-length']
         if len(lengths) == 1 and lengths[0].isdigit() and int(lengths[0]) > MAX_UPLOAD_REQUEST_BYTES:
-            await JSONResponse({'detail': 'Upload exceeds the configured size limit'}, status_code=413)(scope, receive, send)
+            await JSONResponse({'detail': 'Upload exceeds the configured size limit'}, status_code=HTTPStatus.REQUEST_ENTITY_TOO_LARGE)(scope, receive, send)
             return
         received = 0
         exceeded = False
@@ -80,6 +83,6 @@ class UploadLimitMiddleware:
             return message
         async def limited_send(message):
             if exceeded and message['type'] == 'http.response.start':
-                message = dict(message, status=413)
+                message = dict(message, status=HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
             await send(message)
         await self.app(scope, limited_receive, limited_send)

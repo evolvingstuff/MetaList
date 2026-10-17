@@ -133,7 +133,7 @@ function installBrowserEnvironment(t, options = {}) {
                 throw new Error('Cannot insert after detached element');
             }
             const nextIndex = this.parentElement.children.indexOf(this) + 1;
-            const nextSibling = this.parentElement.children[nextIndex] || null;
+            const nextSibling = this.parentElement.children[nextIndex] || null;  // shockharness: ignore[DEF003] reason="the fake answers like the real API: null or empty when absent"
             this.parentElement.insertBefore(child, nextSibling);
         }
 
@@ -184,13 +184,13 @@ function installBrowserEnvironment(t, options = {}) {
 
         querySelector(selector) {
             if (selector === ':scope > .note-content') {
-                return this.children.find((child) => child.classList.contains('note-content')) || null;
+                return this.children.find((child) => child.classList.contains('note-content')) || null;  // shockharness: ignore[DEF003] reason="the fake answers like the real API: null or empty when absent"
             }
             if (selector === ':scope > .note-collapse-toggle') {
-                return this.children.find((child) => child.classList.contains('note-collapse-toggle')) || null;
+                return this.children.find((child) => child.classList.contains('note-collapse-toggle')) || null;  // shockharness: ignore[DEF003] reason="the fake answers like the real API: null or empty when absent"
             }
             if (selector === ':scope > .note-children') {
-                return this.children.find((child) => child.classList.contains('note-children')) || null;
+                return this.children.find((child) => child.classList.contains('note-children')) || null;  // shockharness: ignore[DEF003] reason="the fake answers like the real API: null or empty when absent"
             }
             return null;
         }
@@ -294,7 +294,7 @@ function installBrowserEnvironment(t, options = {}) {
             if (!match) {
                 return null;
             }
-            const element = elementByNoteId.get(match[1]) || null;
+            const element = elementByNoteId.get(match[1]) || null;  // shockharness: ignore[DEF003] reason="the fake answers like the real API: null or empty when absent"
             if (!element || !element.isConnected || element.dataset.noteId !== match[1]) {
                 return null;
             }

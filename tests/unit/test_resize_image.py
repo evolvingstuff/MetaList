@@ -62,5 +62,6 @@ def test_cmd_resize_image_updates_note_and_records_undo(monkeypatch) -> None:
         "content": '{<img src="one.png">}',
         "tags": "foo {@size=1.25}",
         "sizeFactor": "1.25",
+        "editingImageSizes": [1.25],
         "updateUUID": "uuid-resized",
     }

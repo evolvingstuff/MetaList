@@ -7,6 +7,9 @@ from app.config import TAG_SUGGESTION_CONNECTORS
 
 
 MAX_SELECTED_TEXT_TAG_CHARACTERS = 25
+# Tags keep printable ASCII only: space (0x20) through tilde (0x7E).
+_FIRST_PRINTABLE_ASCII_CODEPOINT = ord(" ")
+_LAST_PRINTABLE_ASCII_CODEPOINT = ord("~")
 
 _TAG_CONTAINS_DISALLOWED = frozenset(
     {
@@ -62,7 +65,7 @@ def build_default_tag_from_selected_text(selected_text: str) -> str:
     candidate_characters: list[str] = []
     for char in spaces_joined:
         codepoint = ord(char)
-        if codepoint < 0x20 or codepoint > 0x7E:
+        if codepoint < _FIRST_PRINTABLE_ASCII_CODEPOINT or codepoint > _LAST_PRINTABLE_ASCII_CODEPOINT:
             continue
         if char in _TAG_CONTAINS_DISALLOWED:
             continue

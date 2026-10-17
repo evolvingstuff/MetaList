@@ -46,7 +46,7 @@ export function updateMoveDragGestureState(previousState, movement) {
     const dragActive = shouldActivateMoveDrag(movement);
     return {
         dragActive,
-        hasCrossedActivationThreshold: previousState.hasCrossedActivationThreshold || dragActive,
+        hasCrossedActivationThreshold: previousState.hasCrossedActivationThreshold || dragActive,  // shockharness: ignore[DEF003] reason="a boolean OR of two conditions, not a fallback"
     };
 }
 

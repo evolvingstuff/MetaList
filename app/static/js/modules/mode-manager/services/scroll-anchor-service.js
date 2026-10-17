@@ -1,4 +1,11 @@
+import { NOT_FOUND } from '../../not-found.js';
+import { clampNumber, distanceToLine, getViewportReferenceY, getViewportTopInset } from './viewport-reference.js';
+import { half } from '../../half.js';
+
 const DEFAULT_BELT_SIZE = 4;
+const MAX_BELT_SIZE = 10;
+// A root note whose top is this close to the viewport top is pinned there as the anchor.
+const PINNED_TOP_ANCHOR_MAX_DISTANCE_PX = 80;
 
 const ROOT_PARENT_SENTINELS = new Set(['', 'null', 'undefined', 'none']);
 
@@ -45,43 +52,6 @@ export function areScrollAnchorsEqual(left, right) {
     );
 }
 
-function clampNumber(value, min, max) {
-    if (typeof value !== 'number' || Number.isNaN(value)) {
-        throw new Error('clampNumber requires a number');
-    }
-    if (value < min) return min;
-    if (value > max) return max;
-    return value;
-}
-
-function getViewportReferenceY(anchorBias) {
-    const topInset = getViewportTopInset();
-    if (anchorBias === 'center') {
-        return topInset + (window.innerHeight - topInset) / 2;
-    }
-    if (anchorBias === 'top') {
-        return topInset;
-    }
-    throw new Error(`Unsupported anchorBias: ${anchorBias}`);
-}
-
-function getViewportTopInset() {
-    const controls = document.querySelector('.controls');
-    if (!controls) {
-        return 0;
-    }
-    const rect = controls.getBoundingClientRect();
-    if (rect.height <= 0 || rect.width <= 0) {
-        return 0;
-    }
-    if (rect.bottom <= 0) {
-        return 0;
-    }
-    // Add a small buffer so restored anchors don't end up tucked under the sticky search bar.
-    const bufferPx = 8;
-    return Math.max(0, Math.round(rect.bottom + bufferPx));
-}
-
 function requireNotesContainer() {
     const container = document.getElementById('notes-container');
     if (!container) {
@@ -97,7 +67,7 @@ function isRootNoteElement(element) {
 }
 
 function getNoteId(element) {
-    return (element?.dataset?.noteId || '').toString();
+    return element.dataset.noteId;
 }
 
 function collectRootNotesInDomOrder(container) {
@@ -121,16 +91,9 @@ function getNoteContentElement(noteElement) {
     return noteElement;
 }
 
-function distanceToLine(rect, lineY) {
-    if (lineY >= rect.top && lineY <= rect.bottom) {
-        return 0;
-    }
-    return Math.min(Math.abs(rect.top - lineY), Math.abs(rect.bottom - lineY));
-}
-
 function findAnchorIndex(noteElements, anchorBias) {
     const lineY = getViewportReferenceY(anchorBias);
-    let bestIndex = -1;
+    let bestIndex = NOT_FOUND;
     let bestDistance = Infinity;
     let bestCenterDistance = Infinity;
 
@@ -142,7 +105,7 @@ function findAnchorIndex(noteElements, anchorBias) {
         if (rect.height <= 0) continue;
 
         const dist = distanceToLine(rect, lineY);
-        const centerDist = Math.abs((rect.top + rect.bottom) / 2 - lineY);
+        const centerDist = Math.abs(half(rect.top + rect.bottom) - lineY);
         if (dist < bestDistance || (dist === bestDistance && centerDist < bestCenterDistance)) {
             bestIndex = i;
             bestDistance = dist;
@@ -163,8 +126,8 @@ export function computeScrollAnchor(options) {
         requestedBias = 'center';
     }
     const beltSize = typeof options.beltSize === 'number' ? options.beltSize : DEFAULT_BELT_SIZE;
-    if (!Number.isInteger(beltSize) || beltSize < 0 || beltSize > 10) {
-        throw new Error('beltSize must be an integer between 0 and 10');
+    if (!Number.isInteger(beltSize) || beltSize < 0 || beltSize > MAX_BELT_SIZE) {
+        throw new Error(`beltSize must be an integer between 0 and ${MAX_BELT_SIZE}`);
     }
 
     let container = options.container;
@@ -177,10 +140,10 @@ export function computeScrollAnchor(options) {
     }
 
     let anchorBias = requestedBias;
-    let anchorIndex = -1;
+    let anchorIndex = NOT_FOUND;
     if (requestedBias === 'auto') {
         const topRef = getViewportReferenceY('top');
-        let bestPinnedIndex = -1;
+        let bestPinnedIndex = NOT_FOUND;
         let bestPinnedDistance = Infinity;
         for (let i = 0; i < noteElements.length; i += 1) {
             const element = noteElements[i];
@@ -188,7 +151,7 @@ export function computeScrollAnchor(options) {
             const rect = element.getBoundingClientRect();
             if (rect.bottom <= topRef) continue;
             const dist = Math.abs(rect.top - topRef);
-            if (dist <= 80 && dist < bestPinnedDistance) {
+            if (dist <= PINNED_TOP_ANCHOR_MAX_DISTANCE_PX && dist < bestPinnedDistance) {
                 bestPinnedIndex = i;
                 bestPinnedDistance = dist;
             }

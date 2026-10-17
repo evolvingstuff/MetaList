@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.utils.byte_sizes import MIB
+from http import HTTPStatus
 from fastapi import APIRouter, HTTPException, Request
 import re
 from typing import Annotated
@@ -25,6 +27,15 @@ from app.usecases.rename_tag import apply_rename_tag_everywhere
 from app.usecases.delete_tag import apply_delete_tag_everywhere
 from app.utils.text_utils import strip_html
 
+# The longest tag a rename or delete accepts, in characters.
+MAX_TAG_LENGTH = 1024
+# An equality line (A = B) parses into two rules, A => B and B => A.
+_EQUALITY_LINE_RULE_COUNT = 2
+# Tag search ranks: prefix matches first, then substring, then fuzzy.
+_PREFIX_MATCH_RANK = 0
+_SUBSTRING_MATCH_RANK = 1
+_FUZZY_MATCH_RANK = 2
+
 
 def _maybe_bearer_token(request: Request) -> str:
     token = get_request_auth_token(request)
@@ -35,18 +46,18 @@ def _maybe_bearer_token(request: Request) -> str:
 
 @with_config(ConfigDict(strict=True))
 class RuleTextRequest(TypedDict):
-    text: Annotated[str, Field(min_length=1, max_length=1024 * 1024)]
+    text: Annotated[str, Field(min_length=1, max_length=MIB)]
 
 
 @with_config(ConfigDict(strict=True))
 class RenameTagRequest(TypedDict):
-    old: Annotated[str, Field(min_length=1, max_length=1024)]
-    new: Annotated[str, Field(min_length=1, max_length=1024)]
+    old: Annotated[str, Field(min_length=1, max_length=MAX_TAG_LENGTH)]
+    new: Annotated[str, Field(min_length=1, max_length=MAX_TAG_LENGTH)]
 
 
 @with_config(ConfigDict(strict=True))
 class DeleteTagRequest(TypedDict):
-    tag: Annotated[str, Field(min_length=1, max_length=1024)]
+    tag: Annotated[str, Field(min_length=1, max_length=MAX_TAG_LENGTH)]
 
 
 router = APIRouter(prefix="/ontology", tags=["ontology2"])
@@ -141,9 +152,9 @@ def list_rules() -> dict:
 def create_rule(request: Request, payload: RuleTextRequest) -> dict:
     text = payload["text"]
     if not isinstance(text, str):
-        raise HTTPException(status_code=400, detail="text must be a string")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="text must be a string")
     if text.strip() == "":
-        raise HTTPException(status_code=400, detail="text must be non-empty")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="text must be non-empty")
     candidate_note_ids: set[str] = set()
     if note_store.loaded:
         candidate_note_ids = _collect_candidate_note_ids_for_texts(
@@ -164,14 +175,14 @@ def create_rule(request: Request, payload: RuleTextRequest) -> dict:
 def update_rule(request: Request, rule_id: int, payload: RuleTextRequest) -> dict:
     text = payload["text"]
     if not isinstance(text, str):
-        raise HTTPException(status_code=400, detail="text must be a string")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="text must be a string")
     if text.strip() == "":
-        raise HTTPException(status_code=400, detail="text must be non-empty")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="text must be non-empty")
 
     existing_lines = list_rule_lines()
     existing_by_id = {existing_id for existing_id, _text in existing_lines}
     if rule_id not in existing_by_id:
-        raise HTTPException(status_code=404, detail=f"Rule not found: {rule_id}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Rule not found: {rule_id}")
 
     candidate_note_ids: set[str] = set()
     if note_store.loaded:
@@ -202,7 +213,7 @@ def delete_rule(rule_id: int) -> dict:
     existing_lines = list_rule_lines()
     existing_by_id = {existing_id for existing_id, _text in existing_lines}
     if rule_id not in existing_by_id:
-        raise HTTPException(status_code=404, detail=f"Rule not found: {rule_id}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Rule not found: {rule_id}")
 
     candidate_note_ids: set[str] = set()
     if note_store.loaded:
@@ -232,11 +243,11 @@ def rename_tag(request: Request, payload: RenameTagRequest) -> dict:
     old = payload["old"]
     new = payload["new"]
     if not isinstance(old, str) or old.strip() == "":
-        raise HTTPException(status_code=400, detail="old must be a non-empty string")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="old must be a non-empty string")
     if not isinstance(new, str) or new.strip() == "":
-        raise HTTPException(status_code=400, detail="new must be a non-empty string")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="new must be a non-empty string")
     if old.strip() == new.strip():
-        raise HTTPException(status_code=400, detail="old and new must differ")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="old and new must differ")
 
     token = _maybe_bearer_token(request)
     return apply_rename_tag_everywhere(old=old, new=new, token=token)
@@ -247,7 +258,7 @@ def rename_tag(request: Request, payload: RenameTagRequest) -> dict:
 def delete_tag(request: Request, payload: DeleteTagRequest) -> dict:
     tag = payload["tag"]
     if not isinstance(tag, str) or tag.strip() == "":
-        raise HTTPException(status_code=400, detail="tag must be a non-empty string")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="tag must be a non-empty string")
     token = _maybe_bearer_token(request)
     return apply_delete_tag_everywhere(tag=tag, token=token)
 
@@ -302,7 +313,7 @@ def focus_view(tag: str) -> dict:
         raise TypeError(f"Unknown atom: {type(atom)}")
 
     def record_equality_rule_ids(rules: list, rule_id: int) -> bool:
-        if len(rules) != 2:
+        if len(rules) != _EQUALITY_LINE_RULE_COUNT:
             return False
         first, second = rules
         if len(first.lhs) != 1 or len(second.lhs) != 1:
@@ -315,8 +326,10 @@ def focus_view(tag: str) -> dict:
         second_rhs = second.rhs
         if first_lhs != second_rhs or first_rhs != second_lhs:
             return False
-        equality_rule_ids_by_edge.setdefault((first_lhs, first_rhs), set()).add(rule_id)
-        equality_rule_ids_by_edge.setdefault((first_rhs, first_lhs), set()).add(rule_id)
+        for edge in ((first_lhs, first_rhs), (first_rhs, first_lhs)):
+            if edge not in equality_rule_ids_by_edge:
+                equality_rule_ids_by_edge[edge] = set()
+            equality_rule_ids_by_edge[edge].add(rule_id)
         return True
 
     for rule_id, text in list_rule_lines():
@@ -401,9 +414,8 @@ def focus_view(tag: str) -> dict:
     for candidate in sorted(equals):
         if candidate == tag:
             continue
-        equality_rule_ids = equality_rule_ids_by_edge.get((tag, candidate))
-        if equality_rule_ids:
-            direct_middle.append({"tag": candidate, "ruleIds": sorted(equality_rule_ids)})
+        if (tag, candidate) in equality_rule_ids_by_edge:
+            direct_middle.append({"tag": candidate, "ruleIds": sorted(equality_rule_ids_by_edge[(tag, candidate)])})
             continue
         forward_key = (tag, candidate)
         backward_key = (candidate, tag)
@@ -440,17 +452,18 @@ def list_tags(q: str, limit: int) -> dict:
         raise ValueError("limit must be >= 0")
 
     ontology = get_ontology()
-    tag_counts = search_index.list_tag_frequencies()
+    # A tag only the rules name is on no note yet.
+    tag_counts = {tag: 0 for tag in extract_ontology_tags(ontology)}
+    tag_counts.update(search_index.list_tag_frequencies())
     tags = set(tag_counts.keys())
-    tags.update(extract_ontology_tags(ontology))
 
     needle = q.casefold().strip()
 
     if needle == "":
-        ordered = sorted(tags, key=lambda tag: (-tag_counts.get(tag, 0), tag))
+        ordered = sorted(tags, key=lambda tag: (-tag_counts[tag], tag))
         ordered = ordered[:limit]
         payload = [
-            {"tag": tag, "count": tag_counts.get(tag, 0)}
+            {"tag": tag, "count": tag_counts[tag]}
             for tag in ordered
         ]
         return {"totalCount": len(tags), "tags": payload}
@@ -459,22 +472,23 @@ def list_tags(q: str, limit: int) -> dict:
     for tag in tags:
         folded = tag.casefold()
         if folded.startswith(needle):
-            rank = 0
+            rank = _PREFIX_MATCH_RANK
         elif needle in folded:
-            rank = 1
+            rank = _SUBSTRING_MATCH_RANK
         elif _fuzzy_match(needle, folded):
-            rank = 2
+            rank = _FUZZY_MATCH_RANK
         else:
             continue
-        count = tag_counts.get(tag, 0)
+        count = tag_counts[tag]
         matches.append((rank, -count, tag))
 
-    matches.sort(key=lambda item: (item[0], item[1], item[2]))
-    results = [item[2] for item in matches]
+    # By rank, then most used, then name.
+    matches.sort()
+    results = [tag for _rank, _negative_count, tag in matches]
     results = results[:limit]
 
     payload = [
-        {"tag": tag, "count": tag_counts.get(tag, 0)}
+        {"tag": tag, "count": tag_counts[tag]}
         for tag in results
     ]
     return {"totalCount": len(tags), "tags": payload}

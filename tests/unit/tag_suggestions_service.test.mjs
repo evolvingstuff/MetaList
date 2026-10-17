@@ -182,7 +182,7 @@ function installTagSuggestionsDom(t) {
             if (!event || typeof event.type !== 'string') {
                 throw new Error('dispatchEvent requires event with type');
             }
-            const listeners = this._listeners.get(event.type) || [];
+            const listeners = this._listeners.get(event.type) || [];  // shockharness: ignore[DEF003] reason="the fake answers like the real API: null or empty when absent"
             for (const listener of listeners) {
                 listener.call(this, event);
             }

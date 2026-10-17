@@ -1,3 +1,4 @@
+import { MS_PER_SECOND } from '../../time-units.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import { ApplicationState } from '../../application-state.js';
 import { DOMUtils } from '../../dom-utils.js';
@@ -33,6 +34,9 @@ import {
     actionPasteReferenceChild,
 } from '../actions/note-actions.js';
 import { CommandGate } from '../services/command-gate-service.js';
+import { captureEditingFocus, restoreEditingFocus } from '../services/viewport-hold-service.js';
+import { editingFocusAtRightPress, rememberEditingFocusAtRightPress } from '../services/right-press-focus-service.js';
+import { applyEditingImageSizes, refreshEditingImageSizes } from '../services/editing-image-size-service.js';
 import {
     prepareDeleteNoteContextAction,
     prepareOutlineMoveContextAction,
@@ -87,6 +91,7 @@ import { addDiagramToNote, openDiagramEditor } from '../../excalidraw/excalidraw
 import { unlessDiagramEditorOpen } from '../../excalidraw/excalidraw-editor-state.js';
 
 const ontologyModal = new OntologyModal();
+const AI_TAG_FAILURE_BANNER_SECONDS = 8;
 // Entered tags are described when right-clicked; a later right-click wins over a slower lookup.
 const tagDetailsState = ApplicationState.createFields('tag-details-menu', { requestSerial: 0 });
 // The edited note's menu waits for the Suggest Tags with AI check; only the latest right-click opens.
@@ -110,7 +115,19 @@ async function resizeImageFromContext(imageContext, action) {
         throw new Error('Image resize context requires non-negative occurrenceIndex');
     }
 
+    // Where the user is working in the edited note, so the resize leaves it there.
+    let editingFocus = null;
     if (ModeContext.isEditing && ModeContext.currentNoteId === hostNoteId) {
+        const editedNote = document.querySelector(`.note[data-note-id="${hostNoteId}"]`);
+        if (!(editedNote instanceof HTMLElement)) {
+            throw new Error(`Editing note element missing before image resize: ${hostNoteId}`);
+        }
+        // Where the user was before the right-click moved the caret; a menu opened
+        // without a right press (from the keyboard) found it where it is now.
+        editingFocus = editingFocusAtRightPress(hostNoteId);
+        if (editingFocus === null) {
+            editingFocus = captureEditingFocus(editedNote);
+        }
         await actionSaveNote(hostNoteId);
     }
     const response = await NotesAPI.resizeImage(
@@ -125,6 +142,9 @@ async function resizeImageFromContext(imageContext, action) {
     if (typeof response.content !== 'string' || typeof response.tags !== 'string') {
         throw new Error('Image resize response must include content and tags');
     }
+    if (!Array.isArray(response.editingImageSizes)) {
+        throw new Error('Image resize response must include editingImageSizes');
+    }
     if (ModeContext.isEditing && ModeContext.currentNoteId === hostNoteId) {
         const noteElement = document.querySelector(`.note[data-note-id="${hostNoteId}"]`);
         if (!(noteElement instanceof HTMLElement)) {
@@ -134,8 +154,20 @@ async function resizeImageFromContext(imageContext, action) {
         if (!(noteContent instanceof HTMLElement)) {
             throw new Error(`Editing note content missing after image resize: ${hostNoteId}`);
         }
-        noteContent.innerHTML = response.content;
+        // A size tag change alone leaves the text, and the caret in it, as it was;
+        // braces added or removed shift a caret after them by their length.
+        const textBefore = noteContent.textContent;
+        if (noteContent.innerHTML !== response.content) {
+            noteContent.innerHTML = response.content;
+        }
+        // In the same frame as the new text, so an image never shows at full size between.
+        applyEditingImageSizes(noteContent, response.editingImageSizes);
         setTagBarValue(noteElement, response.tags);
+        let shiftedFocus = null;
+        if (editingFocus !== null) {
+            shiftedFocus = shiftedEditingFocus(editingFocus, textBefore, noteContent.textContent);
+            restoreEditingFocus(noteElement, shiftedFocus);
+        }
         markTagBarSaved(noteElement, response.tags);
         if (ModeContext.currentContent !== response.content) {
             ModeContext.setCurrentContent(response.content);
@@ -146,7 +178,19 @@ async function resizeImageFromContext(imageContext, action) {
         if (ModeContext.isDirty) {
             ModeContext.setDirty(false);
         }
-        if (!ModeContext.editSessionHasEdits) ModeContext.markEditSessionHasEdits();
+        // Everything is saved, the resize last: ⌘Z undoes it first, then what was
+        // typed before (as after a saved paste, the session's history restarts).
+        ModeContext.resetEditSessionState({ startedCollapsed: ModeContext.editSessionStartedCollapsed });
+        // The view learns the saved note too (its tags, and the fingerprint that
+        // tells a later undo apart from this state), then the caret goes back.
+        await actionRefreshAndMaybeSelect({
+            startedAt: performance.now(),
+            context: `resizeImage.${action}.editing`,
+        });
+        if (shiftedFocus !== null) {
+            restoreEditingFocus(noteElement, shiftedFocus);
+        }
+        await refreshEditingImageSizes(hostNoteId);
         return;
     }
     await actionRefreshAndMaybeSelect({
@@ -155,12 +199,27 @@ async function resizeImageFromContext(imageContext, action) {
     });
 }
 
+// Captured editing focus moved through a text change: positions after the first
+// changed character shift by the change in length.
+function shiftedEditingFocus(focus, textBefore, textAfter) {
+    if (focus.kind !== 'content' || textBefore === textAfter) {
+        return focus;
+    }
+    let common = 0;
+    while (common < textBefore.length && common < textAfter.length && textBefore[common] === textAfter[common]) {
+        common += 1;
+    }
+    const delta = textAfter.length - textBefore.length;
+    const shift = (position) => (position > common ? position + delta : position);
+    return { ...focus, anchorPosition: shift(focus.anchorPosition), focusPosition: shift(focus.focusPosition) };
+}
+
 // The HTML element a right-click acts on: the clicked element, or for text, math
 // (MathML) and drawings (SVG, such as Mermaid diagrams) the nearest HTML element
 // around it, so the note's menu opens instead of the browser's.
 function resolveEventElement(target) {
     let node = target;
-    if (node && node.nodeType === 3) {
+    if (node && node.nodeType === Node.TEXT_NODE) {
         node = node.parentElement;
     }
     while (node instanceof Element && !(node instanceof HTMLElement)) {
@@ -772,7 +831,7 @@ async function suggestTagsWithAi(noteId, includeChildren) {
             throw error;
         }
         showAiTagStatus(noteId, '', '');
-        ErrorHandler.showInfoBanner(`The AI couldn't suggest tags: ${error.message}`, 8000);
+        ErrorHandler.showInfoBanner(`The AI couldn't suggest tags: ${error.message}`, AI_TAG_FAILURE_BANNER_SECONDS * MS_PER_SECOND);
     }
     if (tags === null) {
         return;
@@ -926,7 +985,6 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
         hasNoteClipboard,
         hasReferenceClipboard,
         canPasteReferenceHere: pasteHereRange !== null,
-        canResizeImage: !ModeContext.isEditing,
         canAddStyle: ModeContext.isEditing && ModeContext.currentNoteId === noteId,
         canRemoveFormatting: ModeContext.isEditing && ModeContext.currentNoteId === noteId,
         canAddDiagram: ModeContext.isEditing && ModeContext.currentNoteId === noteId,
@@ -1485,6 +1543,8 @@ export function initContextMenuEvents() {
     initContextMenuService();
     // Before the browser may select the word under the pointer (macOS).
     document.addEventListener('mousedown', rememberSelectionAtRightPress, { capture: true });
+    // Firefox moves the caret at pointerdown, before mousedown.
+    document.addEventListener('pointerdown', rememberEditingFocusAtRightPress, { capture: true });
     document.addEventListener('contextmenu', unlessDiagramEditorOpen(handleContextMenu), { capture: true });
     // Right-click never shows the browser's own menu anywhere in MetaList (inputs,
     // the chat panel and overlays included): where MetaList has no menu, nothing opens.

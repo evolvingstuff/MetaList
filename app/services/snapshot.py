@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.utils.byte_sizes import MIB
 import hashlib
 import json
 from dataclasses import dataclass
@@ -33,8 +34,10 @@ from app.services.search_index import search_index
 from app.services.search_query import ParsedSearchQuery, SearchClause, parse_search_query
 from app.services.sync import get_all_locks
 from app.services.view_state import ViewState
+from app.services.editing_image_sizes import editing_image_size_factors
 from app.security.sensitive_cache import SensitiveMemo
 from app.utils.text_utils import strip_html
+from app.utils.time_units import MS_PER_SECOND
 
 # Windowing constants (tuned later)
 # The window is a band of roots around the ones the browser can see: this many
@@ -42,6 +45,11 @@ from app.utils.text_utils import strip_html
 # between half and twice this far from the visible roots, so ordinary
 # scrolling changes nothing and unloading happens far from the viewport.
 ROOT_BAND_MARGIN = 75
+# "Between half and twice": the near edge is the margin divided by this, the
+# far edge the margin times this.
+_BAND_EDGE_HOLD_FACTOR = 2
+# A root has a neighbour only in a list of at least this many roots.
+_MIN_ROOTS_WITH_NEIGHBOUR = 2
 _UUID_IN_TEXT_RE = re.compile(
     r"(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 )
@@ -65,6 +73,14 @@ class ResolvedViewScope:
     matched_note_ids: frozenset[str]
     ordered_root_ids: tuple[str, ...]
     total_root_count: int
+
+
+def _structure_part(note_id: Optional[str]) -> str:
+    """A link in a note's structure hash: its id, or nothing for no note."""
+    if note_id is None:
+        return ""
+    assert isinstance(note_id, str)
+    return note_id
 
 
 def _extract_direct_uuid_note_ids(clause: SearchClause) -> Set[str]:
@@ -344,7 +360,7 @@ def _compute_hash(
     sha.update(b"|FLAGS|")
     sha.update(flags_json.encode("utf-8"))
     sha.update(b"|STRUCT|")
-    parts = [parent_id or "", prev_id or "", next_id or ""]
+    parts = [_structure_part(parent_id), _structure_part(prev_id), _structure_part(next_id)]
     sha.update("::".join(parts).encode("utf-8"))
     return sha.hexdigest()
 
@@ -438,12 +454,12 @@ def _determine_root_band(
         target_start, target_end = max(0, top - margin), min(last, bottom + margin)
         if current_indices:
             start = _keep_or_move_edge(
-                current=min(current_indices), near=max(0, top - margin // 2),
-                far=max(0, top - 2 * margin), target=target_start,
+                current=min(current_indices), near=max(0, top - margin // _BAND_EDGE_HOLD_FACTOR),
+                far=max(0, top - _BAND_EDGE_HOLD_FACTOR * margin), target=target_start,
             )
             end = _keep_or_move_edge(
-                current=max(current_indices), near=min(last, bottom + margin // 2),
-                far=min(last, bottom + 2 * margin), target=target_end,
+                current=max(current_indices), near=min(last, bottom + margin // _BAND_EDGE_HOLD_FACTOR),
+                far=min(last, bottom + _BAND_EDGE_HOLD_FACTOR * margin), target=target_end,
             )
         else:
             start, end = target_start, target_end
@@ -460,7 +476,7 @@ def _determine_root_band(
 
 
 def _timestamp_iso(record: object, field_name: str) -> str:
-    timestamp = getattr(record, field_name, None)
+    timestamp = getattr(record, field_name)
     if not isinstance(timestamp, datetime):
         return ""
     return timestamp.isoformat()
@@ -533,7 +549,7 @@ def _share_neighbour_timestamp(
     roots: List[str], edited_root_id: str, root_sort_timestamps: Dict[str, datetime],
 ) -> Dict[str, datetime]:
     """Date-bucketed sorts: a root held in place shows under its neighbour's date header."""
-    if edited_root_id not in root_sort_timestamps or edited_root_id not in roots or len(roots) < 2:
+    if edited_root_id not in root_sort_timestamps or edited_root_id not in roots or len(roots) < _MIN_ROOTS_WITH_NEIGHBOUR:
         return root_sort_timestamps
     index = roots.index(edited_root_id)
     if index > 0:
@@ -622,7 +638,9 @@ def _select_view(
 # content has a literal URL image source are skipped up front, and renders
 # that still emitted a proxy source (e.g. from an embedded note) are not stored.
 _REMOTE_IMAGE_PROXY_MARKER = "data-remote-image-proxy-src="
-_VIEW_RENDER_MEMO = SensitiveMemo(maxsize=65536, max_bytes=64 * 1024 * 1024)
+_VIEW_RENDER_MEMO_ENTRIES = 65536
+_VIEW_RENDER_MEMO_MIB = 64
+_VIEW_RENDER_MEMO = SensitiveMemo(maxsize=_VIEW_RENDER_MEMO_ENTRIES, max_bytes=_VIEW_RENDER_MEMO_MIB * MIB)
 
 
 def _is_render_cacheable(content_html: str) -> bool:
@@ -671,7 +689,7 @@ class _DependencyRecorder:
     def context(self) -> EmbedRenderContext:
         return EmbedRenderContext(
             has_note=self._has_note, get_note=self._get_note, get_children=self._get_children,
-            has_file=self._has_file, get_file=self._get_file,
+            has_file=self._has_file, get_file=self._get_file, static_collapse_arrows=False,
         )
 
     def _has_note(self, note_id: str) -> bool:
@@ -865,6 +883,8 @@ def _render_view_note(
     is_editing = bool(flags["isEditing"])
     if is_editing:
         rendered_content = rec.content
+        # The editor shows each image at its size from the start (docs/ui/content-formatting.md).
+        flags["editingImageSizes"] = editing_image_size_factors(content_html=rec.content, tags=rec.tags)
     elif type(rec) is NoteRecord and _is_render_cacheable(rec.content):
         # Identity keys are exact only for immutable records; any other record
         # type (e.g. test doubles) could change in place and renders directly.
@@ -915,6 +935,7 @@ def build_view_state(
         get_children=traversal_cache.get_children,
         has_file=file_registry.has_file,
         get_file=_get_file_record,
+        static_collapse_arrows=False,
     )
 
     selection = _select_view(
@@ -1027,7 +1048,7 @@ def build_view_state(
     }
 
     if filter_active:
-        elapsed_ms = (time.perf_counter() - t0) * 1000
+        elapsed_ms = (time.perf_counter() - t0) * MS_PER_SECOND
         logger.bind(
             metrics={
                 "elapsed_ms": elapsed_ms,

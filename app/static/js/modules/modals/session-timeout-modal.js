@@ -1,3 +1,5 @@
+import { parseDecimalInteger } from '../decimal-integer.js';
+import { HTTP_STATUS } from '../http-status.js';
 import { ApplicationState } from '../application-state.js';
 import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
@@ -211,7 +213,7 @@ export class SessionTimeoutModal extends BaseModal {
         }
 
         const response = await fetch(url, requestInit);
-        if (response.status === 204) {
+        if (response.status === HTTP_STATUS.NO_CONTENT) {
             return null;
         }
 
@@ -289,7 +291,7 @@ export class SessionTimeoutModal extends BaseModal {
             throw new Error('Idle timeout must be a whole number of minutes');
         }
 
-        const timeoutMinutes = Number.parseInt(rawText, 10);
+        const timeoutMinutes = parseDecimalInteger(rawText);
         if (!Number.isInteger(timeoutMinutes)) {
             throw new Error('Idle timeout must be a whole number of minutes');
         }

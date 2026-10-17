@@ -154,6 +154,8 @@ def parse_search_query(normalized_text: str) -> ParsedSearchQuery:
 
 
 _WHITESPACE_RE = re.compile(r"\s+")
+# A backslash and the character it escapes.
+_ESCAPE_SEQUENCE_LENGTH = 2
 
 
 def _normalize_phrase(text: str) -> str:
@@ -177,7 +179,7 @@ def _read_quoted_inner(text: str, start_index: int, quote_char: str) -> tuple[st
                 next_char = text[index + 1]
                 if next_char == quote_char or next_char == "\\":
                     normalized_inner += f"\\{next_char}"
-                    index += 2
+                    index += _ESCAPE_SEQUENCE_LENGTH
                     continue
             normalized_inner += char
             index += 1
@@ -200,7 +202,7 @@ def _unescape_quoted_inner(normalized_inner: str, quote_char: str) -> str:
             next_char = normalized_inner[index + 1]
             if next_char == quote_char or next_char == "\\":
                 output += next_char
-                index += 2
+                index += _ESCAPE_SEQUENCE_LENGTH
                 continue
         output += char
         index += 1

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from http import HTTPStatus
 import logging
 import urllib.parse
 from typing import Dict
@@ -39,6 +40,7 @@ from app.api.note_requests import (
     ToggleTodoDoneRequest,
     UnformatNoteContentRequest,
     ResizeNoteImageRequest,
+    EditingImageSizesRequest,
     RunShellEndpointRequest,
     ToggleReferenceModeEndpointRequest,
     MoveNoteEndpointRequest,
@@ -161,6 +163,7 @@ from app.services.selected_text_tag import SelectedTextTagValidationError
 from app.api.request_auth import require_request_auth_token
 from app.security.shell_execution import is_loopback_host
 from app.services.input_errors import InputRejected
+from app.services.editing_image_sizes import editing_image_size_factors
 
 
 logger = logging.getLogger(__name__)
@@ -201,6 +204,20 @@ def stop_link_title_retry_route(request: Request) -> dict[str, object]:
     return stop_link_title_retry()
 
 
+def _required_query_param(request: Request, name: str) -> str:
+    """A query parameter the route needs: a request without it is rejected, never defaulted."""
+    if name not in request.query_params:
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{name} query parameter is required")
+    return request.query_params[name]
+
+
+def _optional_note_id_param(request: Request) -> str | None:
+    """The note an export covers, with its children; absent means the whole view."""
+    if "note_id" not in request.query_params:
+        return None
+    return request.query_params["note_id"]
+
+
 def _require_note_present(note_id: str, *, context: str) -> None:
     if not isinstance(context, str) or not context:
         raise ValueError("context must be a non-empty string")
@@ -210,7 +227,7 @@ def _require_note_present(note_id: str, *, context: str) -> None:
     if note_store.has_note(note_id):
         return
 
-    raise HTTPException(status_code=404, detail=f"Note not found: {note_id}")
+    raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Note not found: {note_id}")
 
 
 def _require_loopback_shell_request(request: Request) -> None:
@@ -218,13 +235,13 @@ def _require_loopback_shell_request(request: Request) -> None:
         raise TypeError("request must be a Request")
     if request.client is None or not is_loopback_host(host=request.client.host):
         raise HTTPException(
-            status_code=403,
+            status_code=HTTPStatus.FORBIDDEN,
             detail="Shell execution is restricted to loopback clients",
         )
     request_hostname = request.url.hostname
     if request_hostname is None or not is_loopback_host(host=request_hostname):
         raise HTTPException(
-            status_code=403,
+            status_code=HTTPStatus.FORBIDDEN,
             detail="Shell execution requires a loopback request host",
         )
 
@@ -239,7 +256,7 @@ def _resolve_tab_sort_mode(tab_id: object) -> str:
         sort_mode = tab_state_store.get_sort_mode(tab_id=tab_id)
     if capture.captured_exception is not None:
         exc = capture.captured_exception
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)) from exc
     if sort_mode is None:
         raise RuntimeError("tab_state_store.get_sort_mode returned no value")
     return sort_mode
@@ -257,7 +274,7 @@ def _block_root_reorder_when_sorted(note_id: str, *, tab_id: object, new_parent_
         return
 
     raise HTTPException(
-        status_code=409,
+        status_code=HTTPStatus.CONFLICT,
         detail=(
             "Root-note reordering is unavailable while sort order is "
             f"{normalize_sort_mode(sort_mode)!r}"
@@ -270,7 +287,7 @@ def _block_root_prioritization_when_sorted(*, tab_id: object) -> None:
     if not is_root_reorder_locked(sort_mode):
         return
     raise HTTPException(
-        status_code=409,
+        status_code=HTTPStatus.CONFLICT,
         detail=(
             "Root-note reordering is unavailable while sort order is "
             f"{normalize_sort_mode(sort_mode)!r}"
@@ -307,7 +324,7 @@ def view_diff(payload: ViewDiffRequest):
         normalized_search = None
     if normalized_search is not None:
         if not isinstance(normalized_search, str):
-            raise HTTPException(status_code=400, detail="search must be a string or null")
+            raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="search must be a string or null")
         # Validated before anything changes; a search that does not parse is
         # answered as rejected input (main.py), shown as a polite warning.
         parse_search_query(normalized_search)
@@ -352,7 +369,10 @@ def view_diff(payload: ViewDiffRequest):
         start_at_list_end=start_at_list_end,
     )
     update_uuid = get_current_sync_uuid()
-    root_ids = list(state.children_by_parent.get(None, []))
+    # An empty view has no root entry.
+    root_ids: list[str] = []
+    if None in state.children_by_parent:
+        root_ids = list(state.children_by_parent[None])
     view_cache.set(client_id=client_id, tab_id=tab_id, state=state)
     response_snapshot = {
         "notes": {},
@@ -396,18 +416,18 @@ def get_tab_state() -> Dict[str, object]:
 @transactional_route
 def update_tab_state(payload: UpdateTabStateRequest) -> Dict[str, object]:
     if "activeTabId" not in payload or "tabs" not in payload or "tabOrder" not in payload:
-        raise HTTPException(status_code=400, detail="activeTabId, tabs, and tabOrder are required")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="activeTabId, tabs, and tabOrder are required")
     active_tab_id = payload["activeTabId"]
     tabs = payload["tabs"]
     tab_order = payload["tabOrder"]
     if not isinstance(tab_order, list):
-        raise HTTPException(status_code=400, detail="tabOrder must be a list")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="tabOrder must be a list")
     tab_order_list = [str(entry) for entry in tab_order]
     capture = CapturedExceptionContext(InputRejected, boundary='app/api/routes/notes.py:update_tab_state:capture')
     with capture:
         response = tab_state_store.update(active_tab_id=active_tab_id, tabs=tabs, tab_order=tab_order_list)
     if capture.captured_exception is not None:
-        raise HTTPException(status_code=400, detail="Invalid or stale tab state") from capture.captured_exception
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Invalid or stale tab state") from capture.captured_exception
     return response
 
 
@@ -415,9 +435,9 @@ def update_tab_state(payload: UpdateTabStateRequest) -> Dict[str, object]:
 @transactional_route
 def update_tab_sort_mode(payload: UpdateTabSortModeRequest) -> Dict[str, object]:
     if "tabId" not in payload:
-        raise HTTPException(status_code=400, detail="tabId is required")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="tabId is required")
     if "sortMode" not in payload:
-        raise HTTPException(status_code=400, detail="sortMode is required")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="sortMode is required")
 
     tab_id = payload["tabId"]
     sort_mode = payload["sortMode"]
@@ -430,7 +450,7 @@ def update_tab_sort_mode(payload: UpdateTabSortModeRequest) -> Dict[str, object]
         response = tab_state_store.set_sort_mode(tab_id=tab_id, sort_mode=sort_mode)
     if capture.captured_exception is not None:
         exc = capture.captured_exception
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)) from exc
     if response is None:
         raise RuntimeError("tab_state_store.set_sort_mode returned no value")
     if response["changed"] is True:
@@ -442,13 +462,13 @@ def update_tab_sort_mode(payload: UpdateTabSortModeRequest) -> Dict[str, object]
 @transactional_route
 def create_new_tab(payload: CreateNewTabRequest) -> Dict[str, object]:
     if "copyFromTabId" not in payload:
-        raise HTTPException(status_code=400, detail="copyFromTabId is required")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="copyFromTabId is required")
     copy_from_tab_id = payload["copyFromTabId"]
     capture = CapturedExceptionContext(InputRejected, boundary='app/api/routes/notes.py:create_new_tab:capture')
     with capture:
         response = tab_state_store.create_tab(copy_from_tab_id=copy_from_tab_id)
     if capture.captured_exception is not None:
-        raise HTTPException(status_code=400, detail="Invalid or stale tab state") from capture.captured_exception
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Invalid or stale tab state") from capture.captured_exception
     # The browser clones the source tab's DOM into the new tab, so the new tab
     # starts from the source tab's warm view.
     view_cache.copy_tab(
@@ -461,13 +481,13 @@ def create_new_tab(payload: CreateNewTabRequest) -> Dict[str, object]:
 @transactional_route
 def delete_tab(payload: DeleteTabRequest) -> Dict[str, object]:
     if "tabId" not in payload:
-        raise HTTPException(status_code=400, detail="tabId is required")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="tabId is required")
     tab_id = payload["tabId"]
     capture = CapturedExceptionContext(InputRejected, boundary='app/api/routes/notes.py:delete_tab:capture')
     with capture:
         response = tab_state_store.delete_tab(tab_id=tab_id)
     if capture.captured_exception is not None:
-        raise HTTPException(status_code=400, detail="Invalid or stale tab state") from capture.captured_exception
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Invalid or stale tab state") from capture.captured_exception
     view_cache.discard_tab(tab_id)
     return response
 
@@ -699,12 +719,12 @@ def export_summary(request: Request) -> Dict[str, object]:
     """What an export or print of a note (with its children) or of the view holds,
     for its dialog: the title it starts with, and how many passwords and usernames it shows."""
     _require_bearer_token(request)
-    search_query = request.query_params.get("search_query")
-    tab_id = request.query_params.get("tab_id")
-    is_untagged_view = request.query_params.get("is_untagged_view")
-    if search_query is None or tab_id is None or tab_id == "" or is_untagged_view not in {"true", "false"}:
-        raise HTTPException(status_code=400, detail="search_query, tab_id and is_untagged_view are required")
-    note_id = request.query_params.get("note_id")
+    search_query = _required_query_param(request, "search_query")
+    tab_id = _required_query_param(request, "tab_id")
+    is_untagged_view = _required_query_param(request, "is_untagged_view")
+    if tab_id == "" or is_untagged_view not in {"true", "false"}:
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="search_query, tab_id and is_untagged_view are required")
+    note_id = _optional_note_id_param(request)
     if note_id is not None:
         _require_note_present(note_id, context="notes.export-summary")
     normalized_search = search_query
@@ -726,51 +746,46 @@ def export_summary(request: Request) -> Dict[str, object]:
 @router.get("/notes/export-html")
 def export_notes_html(request: Request) -> Response:
     token = _require_bearer_token(request)
-    search_query = request.query_params.get("search_query")
-    if search_query is None:
-        raise HTTPException(status_code=400, detail="search_query query parameter is required")
-    theme = request.query_params.get("theme")
-    if theme is None:
-        raise HTTPException(status_code=400, detail="theme query parameter is required")
-
-    if not isinstance(search_query, str):
-        raise TypeError("search_query query parameter must be a string")
-    if not isinstance(theme, str):
-        raise TypeError("theme query parameter must be a string")
+    search_query = _required_query_param(request, "search_query")
+    theme = _required_query_param(request, "theme")
 
     normalized_search = search_query
     if normalized_search == "":
         normalized_search = None
-    note_id = request.query_params.get("note_id")
+    note_id = _optional_note_id_param(request)
     if note_id is not None:
-        if not isinstance(note_id, str) or note_id == "":
-            raise HTTPException(status_code=400, detail="note_id query parameter must be non-empty")
+        if note_id == "":
+            raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="note_id query parameter must be non-empty")
         _require_note_present(note_id, context="notes.export-html")
 
     normalized_theme = theme.strip().lower()
     if normalized_theme not in {"dark", "light"}:
-        raise HTTPException(status_code=400, detail="theme must be 'light' or 'dark'")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="theme must be 'light' or 'dark'")
     # The view as the tab shows it: its sort order and kind (All or Untagged notes).
-    tab_id = request.query_params.get("tab_id")
-    if tab_id is None or tab_id == "":
-        raise HTTPException(status_code=400, detail="tab_id query parameter is required")
-    is_untagged_view = request.query_params.get("is_untagged_view")
+    tab_id = _required_query_param(request, "tab_id")
+    if tab_id == "":
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="tab_id query parameter is required")
+    is_untagged_view = _required_query_param(request, "is_untagged_view")
     if is_untagged_view not in {"true", "false"}:
-        raise HTTPException(status_code=400, detail="is_untagged_view query parameter must be 'true' or 'false'")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="is_untagged_view query parameter must be 'true' or 'false'")
 
     # Both carry the user's title; a download collapses and expands, a print is always light.
-    purpose = request.query_params.get("purpose")
+    purpose = _required_query_param(request, "purpose")
     if purpose not in EXPORT_PURPOSES:
-        raise HTTPException(status_code=400, detail="purpose query parameter must be 'download' or 'print'")
-    title = request.query_params.get("title")
-    if title is None:
-        raise HTTPException(status_code=400, detail="title query parameter is required")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="purpose query parameter must be 'download' or 'print'")
+    title = _required_query_param(request, "title")
     if purpose == "print":
         normalized_theme = "light"
     # Passwords and usernames show only when the user chose to include them in this export.
-    include_credentials = request.query_params.get("include_credentials")
+    include_credentials = _required_query_param(request, "include_credentials")
     if include_credentials not in {"true", "false"}:
-        raise HTTPException(status_code=400, detail="include_credentials query parameter must be 'true' or 'false'")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="include_credentials query parameter must be 'true' or 'false'")
+    # A download starts as MetaList shows it, the note being edited open ("" when none is).
+    editing_note_id: str | None = _required_query_param(request, "editing_note_id")
+    if editing_note_id == "":
+        editing_note_id = None
+    else:
+        _require_note_present(editing_note_id, context="notes.export-html")
 
     document = build_notes_export_document(
         search=normalized_search,
@@ -782,6 +797,7 @@ def export_notes_html(request: Request) -> Response:
         purpose=purpose,
         title=title,
         include_credentials=include_credentials == "true",
+        editing_note_id=editing_note_id,
     )
     filename = build_notes_export_filename(title)
     quoted_filename = urllib.parse.quote(filename)
@@ -856,7 +872,7 @@ def outside_referrers(note_id: str) -> Dict[str, object]:
 def _compute_lock_diff(previous: Dict[str, str], current: Dict[str, str]) -> Dict[str, str]:
     diff: Dict[str, str] = {}
     for note_id, owner in current.items():
-        if previous.get(note_id) != owner:
+        if note_id not in previous or previous[note_id] != owner:
             diff[note_id] = owner
     for note_id in previous:
         if note_id not in current:
@@ -869,7 +885,7 @@ def _compute_lock_diff(previous: Dict[str, str], current: Dict[str, str]) -> Dic
 def _not_impl(exc: Exception) -> None:
     # Turn NotImplementedError into HTTP 501; re-raise anything else
     if isinstance(exc, NotImplementedError):
-        raise HTTPException(status_code=501, detail=str(exc))
+        raise HTTPException(status_code=HTTPStatus.NOT_IMPLEMENTED, detail=str(exc))
     raise exc
 
 
@@ -931,7 +947,7 @@ def create_file_preview_child(request: Request, note_id: str, body: CreateFilePr
     _require_note_present(note_id, context="notes.file-preview-child")
     file_id = body["fileId"]
     if not file_registry.has_file(file_id):
-        raise HTTPException(status_code=404, detail=f"File not found: {file_id}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"File not found: {file_id}")
     cmd = CmdCreateFilePreviewChild(
         parent_note_id=note_id,
         file_id=file_id,
@@ -1011,7 +1027,7 @@ def add_selected_text_tag(request: Request, note_id: str, body: AddSelectedTextT
         response = command.execute()
     if capture.captured_exception is not None:
         exc = capture.captured_exception
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)) from exc
     if response is None:
         raise RuntimeError("CmdAddSelectedTextTag returned no response")
     return response
@@ -1197,6 +1213,16 @@ def resize_note_image(request: Request, note_id: str, body: ResizeNoteImageReque
         viewport=viewport,
     )
     return cmd.execute()
+
+
+# The size each inline image shows at in the editor, for unsaved text and tags:
+# what the view would render (a display-only zoom; nothing is saved).
+@router.post("/notes/{note_id}/editing-image-sizes")
+@transactional_route
+def editing_image_sizes(request: Request, note_id: str, body: EditingImageSizesRequest) -> Dict[str, object]:
+    _require_bearer_token(request)
+    _require_note_present(note_id, context="notes.editing-image-sizes")
+    return {"factors": editing_image_size_factors(content_html=body["content"], tags=body["tags"])}
 
 
 @router.post("/notes/{note_id}/run-shell")
@@ -1612,7 +1638,7 @@ def paste_reference_child_endpoint(request: Request, target_note_id: str, body: 
 def _require_viewport(body: dict) -> dict:
     viewport = body["viewport"]
     if not isinstance(viewport, dict):
-        raise HTTPException(status_code=400, detail="viewport is required")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="viewport is required")
     return viewport
 
 

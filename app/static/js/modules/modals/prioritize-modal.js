@@ -1,3 +1,4 @@
+import { NEXT_ROW, NO_SELECTION, PREVIOUS_ROW } from '../list-selection.js';
 import { ApplicationState } from '../application-state.js';
 import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
@@ -41,7 +42,7 @@ export class PrioritizeModal extends BaseModal {
             searchQuery: this._context.searchQuery,
             tagInput: '',
             suggestions: [],
-            selectedIndex: -1,
+            selectedIndex: NO_SELECTION,
             loadingSuggestions: true,
             isDropdownOpen: true,
             error: '',
@@ -109,9 +110,6 @@ export class PrioritizeModal extends BaseModal {
         }
     }
 
-    shouldCloseOnClickOutside() {
-        return true;
-    }
 
     getElements() {
         const modalElement = document.getElementById(this.modalElementId);
@@ -206,7 +204,7 @@ export class PrioritizeModal extends BaseModal {
                 return;
             }
             event.preventDefault();
-            this.moveSelection(1);
+            this.moveSelection(NEXT_ROW);
             return;
         }
         if (event.key === 'ArrowUp') {
@@ -214,7 +212,7 @@ export class PrioritizeModal extends BaseModal {
                 return;
             }
             event.preventDefault();
-            this.moveSelection(-1);
+            this.moveSelection(PREVIOUS_ROW);
             return;
         }
         if (event.key !== 'Enter') {
@@ -389,7 +387,7 @@ export class PrioritizeModal extends BaseModal {
         input.onblur = () => {
             this.updateModalState({
                 isDropdownOpen: false,
-                selectedIndex: -1,
+                selectedIndex: NO_SELECTION,
             });
             this.syncSuggestionUi();
         };
@@ -417,7 +415,7 @@ export class PrioritizeModal extends BaseModal {
         this.updateModalState({
             tagInput: tag,
             isDropdownOpen: false,
-            selectedIndex: -1,
+            selectedIndex: NO_SELECTION,
             loadingSuggestions: false,
             error: '',
         });
@@ -465,7 +463,7 @@ export class PrioritizeModal extends BaseModal {
         this.updateModalState({
             loadingSuggestions: true,
             isDropdownOpen: true,
-            selectedIndex: -1,
+            selectedIndex: NO_SELECTION,
         });
         this.syncSuggestionUi();
 
@@ -522,7 +520,7 @@ export class PrioritizeModal extends BaseModal {
                 loadingSuggestions: false,
                 suggestions: [],
                 isDropdownOpen: keepDropdownOpen,
-                selectedIndex: -1,
+                selectedIndex: NO_SELECTION,
                 error: message,
             });
             this.syncSuggestionUi();

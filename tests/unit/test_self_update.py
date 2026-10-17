@@ -415,7 +415,7 @@ def test_fetch_latest_pypi_version_reads_validated_project_metadata(monkeypatch)
     monkeypatch.setattr(
         self_update.httpx,
         "get",
-        lambda url, **kwargs: calls.append((url, kwargs)) or response,
+        lambda url, **kwargs: calls.append((url, kwargs)) or response,  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
     )
 
     assert self_update._fetch_latest_pypi_version() == "0.3.13"

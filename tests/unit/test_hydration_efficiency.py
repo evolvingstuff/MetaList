@@ -97,7 +97,7 @@ def test_note_store_reuses_plain_text_created_during_cache_hydration(
             "parent_id": None,
             "prev_id": None,
             "next_id": None,
-            "is_collapsed": False,
+            "is_collapsed": False, "created_at": None, "updated_at": None,
         }
     ]
     monkeypatch.setattr(note_store_module, "get_cached_content", lambda _note_id: "<div>One</div>")

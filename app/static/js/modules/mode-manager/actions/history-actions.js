@@ -11,6 +11,12 @@ import { scrollNoteIntoView } from '../services/scroll-restoration-service.js';
 import { detachEditorSurface } from '../../editor-toolbar.js';
 import { clearTagBar } from '../services/tag-bar-service.js';
 import { resolveHistoryEditingState } from '../services/history-selection-policy-service.js';
+import { refreshEditingImageSizes } from '../services/editing-image-size-service.js';
+import { MS_PER_SECOND } from '../../time-units.js';
+
+const NOTHING_TO_UNDO_BANNER_SECONDS = 5;
+// After an undo or redo re-renders, the changed note is scrolled into view this much later.
+const SCROLL_TO_CHANGED_NOTE_DELAY_MS = 300;
 
 function applyScrollRestore(scrollRestore, contextLabel) {
     if (!scrollRestore || typeof scrollRestore !== 'object') {
@@ -55,7 +61,7 @@ function applyScrollRestore(scrollRestore, contextLabel) {
         : null;
 
     return {
-        visibleRootAnchorId: viewAnchorRootId || anchorId,
+        visibleRootAnchorId: viewAnchorRootId === null ? anchorId : viewAnchorRootId,  // shockharness: ignore[DEF004] reason="a restore may carry no view anchor; the scroll anchor stands in"
         focusNoteId,
         opType,
     };
@@ -147,7 +153,7 @@ export async function actionUndo() {
 
     if (result.status === 'noop') {
         Logger.logAction('undo_noop', { message: result.message });
-        ErrorHandler.showInfoBanner(result.message, 5000);
+        ErrorHandler.showInfoBanner(result.message, NOTHING_TO_UNDO_BANNER_SECONDS * MS_PER_SECOND);
         return; 
     }
 
@@ -183,7 +189,7 @@ export async function actionUndo() {
         });
     } else {
         
-        throw new Error(`Undo failed: ${result.message || 'Unknown error'}`);
+        throw new Error(`Undo failed: ${JSON.stringify(result.message)}`);
     }
 
     const newContent = await actionRefreshAndMaybeSelect({ startedAt, context: 'actionUndo', visibleRootAnchorId });
@@ -192,11 +198,15 @@ export async function actionUndo() {
     if (focusNoteId) {
 		window.setTimeout(() => {
 			scrollNoteIntoView(focusNoteId, {});
-		}, 300);
+		}, SCROLL_TO_CHANGED_NOTE_DELAY_MS);
 	}
 
     if (ModeContext.currentContent !== newContent && newContent !== null) {
         ModeContext.setCurrentContent(newContent);
+    }
+    // An undone or redone size tag leaves the text as it was: the sizes follow it.
+    if (ModeContext.isEditing) {
+        await refreshEditingImageSizes(ModeContext.currentNoteId);
     }
 
     ModeContext.validate();
@@ -258,7 +268,7 @@ export async function actionRedo() {
         });
     } else {
         
-        throw new Error(`Redo failed: ${result.message || 'Unknown error'}`);
+        throw new Error(`Redo failed: ${JSON.stringify(result.message)}`);
     }
 
     const newContent = await actionRefreshAndMaybeSelect({ startedAt, context: 'actionRedo', visibleRootAnchorId });
@@ -267,11 +277,15 @@ export async function actionRedo() {
     if (focusNoteId) {
 		window.setTimeout(() => {
 			scrollNoteIntoView(focusNoteId, {});
-		}, 300);
+		}, SCROLL_TO_CHANGED_NOTE_DELAY_MS);
 	}
 
     if (ModeContext.currentContent !== newContent && newContent !== null) {
         ModeContext.setCurrentContent(newContent);
+    }
+    // An undone or redone size tag leaves the text as it was: the sizes follow it.
+    if (ModeContext.isEditing) {
+        await refreshEditingImageSizes(ModeContext.currentNoteId);
     }
 
     ModeContext.validate();

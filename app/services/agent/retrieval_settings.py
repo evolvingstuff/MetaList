@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal
+from app.services.preference_values import preference_or_default
 
 
 OPENAI_MAX_PAGE_APPROXIMATE_TOKENS_PREFERENCE_KEY = (
@@ -35,7 +36,8 @@ class AgentRetrievalSettings:
 def resolve_tagging_batch_tokens(preferences: dict[str, str], provider: str) -> int:
     if provider == "openai":
         return int(validate_openai_max_page_approximate_tokens_preference(
-            preferences.get("pref.ai.openai.tagging.batch_tokens", str(DEFAULT_OPENAI_TAGGING_BATCH_TOKENS))))
+            preference_or_default(
+                preferences, "pref.ai.openai.tagging.batch_tokens", default=str(DEFAULT_OPENAI_TAGGING_BATCH_TOKENS))))
     raise ValueError(f"Unsupported tagging provider: {provider}")
 
 
@@ -57,10 +59,7 @@ def resolve_agent_retrieval_settings(
         raise TypeError("preferences must be a dict")
     preference_key = _preference_key_for_provider(provider=provider)
     default = _default_for_provider(provider=provider)
-    raw_value = preferences.get(
-        preference_key,
-        str(default.max_page_approximate_tokens),
-    )
+    raw_value = preference_or_default(preferences, preference_key, default=str(default.max_page_approximate_tokens))
     if (
         provider == "openai"
         and raw_value == str(LEGACY_DEFAULT_OPENAI_MAX_PAGE_APPROXIMATE_TOKENS)

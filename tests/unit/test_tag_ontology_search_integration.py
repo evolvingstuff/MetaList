@@ -49,7 +49,7 @@ def _load_store_with_ontology(
 def test_search_matches_ontology_implied_tags(monkeypatch: pytest.MonkeyPatch) -> None:
     content_by_id = {"n": "<div>hello</div>"}
     tags_by_id = {"n": "alpha"}
-    rows = [{"id": "n", "parent_id": None, "prev_id": None, "next_id": None, "is_collapsed": 0}]
+    rows = [{"id": "n", "parent_id": None, "prev_id": None, "next_id": None, "is_collapsed": 0, "created_at": None, "updated_at": None}]
 
     _, index = _load_store_with_ontology(
         monkeypatch,
@@ -66,7 +66,7 @@ def test_search_matches_ontology_implied_tags(monkeypatch: pytest.MonkeyPatch) -
 def test_search_matches_ontology_text_matchers(monkeypatch: pytest.MonkeyPatch) -> None:
     content_by_id = {"n": "<div>TODO ship it</div>"}
     tags_by_id = {"n": ""}
-    rows = [{"id": "n", "parent_id": None, "prev_id": None, "next_id": None, "is_collapsed": 0}]
+    rows = [{"id": "n", "parent_id": None, "prev_id": None, "next_id": None, "is_collapsed": 0, "created_at": None, "updated_at": None}]
 
     _, index = _load_store_with_ontology(
         monkeypatch,
@@ -84,7 +84,7 @@ def test_search_applies_ontology_to_proposed_tags(monkeypatch: pytest.MonkeyPatc
     content_by_id = {"n": "<div>hello</div>"}
     tags_by_id = {"n": "human"}
     rows = [
-        {"id": "n", "parent_id": None, "prev_id": None, "next_id": None, "is_collapsed": 0}
+        {"id": "n", "parent_id": None, "prev_id": None, "next_id": None, "is_collapsed": 0, "created_at": None, "updated_at": None}
     ]
 
     _, index = _load_store_with_ontology(

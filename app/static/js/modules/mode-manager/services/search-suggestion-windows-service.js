@@ -2,9 +2,10 @@ import { ApplicationState } from '../../application-state.js';
 export const DEFAULT_SEARCH_SUGGESTION_WINDOWS_VALUE = '[1,7,30]';
 export const MAX_SEARCH_SUGGESTION_WINDOW_DAYS = 365;
 export const MAX_SEARCH_SUGGESTION_WINDOW_SLOTS = 20;
+const DEFAULT_SEARCH_SUGGESTION_WINDOW_DAYS = Object.freeze(JSON.parse(DEFAULT_SEARCH_SUGGESTION_WINDOWS_VALUE));
 
 const moduleState = ApplicationState.createFields('search-suggestion-windows-service', {
-    currentWindowDays: Object.freeze([1, 7, 30]),
+    currentWindowDays: DEFAULT_SEARCH_SUGGESTION_WINDOW_DAYS,
     shouldShowWindowLabels: true,
     shouldLimitNoteCreditsPerSearchContext: true,
 });

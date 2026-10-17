@@ -13,15 +13,18 @@ _PHASE_ORDER = (
 )
 _PHASE_INDEX = {phase: index for index, phase in enumerate(_PHASE_ORDER)}
 _PHASE_COUNT = len(_PHASE_ORDER)
+_PERCENT_COMPLETE = 100
+# Running hydration never reports complete; only finish() does.
+_RUNNING_PERCENT_MAX = _PERCENT_COMPLETE - 1
 
 
 def _calculate_overall_percent(
     *, status: str, phase: str, processed: int, total: int
 ) -> int:
     if status == "ready":
-        return 100
+        return _PERCENT_COMPLETE
     if phase == "complete":
-        return 100
+        return _PERCENT_COMPLETE
     if phase in _PHASE_INDEX:
         index = _PHASE_INDEX[phase]
         if total > 0:
@@ -29,9 +32,9 @@ def _calculate_overall_percent(
         else:
             phase_progress = 0
         fraction = (index + phase_progress) / _PHASE_COUNT
-        percent = int(fraction * 100)
-        if status == "running" and percent > 99:
-            return 99
+        percent = int(fraction * _PERCENT_COMPLETE)
+        if status == "running" and percent > _RUNNING_PERCENT_MAX:
+            return _RUNNING_PERCENT_MAX
         if percent < 0:
             return 0
         return percent

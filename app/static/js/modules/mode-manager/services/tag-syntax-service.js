@@ -28,6 +28,12 @@ const TAG_WRAPPER_PAIRS = new Map([
     ['(', ')'],
 ]);
 const TAG_WRAPPER_CHARS = new Set(['[', ']', '{', '}', '(', ')']);
+// A tag may be wrapped at most three levels deep: [tag], [[tag]], [[[tag]]].
+export const MAX_WRAPPER_DEPTH = 3;
+// Each wrapper level contributes one opener and one closer.
+const WRAPPER_ENDS_PER_LEVEL = 2;
+export const COMMENT_OPEN = '/*';
+export const COMMENT_CLOSE = '*/';
 const SCOPED_RENDERER_TAGS = new Set(['@markdown', '@latex', '@json', '@csv', '@shell', '@chess', '@diff', '@mermaid']);
 // @code=<language> (any name the server's highlighter knows; app/services/code_rendering.py).
 const CODE_RENDERER_TAG_RE = /^@code=[a-z0-9][a-z0-9+#._-]*$/;
@@ -63,12 +69,16 @@ function isSupportedMetaTag(term) {
         && /[1-9]/.test(folded.slice('@size='.length));
 }
 
+// Printable ASCII runs from the space (0x20) to the tilde (0x7e).
+const FIRST_PRINTABLE_ASCII_CODE = ' '.charCodeAt(0);
+const LAST_PRINTABLE_ASCII_CODE = '~'.charCodeAt(0);
+
 function isAsciiPrintable(char) {
     if (typeof char !== 'string' || char.length === 0) {
         return false;
     }
     const code = char.charCodeAt(0);
-    return code >= 0x20 && code <= 0x7e;
+    return code >= FIRST_PRINTABLE_ASCII_CODE && code <= LAST_PRINTABLE_ASCII_CODE;
 }
 
 function isWhitespace(char) {
@@ -149,7 +159,7 @@ function enforceWrappedTagTokenInternal(
     }
 
     let openerCount = 0;
-    while (openerCount < rawToken.length && rawToken[openerCount] === opener && openerCount < 3) {
+    while (openerCount < rawToken.length && rawToken[openerCount] === opener && openerCount < MAX_WRAPPER_DEPTH) {
         openerCount += 1;
     }
 
@@ -222,7 +232,7 @@ function analyzeUnclosedWrapperTokenInfo(token) {
     }
 
     let openerCount = 0;
-    while (openerCount < token.length && token[openerCount] === opener && openerCount < 3) {
+    while (openerCount < token.length && token[openerCount] === opener && openerCount < MAX_WRAPPER_DEPTH) {
         openerCount += 1;
     }
 
@@ -316,7 +326,7 @@ function enforceTagBarInputInternal(rawInput, options) {
                 throw new Error(`Unknown tag wrapper opener: ${opener}`);
             }
             let openerCount = 0;
-            while (openerCount < rawInput.length - index && rawInput[index + openerCount] === opener && openerCount < 3) {
+            while (openerCount < rawInput.length - index && rawInput[index + openerCount] === opener && openerCount < MAX_WRAPPER_DEPTH) {
                 openerCount += 1;
             }
             wrapper = { opener, closer, openerCount };
@@ -362,19 +372,19 @@ function scanTagBarSegments(rawInput) {
     let index = 0;
     let wrapper = null;
     while (index < rawInput.length) {
-        if (rawInput.startsWith('/*', index)) {
+        if (rawInput.startsWith(COMMENT_OPEN, index)) {
             if (currentToken.length > 0) {
                 segments.push({ type: 'token', text: currentToken });
                 currentToken = '';
             }
 
-            const closeIndex = rawInput.indexOf('*/', index + 2);
+            const closeIndex = rawInput.indexOf(COMMENT_CLOSE, index + COMMENT_OPEN.length);
             if (closeIndex === -1) {
                 return { segments, unclosedCommentText: rawInput.slice(index) };
             }
 
-            segments.push({ type: 'comment', text: rawInput.slice(index, closeIndex + 2) });
-            index = closeIndex + 2;
+            segments.push({ type: 'comment', text: rawInput.slice(index, closeIndex + COMMENT_CLOSE.length) });
+            index = closeIndex + COMMENT_CLOSE.length;
             continue;
         }
 
@@ -386,7 +396,7 @@ function scanTagBarSegments(rawInput) {
                 throw new Error(`Unknown tag wrapper opener: ${opener}`);
             }
             let openerCount = 0;
-            while (openerCount < rawInput.length - index && rawInput[index + openerCount] === opener && openerCount < 3) {
+            while (openerCount < rawInput.length - index && rawInput[index + openerCount] === opener && openerCount < MAX_WRAPPER_DEPTH) {
                 openerCount += 1;
             }
             wrapper = { opener, closer, openerCount };
@@ -432,13 +442,13 @@ function scanTagBarTokensWithPositions(rawInput) {
             break;
         }
 
-        if (rawInput.startsWith('/*', index)) {
-            const end = rawInput.indexOf('*/', index + 2);
+        if (rawInput.startsWith(COMMENT_OPEN, index)) {
+            const end = rawInput.indexOf(COMMENT_CLOSE, index + COMMENT_OPEN.length);
             if (end === -1) {
                 break;
             }
-            commentRanges.push({ start: index, end: end + 2 });
-            index = end + 2;
+            commentRanges.push({ start: index, end: end + COMMENT_CLOSE.length });
+            index = end + COMMENT_CLOSE.length;
             continue;
         }
 
@@ -446,10 +456,10 @@ function scanTagBarTokensWithPositions(rawInput) {
         const opener = rawInput[index];
         if (TAG_WRAPPER_OPENERS.has(opener)) {
             let openerCount = 1;
-            while (index + openerCount < rawInput.length && rawInput[index + openerCount] === opener && openerCount < 3) {
+            while (index + openerCount < rawInput.length && rawInput[index + openerCount] === opener && openerCount < MAX_WRAPPER_DEPTH) {
                 openerCount += 1;
             }
-            if (openerCount <= 3) {
+            if (openerCount <= MAX_WRAPPER_DEPTH) {
                 const closer = TAG_WRAPPER_PAIRS.get(opener);
                 if (typeof closer !== 'string') {
                     throw new Error(`Unknown tag wrapper opener: ${opener}`);
@@ -489,7 +499,7 @@ function unwrapWrapperToken(token) {
     while (openerCount < token.length && token[openerCount] === opener) {
         openerCount += 1;
     }
-    if (openerCount > 3) {
+    if (openerCount > MAX_WRAPPER_DEPTH) {
         return null;
     }
 
@@ -498,7 +508,7 @@ function unwrapWrapperToken(token) {
         throw new Error(`Unknown tag wrapper opener: ${opener}`);
     }
 
-    if (token.length < openerCount * 2) {
+    if (token.length < openerCount * WRAPPER_ENDS_PER_LEVEL) {
         return null;
     }
 
@@ -611,7 +621,7 @@ export function analyzeTagBarInput(rawInput) {
     }
     const normalizedText = normalizedSegments.join(' ').trim();
 
-    const shouldWarnUnclosedComment = Boolean(unclosedCommentText) && unclosedCommentText.length > 2;
+    const shouldWarnUnclosedComment = Boolean(unclosedCommentText) && unclosedCommentText.length > COMMENT_OPEN.length;
 
     const errorMessage = shouldWarnUnclosedComment
         ? 'Close comment with */'

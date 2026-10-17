@@ -150,6 +150,10 @@ Follow these steps:
 4. Write a minimal test that matches the reported steps and expected behavior. Verify the test fails against current code for the right reason before making production code changes.
 5. Implement the smallest fix that makes the test pass. Follow fail-fast/loud rules; use asserts to document invariants where appropriate.
 6. Run the relevant tests until they pass.
+7. Propose a ShockHarness rule (see below).
+
+### Every Bug Suggests a ShockHarness Rule
+Whenever you run into a bug (reported, found in testing, or met in passing), hypothesize a ShockHarness rule that, had it existed, would have caught it before it shipped. A rule is better than a heuristic: say what code shape it matches, why that shape causes the bug, and roughly how often it would fire falsely. A heuristic is the fallback when no precise rule fits. Tell the user the proposal along with the fix, so it can go to the ShockHarness project.
 
 ### PLAN
 If the user says `PLAN:` (optionally followed by context):

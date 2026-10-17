@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+from http import HTTPStatus
 from fastapi import HTTPException, Request, Response
 
 from app.config import ACTIVE_NAMESPACE
 from app.server_runtime import validate_namespace
+from app.utils.sent_fields import sent_or_none
 
 
 AUTH_COOKIE_PREFIX = "metalist_auth"
+# "Bearer <token>": the scheme and the token.
+_BEARER_HEADER_PARTS = 2
 
 
 def auth_cookie_name_for_namespace(namespace: str) -> str:
@@ -21,10 +25,10 @@ def read_request_auth_token(request: Request) -> tuple[str | None, str | None]:
     if not isinstance(request, Request):
         raise TypeError("request must be a Request")
 
-    authorization = request.headers.get("authorization")
+    authorization = sent_or_none(request.headers, "authorization")
     if authorization is not None:
         parts = authorization.split()
-        if len(parts) != 2 or parts[0].lower() != "bearer":
+        if len(parts) != _BEARER_HEADER_PARTS or parts[0].lower() != "bearer":
             return None, "Invalid Authorization header"
         return parts[1], None
 
@@ -37,14 +41,14 @@ def read_request_auth_token(request: Request) -> tuple[str | None, str | None]:
 def get_request_auth_token(request: Request) -> str | None:
     token, error_detail = read_request_auth_token(request)
     if error_detail is not None:
-        raise HTTPException(status_code=401, detail=error_detail)
+        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED, detail=error_detail)
     return token
 
 
 def require_request_auth_token(request: Request) -> str:
     token = get_request_auth_token(request)
     if token is None:
-        raise HTTPException(status_code=401, detail="Authentication required")
+        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED, detail="Authentication required")
     return token
 
 

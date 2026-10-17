@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from http import HTTPStatus
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
@@ -30,18 +31,25 @@ from app.services.public_http import PublicHttpTargetRejected
 from app.services.public_http import ResolvedPublicHttpTarget
 from app.services.public_http import _PinnedNetworkBackend
 from app.services.public_http import normalize_public_http_url
+from app.utils.sent_fields import sent_or_none
 from app.services.public_http import resolve_public_http_target as _resolve_public_http_target
 
 _LinkTitleTargetRejected = PublicHttpTargetRejected
 _PinnedHTTPTransport = PinnedPublicHTTPTransport
 _ResolvedHttpTarget = ResolvedPublicHttpTarget
 
+# A record not yet stored has no database row id.
+_UNSAVED_ROW_ID = -1
 _FETCH_TIMEOUT_SECONDS = 4.0
 _MAX_REDIRECTS = 5
 _MAX_RESPONSE_BYTES = 1024 * 1024
-_OK_REFRESH_AFTER = timedelta(days=90)
-_NO_TITLE_REFRESH_AFTER = timedelta(days=30)
-_FAILED_REFRESH_AFTER = timedelta(days=7)
+_OK_REFRESH_AFTER_DAYS = 90
+_NO_TITLE_REFRESH_AFTER_DAYS = 30
+_FAILED_REFRESH_AFTER_DAYS = 7
+_OK_REFRESH_AFTER = timedelta(days=_OK_REFRESH_AFTER_DAYS)
+_NO_TITLE_REFRESH_AFTER = timedelta(days=_NO_TITLE_REFRESH_AFTER_DAYS)
+_FAILED_REFRESH_AFTER = timedelta(days=_FAILED_REFRESH_AFTER_DAYS)
+_MAX_TITLE_LENGTH = 300
 _USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -51,19 +59,24 @@ _USER_AGENT = (
 _AUTO_RETRY_STATUSES = {"ok", "no_title", "failed"}
 # "Retry failed link titles" asks these again; unsupported and blocked links are final.
 _MANUAL_RETRY_STATUSES = {"no_title", "failed"}
+_FAILED_SECOND_RETRY_MINUTES = 5
+_FAILED_THIRD_RETRY_MINUTES = 30
+_FAILED_FOURTH_RETRY_HOURS = 6
 _FAILED_RETRY_DELAYS = (
     timedelta(minutes=1),
-    timedelta(minutes=5),
-    timedelta(minutes=30),
-    timedelta(hours=6),
+    timedelta(minutes=_FAILED_SECOND_RETRY_MINUTES),
+    timedelta(minutes=_FAILED_THIRD_RETRY_MINUTES),
+    timedelta(hours=_FAILED_FOURTH_RETRY_HOURS),
     timedelta(days=1),
     _FAILED_REFRESH_AFTER,
 )
 # A site that answered HTTP 429 (too many requests) is retried more slowly.
+_RATE_LIMITED_FIRST_RETRY_MINUTES = 10
+_RATE_LIMITED_THIRD_RETRY_HOURS = 6
 _RATE_LIMITED_RETRY_DELAYS = (
-    timedelta(minutes=10),
+    timedelta(minutes=_RATE_LIMITED_FIRST_RETRY_MINUTES),
     timedelta(hours=1),
-    timedelta(hours=6),
+    timedelta(hours=_RATE_LIMITED_THIRD_RETRY_HOURS),
     timedelta(days=1),
     _FAILED_REFRESH_AFTER,
 )
@@ -74,12 +87,14 @@ _HOST_WAIT_POLL_SECONDS = 0.1
 _RATE_LIMIT_DEFAULT_COOLDOWN_SECONDS = 10 * 60
 _RATE_LIMIT_MIN_COOLDOWN_SECONDS = 60
 _RATE_LIMIT_MAX_COOLDOWN_SECONDS = 6 * 60 * 60
+_NO_TITLE_SECOND_RETRY_MINUTES = 10
+_NO_TITLE_FIFTH_RETRY_DAYS = 7
 _NO_TITLE_RETRY_DELAYS = (
     timedelta(minutes=1),
-    timedelta(minutes=10),
+    timedelta(minutes=_NO_TITLE_SECOND_RETRY_MINUTES),
     timedelta(hours=1),
     timedelta(days=1),
-    timedelta(days=7),
+    timedelta(days=_NO_TITLE_FIFTH_RETRY_DAYS),
     _NO_TITLE_REFRESH_AFTER,
 )
 _INTERSTITIAL_TITLE_EXACT_MATCHES = {
@@ -237,12 +252,12 @@ class _TitleParser(HTMLParser):
             for name, value in attrs
             if isinstance(name, str) and isinstance(value, str)
         }
-        content = attrs_by_name.get("content")
+        content = sent_or_none(attrs_by_name, "content")
         if content is None:
             return
-        property_value = attrs_by_name.get("property")
-        name_value = attrs_by_name.get("name")
-        itemprop_value = attrs_by_name.get("itemprop")
+        property_value = sent_or_none(attrs_by_name, "property")
+        name_value = sent_or_none(attrs_by_name, "name")
+        itemprop_value = sent_or_none(attrs_by_name, "itemprop")
         if property_value is not None and property_value.casefold() == "og:title":
             self.og_title = content
         if name_value is not None and name_value.casefold() == "twitter:title":
@@ -540,12 +555,13 @@ class LinkTitleFetcher:
 
 
 _FETCHER_EXECUTOR = None
+_FETCHER_WORKER_COUNT = 3
 
 
 def _executor():
     global _FETCHER_EXECUTOR
     if _FETCHER_EXECUTOR is None:
-        _FETCHER_EXECUTOR = ThreadPoolExecutor(max_workers=3, thread_name_prefix="link-title")
+        _FETCHER_EXECUTOR = ThreadPoolExecutor(max_workers=_FETCHER_WORKER_COUNT, thread_name_prefix="link-title")
     return _FETCHER_EXECUTOR
 
 
@@ -562,7 +578,7 @@ def display_domain_for_url(url: str) -> str:
         raise RuntimeError(f"Normalized URL missing hostname: {normalized}")
     hostname = parsed.hostname
     if hostname.startswith("www."):
-        hostname = hostname[4:]
+        hostname = hostname[len("www."):]
     return hostname
 
 
@@ -894,7 +910,7 @@ def _build_next_record(
         )
 
     if previous is None:
-        row_id = -1
+        row_id = _UNSAVED_ROW_ID
         created_at = now
     else:
         row_id = previous.id
@@ -1208,12 +1224,12 @@ def _fetch_page(url: str, target: _ResolvedHttpTarget) -> _LinkTitleFetchResult 
             if redirect_result is not None:
                 return redirect_result
 
-            if response.status_code == 429:
+            if response.status_code == HTTPStatus.TOO_MANY_REQUESTS:
                 _host_pacer.cool_down(
                     _pacing_host(url),
-                    _rate_limit_cooldown_seconds(response.headers.get("retry-after")),
+                    _rate_limit_cooldown_seconds(sent_or_none(response.headers, "retry-after")),
                 )
-            if response.status_code >= 400:
+            if response.status_code >= HTTPStatus.BAD_REQUEST:
                 return _LinkTitleFetchResult(
                     url=url,
                     title=None,
@@ -1221,8 +1237,9 @@ def _fetch_page(url: str, target: _ResolvedHttpTarget) -> _LinkTitleFetchResult 
                     last_error_kind=f"http_{response.status_code}",
                 )
 
-            content_type = response.headers.get("content-type", "")
-            if content_type and "html" not in content_type.casefold():
+            # A page without a content type may still be HTML.
+            content_type = sent_or_none(response.headers, "content-type")
+            if content_type is not None and content_type != "" and "html" not in content_type.casefold():
                 return _LinkTitleFetchResult(url=url, title=None, status="unsupported", last_error_kind="non_html")
 
             chunks: list[bytes] = []
@@ -1285,9 +1302,9 @@ def _fetch_oembed_title(*, page_url: str, oembed_url: str) -> _LinkTitleFetchRes
     if response is None:
         return None
     status_code, content = response
-    if status_code == 429:
+    if status_code == HTTPStatus.TOO_MANY_REQUESTS:
         return _LinkTitleFetchResult(url=page_url, title=None, status="failed", last_error_kind="http_429")
-    if status_code != 200:
+    if status_code != HTTPStatus.OK:
         return None
     json_capture = CapturedExceptionContext(json.JSONDecodeError, UnicodeDecodeError, boundary='app/services/link_titles.py:_fetch_oembed_title:json_capture')
     payload = None
@@ -1314,12 +1331,12 @@ def _request_oembed(oembed_url: str, target: _ResolvedHttpTarget) -> tuple[int, 
         with client.stream("GET", oembed_url) as response:
             status_code = response.status_code
             content = b""
-            if status_code == 429:
+            if status_code == HTTPStatus.TOO_MANY_REQUESTS:
                 _host_pacer.cool_down(
                     _pacing_host(oembed_url),
-                    _rate_limit_cooldown_seconds(response.headers.get("retry-after")),
+                    _rate_limit_cooldown_seconds(sent_or_none(response.headers, "retry-after")),
                 )
-            if status_code == 200:
+            if status_code == HTTPStatus.OK:
                 chunks: list[bytes] = []
                 total_bytes = 0
                 for chunk in response.iter_bytes():
@@ -1350,9 +1367,9 @@ def _download_oembed(oembed_url: str, target: _ResolvedHttpTarget) -> tuple[int,
 
 
 def _redirect_result_from_response(*, url: str, response: httpx.Response) -> _LinkTitleFetchResult | None:
-    if 300 > response.status_code or response.status_code >= 400:
+    if not httpx.codes.is_redirect(response.status_code):
         return None
-    location = response.headers.get("location")
+    location = sent_or_none(response.headers, "location")
     if location is None or location.strip() == "":
         return _LinkTitleFetchResult(url=url, title=None, status="failed", last_error_kind="redirect_without_location")
     next_url = normalize_url_for_link_title(str(httpx.URL(url).join(location)))
@@ -1388,8 +1405,8 @@ def _clean_title_text(value: str | None) -> str | None:
     cleaned = " ".join(value.split())
     if cleaned == "":
         return None
-    if len(cleaned) > 300:
-        cleaned = cleaned[:300].rstrip()
+    if len(cleaned) > _MAX_TITLE_LENGTH:
+        cleaned = cleaned[:_MAX_TITLE_LENGTH].rstrip()
     return cleaned
 
 
@@ -1413,14 +1430,22 @@ def _is_placeholder_title(*, title: str, url: str) -> bool:
 
 # Second-level labels under a country code ("bbc.co.uk"): the site's name is the label before.
 _COUNTRY_SECOND_LEVEL_LABELS = {"ac", "co", "com", "edu", "gov", "net", "org"}
+_COUNTRY_CODE_LENGTH = 2
+_SECOND_LEVEL_LABEL_INDEX = -2  # "co" in "bbc.co.uk"
+_SITE_DOMAIN_LABEL_COUNT = 2  # "reddit", "com"
+_COUNTRY_SITE_DOMAIN_LABEL_COUNT = 3  # "bbc", "co", "uk"
 
 
 def _site_domain_labels(url: str) -> list[str]:
     """The site's own domain: ["reddit", "com"] for old.reddit.com, ["bbc", "co", "uk"] for bbc.co.uk."""
     labels = _pacing_host(url).split(".")
-    if len(labels) >= 3 and len(labels[-1]) == 2 and labels[-2] in _COUNTRY_SECOND_LEVEL_LABELS:
-        return labels[-3:]
-    return labels[-2:]
+    if (
+        len(labels) >= _COUNTRY_SITE_DOMAIN_LABEL_COUNT
+        and len(labels[-1]) == _COUNTRY_CODE_LENGTH
+        and labels[_SECOND_LEVEL_LABEL_INDEX] in _COUNTRY_SECOND_LEVEL_LABELS
+    ):
+        return labels[-_COUNTRY_SITE_DOMAIN_LABEL_COUNT:]
+    return labels[-_SITE_DOMAIN_LABEL_COUNT:]
 
 
 def _is_site_name_title(*, title: str, url: str) -> bool:

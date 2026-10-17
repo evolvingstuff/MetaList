@@ -17,12 +17,17 @@ from app.services.namespace_switcher import _stop_failed_namespace_launch
 from app.services.namespace_switcher import _wait_for_namespace_ready
 from app.services.windows_process_control import stop_process_tree as stop_windows_process_tree
 from app.services.update_installer import resolve_update_installer
+from app.utils.time_units import SECONDS_PER_MINUTE
+
+_PREFLIGHT_COMMAND_TIMEOUT_MINUTES = 10
+_PROBE_REQUEST_TIMEOUT_SECONDS = 15
 
 
 def _run_checked(command: list[str], *, environ: Mapping[str, str], directory: Path) -> str:
     completed = subprocess.run(
         command, env=dict(environ), cwd=directory, capture_output=True,
-        text=True, encoding="utf-8", check=False, timeout=600,
+        text=True, encoding="utf-8", check=False,
+        timeout=_PREFLIGHT_COMMAND_TIMEOUT_MINUTES * SECONDS_PER_MINUTE,
     )
     if completed.returncode != 0:
         raise RuntimeError(
@@ -67,10 +72,10 @@ def _probe_candidate(*, python: str, executable: str, directory: Path,
             launched_process=NamespaceLaunchProcess(process, log_path, 0),
         )
         with httpx.Client(
-            base_url=f"http://127.0.0.1:{port}", timeout=15, trust_env=False,
+            base_url=f"http://127.0.0.1:{port}", timeout=_PROBE_REQUEST_TIMEOUT_SECONDS, trust_env=False,
             headers={"X-Metalist-Tab-Id": "00000000-0000-4000-8000-000000000001"},
         ) as client:
-            status = client.get("/api2/auth/status")
+            status = client.get("/api2/auth/status")  # shockharness: ignore[DEF002] reason="an HTTP GET request, not a lookup"
             status.raise_for_status()
             if status.json()["version"] != target_version:
                 raise RuntimeError("Update candidate started with the wrong version")
@@ -114,7 +119,7 @@ def prepare_update(*, target_version: str, environ: Mapping[str, str]) -> list[s
             candidate_python, "-I", "-c",
             "import sys,json,importlib.metadata; print(json.dumps([list(sys.version_info[:2]),importlib.metadata.version('metalist')]))",
         ], environ=stage_environ, directory=directory))
-        if identity != [list(sys.version_info[:2]), target_version]:
+        if identity != [[sys.version_info.major, sys.version_info.minor], target_version]:
             raise RuntimeError("Update preflight changed Python or installed the wrong MetaList version")
         _run_checked([uv_executable, "pip", "check", "--python", candidate_python], environ=stage_environ, directory=directory)
         frozen = _run_checked([uv_executable, "pip", "freeze", "--python", candidate_python], environ=stage_environ, directory=directory)

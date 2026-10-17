@@ -1,3 +1,4 @@
+import { HTTP_STATUS } from './http-status.js';
 import { ApplicationState } from './application-state.js';
 import { rethrowUnexpectedError } from './expected-errors.js';
 /**
@@ -9,11 +10,13 @@ import { ModeContextInstance as ModeContext } from './mode-manager/mode-context.
 import { CONFIG } from './config.js';
 import { ErrorHandler } from './error-handler.js';
 import { buildSessionHeaders } from './session-auth.js';
+import { MS_PER_SECOND } from './time-units.js';
 
 const moduleState = ApplicationState.createFields('connectivity-monitor', {
     connectivityInterval: null,
 });
 const CONNECTIVITY_CHECK_INTERVAL = 2000; // Check every 2 seconds
+const CONNECTIVITY_CHECK_TIMEOUT_SECONDS = 3;
 
 export const ConnectivityMonitor = {
     handleConnectivityFailure(error) {
@@ -64,7 +67,7 @@ export const ConnectivityMonitor = {
      */
     async checkConnectivity() {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), CONNECTIVITY_CHECK_TIMEOUT_SECONDS * MS_PER_SECOND);
 
         const response = await fetch(CONFIG.API.AUTH.STATUS, {
             method: 'GET',
@@ -76,7 +79,7 @@ export const ConnectivityMonitor = {
 
         if (response.ok) {
             ErrorHandler.handleConnectionRestored();
-        } else if (response.status === 401) {
+        } else if (response.status === HTTP_STATUS.UNAUTHORIZED) {
             ErrorHandler.handleApiError(null, response);
         } else {
             console.log('[ConnectivityMonitor] Server returned error:', response.status);

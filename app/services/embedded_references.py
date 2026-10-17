@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.utils.byte_sizes import MIB
 import html
 import re
 from dataclasses import dataclass
@@ -81,6 +82,11 @@ _UUID_REFERENCE_ID_RE = re.compile(
     r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 )
 _WHITESPACE_RE = re.compile(r"\s+")
+_LINK_OPEN = "[["
+_EMBED_OPEN = "![["
+_REFERENCE_CLOSE = "]]"
+# The first meaningful fragment, plus a second one to tell whether more follow.
+_PREVIEW_HEAD_FRAGMENT_COUNT = 2
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,6 +96,11 @@ class EmbedRenderContext:
     get_children: Callable[[Optional[str]], List[str]]
     has_file: Callable[[str], bool]
     get_file: Callable[[str], object]
+    # A downloaded export: the notes in an embed get MetaList's arrows and start
+    # as saved, and carry their first line and their full content, so the file
+    # can fold them. False for the live view (it folds through the server) and
+    # for prints (always fully expanded, no arrows).
+    static_collapse_arrows: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -152,7 +163,7 @@ class _ImageSourceParser(HTMLParser):
 def collect_reference_tokens_from_html(content_html: str) -> List[ReferenceToken]:
     if not isinstance(content_html, str):
         raise TypeError("content_html must be a string")
-    if "[[" not in content_html:
+    if _LINK_OPEN not in content_html:
         return []
 
     parts = _HTML_TOKEN_SPLIT_RE.split(content_html)
@@ -231,7 +242,7 @@ def collect_active_reference_tokens(content_html: str) -> List[ReferenceToken]:
     A [[...]] holding exactly a note id is a link even in a note whose tag bar
     has a [[...]] formatting wrapper (docs/ui/references.md).
     """
-    if "[[" not in content_html:
+    if _LINK_OPEN not in content_html:
         return []
     return collect_reference_tokens_from_html(content_html)
 
@@ -367,14 +378,18 @@ def _iter_collapsed_preview_meaningful_fragments(content_html: str) -> Iterator[
         yield "".join(fragment_parts).strip()
 
 
-@sensitive_lru_cache(maxsize=8192, max_bytes=32 * 1024 * 1024)
+_COLLAPSED_PREVIEW_MEMO_ENTRIES = 8192
+_COLLAPSED_PREVIEW_MEMO_MIB = 32
+
+
+@sensitive_lru_cache(maxsize=_COLLAPSED_PREVIEW_MEMO_ENTRIES, max_bytes=_COLLAPSED_PREVIEW_MEMO_MIB * MIB)
 def _collapsed_preview_head(content_html: str) -> Tuple[str, bool]:
     """First meaningful fragment and whether another follows.
 
     Pure in the content string; a view asks for this several times per note,
     so it is cached and stops scanning once a second fragment is known.
     """
-    head = tuple(islice(_iter_collapsed_preview_meaningful_fragments(content_html), 2))
+    head = tuple(islice(_iter_collapsed_preview_meaningful_fragments(content_html), _PREVIEW_HEAD_FRAGMENT_COUNT))
     if not head:
         return "", False
     return head[0], len(head) > 1
@@ -562,7 +577,7 @@ def _replace_reference_tokens_in_text(
             break
 
         output.append(text[index:token_start])
-        end = text.find("]]", token_start + token_open_length)
+        end = text.find(_REFERENCE_CLOSE, token_start + token_open_length)
         if end == -1:
             output.append(text[token_start:])
             break
@@ -592,7 +607,7 @@ def _replace_reference_tokens_in_text(
             )
         )
         occurrence_index += 1
-        index = end + 2
+        index = end + len(_REFERENCE_CLOSE)
 
     return "".join(output), occurrence_index
 
@@ -611,7 +626,7 @@ def _collect_reference_tokens_in_text(
         if token_start is None:
             break
 
-        token_end_inner = text.find("]]", token_start + token_open_length)
+        token_end_inner = text.find(_REFERENCE_CLOSE, token_start + token_open_length)
         if token_end_inner == -1:
             break
 
@@ -622,13 +637,13 @@ def _collect_reference_tokens_in_text(
                 ReferenceToken(
                     note_id=note_id,
                     start=text_offset + token_start,
-                    end=text_offset + token_end_inner + 2,
+                    end=text_offset + token_end_inner + len(_REFERENCE_CLOSE),
                     is_embed=is_embed,
                     occurrence_index=occurrence_index,
                 )
             )
             occurrence_index += 1
-            index = token_end_inner + 2
+            index = token_end_inner + len(_REFERENCE_CLOSE)
         else:
             # Same rule as rendering: only the opener is skipped, so nested links are found.
             index = token_start + token_open_length
@@ -640,12 +655,12 @@ def _find_next_reference_token_start(*, text: str, start: int) -> tuple[Optional
     # An embed "![[" at i implies "[[" at i + 1, so the earliest token begins at
     # the first "[[" or one character before it when that character is "!".
     assert start >= 0
-    bracket_index = text.find("[[", start)
+    bracket_index = text.find(_LINK_OPEN, start)
     if bracket_index == -1:
         return None, 0, False
     if bracket_index > start and text[bracket_index - 1] == "!":
-        return bracket_index - 1, 3, True
-    return bracket_index, 2, False
+        return bracket_index - 1, len(_EMBED_OPEN), True
+    return bracket_index, len(_LINK_OPEN), False
 
 
 def _is_valid_embed_note_id(note_id: str) -> bool:
@@ -1242,17 +1257,26 @@ def _render_embedded_note_node(
         # A note in the embed that is itself only a reference: a deeper embed.
         classes = f"{classes} note-embed-holds-embed"
     child_ids = context.get_children(note_id)
+    assert static_export or not context.static_collapse_arrows, "only a static export folds in the file"
     # Collapse is shared: an embedded note shows the state saved for it, as in
-    # the main tree, with an arrow where it can collapse. Exports show the
-    # whole subtree, as a document.
-    has_arrow = (not static_export) and _is_embedded_note_collapsible(
-        content_html=record_content, child_ids=child_ids, context=context
-    )
+    # the main tree, with an arrow where it can collapse. A print shows the
+    # whole subtree, as a document; a download starts as MetaList shows it.
+    can_collapse = _is_embedded_note_collapsible(content_html=record_content, child_ids=child_ids, context=context)
+    has_arrow = can_collapse and not static_export
+    if context.static_collapse_arrows:
+        # The embed's first note folds with its holder, whose own arrow does it.
+        has_arrow = can_collapse and not is_root
     shown_state_id = resolve_held_source(note_id, has_note=context.has_note, content_of=_context_content(context))
     is_collapsed = has_arrow and bool(context.get_note(shown_state_id).is_collapsed)
     toggle_html = ""
     if has_arrow:
         toggle_html = _embed_arrow_html(escaped_note_id=escaped_note_id, is_collapsed=is_collapsed)
+    if has_arrow and context.static_collapse_arrows:
+        return _render_foldable_static_embedded_note_node(
+            note_id=note_id, record_tags=record_tags, annotated_content=annotated_content, classes=classes,
+            escaped_note_id=escaped_note_id, toggle_html=toggle_html, is_collapsed=is_collapsed, child_ids=child_ids,
+            context=context, ancestry=ancestry, redact_credentials=redact_credentials,
+        )
     children_html = ""
     if is_collapsed:
         classes = f"{classes} note-embed-collapsed"
@@ -1287,6 +1311,60 @@ def _render_embedded_note_node(
         '<div class="note-embed-body">'
         f"{toggle_html}"
         f'<div class="note-embed-content">{rendered_content}</div>'
+        f"{children_html}"
+        "</div>"
+        "</div>"
+    )
+
+
+def _render_foldable_static_embedded_note_node(
+    *,
+    note_id: str,
+    record_tags: str,
+    annotated_content: str,
+    classes: str,
+    escaped_note_id: str,
+    toggle_html: str,
+    is_collapsed: bool,
+    child_ids: List[str],
+    context: EmbedRenderContext,
+    ancestry: Tuple[str, ...],
+    redact_credentials: bool,
+) -> str:
+    """An embedded note in a downloaded export: its first line and its full
+    content with its children, the file's arrow showing one or the other."""
+    if is_collapsed:
+        classes = f"{classes} note-embed-collapsed"
+    collapsed_content = render_collapsed_note_content_with_embeds(
+        note_id=note_id,
+        content_html=annotated_content,
+        tags=record_tags,
+        context=context,
+        static_export=True,
+        redact_credentials=redact_credentials,
+    )
+    expanded_content = _render_expanded_embedded_content(
+        note_id=note_id,
+        annotated_content=annotated_content,
+        tags=record_tags,
+        context=context,
+        ancestry=ancestry,
+        static_export=True,
+        redact_credentials=redact_credentials,
+    )
+    children_html = _render_embedded_children(
+        child_ids=child_ids,
+        context=context,
+        ancestry=ancestry,
+        static_export=True,
+        redact_credentials=redact_credentials,
+    )
+    return (
+        f'<div class="{classes}" data-embed-note-id="{escaped_note_id}">'
+        '<div class="note-embed-body">'
+        f"{toggle_html}"
+        f'<div class="note-embed-content">{expanded_content}</div>'
+        f'<div class="note-embed-content note-embed-content-collapsed">{collapsed_content}</div>'
         f"{children_html}"
         "</div>"
         "</div>"
@@ -1407,10 +1485,10 @@ def _strip_reference_tokens(text: str) -> str:
 
 def _strip_reference_token_if_uuid(match: re.Match[str]) -> str:
     token = match.group(0)
-    if token.startswith("![["):
-        note_id = token[3:-2].strip()
+    if token.startswith(_EMBED_OPEN):
+        note_id = token[len(_EMBED_OPEN) : -len(_REFERENCE_CLOSE)].strip()
     else:
-        note_id = token[2:-2].strip()
+        note_id = token[len(_LINK_OPEN) : -len(_REFERENCE_CLOSE)].strip()
     if _is_valid_embed_note_id(note_id):
         return " "
     return token

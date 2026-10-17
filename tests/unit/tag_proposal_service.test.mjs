@@ -90,7 +90,7 @@ class FakeElement {
 }
 
 function directChild(noteElement, className) {
-    return noteElement.children.find((child) => child.classList.contains(className)) || null;
+    return noteElement.children.find((child) => child.classList.contains(className)) || null;  // shockharness: ignore[DEF003] reason="the fake answers like the real API: null or empty when absent"
 }
 
 test('proposal presentation shows editable chips and one rolled-up robot count', async (t) => {

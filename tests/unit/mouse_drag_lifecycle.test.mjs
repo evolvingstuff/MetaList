@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { ApplicationState } from '../../app/static/js/modules/application-state.js';
+import { half } from '../../app/static/js/modules/half.js';
 import { resolveVerticalSiblingDropDestination, updateMoveDragGestureState } from '../../app/static/js/modules/mode-manager/services/note-drag-service.js';
 import { selectTagOnDoubleClick } from '../../app/static/js/modules/mode-manager/services/tag-input-selection-service.js';
 import { unlessDiagramEditorOpen } from '../../app/static/js/modules/excalidraw/excalidraw-editor-state.js';
@@ -14,7 +15,7 @@ function harness() {
     // All drag-visual preferences are on by default.
     const classes = new Set(['pref-drag-ghost', 'pref-drop-indicator', 'pref-drag-direction-icon']);
     const listeners = new Map();
-    const register = (type, handler) => listeners.set(type, [...(listeners.get(type) || []), handler]);
+    const register = (type, handler) => listeners.set(type, [...(listeners.get(type) || []), handler]);  // shockharness: ignore[DEF003] reason="the fake answers like the real API: null or empty when absent"
     const actions = [];
     const indicators = [];
     let now = 100;
@@ -62,6 +63,7 @@ function harness() {
         Node: Object,
         Element: Object,
         Logger: { logNoop() {}, logInit() {} },
+        half,
         recordCollapse: () => actions.push('collapse'),
         unlessDiagramEditorOpen, resolveDiagramTarget: () => null, openDiagramEditor: () => {},
     };
@@ -76,7 +78,7 @@ function harness() {
         consumeMouseDownClick: consumeClickAfterMouseDownAction,
     };`)(...Object.values(dependencies));
     return { ...handlers, actions, classes, indicators, setTime: value => { now = value; },
-        dispatch: (type, mouseEvent) => (listeners.get(type) || []).forEach(handler => handler(mouseEvent)),
+        dispatch: (type, mouseEvent) => (listeners.get(type) || []).forEach(handler => handler(mouseEvent)),  // shockharness: ignore[DEF003] reason="the fake answers like the real API: null or empty when absent"
     };
 }
 

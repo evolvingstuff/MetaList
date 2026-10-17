@@ -1,3 +1,4 @@
+import { parseDecimalInteger } from './decimal-integer.js';
 import { ApplicationState } from './application-state.js';
 import { HttpRequestError } from './expected-errors.js';
 import {
@@ -15,6 +16,8 @@ const UUID_ATTRIBUTE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}
 const REFERENCE_QUERY_ATTRIBUTE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?: OR [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})*$/i;
 const REFERENCE_ARIA_LABEL_PATTERN = /^Reference [1-9]\d*$/;
 const MATHML_LENGTH_VALUE_PATTERN = /^[a-z0-9.+%-]+(?:\s+[a-z0-9.+%-]+)*$/i;
+// Matches the server's MathML length limit (app/security/note_html.py).
+const MATHML_LENGTH_VALUE_MAX_CHARACTERS = 80;
 const MATHML_COLOR_VALUE_PATTERN = /^(?:#[0-9a-f]{3,8}|[a-z]+)$/i;
 const MATHML_TAGS = new Set([
     'math', 'menclose', 'mfrac', 'mi', 'mn', 'mo', 'mover', 'mpadded',
@@ -104,7 +107,7 @@ function sanitizeClassAttribute(rawValue, policy) {
         .split(/\s+/)
         .filter(Boolean)
         .filter(className => (
-            allowedNames.has(className)
+            allowedNames.has(className)  // shockharness: ignore[DEF003] reason="a boolean OR of two conditions, not a fallback"
             || policy.allowed_class_prefixes.some(prefix => className.startsWith(prefix))
         ));
     return safeNames.length === 0 ? null : safeNames.join(' ');
@@ -152,7 +155,7 @@ function sanitizeMathMlAttribute(attributeName, value) {
         return MATHML_COLOR_VALUE_PATTERN.test(value) ? value : null;
     }
     if (MATHML_LENGTH_ATTRIBUTES.has(attributeName)) {
-        return value.length <= 80 && MATHML_LENGTH_VALUE_PATTERN.test(value) ? value : null;
+        return value.length <= MATHML_LENGTH_VALUE_MAX_CHARACTERS && MATHML_LENGTH_VALUE_PATTERN.test(value) ? value : null;
     }
     throw new Error(`Unvalidated MathML attribute: ${attributeName}`);
 }
@@ -186,7 +189,7 @@ function sanitizeScalarAttribute(tagName, attributeName, rawValue, policy) {
         return IMAGE_DIMENSION_ATTRIBUTE_PATTERN.test(value) ? value : null;
     }
     if (attributeName === 'colspan' || attributeName === 'rowspan') {
-        return POSITIVE_INTEGER_ATTRIBUTE_PATTERN.test(value) && Number.parseInt(value, 10) > 0
+        return POSITIVE_INTEGER_ATTRIBUTE_PATTERN.test(value) && parseDecimalInteger(value) > 0
             ? value
             : null;
     }

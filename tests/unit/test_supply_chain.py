@@ -66,7 +66,7 @@ def test_distribution_rejects_obsolete_vendor_bundle():
     distribution = importlib.util.module_from_spec(distribution_spec)
     distribution_spec.loader.exec_module(distribution)
     expected = {'app/static/js/vendor/patched.js'}
-    with pytest.raises(AssertionError, match='obsolete vendor bundles'):
+    with pytest.raises(RuntimeError, match='obsolete vendor bundles'):
         distribution.check_vendor_inventory(expected | {'app/static/js/vendor/old.js'}, expected)
 
 
@@ -76,5 +76,5 @@ def test_distribution_rejects_repository_only_tests(name):
     distribution = importlib.util.module_from_spec(distribution_spec)
     distribution_spec.loader.exec_module(distribution)
     distribution.check_repository_only_tests({'app/services/agent/history.py'})
-    with pytest.raises(AssertionError, match='repository-only tests'):
+    with pytest.raises(RuntimeError, match='repository-only tests'):
         distribution.check_repository_only_tests({'app/services/agent/history.py', name})

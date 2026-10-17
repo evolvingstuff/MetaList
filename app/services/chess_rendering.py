@@ -24,6 +24,17 @@ _PIECE_GLYPHS = {"k": "♚", "q": "♛", "r": "♜", "b": "♝", "n": "♞", "p"
 _TEXT_PRESENTATION = "︎"
 _CASTLING_RE = re.compile(r"^(?:-|K?Q?k?q?)$")
 _EN_PASSANT_RE = re.compile(r"^(?:-|[a-h][36])$")
+# Positions of the optional FEN fields after the piece placement.
+_SIDE_TO_MOVE_FIELD = 1
+_CASTLING_FIELD = 2
+_EN_PASSANT_FIELD = 3
+_HALFMOVE_CLOCK_FIELD = 4
+_FULLMOVE_FIELD = 5
+_FEN_FIELD_COUNT = _FULLMOVE_FIELD + 1
+# The board is square: as many ranks as files, and as many squares in a rank.
+_BOARD_SIZE = len(_FILES)
+# Squares alternate between the two shades, light and dark.
+_SHADE_COUNT = 2
 
 
 @dataclass(frozen=True)
@@ -43,32 +54,32 @@ def parse_fen(raw_text: str) -> tuple[ChessPosition | None, str]:
     fields = raw_text.split()
     if not fields:
         return None, "Write a FEN position, for example the start: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-    if len(fields) > 6:
-        return None, "A FEN has at most 6 fields separated by spaces"
+    if len(fields) > _FEN_FIELD_COUNT:
+        return None, f"A FEN has at most {_FEN_FIELD_COUNT} fields separated by spaces"
     ranks, message = _parse_placement(fields[0])
     if ranks is None:
         return None, message
     side_to_move = "-"
-    if len(fields) >= 2:
-        if fields[1] not in {"w", "b"}:
-            return None, f"Side to move must be w or b, not {fields[1]}"
-        side_to_move = fields[1]
+    if len(fields) > _SIDE_TO_MOVE_FIELD:
+        if fields[_SIDE_TO_MOVE_FIELD] not in {"w", "b"}:
+            return None, f"Side to move must be w or b, not {fields[_SIDE_TO_MOVE_FIELD]}"
+        side_to_move = fields[_SIDE_TO_MOVE_FIELD]
     castling = "-"
-    if len(fields) >= 3:
-        if fields[2] == "" or not _CASTLING_RE.match(fields[2]):
-            return None, f"Castling must be - or letters from KQkq in that order, not {fields[2]}"
-        castling = fields[2]
+    if len(fields) > _CASTLING_FIELD:
+        if fields[_CASTLING_FIELD] == "" or not _CASTLING_RE.match(fields[_CASTLING_FIELD]):
+            return None, f"Castling must be - or letters from KQkq in that order, not {fields[_CASTLING_FIELD]}"
+        castling = fields[_CASTLING_FIELD]
     en_passant = "-"
-    if len(fields) >= 4:
-        if not _EN_PASSANT_RE.match(fields[3]):
-            return None, f"En passant must be - or a square on rank 3 or 6 such as e3, not {fields[3]}"
-        en_passant = fields[3]
-    for index, name in ((4, "Halfmove clock"), (5, "Move number")):
+    if len(fields) > _EN_PASSANT_FIELD:
+        if not _EN_PASSANT_RE.match(fields[_EN_PASSANT_FIELD]):
+            return None, f"En passant must be - or a square on rank 3 or 6 such as e3, not {fields[_EN_PASSANT_FIELD]}"
+        en_passant = fields[_EN_PASSANT_FIELD]
+    for index, name in ((_HALFMOVE_CLOCK_FIELD, "Halfmove clock"), (_FULLMOVE_FIELD, "Move number")):
         if len(fields) > index and not fields[index].isdigit():
             return None, f"{name} must be a whole number, not {fields[index]}"
     fullmove = "-"
-    if len(fields) == 6:
-        fullmove = fields[5]
+    if len(fields) == _FEN_FIELD_COUNT:
+        fullmove = fields[_FULLMOVE_FIELD]
     position = ChessPosition(
         ranks=ranks, side_to_move=side_to_move, castling=castling, en_passant=en_passant, fullmove=fullmove,
     )
@@ -77,11 +88,11 @@ def parse_fen(raw_text: str) -> tuple[ChessPosition | None, str]:
 
 def _parse_placement(placement: str) -> tuple[Tuple[Tuple[str, ...], ...] | None, str]:
     rank_texts = placement.split("/")
-    if len(rank_texts) != 8:
-        return None, f"The position needs 8 ranks separated by /, not {len(rank_texts)}"
+    if len(rank_texts) != _BOARD_SIZE:
+        return None, f"The position needs {_BOARD_SIZE} ranks separated by /, not {len(rank_texts)}"
     ranks = []
     for index, rank_text in enumerate(rank_texts):
-        rank_number = 8 - index
+        rank_number = _BOARD_SIZE - index
         squares: list[str] = []
         for char in rank_text:
             if char in "12345678":
@@ -90,8 +101,8 @@ def _parse_placement(placement: str) -> tuple[Tuple[Tuple[str, ...], ...] | None
             if char.lower() not in _PIECE_NAMES:
                 return None, f"Rank {rank_number} has {char!r}, which is not a piece (KQRBNP for White, kqrbnp for Black) or a count of empty squares"
             squares.append(char)
-        if len(squares) != 8:
-            return None, f"Rank {rank_number} covers {len(squares)} squares; each rank needs exactly 8"
+        if len(squares) != _BOARD_SIZE:
+            return None, f"Rank {rank_number} covers {len(squares)} squares; each rank needs exactly {_BOARD_SIZE}"
         ranks.append(tuple(squares))
     return tuple(ranks), ""
 
@@ -118,7 +129,7 @@ def render_chess_meta(*, content_html: str, formatting_tags: FrozenSet[str], ext
     label = "Chess position"
     if caption:
         label = f"Chess position, {caption}"
-    squares = [_render_rank(position.ranks[index], rank_number=8 - index) for index in range(8)]
+    squares = [_render_rank(position.ranks[index], rank_number=_BOARD_SIZE - index) for index in range(_BOARD_SIZE)]
     squares.append('<span class="meta-chess-corner"></span>')
     squares.extend(f'<span class="meta-chess-file">{file_letter}</span>' for file_letter in _FILES)
     caption_html = ""
@@ -137,7 +148,7 @@ def _render_rank(squares: Tuple[str, ...], *, rank_number: int) -> str:
     for file_index, piece in enumerate(squares):
         # a1 is a dark square.
         shade = "meta-chess-light"
-        if (file_index + rank_number) % 2 == 1:
+        if (file_index + rank_number) % _SHADE_COUNT == 1:
             shade = "meta-chess-dark"
         square_name = f"{_FILES[file_index]}{rank_number}"
         if piece == "":

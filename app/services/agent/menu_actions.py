@@ -9,13 +9,17 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.services.agent.help_catalog import MENU_BY_ID
 
+_MAX_RESULT_DETAIL_CHARS = 2000
+# How long the agent waits for the browser to open the menu it asked for.
+_MENU_RESULT_TIMEOUT_SECONDS = 30
+
 
 class MenuResult(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
     request_id: str = Field(..., min_length=1)
     status: Literal['opened', 'unavailable', 'cancelled']
-    detail: str = Field(..., max_length=2000)
+    detail: str = Field(..., max_length=_MAX_RESULT_DETAIL_CHARS)
 
 
 @dataclass(frozen=True)
@@ -47,7 +51,7 @@ class MenuActionStore:
     async def wait(self, pending: PendingMenu) -> MenuResult:
         # lint: allow-PY001 rationale="browser disconnect or missing acknowledgment is an external timeout"
         try:
-            return await asyncio.wait_for(pending.future, timeout=30)
+            return await asyncio.wait_for(pending.future, timeout=_MENU_RESULT_TIMEOUT_SECONDS)
         # lint: allow-PY001 rationale="record a missing browser acknowledgment as unavailable, never success"
         except asyncio.TimeoutError:
             return MenuResult(request_id=pending.request_id, status='unavailable', detail='Browser did not acknowledge opening within 30 seconds.')
@@ -55,7 +59,9 @@ class MenuActionStore:
             self.discard(pending)
 
     def discard(self, pending: PendingMenu) -> None:
-        self._pending.pop(pending.request_id, None)
+        # The browser's acknowledgment may have removed it already.
+        if pending.request_id in self._pending:
+            del self._pending[pending.request_id]
         if not pending.future.done():
             pending.future.cancel()
 

@@ -1,3 +1,5 @@
+import { distanceToLine, getScrollMaxY, getViewportReferenceY, getViewportTopInset } from './viewport-reference.js';
+import { half } from '../../half.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import { areScrollAnchorsEqual, computeScrollAnchor } from './scroll-anchor-service.js';
 
@@ -64,36 +66,6 @@ function collectRedactedNotesInScope(scopeNoteElement) {
     return noteElements;
 }
 
-function getViewportTopInset() {
-    const controls = document.querySelector('.controls');
-    if (!controls) {
-        return 0;
-    }
-    const rect = controls.getBoundingClientRect();
-    if (rect.height <= 0 || rect.width <= 0 || rect.bottom <= 0) {
-        return 0;
-    }
-    return Math.max(0, Math.round(rect.bottom + 8));
-}
-
-function getViewportReferenceY(anchorBias) {
-    const topInset = getViewportTopInset();
-    if (anchorBias === 'center') {
-        return topInset + (window.innerHeight - topInset) / 2;
-    }
-    if (anchorBias === 'top') {
-        return topInset;
-    }
-    throw new Error(`Unsupported anchorBias: ${anchorBias}`);
-}
-
-function distanceToLine(rect, lineY) {
-    if (lineY >= rect.top && lineY <= rect.bottom) {
-        return 0;
-    }
-    return Math.min(Math.abs(rect.top - lineY), Math.abs(rect.bottom - lineY));
-}
-
 function findBestViewportAnchorNote() {
     const noteElements = Array.from(document.querySelectorAll('.note[data-note-id]'));
     if (noteElements.length === 0) {
@@ -110,7 +82,7 @@ function findBestViewportAnchorNote() {
             continue;
         }
         const dist = distanceToLine(rect, centerRef);
-        const centerDistance = Math.abs((rect.top + rect.bottom) / 2 - centerRef);
+        const centerDistance = Math.abs(half(rect.top + rect.bottom) - centerRef);
         if (dist < bestDistance || (dist === bestDistance && centerDistance < bestCenterDistance)) {
             bestElement = noteElement;
             bestDistance = dist;
@@ -118,11 +90,6 @@ function findBestViewportAnchorNote() {
         }
     }
     return bestElement;
-}
-
-function getScrollMaxY() {
-    const doc = document.documentElement;
-    return Math.max(0, Math.round(doc.scrollHeight - window.innerHeight));
 }
 
 function clampScrollY(scrollY) {

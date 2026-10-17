@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 from threading import Lock
 from uuid import uuid4
 
 from app.services.ai_chat_rendering import strip_note_citations_for_history
+from app.utils.time_units import MS_PER_SECOND
 
 
 _MAX_MESSAGES_PER_SESSION = 100
+# A turn is the user's message followed by the assistant's answer.
+_MESSAGES_PER_TURN = 2
 _MAX_MESSAGE_CHARACTERS = 32_000
 
 
@@ -55,17 +59,17 @@ class AiChatActivityTimer:
                 prior_label, prior_started_at = self._started[action]
                 should_start = prior_label != label
                 if not should_start:
-                    measured_duration = (observed_at - prior_started_at) * 1_000
+                    measured_duration = (observed_at - prior_started_at) * MS_PER_SECOND
             if should_start:
                 self._started[action] = (
                     label,
-                    observed_at - (float(supplied_duration) / 1_000),
+                    observed_at - (float(supplied_duration) / MS_PER_SECOND),
                 )
                 measured_duration = float(supplied_duration)
         else:
             if action in self._started:
                 _prior_label, prior_started_at = self._started.pop(action)
-                measured_duration = (observed_at - prior_started_at) * 1_000
+                measured_duration = (observed_at - prior_started_at) * MS_PER_SECOND
         duration_ms = max(float(supplied_duration), measured_duration)
         return {**event, "duration_ms": duration_ms}
 
@@ -88,55 +92,66 @@ def _failed_turn_history_content(error: str) -> str:
     return strip_note_citations_for_history(f"{_FAILED_TURN_HISTORY_PREFIX}\n{error}")
 
 
+@dataclass
+class _ChatSession:
+    """One authenticated session's conversation."""
+    messages: list[dict[str, str]]
+    # Progress shown under each message, by message id.
+    activities: dict[str, list[dict[str, object]]]
+    # The agent's own record of what each answer did (action_log.py), by
+    # assistant message id. Only the model sees it, on later turns.
+    action_logs: dict[str, list[dict[str, object]]]
+    # The first message the model still sees (after a provider switch, a
+    # disclosure boundary or trimming).
+    history_start: int
+    # None until the first disclosure boundary is set.
+    disclosure_key: str | None
+
+
+def _new_chat_session() -> _ChatSession:
+    return _ChatSession(messages=[], activities={}, action_logs={}, history_start=0, disclosure_key=None)
+
+
 class AiChatSessionStore:
     """Keep AI conversations isolated by opaque authenticated-session key."""
 
     def __init__(self) -> None:
-        self._sessions: dict[str, list[dict[str, str]]] = {}
-        self._activities: dict[str, dict[str, list[dict[str, object]]]] = {}
-        # The agent's own record of what each answer did (action_log.py), by
-        # assistant message id. Only the model sees it, on later turns.
-        self._action_logs: dict[str, dict[str, list[dict[str, object]]]] = {}
+        self._sessions: dict[str, _ChatSession] = {}
         self._lock = Lock()
-        self._history_starts: dict[str, int] = {}
-        self._disclosure_keys: dict[str, str] = {}
 
     def reset(self) -> None:
         with self._lock:
-            self._history_starts.clear()
-            self._disclosure_keys.clear()
             self._sessions.clear()
-            self._activities.clear()
-            self._action_logs.clear()
 
     def clear_session(self, *, session_key: str) -> None:
         self._validate_session_key(session_key)
         with self._lock:
-            self._history_starts.pop(session_key, None)
-            self._disclosure_keys.pop(session_key, None)
-            self._sessions.pop(session_key, None)
-            self._activities.pop(session_key, None)
-            self._action_logs.pop(session_key, None)
+            # A session that never chatted has nothing to clear.
+            if session_key in self._sessions:
+                del self._sessions[session_key]
+
+    def _session_locked(self, session_key: str) -> _ChatSession:
+        """The session's conversation, started empty on its first use."""
+        if session_key not in self._sessions:
+            self._sessions[session_key] = _new_chat_session()
+        return self._sessions[session_key]
 
     def snapshot(self, *, session_key: str) -> dict[str, list[dict[str, object]]]:
         self._validate_session_key(session_key)
         with self._lock:
-            messages = self._sessions.get(session_key, [])
-            session_activities: dict[str, list[dict[str, object]]] = {}
-            if session_key in self._activities:
-                session_activities = self._activities[session_key]
-            elif messages:
-                raise RuntimeError("AI activities missing for populated session")
+            if session_key not in self._sessions:
+                return {"messages": []}
+            session = self._sessions[session_key]
             return {
                 "messages": [
                     {
                         **message,
                         "activities": [
                             dict(activity)
-                            for activity in session_activities[message["id"]]
+                            for activity in session.activities[message["id"]]
                         ],
                     }
-                    for message in messages
+                    for message in session.messages
                 ]
             }
 
@@ -153,17 +168,18 @@ class AiChatSessionStore:
         self._validate_message_text(provider, label="provider")
         self._validate_message_text(model, label="model")
         with self._lock:
-            messages = self._sessions.setdefault(session_key, [])
-            session_activities = self._activities.setdefault(session_key, {})
+            session = self._session_locked(session_key)
+            messages = session.messages
+            session_activities = session.activities
             if any(message["status"] == "streaming" for message in messages):
                 raise RuntimeError("AI chat session already streaming a turn")
             if messages and messages[-1]["provider"] != provider:
-                self._history_starts[session_key] = len(messages)
-            if len(messages) + 2 > _MAX_MESSAGES_PER_SESSION:
-                removed_message_ids = [message["id"] for message in messages[:2]]
-                del messages[:2]
-                self._history_starts[session_key] = max(0, self._history_starts.get(session_key, 0) - 2)
-                session_action_logs = self._action_logs.setdefault(session_key, {})
+                session.history_start = len(messages)
+            if len(messages) + _MESSAGES_PER_TURN > _MAX_MESSAGES_PER_SESSION:
+                removed_message_ids = [message["id"] for message in messages[:_MESSAGES_PER_TURN]]
+                del messages[:_MESSAGES_PER_TURN]
+                session.history_start = max(0, session.history_start - _MESSAGES_PER_TURN)
+                session_action_logs = session.action_logs
                 for removed_message_id in removed_message_ids:
                     if removed_message_id not in session_activities:
                         raise RuntimeError("AI activity list missing for removed message")
@@ -239,8 +255,8 @@ class AiChatSessionStore:
             raise ValueError("AI activity duration must be non-negative and finite")
         with self._lock:
             self._require_streaming_turn(session_key=session_key, turn_id=turn_id)
-            session_activities = self._activities.get(session_key)
-            if session_activities is None or turn_id not in session_activities:
+            session_activities = self._sessions[session_key].activities
+            if turn_id not in session_activities:
                 raise RuntimeError("AI activity list missing for streaming turn")
             session_activities[turn_id].append(
                 {
@@ -297,12 +313,14 @@ class AiChatSessionStore:
             )
             message["content"] = final_content
             message["status"] = "complete"
-            self._action_logs.setdefault(session_key, {})[turn_id] = [dict(action) for action in actions]
+            self._sessions[session_key].action_logs[turn_id] = [dict(action) for action in actions]
 
     def is_streaming(self, *, session_key: str, turn_id: str) -> bool:
         with self._lock:
+            if session_key not in self._sessions:
+                return False
             return any(message['id'] == turn_id and message['status'] == 'streaming'
-                       for message in self._sessions.get(session_key, []))
+                       for message in self._sessions[session_key].messages)
 
     def fail_turn(self, *, session_key: str, turn_id: str, error: str) -> None:
         self._validate_session_key(session_key)
@@ -322,20 +340,23 @@ class AiChatSessionStore:
         if not disclosure_key:
             raise ValueError("A disclosure boundary key is required")
         with self._lock:
-            if self._disclosure_keys.get(session_key) != disclosure_key:
-                self._history_starts[session_key] = len(self._sessions.get(session_key, []))
-                self._disclosure_keys[session_key] = disclosure_key
+            session = self._session_locked(session_key)
+            if session.disclosure_key != disclosure_key:
+                session.history_start = len(session.messages)
+                session.disclosure_key = disclosure_key
                 return True
             return False
 
     def provider_messages(self, *, session_key: str) -> list[dict[str, str]]:
         self._validate_session_key(session_key)
         with self._lock:
-            messages = self._sessions.get(session_key, [])
-            assert len(messages) % 2 == 0, "AI chat history must contain complete turn pairs"
+            if session_key not in self._sessions:
+                return []
+            session = self._sessions[session_key]
+            messages = session.messages
+            assert len(messages) % _MESSAGES_PER_TURN == 0, "AI chat history must contain complete turn pairs"
             provider_messages: list[dict[str, str]] = []
-            start = self._history_starts.get(session_key, 0)
-            for index in range(start, len(messages), 2):
+            for index in range(session.history_start, len(messages), _MESSAGES_PER_TURN):
                 user_message = messages[index]
                 assistant_message = messages[index + 1]
                 assert user_message["role"] == "user"
@@ -352,7 +373,7 @@ class AiChatSessionStore:
                     )
                     continue
                 if assistant_message["status"] == "streaming":
-                    assert index == len(messages) - 2, "only the current turn may be streaming"
+                    assert index == len(messages) - _MESSAGES_PER_TURN, "only the current turn may be streaming"
                     continue
                 assert assistant_message["status"] == "complete"
                 assistant_content = assistant_message["content"]
@@ -373,10 +394,13 @@ class AiChatSessionStore:
         appear in provider_messages() with their explanation but have no record here."""
         self._validate_session_key(session_key)
         with self._lock:
-            messages = self._sessions.get(session_key, [])
-            session_action_logs = self._action_logs.get(session_key, {})
+            if session_key not in self._sessions:
+                return []
+            session = self._sessions[session_key]
+            messages = session.messages
+            session_action_logs = session.action_logs
             earlier: list[dict[str, object]] = []
-            for index in range(self._history_starts.get(session_key, 0), len(messages), 2):
+            for index in range(session.history_start, len(messages), _MESSAGES_PER_TURN):
                 user_message, assistant_message = messages[index], messages[index + 1]
                 if assistant_message["status"] != "complete":
                     continue
@@ -395,10 +419,9 @@ class AiChatSessionStore:
         session_key: str,
         turn_id: str,
     ) -> dict[str, str]:
-        messages = self._sessions.get(session_key)
-        if messages is None:
+        if session_key not in self._sessions:
             raise RuntimeError("AI chat session missing")
-        for message in messages:
+        for message in self._sessions[session_key].messages:
             if message["id"] != turn_id:
                 continue
             if message["role"] != "assistant":

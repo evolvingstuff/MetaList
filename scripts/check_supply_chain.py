@@ -14,6 +14,8 @@ from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPORT_OPTIONS = ['--frozen', '--offline', '--no-emit-project', '--no-header', '--no-annotate']
+VENDOR_REPORT_JSON_INDENT = 2
+OSV_QUERY_TIMEOUT_SECONDS = 45
 
 
 def check_exports(root: Path) -> None:
@@ -42,8 +44,10 @@ def bundled_packages(root: Path, library: dict) -> list[dict]:
     if not isinstance(packages, list) or not packages:
         raise RuntimeError(f'Vendor bundle {library["name"]} lists no packages')
     for package in packages:
-        entry = locked.get(package['lockKey'])
-        if entry is None or entry.get('version') != package['version'] or 'integrity' not in entry:
+        entry = None
+        if package['lockKey'] in locked:
+            entry = locked[package['lockKey']]
+        if entry is None or 'version' not in entry or entry['version'] != package['version'] or 'integrity' not in entry:
             raise RuntimeError(f'Bundled package {package["name"]}@{package["version"]} is not pinned in {bundle["lockfile"]}')
         if not package['lockKey'].endswith('node_modules/' + package['name']):
             raise RuntimeError(f'Bundled package {package["name"]} has an inconsistent lock key {package["lockKey"]}')
@@ -111,7 +115,7 @@ def audit_vendor_versions(libraries: list[dict]) -> list[dict]:
         query = {'package': {'name': library['name'], 'ecosystem': 'npm'}, 'version': library['version']}
         request = Request('https://api.osv.dev/v1/query', data=json.dumps(query).encode(),
                           headers={'Content-Type': 'application/json'})
-        with urlopen(request, timeout=45) as response:
+        with urlopen(request, timeout=OSV_QUERY_TIMEOUT_SECONDS) as response:
             report = json.load(response)
         if not isinstance(report, dict):
             raise RuntimeError('OSV response must be an object')
@@ -142,7 +146,7 @@ def audit(root: Path, output: Path) -> None:
     (output / 'vendor.json').write_text(json.dumps({
         'checked_at': datetime.now(timezone.utc).isoformat(),
         'source': 'https://api.osv.dev/v1/query', 'libraries': vendor_results,
-    }, indent=2) + '\n')
+    }, indent=VENDOR_REPORT_JSON_INDENT) + '\n')
     if completed.returncode != 0:
         raise RuntimeError(f'Python dependency audit failed (exit {completed.returncode}); inspect python.json')
     if any(library['vulnerabilities'] for library in vendor_results):

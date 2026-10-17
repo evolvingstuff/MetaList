@@ -28,6 +28,7 @@ import {checkSortedTabs} from './browser-sorted-tab-regressions.mjs';
 import {checkSearchInputRejected} from './browser-search-input-regressions.mjs';
 import {checkDictationPaste} from './browser-dictation-paste-regressions.mjs';
 import {checkFileDropPreviews} from './browser-file-drop-preview-regressions.mjs';
+import {checkImageMenu} from './browser-image-menu-regressions.mjs';
 import {checkTagSuggestionMenu} from './browser-tag-suggestion-menu-regressions.mjs';
 import {checkPasteFormats} from './browser-paste-format-regressions.mjs';
 import {checkAiNoteTagSuggestions} from './browser-ai-note-tag-regressions.mjs';
@@ -38,6 +39,8 @@ import {checkReferencePaste} from './browser-reference-paste-regressions.mjs';
 import {checkClickCaret} from './browser-click-caret-regressions.mjs';
 import {checkEditableEmbeds} from './browser-editable-embed-regressions.mjs';
 import {checkCollapseOutlines} from './browser-collapse-outline-regressions.mjs';
+import {checkBackupReminder} from './browser-backup-reminder-regressions.mjs';
+import {checkReminderSurfaceWhileEditing} from './browser-reminder-surface-regressions.mjs';
 import {checkDeleteWarning} from './browser-delete-warning-regressions.mjs';
 
 const directory = await mkdtemp(join(tmpdir(), 'metalist-browser-'));
@@ -106,7 +109,7 @@ try {
   browser.on('targetdestroyed', target => lifecycle(`target destroyed ${target.type()} ${target.url()}`));
   browser.on('targetcreated', target => lifecycle(`target created ${target.type()} ${target.url()}`));
   const updateFixture = await prepareUpdateFixture(page);
-  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'move-to-bottom', 'list-edges', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews', 'tag-suggestion-menu', 'paste-formats', 'ai-note-tags', 'robot-proposals', 'export-print', 'url-cleaning', 'reference-paste', 'click-caret', 'editable-embeds', 'delete-warning', 'collapse-outlines'].includes(process.env.BROWSER_TEST_SUITE)) {
+  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'move-to-bottom', 'list-edges', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews', 'image-menu', 'tag-suggestion-menu', 'paste-formats', 'ai-note-tags', 'robot-proposals', 'export-print', 'url-cleaning', 'reference-paste', 'click-caret', 'editable-embeds', 'delete-warning', 'collapse-outlines', 'backup-reminder', 'reminder-surface'].includes(process.env.BROWSER_TEST_SUITE)) {
     // The focused suite does not run checkAppUpdates, which normally releases
     // this intentionally held request. Avoid an unrelated update notice too.
     updateFixture.outage = true;
@@ -117,6 +120,13 @@ try {
   const pageFailure = new Promise((resolve, reject) => page.on('pageerror', reject));
   await page.goto(origin);
   await Promise.race([page.waitForSelector('[data-app-ready="true"]', {timeout:30000}), pageFailure]);
+  // The backup reminder is on by default and a fresh test namespace has no backup, so its
+  // card would float over whatever a check clicks near the bottom right, as the update
+  // notice would. Only its own suite (backup-reminder) wants it, and turns it on itself.
+  await page.evaluate(async () => {
+    const {CommandPalette} = await import('/static/js/modules/command-palette/command-palette-controller.js');
+    await CommandPalette.applyPreference('pref.backup_reminder', 'off');
+  });
   if (process.env.BROWSER_TEST_SUITE === 'ai-selected-note') {
     await checkAiSelectedNote(page);
     assert.deepEqual(errors, []);
@@ -169,6 +179,10 @@ try {
     await checkFileDropPreviews(page);
     assert.deepEqual(errors, []);
     console.log(`PASS file drop preview regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'image-menu') {
+    await checkImageMenu(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS image menu regressions in ${await browser.version()}`);
   } else if (process.env.BROWSER_TEST_SUITE === 'tag-suggestion-menu') {
     await checkTagSuggestionMenu(page);
     assert.deepEqual(errors, []);
@@ -185,6 +199,14 @@ try {
     await checkDeleteWarning(page);
     assert.deepEqual(errors, []);
     console.log(`PASS delete warning regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'reminder-surface') {
+    await checkReminderSurfaceWhileEditing(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS reminder surface regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'backup-reminder') {
+    await checkBackupReminder(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS backup reminder regressions in ${await browser.version()}`);
   } else if (process.env.BROWSER_TEST_SUITE === 'collapse-outlines') {
     await checkCollapseOutlines(page);
     assert.deepEqual(errors, []);

@@ -1,3 +1,4 @@
+import { NOT_IN_TAB_ORDER } from '../../dom-focus.js';
 import { ApplicationState } from '../../application-state.js';
 import { NotesAPI } from '../../api-client.js';
 import { askExportOptions } from '../../modals/export-options-modal.js';
@@ -36,7 +37,7 @@ function loadPrintFrame(htmlText) {
         const frame = document.createElement('iframe');
         frame.className = 'print-frame';
         frame.setAttribute('aria-hidden', 'true');
-        frame.tabIndex = -1;
+        frame.tabIndex = NOT_IN_TAB_ORDER;
         frame.srcdoc = htmlText;
         frame.addEventListener('load', () => {
             if (frame.contentWindow === null) {

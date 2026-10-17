@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal
+from app.services.preference_values import preference_or_default
 
 
 WEB_ACCESS_MODE_PREFERENCE_KEY = "pref.ai.web_access_mode"
@@ -33,7 +34,7 @@ def validate_web_access_mode(value: str) -> WebAccessMode:
 def resolve_agent_web_settings(*, preferences: dict[str, str]) -> AgentWebSettings:
     if not isinstance(preferences, dict):
         raise TypeError("preferences must be a dict")
-    raw_mode = preferences.get(WEB_ACCESS_MODE_PREFERENCE_KEY, "none")
+    raw_mode = preference_or_default(preferences, WEB_ACCESS_MODE_PREFERENCE_KEY, default="none")
     return AgentWebSettings(mode=validate_web_access_mode(raw_mode))
 
 

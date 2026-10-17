@@ -1,5 +1,8 @@
+import { parseDecimalInteger } from '../decimal-integer.js';
 import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
+
+const KEEP_COUNT_FOCUS_DELAY_MS = 50;
 
 
 function _assertPositiveInteger(value, fieldName) {
@@ -37,9 +40,6 @@ export class BackupRetentionModal extends BaseModal {
         };
     }
 
-    shouldCloseOnClickOutside() {
-        return true;
-    }
 
     showModalElement() {
         let modalElement = document.getElementById(this.modalElementId);
@@ -158,7 +158,7 @@ export class BackupRetentionModal extends BaseModal {
 
         const keepCountInput = document.getElementById('backup-retention-keep-count');
         if (keepCountInput instanceof HTMLInputElement) {
-            setTimeout(() => keepCountInput.focus(), 50);
+            setTimeout(() => keepCountInput.focus(), KEEP_COUNT_FOCUS_DELAY_MS);
         }
     }
 
@@ -214,7 +214,7 @@ export class BackupRetentionModal extends BaseModal {
             return null;
         }
 
-        const keepCount = Number.parseInt(raw, 10);
+        const keepCount = parseDecimalInteger(raw);
         if (keepCount < 1 || keepCount > backupCount) {
             this.updateModalState({
                 error: `Backups to keep must be between 1 and ${backupCount}.`,
@@ -277,7 +277,7 @@ export class BackupRetentionModal extends BaseModal {
             return null;
         }
 
-        const keepCount = Number.parseInt(raw, 10);
+        const keepCount = parseDecimalInteger(raw);
         if (keepCount < 1 || keepCount > backupCount) {
             return null;
         }

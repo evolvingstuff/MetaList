@@ -1,8 +1,12 @@
+import { parseDecimalInteger } from '../decimal-integer.js';
 import { ApplicationState } from '../application-state.js';
 const MENU_PADDING_PX = 8;
 // Moving the pointer this far outside the menu (and its open submenu) closes it,
 // like the tab overlay: far enough that small movements near the edge do not.
 const POINTER_DISMISS_BUFFER_PX = 28;
+// The .context-menu padding in main.css: a submenu sits this much above the
+// item that opens it, so its first item lines up with that item.
+const SUBMENU_PADDING_TOP_PX = 6;
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 // Icons that are a character rather than a line drawing: the robot marks AI
 // tag proposals on notes (🤖 N), so AI tagging items use the same one.
@@ -292,7 +296,7 @@ function handleMenuClick(event) {
     if (typeof indexAttr !== 'string' || indexAttr.trim() === '') {
         throw new Error('Context menu item missing index');
     }
-    const index = Number.parseInt(indexAttr, 10);
+    const index = parseDecimalInteger(indexAttr);
     if (!Number.isInteger(index) || index < 0 || index >= items.length) {
         throw new Error(`Context menu item index invalid: ${indexAttr}`);
     }
@@ -462,7 +466,7 @@ function resolveSubmenuPosition(parentRect, submenuRect) {
     if (left + submenuRect.width + MENU_PADDING_PX > viewportWidth) {
         left = parentRect.left - submenuRect.width + 1;
     }
-    let top = parentRect.top - 6;
+    let top = parentRect.top - SUBMENU_PADDING_TOP_PX;
     if (top + submenuRect.height + MENU_PADDING_PX > viewportHeight) {
         top = viewportHeight - submenuRect.height - MENU_PADDING_PX;
     }
@@ -679,6 +683,18 @@ function createMenuIcon(iconName) {
         svg.appendChild(path);
     });
     return svg;
+}
+
+// A menu icon as SVG markup, for views built from HTML strings (it matches the
+// menu's own drawing).
+export function contextMenuIconMarkup(iconName, className) {
+    if (typeof className !== 'string' || className.length === 0) {
+        throw new Error('contextMenuIconMarkup requires a class name');
+    }
+    const paths = CONTEXT_MENU_ICONS[iconName];
+    assertMenuIconPaths(paths, iconName);
+    const pathMarkup = paths.map((pathData) => `<path d="${pathData}"></path>`).join('');
+    return `<svg class="${className}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${pathMarkup}</svg>`;
 }
 
 function assertMenuIconPaths(paths, iconName) {

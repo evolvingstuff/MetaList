@@ -14,7 +14,7 @@
 ## Rendering Rules
 - **View mode**:
   - Note targets:
-    - **Embeds.** The note holding the reference shows the source in place, tinted blue (light `#afd7fb`; dark `#173350`), drawn exactly as the main tree draws notes: the same boxes, indent, spacing and ▾/▸ arrows. An embed inside an embed (a note in the source that is itself only a reference) is a shade deeper (`#96c8f7`, then `#7db8f2`; dark `#1d3f63`, `#244b76`).
+    - **Embeds.** The note holding the reference shows the source in place, tinted grey (light `#f1f3f5`; dark `#202224`), drawn exactly as the main tree draws notes: the same boxes, indent, spacing and ▾/▸ arrows. An embed inside an embed (a note in the source that is itself only a reference) is a shade deeper (`#e5e8eb`, then `#d8dce0`; dark `#2a2d30`, `#35393d`).
     - The holder folds as its source: its ▾/▸ collapses or expands the source everywhere (the original in the tree and every other embed of it), and its own children with it. When the source is folded anywhere, the holder shows folded. Undo reverts both. A folded embed shows the source's first line as plain text, still tinted.
     - Each note inside an embed shows the collapse saved for it, with its own ▾/▸ where it can collapse; pressing it folds that note everywhere. A note being edited is saved and left first. Full screen and floating windows show no embed arrows.
     - The holder's own children (indented under it in the tree) show after the source's children, as notes of the level around the holder (white in the main tree). They belong to the holder, not the source: the source knows nothing of them, and they cannot be moved in among the source's children.

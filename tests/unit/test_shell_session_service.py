@@ -115,7 +115,7 @@ def test_shell_session_streams_output_without_stdin(monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr(
         shell_session_service.subprocess,
         "Popen",
-        lambda *args, **kwargs: popen_calls.append(kwargs) or fake_process,
+        lambda *args, **kwargs: popen_calls.append(kwargs) or fake_process,  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
     )
 
     started = service.start_run(note_id="note-1", script_text="echo hello", timeout_seconds=0)

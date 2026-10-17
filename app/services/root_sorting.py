@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.services.resource_limits import SENSITIVE_MEMO_BYTES
 from threading import RLock
 
 from datetime import datetime
@@ -25,6 +26,11 @@ SORT_MODES = frozenset(
     }
 )
 TIMESTAMP_SORT_MODES = frozenset({SORT_MODE_CREATED, SORT_MODE_UPDATED})
+# An index not yet built for any store revision.
+_NO_REVISION = -1
+_ALPHABETICAL_KEY_MEMO_ENTRIES = 32768
+# The missing-parents error names at most this many of them.
+_MISSING_PARENTS_SHOWN = 5
 
 
 def normalize_sort_mode(sort_mode: object) -> str:
@@ -81,7 +87,7 @@ class _RootMetrics:
         self.own = {}
         self.text_keys = {}
         self.roots = {}
-        self.revision = -1
+        self.revision = _NO_REVISION
         for note_id, record in records.items():
             if note_id not in self.children:
                 self.children[note_id] = set()
@@ -91,7 +97,7 @@ class _RootMetrics:
             self.own[note_id] = self._own_values(note_id, record)
         missing_parents = set(self.children) - set(records) - {None}
         if missing_parents:
-            raise RuntimeError(f'Root sorting parents are missing: {sorted(missing_parents)[:5]}')
+            raise RuntimeError(f'Root sorting parents are missing: {sorted(missing_parents)[:_MISSING_PARENTS_SHOWN]}')
         reached = 0
         for root_id in self.children[None]:
             self.roots[root_id], size = self._aggregate(root_id)
@@ -210,7 +216,7 @@ def _get_root_subtree_updated_timestamp(root_id: str):
     return value
 
 
-@sensitive_lru_cache(maxsize=32768, max_bytes=16 * 1024 * 1024)
+@sensitive_lru_cache(maxsize=_ALPHABETICAL_KEY_MEMO_ENTRIES, max_bytes=SENSITIVE_MEMO_BYTES)
 def _alphabetical_key(content: str):
     text = strip_html(content).strip()
     return text.casefold(), text, len(text)
@@ -239,6 +245,21 @@ def get_root_sort_timestamps(sort_mode: object) -> Dict[str, datetime]:
     return root_timestamps
 
 
+def _alphabetical_sort_key(item: tuple[str, object, int]) -> tuple[object, int]:
+    _root_id, content_key, canonical_index = item
+    return content_key, canonical_index
+
+
+def _content_volume_sort_key(item: tuple[str, int, int]) -> tuple[int, int]:
+    _root_id, character_count, canonical_index = item
+    return -character_count, canonical_index
+
+
+def _newest_first_sort_key(item: tuple[str, datetime, int]) -> tuple[float, int]:
+    _root_id, timestamp, canonical_index = item
+    return -timestamp.timestamp(), canonical_index
+
+
 def get_root_ids_for_sort_mode(
     sort_mode: object,
     *,
@@ -253,14 +274,14 @@ def get_root_ids_for_sort_mode(
         for canonical_index, root_id in enumerate(canonical_root_ids):
             content_key = _get_root_content_sort_key(root_id)
             decorated_alpha.append((root_id, content_key, canonical_index))
-        decorated_alpha.sort(key=lambda item: (item[1], item[2]))
+        decorated_alpha.sort(key=_alphabetical_sort_key)
         return [root_id for root_id, _, _ in decorated_alpha]
     if normalized == SORT_MODE_CONTENT_VOLUME:
         decorated_volume = []
         for canonical_index, root_id in enumerate(canonical_root_ids):
             character_count = _get_root_subtree_content_volume(root_id)
             decorated_volume.append((root_id, character_count, canonical_index))
-        decorated_volume.sort(key=lambda item: (-item[1], item[2]))
+        decorated_volume.sort(key=_content_volume_sort_key)
         return [root_id for root_id, _, _ in decorated_volume]
 
     decorated = []
@@ -270,7 +291,7 @@ def get_root_ids_for_sort_mode(
         timestamp = root_timestamps[root_id]
         decorated.append((root_id, timestamp, canonical_index))
 
-    decorated.sort(key=lambda item: (-item[1].timestamp(), item[2]))
+    decorated.sort(key=_newest_first_sort_key)
     return [root_id for root_id, _, _ in decorated]
 
 

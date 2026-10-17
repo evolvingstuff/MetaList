@@ -1,4 +1,7 @@
 import { HttpRequestError } from '../expected-errors.js';
+
+// At most this many near-miss tags are suggested for one token.
+const MAX_NEAR_MISS_TAGS = 8;
 export function validateCommandPaletteTagMappings(endpoints, tagMap) {
     if (!(tagMap instanceof Map)) {
         throw new Error('Command palette tag map not loaded');
@@ -118,7 +121,7 @@ export function findNearMissTags(allTags, token) {
         return [];
     }
 
-    const maxResults = 8;
+    const maxResults = MAX_NEAR_MISS_TAGS;
     const lower = token.toLowerCase();
     const prefixMatches = [];
     for (const tag of allTags) {

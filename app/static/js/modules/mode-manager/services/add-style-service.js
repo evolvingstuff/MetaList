@@ -1,3 +1,5 @@
+import { COMMENT_CLOSE, COMMENT_OPEN, MAX_WRAPPER_DEPTH } from './tag-syntax-service.js';
+
 const WRAPPER_TYPES = Object.freeze([
     Object.freeze({ opener: '{', closer: '}' }),
     Object.freeze({ opener: '[', closer: ']' }),
@@ -60,12 +62,12 @@ function scanTopLevelTagTokens(tagBarText) {
         if (index >= tagBarText.length) {
             break;
         }
-        if (tagBarText.startsWith('/*', index)) {
-            const commentEnd = tagBarText.indexOf('*/', index + 2);
+        if (tagBarText.startsWith(COMMENT_OPEN, index)) {
+            const commentEnd = tagBarText.indexOf(COMMENT_CLOSE, index + COMMENT_OPEN.length);
             if (commentEnd === -1) {
                 break;
             }
-            index = commentEnd + 2;
+            index = commentEnd + COMMENT_CLOSE.length;
             continue;
         }
 
@@ -73,7 +75,7 @@ function scanTopLevelTagTokens(tagBarText) {
         const wrapper = WRAPPER_TYPES.find((candidate) => candidate.opener === tagBarText[index]);
         if (wrapper) {
             let depth = 1;
-            while (depth < 3 && tagBarText[index + depth] === wrapper.opener) {
+            while (depth < MAX_WRAPPER_DEPTH && tagBarText[index + depth] === wrapper.opener) {
                 depth += 1;
             }
             const closeToken = wrapper.closer.repeat(depth);
@@ -97,7 +99,7 @@ export function chooseStyleScope(contentText, tagBarText) {
     requireText(contentText, 'contentText');
     requireText(tagBarText, 'tagBarText');
 
-    for (let depth = 1; depth <= 3; depth += 1) {
+    for (let depth = 1; depth <= MAX_WRAPPER_DEPTH; depth += 1) {
         for (const wrapper of WRAPPER_TYPES) {
             const openToken = wrapper.opener.repeat(depth);
             const closeToken = wrapper.closer.repeat(depth);

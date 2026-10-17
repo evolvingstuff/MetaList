@@ -1,5 +1,7 @@
+import { half } from '../../half.js';
 import { findSearchTagAtIndex } from './search-syntax-service.js';
 import { findTagAtIndexInTagBar } from './tag-syntax-service.js';
+
 
 export function selectTagOnDoubleClick(event) {
     const input = event.target;
@@ -15,7 +17,7 @@ export function selectTagOnDoubleClick(event) {
         throw new Error('Tag input must expose selection offsets');
     }
     if (input.value.slice(start, end).trim() === '') return;
-    const index = start + Math.floor((end - start) / 2);
+    const index = start + Math.floor(half(end - start));
     const tag = isSearch
         ? findSearchTagAtIndex(input.value, index)
         : findTagAtIndexInTagBar(input.value, index);

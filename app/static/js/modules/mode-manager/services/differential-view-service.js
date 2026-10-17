@@ -1,3 +1,4 @@
+import { parseDecimalInteger } from '../../decimal-integer.js';
 import { ApplicationState } from '../../application-state.js';
 import { CONFIG } from '../../config.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
@@ -24,6 +25,7 @@ import {
     syncNoteTimestampDataset,
 } from './note-timestamp-hover-service.js';
 import { syncTagProposalPresentation } from './tag-proposal-service.js';
+import { applyEditingImageSizes } from './editing-image-size-service.js';
 import { splitTagsForDisplay } from './tag-syntax-service.js';
 
 const CONTENT_ELEMENT_CACHE = ApplicationState.createWeakCollection('CONTENT_ELEMENT_CACHE', 'map');
@@ -519,7 +521,7 @@ function getContentElement(noteElement) {
         contentElement = getDirectChildByClass(noteElement, 'note-content');
     }
     if (!contentElement) {
-        throw new Error(`Note ${noteElement.dataset.noteId || '<unknown>'} missing content element`);
+        throw new Error(`Note ${JSON.stringify(noteElement.dataset.noteId)} missing content element`);
     }
     CONTENT_ELEMENT_CACHE.set(noteElement, contentElement);
     return contentElement;
@@ -531,7 +533,7 @@ function getCollapseToggle(noteElement) {
     }
     const collapseToggle = getDirectChildByClass(noteElement, 'note-collapse-toggle');
     if (!collapseToggle) {
-        throw new Error(`Note ${noteElement.dataset.noteId || '<unknown>'} missing collapse toggle element`);
+        throw new Error(`Note ${JSON.stringify(noteElement.dataset.noteId)} missing collapse toggle element`);
     }
     COLLAPSE_TOGGLE_CACHE.set(noteElement, collapseToggle);
     return collapseToggle;
@@ -543,7 +545,7 @@ function getTagsElement(noteElement) {
     }
     const tagsElement = getDirectChildByClass(noteElement, 'note-tags');
     if (!tagsElement) {
-        throw new Error(`Note ${noteElement.dataset.noteId || '<unknown>'} missing tags element`);
+        throw new Error(`Note ${JSON.stringify(noteElement.dataset.noteId)} missing tags element`);
     }
     TAGS_ELEMENT_CACHE.set(noteElement, tagsElement);
     return tagsElement;
@@ -665,7 +667,7 @@ export function applyDifferentialView(payload, options) {
 
     const parentContainerCache = new Map();
     const ensureParentContainer = (parentId) => {
-        const key = parentId ? parentId : '__root__';
+        const key = parentId === null ? '__root__' : parentId;  // shockharness: ignore[DEF004] reason="a root note has no parent"
         if (parentContainerCache.has(key)) {
             return parentContainerCache.get(key);
         }
@@ -858,7 +860,7 @@ export function applyDifferentialView(payload, options) {
                 contentElement.contentEditable = 'false';
             }
             updateLockIcon(noteElement, lockedByOther);
-            const proposalCount = Number.parseInt(noteElement.dataset.proposalCount, 10);
+            const proposalCount = parseDecimalInteger(noteElement.dataset.proposalCount);
             if (!Number.isInteger(proposalCount) || proposalCount < 0) {
                 throw new Error(`Note ${noteId} has invalid cached proposal count`);
             }
@@ -873,7 +875,8 @@ export function applyDifferentialView(payload, options) {
 
         const previousHash = Object.prototype.hasOwnProperty.call(previousHashes, noteId)
             ? previousHashes[noteId]
-            : (noteElement.dataset.contentHash || null);
+            // A note never rendered here has no hash yet.
+            : ('contentHash' in noteElement.dataset ? noteElement.dataset.contentHash : null);  // shockharness: ignore[DEF002] reason="a note never rendered here has no hash yet"
 
         if (insertedIds.has(noteId) && !noteData) {
             throw new Error(`New note ${noteId} missing payload data`);
@@ -981,6 +984,10 @@ export function applyDifferentialView(payload, options) {
         if (shouldRenderContent) {
             contentElement.innerHTML = noteData.content;
             ensureAnchorsOpenInNewTabs(contentElement);
+            // The edited note's images show at their size from the first frame.
+            if (Array.isArray(noteData.flags.editingImageSizes)) {
+                applyEditingImageSizes(contentElement, noteData.flags.editingImageSizes);
+            }
             logVDOM('replaced note content', { noteId });
             vdomOperations += 1;
             if (incomingHash) {
@@ -1218,6 +1225,11 @@ function applyNoteDataFromPayload(noteElement, noteId, noteData, noteLocks, curr
         ensureAnchorsOpenInNewTabs(contentElement);
         noteElement.dataset.contentHash = snapshotHash;
         contentChanged = true;
+        // The edited note's images show at their size from the first frame (the
+        // server sends sizes only for the note this client edits; its lock may come later).
+        if (Array.isArray(flags.editingImageSizes)) {
+            applyEditingImageSizes(contentElement, flags.editingImageSizes);
+        }
     } else if (snapshotHash && !editingByCurrentClient) {
         noteElement.dataset.contentHash = snapshotHash;
     }

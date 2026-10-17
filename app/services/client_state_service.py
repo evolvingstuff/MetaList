@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from app.utils.byte_sizes import KIB
 import hashlib
 import json
 import re
+from datetime import datetime, timedelta
 
 from app.db.session import begin_writer
 from app.db.settings_sql import (
@@ -27,6 +29,18 @@ from app.services.agent.web_settings import WEB_ACCESS_MODE_PREFERENCE_KEY
 from app.services.agent.web_settings import WEB_ACCESS_MODES
 from app.services.agent.openai_inference import validate_openai_model
 
+_DICTATION_PHRASE_MIN_CHARS = 2
+_DICTATION_PHRASE_MAX_CHARS = 64
+# Sessions whose decrypted preferences may be held in memory at once.
+_PREFERENCES_MEMO_MAX_SESSIONS = 2
+_PREFERENCES_MEMO_MAX_KIB = 256
+# The same bounds as the browser's AI chat panel and search suggestion windows.
+AI_CHAT_MINIMUM_WIDTH = 280
+AI_CHAT_MAXIMUM_WIDTH = 5000
+AI_CHAT_COMPOSER_MINIMUM_HEIGHT = 74
+AI_CHAT_COMPOSER_MAXIMUM_HEIGHT = 220
+_MAX_SEARCH_SUGGESTION_WINDOW_SLOTS = 20
+_MAX_SEARCH_SUGGESTION_WINDOW_DAYS = 365
 
 _ALLOWED_CLIENT_PREFERENCES = {
     "pref.ai.tagging.vocabulary": {"existing", "new"},
@@ -49,6 +63,10 @@ _ALLOWED_CLIENT_PREFERENCES = {
     "pref.dictation.negate": "dictation_phrase",
     "pref.update_notice_version": "release_version",
     "pref.reminder_surface_expanded": {"true", "false"},
+    # How often to remind the user to back up this namespace (backup-reminder-service.js).
+    "pref.backup_reminder": {"off", "daily", "weekly", "every_2_weeks", "monthly"},
+    # Until when the dismissed backup reminder stays hidden.
+    "pref.backup_reminder_hidden_until": "utc_timestamp",
     "pref.note_layout.top_level_note_size": {"same", "larger", "largest"},
     "pref.note_layout.child_indentation": {"compact", "standard", "wide"},
     "pref.note_layout.vertical_spacing": {"compact", "comfortable", "spacious"},
@@ -194,6 +212,18 @@ class ClientStateValidationError(ValueError, RuntimeError):
     """Invalid serialized client preference or usage input."""
 
 
+# A UTC moment as JavaScript's Date.toISOString() writes it.
+_UTC_TIMESTAMP_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z")
+
+
+def _validate_utc_timestamp_preference(*, key: str, value: str) -> None:
+    if _UTC_TIMESTAMP_RE.fullmatch(value) is None:
+        raise ClientStateValidationError(f"Client preference {key} must be a UTC timestamp like 2026-10-16T12:00:00.000Z")
+    # The pattern fixes the shape; an impossible date such as month 13 fails loudly here.
+    moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    assert moment.utcoffset() == timedelta(0)
+
+
 def _validate_client_preferences(preferences: dict[str, object]) -> dict[str, str]:
     if not isinstance(preferences, dict):
         raise TypeError("preferences must be a dict")
@@ -205,7 +235,7 @@ def _validate_client_preferences(preferences: dict[str, object]) -> dict[str, st
         if key in _OBSOLETE_CLIENT_PREFERENCES:
             continue
         # Retire the local-provider selection and its stale cloud-model override.
-        if preferences.get("pref.ai.provider") == "ollama" and key in {
+        if "pref.ai.provider" in preferences and preferences["pref.ai.provider"] == "ollama" and key in {
             "pref.ai.provider", "pref.ai.openai_model",
         }:
             continue
@@ -217,11 +247,20 @@ def _validate_client_preferences(preferences: dict[str, object]) -> dict[str, st
         if allowed_values == "release_version":
             if re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", value) is None:
                 raise ClientStateValidationError("Invalid update notice version")
+        elif allowed_values == "utc_timestamp":
+            _validate_utc_timestamp_preference(key=key, value=value)
         elif allowed_values == "tag_activity_windows":
             _validate_tag_activity_windows_preference(key=key, value=value)
         elif allowed_values == "dictation_phrase":
-            if len(value) < 2 or len(value) > 64 or re.fullmatch(r"[A-Za-z]+(?: [A-Za-z]+)*", value) is None:
-                raise ClientStateValidationError("Dictation phrases must be words of letters, 2 to 64 characters")
+            if (
+                len(value) < _DICTATION_PHRASE_MIN_CHARS
+                or len(value) > _DICTATION_PHRASE_MAX_CHARS
+                or re.fullmatch(r"[A-Za-z]+(?: [A-Za-z]+)*", value) is None
+            ):
+                raise ClientStateValidationError(
+                    "Dictation phrases must be words of letters, "
+                    f"{_DICTATION_PHRASE_MIN_CHARS} to {_DICTATION_PHRASE_MAX_CHARS} characters"
+                )
         elif allowed_values == "openai_model":
             value = validate_openai_model(value)
         elif allowed_values == "ai_chat_width":
@@ -243,7 +282,7 @@ def _validate_ai_chat_width_preference(*, key: str, value: str) -> None:
     if re.fullmatch(r"[1-9][0-9]*", value) is None:
         raise ClientStateValidationError(f"Invalid client preference value for {key}: {value}")
     width = int(value)
-    if width < 280 or width > 5000:
+    if width < AI_CHAT_MINIMUM_WIDTH or width > AI_CHAT_MAXIMUM_WIDTH:
         raise ClientStateValidationError(f"Invalid client preference value for {key}: {value}")
 
 
@@ -251,7 +290,7 @@ def _validate_ai_chat_composer_height_preference(*, key: str, value: str) -> Non
     if re.fullmatch(r"[1-9][0-9]*", value) is None:
         raise ClientStateValidationError(f"Invalid client preference value for {key}: {value}")
     height = int(value)
-    if height < 74 or height > 220:
+    if height < AI_CHAT_COMPOSER_MINIMUM_HEIGHT or height > AI_CHAT_COMPOSER_MAXIMUM_HEIGHT:
         raise ClientStateValidationError(f"Invalid client preference value for {key}: {value}")
 
 
@@ -259,13 +298,13 @@ def _validate_tag_activity_windows_preference(*, key: str, value: str) -> None:
     parsed = json.loads(value)
     if not isinstance(parsed, list):
         raise ClientStateValidationError(f"Invalid client preference value for {key}: expected a list")
-    if len(parsed) > 20:
+    if len(parsed) > _MAX_SEARCH_SUGGESTION_WINDOW_SLOTS:
         raise ClientStateValidationError(f"Invalid client preference value for {key}: too many slots")
     seen: set[int] = set()
     for day_count in parsed:
         if not isinstance(day_count, int) or isinstance(day_count, bool):
             raise ClientStateValidationError(f"Invalid client preference value for {key}: expected integers")
-        if day_count < 1 or day_count > 365:
+        if day_count < 1 or day_count > _MAX_SEARCH_SUGGESTION_WINDOW_DAYS:
             raise ClientStateValidationError(f"Invalid client preference value for {key}: out-of-range window")
         if day_count in seen:
             raise ClientStateValidationError(f"Invalid client preference value for {key}: duplicate window")
@@ -324,7 +363,7 @@ def _validate_usage_state(usage_state: dict[str, object]) -> dict[str, dict[str,
 # them each time. Keyed by the session token: a new login reads them again; every
 # save goes through save_client_preferences, which replaces the copy. Cleared with
 # the other sensitive caches (lock, logout, restore) and never kept while locked.
-_preferences_in_memory = SensitiveMemo(maxsize=2, max_bytes=256 * 1024)
+_preferences_in_memory = SensitiveMemo(maxsize=_PREFERENCES_MEMO_MAX_SESSIONS, max_bytes=_PREFERENCES_MEMO_MAX_KIB * KIB)
 
 
 def _preferences_memory_key(token: str) -> str:

@@ -218,7 +218,7 @@ async function menuGoToBottomCase(page) {
   });
   await page.mouse.click(point.x, point.y, {button: 'right'});
   await page.waitForSelector('#context-menu.is-visible');
-  const item = await page.evaluateHandle(() => [...document.querySelectorAll('#context-menu .context-menu-item')]
+  const item = await page.evaluateHandle(() => [...document.querySelectorAll('#context-menu .context-menu-item')]  // shockharness: ignore[DEF003] reason="no matching menu item is null, as the assertion after it expects"
     .find(node => node.textContent.trim() === 'Go to Bottom') || null);
   const labels = await page.evaluate(() => [...document.querySelectorAll('#context-menu .context-menu-item')].map(node => node.textContent.trim()));
   assert.notEqual(item.asElement(), null, `menu: the background menu should offer Go to Bottom, got ${labels.join(' | ')}`);

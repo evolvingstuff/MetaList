@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Dict
 
 from app.services.file_registry import file_registry
+from app.services.editing_image_sizes import editing_image_size_factors
 from app.services.image_size_formatting import apply_image_size_action
 from app.services.store import store
 from app.services.sync import generate_new_uuid
@@ -52,6 +53,8 @@ class CmdResizeImage(QueryCommand):
                 "content": record.content,
                 "tags": record.tags,
                 "sizeFactor": mutation.size_factor,
+                # The editor shows them with the new text, in the same frame.
+                "editingImageSizes": editing_image_size_factors(content_html=record.content, tags=record.tags),
                 "updateUUID": update_uuid,
             }
 
@@ -79,5 +82,7 @@ class CmdResizeImage(QueryCommand):
             "content": mutation.content_html,
             "tags": mutation.tags,
             "sizeFactor": mutation.size_factor,
+            # The editor shows them with the new text, in the same frame.
+            "editingImageSizes": editing_image_size_factors(content_html=mutation.content_html, tags=mutation.tags),
             "updateUUID": update_uuid,
         }

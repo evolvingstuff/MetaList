@@ -1,3 +1,5 @@
+import { localDateText, twoDigits, utcOffsetText } from './local-date-text.js';
+import { HTTP_STATUS } from './http-status.js';
 import { FileEditSessionExpiredError, FileRevisionConflictError, HttpRequestError, ServerInputRejectedError, rethrowUnexpectedError } from './expected-errors.js';
 import { CONFIG } from './config.js';
 import { DOMUtils } from './dom-utils.js';
@@ -15,6 +17,7 @@ function buildAuthHeaders(includeContentType) {
 
 const FILE_REVISION_HEADER = 'X-MetaList-File-Revision';
 const FILE_PREVIEW_VARIANTS = ['light', 'dark'];
+const MIN_SPLIT_NOTE_SEGMENTS = 2;
 
 function readFileRevision(response) {
     const revision = Number(response.headers.get(FILE_REVISION_HEADER));
@@ -54,10 +57,10 @@ async function postFileEditSession(url, body, description) {
         headers: buildSessionHeaders(true),
         body: JSON.stringify(body),
     });
-    if (response.status === 409) {
+    if (response.status === HTTP_STATUS.CONFLICT) {
         await throwFileRevisionConflict(response, description);
     }
-    if (response.status === 410) {
+    if (response.status === HTTP_STATUS.GONE) {
         throw new FileEditSessionExpiredError(`${description}: the editing session is no longer open`);
     }
     if (!response.ok) {
@@ -167,7 +170,8 @@ export const NotesAPI = {
             if (CONFIG.DEBUG.LOG_API_CALLS) {
                 console.log(' [API] Request:', {
                     url: url,
-                    method: fetchOptions.method || 'GET',
+                    // fetch defaults a request without a method to GET.
+                    method: fetchOptions.method === undefined ? 'GET' : fetchOptions.method,  // shockharness: ignore[DEF002] reason="a request may omit its method; fetch then sends GET"
                     hasBody: requestBody !== null && typeof requestBody !== 'undefined',
                 });
             }
@@ -187,7 +191,7 @@ export const NotesAPI = {
                 headers: headers
             });
 
-            if (response.status === 400 && response.headers.get('content-type')?.includes('application/json')) {
+            if (response.status === HTTP_STATUS.BAD_REQUEST && response.headers.get('content-type')?.includes('application/json')) {
                 const rejection = await response.clone().json();
                 if (rejection.inputRejected === true && typeof rejection.detail === 'string') {
                     throw new ServerInputRejectedError(rejection.detail);
@@ -403,7 +407,7 @@ export const NotesAPI = {
         if (typeof noteId !== 'string' || noteId.length === 0) {
             throw new Error('NotesAPI.splitNote requires noteId string');
         }
-        if (!Array.isArray(segments) || segments.length < 2) {
+        if (!Array.isArray(segments) || segments.length < MIN_SPLIT_NOTE_SEGMENTS) {
             throw new Error('NotesAPI.splitNote requires at least two segments');
         }
         for (const segment of segments) {
@@ -457,6 +461,24 @@ export const NotesAPI = {
             claimSession: true,
             body: JSON.stringify({ sourceKind, occurrenceIndex, action }),
         });
+    },
+
+    // The size each inline image shows at in the editor, for unsaved text and tags.
+    async fetchEditingImageSizes(noteId, content, tags) {
+        if (typeof noteId !== 'string' || noteId.length === 0) {
+            throw new Error('NotesAPI.fetchEditingImageSizes requires noteId string');
+        }
+        if (typeof content !== 'string' || typeof tags !== 'string') {
+            throw new Error('NotesAPI.fetchEditingImageSizes requires content and tags strings');
+        }
+        const payload = await this._apiCall(CONFIG.API.NOTES.EDITING_IMAGE_SIZES(noteId), {
+            method: 'POST',
+            body: JSON.stringify({ content, tags }),
+        });
+        if (payload === null || typeof payload !== 'object' || !Array.isArray(payload.factors)) {
+            throw new Error('Editing image sizes response must list factors');
+        }
+        return payload.factors;
     },
 
     async runShell(noteId, timeoutSeconds) {
@@ -1179,6 +1201,12 @@ export const NotesAPI = {
         if (noteId !== null) {
             params.set('note_id', noteId);
         }
+        // A download starts as the view shows it, with the note being edited open.
+        let editingNoteId = '';
+        if (ModeContext.currentNoteId !== null) {
+            editingNoteId = ModeContext.currentNoteId;
+        }
+        params.set('editing_note_id', editingNoteId);
 
         const response = await fetch(`${CONFIG.API.NOTES.EXPORT_HTML}?${params.toString()}`, {
             method: 'GET',
@@ -1341,7 +1369,7 @@ export const FilesAPI = {
             headers: buildAuthHeaders(false),
             body: formData,
         });
-        if (response.status === 409) {
+        if (response.status === HTTP_STATUS.CONFLICT) {
             await throwFileRevisionConflict(response, 'File changed elsewhere');
         }
         if (!response.ok) {
@@ -1369,7 +1397,7 @@ export const FilesAPI = {
             headers: buildAuthHeaders(false),
             body: formData,
         });
-        if (response.status === 409) {
+        if (response.status === HTTP_STATUS.CONFLICT) {
             await throwFileRevisionConflict(response, 'File changed before its preview was saved');
         }
         if (!response.ok) {
@@ -1437,7 +1465,7 @@ export const FilesAPI = {
             method: 'GET',
             headers: buildAuthHeaders(false),
         });
-        if (response.status === 404) {
+        if (response.status === HTTP_STATUS.NOT_FOUND) {
             return { status: 'missing' };
         }
         if (!response.ok) {
@@ -1487,10 +1515,7 @@ function reminderLocalDate(value) {
     if (!(value instanceof Date)) {
         throw new Error('reminderLocalDate requires Date');
     }
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const day = String(value.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return localDateText(value);
 }
 
 function reminderLocalIso(value) {
@@ -1498,15 +1523,8 @@ function reminderLocalIso(value) {
         throw new Error('reminderLocalIso requires Date');
     }
     const dateText = reminderLocalDate(value);
-    const hour = String(value.getHours()).padStart(2, '0');
-    const minute = String(value.getMinutes()).padStart(2, '0');
-    const second = String(value.getSeconds()).padStart(2, '0');
-    const offsetMinutes = -value.getTimezoneOffset();
-    const sign = offsetMinutes >= 0 ? '+' : '-';
-    const absolute = Math.abs(offsetMinutes);
-    const offsetHours = String(Math.floor(absolute / 60)).padStart(2, '0');
-    const offsetRemainder = String(absolute % 60).padStart(2, '0');
-    return `${dateText}T${hour}:${minute}:${second}${sign}${offsetHours}:${offsetRemainder}`;
+    const clockText = `${twoDigits(value.getHours())}:${twoDigits(value.getMinutes())}:${twoDigits(value.getSeconds())}`;
+    return `${dateText}T${clockText}${utcOffsetText(value)}`;
 }
 
 function reminderActionBody(actionName, actionPayload) {

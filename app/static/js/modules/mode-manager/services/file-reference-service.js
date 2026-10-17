@@ -1,3 +1,4 @@
+import { NOT_FOUND } from '../../not-found.js';
 import { FilesAPI } from '../../api-client.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import { captureSelectionSnapshot, getActiveEditable, getActiveNoteId, restoreSelection } from '../../editor-selection.js';
@@ -5,6 +6,11 @@ import { createNote, createNoteAtTop } from '../actions/note-actions.js';
 import { requireCreatedNoteId } from './root-note-creation-service.js';
 import { actionSaveNote } from '../actions/content-actions.js';
 import { actionSelectNote, actionSwitchNotes } from '../actions/selection-actions.js';
+
+// After the window regains focus from the file picker, how often and how many
+// times to look for the chosen file before treating the picker as cancelled.
+const FILE_PICKER_FOCUS_POLL_INTERVAL_MS = 50;
+const FILE_PICKER_FOCUS_POLL_MAX_ATTEMPTS = 20;
 
 function getFilePickerInput() {
     const input = document.getElementById('file-reference-input');
@@ -51,7 +57,7 @@ function linePrefixText(fullText) {
     const lastLf = fullText.lastIndexOf('\n');
     const lastCr = fullText.lastIndexOf('\r');
     const boundary = Math.max(lastLf, lastCr);
-    if (boundary === -1) {
+    if (boundary === NOT_FOUND) {
         return fullText;
     }
     return fullText.slice(boundary + 1);
@@ -63,15 +69,15 @@ function lineSuffixText(fullText) {
     }
     const lf = fullText.indexOf('\n');
     const cr = fullText.indexOf('\r');
-    let boundary = -1;
-    if (lf === -1) {
+    let boundary = NOT_FOUND;
+    if (lf === NOT_FOUND) {
         boundary = cr;
-    } else if (cr === -1) {
+    } else if (cr === NOT_FOUND) {
         boundary = lf;
     } else {
         boundary = Math.min(lf, cr);
     }
-    if (boundary === -1) {
+    if (boundary === NOT_FOUND) {
         return fullText;
     }
     return fullText.slice(0, boundary);
@@ -368,7 +374,7 @@ function pickSingleFile() {
             if (!Number.isInteger(attemptCount) || attemptCount <= 0) {
                 throw new Error('pollForSelectionAfterFocus requires positive attemptCount');
             }
-            if (attemptCount >= 20) {
+            if (attemptCount >= FILE_PICKER_FOCUS_POLL_MAX_ATTEMPTS) {
                 if (input.value === '') {
                     finish(null);
                     return;
@@ -378,18 +384,18 @@ function pickSingleFile() {
             if (input.value !== '') {
                 focusPollTimeoutId = window.setTimeout(() => {
                     pollForSelectionAfterFocus(attemptCount + 1);
-                }, 50);
+                }, FILE_PICKER_FOCUS_POLL_INTERVAL_MS);
                 return;
             }
             focusPollTimeoutId = window.setTimeout(() => {
                 pollForSelectionAfterFocus(attemptCount + 1);
-            }, 50);
+            }, FILE_PICKER_FOCUS_POLL_INTERVAL_MS);
         };
 
         const handleFocus = () => {
             focusPollTimeoutId = window.setTimeout(() => {
                 pollForSelectionAfterFocus(1);
-            }, 50);
+            }, FILE_PICKER_FOCUS_POLL_INTERVAL_MS);
         };
 
         input.value = '';

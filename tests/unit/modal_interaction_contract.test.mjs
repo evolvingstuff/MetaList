@@ -189,7 +189,7 @@ test('every modal with a primary button declares or implements Enter behavior', 
             continue;
         }
         const hasDeclaredAction = source.includes('data-modal-enter-action');
-        const hasCustomHandler = source.includes('onKeyDown(event)') || source.includes('handleKeyDown(event)');
+        const hasCustomHandler = source.includes('onKeyDown(event)') || source.includes('handleKeyDown(event)');  // shockharness: ignore[DEF003] reason="a boolean OR of two conditions, not a fallback"
         assert.equal(
             hasDeclaredAction || hasCustomHandler,
             true,
@@ -224,7 +224,9 @@ test('formerly blocking modals allow outside-click closing', () => {
 test('delete namespace modal starts in loading state before its async onOpen hook', () => {
     const source = readModalSource('delete-namespace-modal.js');
     const initialStateStart = source.indexOf('    getInitialModalState() {');
-    const initialStateEnd = source.indexOf('    shouldCloseOnClickOutside()', initialStateStart);
+    // The method ends at the first line that closes it at method indentation (LF or CRLF).
+    const closingBrace = source.slice(initialStateStart).search(/\r?\n    \}\r?\n/);
+    const initialStateEnd = closingBrace === -1 ? -1 : initialStateStart + closingBrace;
     assert.notEqual(initialStateStart, -1);
     assert.notEqual(initialStateEnd, -1);
     const initialStateSource = source.slice(initialStateStart, initialStateEnd);

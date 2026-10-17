@@ -40,7 +40,7 @@
         "arguments_any_of": [
           {
             "topics": [
-              "tags"
+              "ontology"
             ]
           }
         ]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from http import HTTPStatus
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
@@ -10,9 +11,14 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.api.request_auth import AUTH_COOKIE_NAME
 from app.services.exception_capture import CapturedExceptionContext
 from app.security.request_hosts import _normalize_hostname, resolve_allowed_request_hosts
+from app.utils.sent_fields import sent_or_none
 
 
 _SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+_BEARER_HEADER_PART_COUNT = 2  # "Bearer <token>"
+# The port a URL means when it names none (RFC 9110 section 4.2).
+_HTTPS_DEFAULT_PORT = 443
+_HTTP_DEFAULT_PORT = 80
 
 
 @dataclass(frozen=True)
@@ -73,9 +79,9 @@ def _parse_origin(origin_header: str) -> tuple[str, str, int] | None:
     scheme, hostname, parsed_port = origin
     if parsed_port is None:
         if scheme == "https":
-            parsed_port = 443
+            parsed_port = _HTTPS_DEFAULT_PORT
         else:
-            parsed_port = 80
+            parsed_port = _HTTP_DEFAULT_PORT
     return scheme, hostname, parsed_port
 
 
@@ -89,9 +95,9 @@ def _resolve_request_authority(*, scheme: str, host_header: str) -> tuple[str, s
     hostname, port = parsed_host
     if port is None:
         if normalized_scheme == "https":
-            port = 443
+            port = _HTTPS_DEFAULT_PORT
         else:
-            port = 80
+            port = _HTTP_DEFAULT_PORT
     return normalized_scheme, hostname, port
 
 
@@ -99,7 +105,7 @@ def _is_bearer_authorization(authorization_header: str | None) -> bool:
     if authorization_header is None:
         return False
     parts = authorization_header.split()
-    return len(parts) == 2 and parts[0].casefold() == "bearer" and parts[1] != ""
+    return len(parts) == _BEARER_HEADER_PART_COUNT and parts[0].casefold() == "bearer" and parts[1] != ""
 
 
 def evaluate_request_boundary(
@@ -122,16 +128,16 @@ def evaluate_request_boundary(
         raise TypeError("allowed_hosts must be a non-empty frozenset")
 
     if host_header is None:
-        return RequestBoundaryRejection(400, "Host header required")
+        return RequestBoundaryRejection(HTTPStatus.BAD_REQUEST, "Host header required")
     request_authority = _resolve_request_authority(
         scheme=request_scheme,
         host_header=host_header,
     )
     if request_authority is None:
-        return RequestBoundaryRejection(400, "Malformed Host header")
+        return RequestBoundaryRejection(HTTPStatus.BAD_REQUEST, "Malformed Host header")
     _, request_hostname, _ = request_authority
     if request_hostname not in allowed_hosts:
-        return RequestBoundaryRejection(400, "Unrecognized Host header")
+        return RequestBoundaryRejection(HTTPStatus.BAD_REQUEST, "Unrecognized Host header")
 
     if method.upper() in _SAFE_METHODS:
         return None
@@ -140,13 +146,13 @@ def evaluate_request_boundary(
         is_bearer_client = _is_bearer_authorization(authorization_header)
         if is_bearer_client and not has_auth_cookie:
             return None
-        return RequestBoundaryRejection(403, "Origin header required for state-changing request")
+        return RequestBoundaryRejection(HTTPStatus.FORBIDDEN, "Origin header required for state-changing request")
 
     origin = _parse_origin(origin_header)
     if origin is None:
-        return RequestBoundaryRejection(403, "Invalid Origin header")
+        return RequestBoundaryRejection(HTTPStatus.FORBIDDEN, "Invalid Origin header")
     if origin != request_authority:
-        return RequestBoundaryRejection(403, "Origin does not match request host")
+        return RequestBoundaryRejection(HTTPStatus.FORBIDDEN, "Origin does not match request host")
     return None
 
 
@@ -160,19 +166,19 @@ class RequestBoundaryMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         host_headers = request.headers.getlist("host")
         if len(host_headers) != 1:
-            return JSONResponse(status_code=400, content={"detail": "Exactly one Host header required"})
+            return JSONResponse(status_code=HTTPStatus.BAD_REQUEST, content={"detail": "Exactly one Host header required"})
         lengths = request.headers.getlist("content-length")
         transfers = request.headers.getlist("transfer-encoding")
         if len(lengths) > 1 or len(request.headers.getlist("origin")) > 1 or (lengths and transfers):
-            return JSONResponse(status_code=400, content={"detail": "Ambiguous request headers"})
+            return JSONResponse(status_code=HTTPStatus.BAD_REQUEST, content={"detail": "Ambiguous request headers"})
         if lengths and (not lengths[0].isascii() or not lengths[0].isdigit()):
-            return JSONResponse(status_code=400, content={"detail": "Invalid Content-Length"})
+            return JSONResponse(status_code=HTTPStatus.BAD_REQUEST, content={"detail": "Invalid Content-Length"})
         rejection = evaluate_request_boundary(
             method=request.method,
             request_scheme=request.scope["scheme"],
             host_header=host_headers[0],
-            origin_header=request.headers.get("origin"),
-            authorization_header=request.headers.get("authorization"),
+            origin_header=sent_or_none(request.headers, "origin"),
+            authorization_header=sent_or_none(request.headers, "authorization"),
             has_auth_cookie=AUTH_COOKIE_NAME in request.cookies,
             allowed_hosts=self._allowed_hosts,
         )

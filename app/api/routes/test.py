@@ -4,7 +4,7 @@ from fastapi import APIRouter
 
 from app.api.transactions import transactional_route
 from app.config import TEST_MODE
-from app.services.test_reset import reset_state_for_tests
+from app.services.reset_for_tests import reset_state_for_tests
 
 router = APIRouter()
 

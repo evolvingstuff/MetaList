@@ -8,10 +8,14 @@ from app.services.app_updates import read_job, release_update_job, update_execut
 from app.services.self_update import schedule_self_update
 from app.version import __version__
 
+# The module name and JOB_ID.
+_EXPECTED_ARGV_LENGTH = 2
+
 
 def run_update(job_id: str) -> None:
     record = read_job(job_id)
-    assert record['status'] == 'queued'
+    if record['status'] != 'queued':
+        raise RuntimeError(f"Update job {job_id} is not queued: {record['status']!r}")
     record = dict(record, status='preparing', pid=os.getpid(), message='Checking the update and preparing verified backups. MetaList will restart automatically.')
     write_job(record)
     # Finally records failures without intercepting internal exceptions.
@@ -38,5 +42,6 @@ def run_update(job_id: str) -> None:
 
 
 if __name__ == '__main__':
-    assert len(sys.argv) == 2, 'Usage: python -m app.services.app_update_worker JOB_ID'
+    if len(sys.argv) != _EXPECTED_ARGV_LENGTH:
+        raise SystemExit('Usage: python -m app.services.app_update_worker JOB_ID')
     run_update(sys.argv[1])

@@ -5,6 +5,7 @@ ready manifest is durable before the first live write. An absent committed
 marker means startup restores the entire original set, including absent files.
 """
 
+from app.utils.byte_sizes import MIB
 from contextlib import contextmanager
 import hashlib
 import json
@@ -23,6 +24,8 @@ else:
 
 _lock = RLock()
 _active: set[Path] = set()
+# The recovery snapshot directory is readable and writable by its owner only.
+_SNAPSHOT_DIRECTORY_MODE = 0o700
 
 
 def _targets(database_path: Path) -> tuple[Path, Path]:
@@ -54,7 +57,7 @@ def _sync_file(path: Path) -> None:
 def _digest(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open('rb') as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b''):
+        for chunk in iter(lambda: handle.read(MIB), b''):
             digest.update(chunk)
     return digest.hexdigest()
 
@@ -109,9 +112,9 @@ def _recover_locked(database_path: Path) -> None:
     manifest_path = directory / 'ready.json'
     if manifest_path.exists() and not (directory / 'committed').exists():
         manifest = json.loads(manifest_path.read_text())
-        if manifest['version'] != 1 or len(manifest['files']) != 2:
-            raise RuntimeError('Unsupported live recovery manifest')
         targets = _targets(database_path)
+        if manifest['version'] != 1 or len(manifest['files']) != len(targets):
+            raise RuntimeError('Unsupported live recovery manifest')
         # Validate the entire recovery set before restoring either database.
         for index, entry in enumerate(manifest['files']):
             if entry['name'] != targets[index].name:
@@ -184,7 +187,7 @@ class LiveDatabaseRecovery:
     def _write_snapshot(self) -> None:
         _recover_locked(self.database_path)
         directory = _directory(self.database_path)
-        directory.mkdir(mode=0o700)
+        directory.mkdir(mode=_SNAPSHOT_DIRECTORY_MODE)
         entries = []
         for index, target in enumerate(_targets(self.database_path)):
             existed = target.exists()

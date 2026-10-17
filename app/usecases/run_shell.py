@@ -7,7 +7,7 @@ from app.security.encryption import is_encryption_required
 from app.security.shell_execution import is_shell_execution_enabled
 from app.usecases.base import QueryCommand
 from app.services.content_formatting import _extract_plain_text, _find_first_renderer_tag
-from app.services.shell_session_service import shell_session_service
+from app.services.shell_session_service import NO_EXIT_CODE, shell_session_service
 from app.services.store import store
 
 
@@ -17,7 +17,7 @@ def _invalid_shell_response(*, error_message: str) -> Dict[str, object]:
     return {
         "runId": "",
         "status": "error",
-        "exitCode": -1,
+        "exitCode": NO_EXIT_CODE,
         "stdout": "",
         "stderr": "",
         "durationMs": 0,

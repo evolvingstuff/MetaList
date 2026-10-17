@@ -4,6 +4,7 @@ from random import Random
 import pytest
 
 import app.services.note_store as note_store_module
+from app.services.note_store import NotePosition
 from app.services.note_store import NoteStore
 from app.services.search_index import SearchIndex
 from app.services.tag_ontology import TagOntology, compile_rules, parse_rules_text
@@ -34,7 +35,7 @@ def _load(monkeypatch, specs):
             prev_id = siblings[position - 1]
         if position + 1 < len(siblings):
             next_id = siblings[position + 1]
-        rows.append(dict(id=note_id, parent_id=parent, is_collapsed=False,
+        rows.append(dict(id=note_id, parent_id=parent, is_collapsed=False, created_at=None, updated_at=None,
                          prev_id=prev_id, next_id=next_id))
     index = SearchIndex()
     monkeypatch.setattr(note_store_module, "search_index", index)
@@ -64,7 +65,7 @@ def test_reference_search_stops_at_source_ancestors_and_includes_source_descenda
     assert index.query_note_ids("@red") == {CHILD}
     assert store.get_inherited_non_meta_tag_terms(HOST) == {"source", "descendant"}
     assert store.get_inherited_proposed_non_meta_tag_terms(HOST) == {"descendant-proposal"}
-    store.update_note_from_db(SimpleNamespace(id=CHILD), "baz", "replacement", "")
+    store.update_note_content(note_id=CHILD, plaintext="baz", tags="replacement", proposed_tags="", updated_at=store.get_note(CHILD).updated_at)
     assert index.query_note_ids("descendant") == set()
     assert index.query_note_ids("descendant-proposal") == set()
     assert index.query_note_ids("replacement") == {CHILD, HOST}
@@ -104,11 +105,11 @@ def test_moving_descendant_updates_references_to_old_and_new_subtrees(monkeypatc
         PARENT: (None, f"![[{OTHER}]]", "", ""),
     })
     assert index.query_note_ids("descendant") == {CHILD, HOST}
-    move = SimpleNamespace(id=CHILD, parent_id=OTHER, prev_id=None, next_id=None)
+    move = NotePosition(note_id=CHILD, parent_id=OTHER, prev_id=None, next_id=None)
     if bulk:
-        store.bulk_update_metadata([move], rebuild=False)
+        store.move_notes([move])
     else:
-        store.update_metadata_from_db(move, rebuild=False)
+        store.move_note(move)
     assert index.query_note_ids("descendant") == {CHILD, PARENT}
     store.rebuild_search_index_tag_terms()
     assert index.query_note_ids("descendant") == {CHILD, PARENT}
@@ -123,7 +124,7 @@ def test_deleted_and_restored_descendant_updates_subtree_references(monkeypatch)
     assert index.query_note_ids("descendant") == {CHILD, HOST}
     store.remove_note(CHILD)
     assert index.query_note_ids("descendant") == set()
-    store.add_note_from_db(SimpleNamespace(id=CHILD, parent_id=SOURCE, prev_id=None, next_id=None),
+    store.add_note_from_db(SimpleNamespace(id=CHILD, parent_id=SOURCE, prev_id=None, next_id=None, is_collapsed=False, created_at=None, updated_at=None),
                            "Restored baz", "restored", "")
     assert index.query_note_ids("restored") == {CHILD, HOST}
 
@@ -135,7 +136,7 @@ def test_subtree_reference_cycle_clears_removed_accepted_and_proposed_tags(monke
         HOST: (None, f"![[{SOURCE}]]", "", ""),
     })
     assert index.query_note_ids("descendant proposal") == {CHILD, HOST}
-    store.update_note_from_db(SimpleNamespace(id=CHILD), f"baz ![[{SOURCE}]]", "", "")
+    store.update_note_content(note_id=CHILD, plaintext=f"baz ![[{SOURCE}]]", tags="", proposed_tags="", updated_at=store.get_note(CHILD).updated_at)
     assert index.query_note_ids("descendant") == set()
     assert index.query_note_ids("proposal") == set()
     assert store.get_inherited_non_meta_tag_terms(HOST) == set()
@@ -157,7 +158,7 @@ def test_descendant_edit_does_not_reindex_source_ancestors_or_siblings(monkeypat
         return original(affected)
 
     monkeypatch.setattr(store, "_propagate_inherited_tag_terms_locked", track)
-    store.update_note_from_db(SimpleNamespace(id=CHILD), "baz", "replacement", "")
+    store.update_note_content(note_id=CHILD, plaintext="baz", tags="replacement", proposed_tags="", updated_at=store.get_note(CHILD).updated_at)
     assert affected_sets == [{CHILD, HOST}]
     assert index.query_note_ids("replacement") == {CHILD, HOST}
     assert index.query_note_ids("source") == {SOURCE, CHILD, OTHER, HOST}
@@ -191,13 +192,13 @@ def test_edits_update_reference_dependents_and_remove_old_hits(monkeypatch):
         CHILD: (HOST, "Child", "", ""),
         OTHER: (None, "Other", "bar", ""),
     })
-    store.update_note_from_db(SimpleNamespace(id=SOURCE), "Source", "new-tag", "")
+    store.update_note_content(note_id=SOURCE, plaintext="Source", tags="new-tag", proposed_tags="", updated_at=store.get_note(SOURCE).updated_at)
     assert index.query_note_ids("foo") == set()
     assert index.query_note_ids("new-tag") == {SOURCE, HOST, CHILD}
-    store.update_note_from_db(SimpleNamespace(id=HOST), f"[[{OTHER}]]", "", "")
+    store.update_note_content(note_id=HOST, plaintext=f"[[{OTHER}]]", tags="", proposed_tags="", updated_at=store.get_note(HOST).updated_at)
     assert index.query_note_ids("new-tag") == {SOURCE}
     assert index.query_note_ids("bar") == {OTHER, HOST, CHILD}
-    store.update_note_from_db(SimpleNamespace(id=HOST), "No reference", "", "")
+    store.update_note_content(note_id=HOST, plaintext="No reference", tags="", proposed_tags="", updated_at=store.get_note(HOST).updated_at)
     assert index.query_note_ids("bar") == {OTHER}
 
 
@@ -209,10 +210,10 @@ def test_chains_cycles_and_tag_removal_reach_least_fixed_point(monkeypatch):
         OTHER: (None, f"[[{CHILD}]]", "", ""),
     })
     assert index.query_note_ids("foo bar") == {SOURCE, HOST, CHILD}
-    store.update_note_from_db(SimpleNamespace(id=SOURCE), f"[[{HOST}]]", "", "")
+    store.update_note_content(note_id=SOURCE, plaintext=f"[[{HOST}]]", tags="", proposed_tags="", updated_at=store.get_note(SOURCE).updated_at)
     assert index.query_note_ids("foo") == set()
     assert index.query_note_ids("bar") == {SOURCE, HOST, CHILD}
-    store.update_note_from_db(SimpleNamespace(id=HOST), "No reference", "", "")
+    store.update_note_content(note_id=HOST, plaintext="No reference", tags="", proposed_tags="", updated_at=store.get_note(HOST).updated_at)
     assert index.query_note_ids("bar") == set()
 
 
@@ -239,7 +240,7 @@ def test_deleted_and_restored_source_updates_surviving_referrers(monkeypatch):
     })
     store.remove_note(SOURCE)
     assert index.query_note_ids("foo") == set()
-    store.add_note_from_db(SimpleNamespace(id=SOURCE, parent_id=None, prev_id=HOST, next_id=None),
+    store.add_note_from_db(SimpleNamespace(id=SOURCE, parent_id=None, prev_id=HOST, next_id=None, is_collapsed=False, created_at=None, updated_at=None),
                            "Restored", "restored-tag", "")
     assert index.query_note_ids("restored-tag") == {SOURCE, HOST, CHILD}
     store.remove_note(HOST)
@@ -251,7 +252,7 @@ def test_new_child_inherits_reference_tags(monkeypatch):
         SOURCE: (None, "Source", "foo", ""),
         HOST: (None, f"[[{SOURCE}]]", "", ""),
     })
-    store.add_note_from_db(SimpleNamespace(id=CHILD, parent_id=HOST, prev_id=None, next_id=None),
+    store.add_note_from_db(SimpleNamespace(id=CHILD, parent_id=HOST, prev_id=None, next_id=None, is_collapsed=False, created_at=None, updated_at=None),
                            "New child", "", "")
     assert index.query_note_ids("foo") == {SOURCE, HOST, CHILD}
 
@@ -265,19 +266,19 @@ def test_moving_source_or_referrer_updates_both_paths(monkeypatch, bulk):
         HOST: (None, f"[[{SOURCE}]]", "", ""),
         CHILD: (HOST, "Child", "", ""),
     })
-    move = SimpleNamespace(id=SOURCE, parent_id=OTHER, prev_id=None, next_id=None)
+    move = NotePosition(note_id=SOURCE, parent_id=OTHER, prev_id=None, next_id=None)
     if bulk:
-        store.bulk_update_metadata([move], rebuild=False)
+        store.move_notes([move])
     else:
-        store.update_metadata_from_db(move, rebuild=False)
+        store.move_note(move)
     assert index.query_note_ids("foo") == {PARENT}
     assert index.query_note_ids("bar") == {OTHER, SOURCE}
     # Moving the child away stops parent-derived contributions.
-    move = SimpleNamespace(id=CHILD, parent_id=PARENT, prev_id=None, next_id=None)
+    move = NotePosition(note_id=CHILD, parent_id=PARENT, prev_id=None, next_id=None)
     if bulk:
-        store.bulk_update_metadata([move], rebuild=False)
+        store.move_notes([move])
     else:
-        store.update_metadata_from_db(move, rebuild=False)
+        store.move_note(move)
     assert index.query_note_ids("foo") == {PARENT, CHILD}
     assert index.query_note_ids("bar") == {OTHER, SOURCE}
 
@@ -288,7 +289,7 @@ def test_reference_to_descendant_forms_valid_cycle_without_stale_tags(monkeypatc
         CHILD: (HOST, "Child", "bar", ""),
     })
     assert index.query_note_ids("foo bar") == {HOST, CHILD}
-    store.update_note_from_db(SimpleNamespace(id=CHILD), "Child", "", "")
+    store.update_note_content(note_id=CHILD, plaintext="Child", tags="", proposed_tags="", updated_at=store.get_note(CHILD).updated_at)
     assert index.query_note_ids("bar") == set()
     assert index.query_note_ids("foo") == {HOST, CHILD}
 
@@ -299,10 +300,7 @@ def test_parent_cycles_still_fail_loudly(monkeypatch):
         CHILD: (HOST, "Child", "bar", ""),
     })
     with pytest.raises(RuntimeError, match="hierarchy cycle"):
-        store.update_metadata_from_db(
-            SimpleNamespace(id=HOST, parent_id=CHILD, prev_id=None, next_id=None),
-            rebuild=False,
-        )
+        store.move_note(NotePosition(note_id=HOST, parent_id=CHILD, prev_id=None, next_id=None))
 
 
 def test_only_affected_notes_recompute_and_plain_edits_and_collapse_reuse_cache(monkeypatch):
@@ -320,12 +318,12 @@ def test_only_affected_notes_recompute_and_plain_edits_and_collapse_reuse_cache(
         return original(affected)
 
     monkeypatch.setattr(store, "_propagate_inherited_tag_terms_locked", track)
-    store.update_note_from_db(SimpleNamespace(id=SOURCE), "Source", "bar", "")
+    store.update_note_content(note_id=SOURCE, plaintext="Source", tags="bar", proposed_tags="", updated_at=store.get_note(SOURCE).updated_at)
     assert affected_sets == [{SOURCE, HOST, CHILD}]
     affected_sets.clear()
     store.set_collapsed(HOST, True)
     store.set_collapsed(HOST, False)
-    store.update_note_from_db(SimpleNamespace(id=HOST), f"Text [[{SOURCE}]]", "", "")
+    store.update_note_content(note_id=HOST, plaintext=f"Text [[{SOURCE}]]", tags="", proposed_tags="", updated_at=store.get_note(HOST).updated_at)
     assert affected_sets == []
     assert index.query_note_ids("bar") == {SOURCE, HOST, CHILD}
     assert store.get_backlink_counts(SOURCE) == {HOST: 1}
@@ -373,7 +371,7 @@ def test_ontology_applies_to_reference_tags_using_each_notes_own_text(monkeypatc
     store.rebuild_search_index_tag_terms()
     assert index.query_note_ids("category") == {SOURCE, HOST, CHILD}
     assert index.query_note_ids("matched") == {HOST}
-    store.update_note_from_db(SimpleNamespace(id=SOURCE), "Source", "", "")
+    store.update_note_content(note_id=SOURCE, plaintext="Source", tags="", proposed_tags="", updated_at=store.get_note(SOURCE).updated_at)
     assert index.query_note_ids("category") == set()
     assert index.query_note_ids("matched") == set()
 
@@ -427,7 +425,7 @@ def test_incremental_graph_updates_match_independent_reachability_oracle(monkeyp
         own_tags[note_id] = tags
         content = " ".join(f"[[{target}]]" for target in targets)
         specs[note_id] = (specs[note_id][0], content, " ".join(tags), "")
-        store.update_note_from_db(SimpleNamespace(id=note_id), content, " ".join(tags), "")
+        store.update_note_content(note_id=note_id, plaintext=content, tags=" ".join(tags), proposed_tags="", updated_at=store.get_note(note_id).updated_at)
         assert_matches_oracle()
     store.rebuild_search_index_tag_terms()
     assert_matches_oracle()

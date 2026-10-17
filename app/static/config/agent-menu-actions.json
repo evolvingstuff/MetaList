@@ -99,7 +99,12 @@
     "id": "form.open_namespace",
     "label": "Open/Switch namespace",
     "selector": "#open-namespace-modal",
-    "presentation": "dialog"
+    "presentation": "dialog",
+    "alternate_dialog": {
+      "when": "there is no other namespace to open",
+      "label": "Create namespace",
+      "selector": "#create-namespace-modal"
+    }
   },
   {
     "id": "form.create_namespace",
@@ -266,6 +271,12 @@
   {
     "id": "action.create_backup",
     "label": "Create backup now",
+    "selector": "#command-palette-modal",
+    "presentation": "palette"
+  },
+  {
+    "id": "pref.backup_reminder",
+    "label": "Backup reminder",
     "selector": "#command-palette-modal",
     "presentation": "palette"
   },

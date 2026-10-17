@@ -6,7 +6,12 @@ const NOTE_REPOSITION_ANIMATION_DURATION_MS = 260;
 const NOTE_REPOSITION_RECT_TOLERANCE_PX = 0.5;
 const NOTE_REPOSITION_GHOST_Z_INDEX = '15';
 const NOTE_REPOSITION_COLLAPSED_SCALE_Y = '0.08';
+// The moved note fades in from this opacity while its ghost fades out from its own.
+const NOTE_REPOSITION_START_OPACITY = 0.18;
+const NOTE_REPOSITION_GHOST_START_OPACITY = 0.72;
 const NOTE_REPOSITION_ANIMATION_EASING = 'cubic-bezier(0.2, 0, 0.2, 1)';
+// The note and its ghost each run one animation.
+const NOTE_REPOSITION_ANIMATION_COUNT = 2;
 const NOTE_REMOVAL_ANIMATION_CLASS = 'is-removal-collapsing';
 const NOTE_REMOVAL_ANIMATION_FALLBACK_MS = 240;
 const NOTE_REMOVAL_ANIMATION_DURATION_MS = 180;
@@ -213,7 +218,7 @@ function animateNoteRepositionChange(capture) {
 
     ghostElement.style.transformOrigin = 'top left';
     ghostElement.style.transform = 'scaleY(1)';
-    ghostElement.style.opacity = '0.72';
+    ghostElement.style.opacity = String(NOTE_REPOSITION_GHOST_START_OPACITY);
 
     let didFinish = false;
     const finishAnimation = () => {
@@ -236,7 +241,7 @@ function animateNoteRepositionChange(capture) {
 
     if (typeof noteElement.animate !== 'function' || typeof ghostElement.animate !== 'function') {
         noteElement.style.transform = `scaleY(${NOTE_REPOSITION_COLLAPSED_SCALE_Y})`;
-        noteElement.style.opacity = '0.18';
+        noteElement.style.opacity = String(NOTE_REPOSITION_START_OPACITY);
         noteElement.getBoundingClientRect();
         ghostElement.getBoundingClientRect();
         window.requestAnimationFrame(() => {
@@ -254,7 +259,7 @@ function animateNoteRepositionChange(capture) {
         return;
     }
 
-    let remainingAnimations = 2;
+    let remainingAnimations = NOTE_REPOSITION_ANIMATION_COUNT;
     const markAnimationFinished = () => {
         remainingAnimations -= 1;
         if (remainingAnimations === 0) {
@@ -268,11 +273,11 @@ function animateNoteRepositionChange(capture) {
         fill: 'none',
     };
     const noteAnimation = noteElement.animate([
-        { transform: `scaleY(${NOTE_REPOSITION_COLLAPSED_SCALE_Y})`, opacity: 0.18 },
+        { transform: `scaleY(${NOTE_REPOSITION_COLLAPSED_SCALE_Y})`, opacity: NOTE_REPOSITION_START_OPACITY },
         { transform: 'scaleY(1)', opacity: 1 },
     ], animationOptions);
     const ghostAnimation = ghostElement.animate([
-        { transform: 'scaleY(1)', opacity: 0.72 },
+        { transform: 'scaleY(1)', opacity: NOTE_REPOSITION_GHOST_START_OPACITY },
         { transform: `scaleY(${NOTE_REPOSITION_COLLAPSED_SCALE_Y})`, opacity: 0 },
     ], animationOptions);
     noteAnimation.onfinish = markAnimationFinished;

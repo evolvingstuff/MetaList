@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Callable, List, Tuple
 
 from app.services.content_formatting import (
+    MAX_DELIMITER_DEPTH,
     _tokenize_tag_bar_preserving_comments,
     _unwrap_tag_token,
     remove_formatting_scope_delimiters,
@@ -13,13 +14,15 @@ from app.services.embedded_references import collect_reference_tokens_from_html
 from app.services.inline_image_occurrences import INLINE_IMAGE_TAG_RE
 
 
+# Steps through SIZE_FACTORS for Make Bigger and Make Smaller.
+_ONE_SIZE_BIGGER = 1
+_ONE_SIZE_SMALLER = -1
 SIZE_FACTORS = ("0.1", "0.25", "0.5", "0.75", "1.0", "1.25", "1.5", "2.0", "3.0")
 _SIZE_TAG_RE = re.compile(
     r"^@size=(0\.1|0\.25|0\.5|0\.75|1\.0|1\.25|1\.5|2\.0|3\.0)$",
     re.IGNORECASE,
 )
 _OPEN_TO_CLOSE = {"{": "}", "[": "]", "(": ")"}
-_MAX_DELIMITER_DEPTH = 3
 
 
 @dataclass(frozen=True, slots=True)
@@ -286,17 +289,17 @@ def _target_size_factor(*, current_factor: str, action: str) -> str:
     if action == "reset":
         return "1.0"
     if action == "bigger":
-        direction = 1
+        direction = _ONE_SIZE_BIGGER
     else:
         assert action == "smaller"
-        direction = -1
+        direction = _ONE_SIZE_SMALLER
     target_index = max(0, min(len(SIZE_FACTORS) - 1, current_index + direction))
     return SIZE_FACTORS[target_index]
 
 
 def _choose_unused_wrapper(*, content_html: str, tags: str) -> Tuple[str, int]:
     for opener, closer in _OPEN_TO_CLOSE.items():
-        for depth in range(1, _MAX_DELIMITER_DEPTH + 1):
+        for depth in range(1, MAX_DELIMITER_DEPTH + 1):
             if opener * depth in content_html or closer * depth in content_html:
                 continue
             if opener * depth in tags or closer * depth in tags:

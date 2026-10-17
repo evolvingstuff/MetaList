@@ -1,15 +1,22 @@
 from __future__ import annotations
 
+from app.utils.tcp_ports import PORT_RANGE_TEXT, is_tcp_port
 import shutil
 import subprocess
 import time
 import ctypes
 from ctypes import wintypes
 
+from app.utils.time_units import MS_PER_SECOND
+
 
 _WAIT_POLL_INTERVAL_SECONDS = 0.25
 _TERMINATE_GRACE_SECONDS = 5.0
 _KILL_GRACE_SECONDS = 5.0
+# GetProcessTimes fills four FILETIMEs: creation, exit, kernel and user time.
+_PROCESS_TIMES_COUNT = 4
+# A FILETIME is one 64-bit count split into two 32-bit halves.
+_FILETIME_HALF_BITS = 32
 
 
 def _validate_pid(*, pid: int) -> None:
@@ -22,8 +29,8 @@ def _validate_pid(*, pid: int) -> None:
 def _validate_port(*, port: int) -> None:
     if not isinstance(port, int):
         raise TypeError(f"port must be an int, got {type(port)}")
-    if port <= 0 or port > 65535:
-        raise ValueError(f"port must be between 1 and 65535, got: {port}")
+    if not is_tcp_port(port):
+        raise ValueError(f"port must be {PORT_RANGE_TEXT}, got: {port}")
 
 
 def _resolve_powershell_path() -> str:
@@ -151,13 +158,13 @@ def _creation_filetime(process) -> int:
     """Read identity from the owned handle, which survives exit and prevents PID reuse."""
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
     get_times = kernel32.GetProcessTimes
-    get_times.argtypes = [wintypes.HANDLE, *([ctypes.POINTER(wintypes.FILETIME)] * 4)]
+    get_times.argtypes = [wintypes.HANDLE, *([ctypes.POINTER(wintypes.FILETIME)] * _PROCESS_TIMES_COUNT)]
     get_times.restype = wintypes.BOOL
-    created, exited, kernel, user = (wintypes.FILETIME() for _ in range(4))
+    created, exited, kernel, user = (wintypes.FILETIME() for _ in range(_PROCESS_TIMES_COUNT))
     if not get_times(int(process._handle), ctypes.byref(created), ctypes.byref(exited),
                      ctypes.byref(kernel), ctypes.byref(user)):
         raise ctypes.WinError(ctypes.get_last_error())
-    return (created.dwHighDateTime << 32) | created.dwLowDateTime
+    return (created.dwHighDateTime << _FILETIME_HALF_BITS) | created.dwLowDateTime
 
 
 def stop_process_tree(*, process) -> None:
@@ -190,7 +197,7 @@ def stop_process_tree(*, process) -> None:
             "if ($start.ToUniversalTime().ToString('yyyyMMddHHmmssffffff') -ne "
             "$created[$pending[$i]].ToString('yyyyMMddHHmmssffffff')) { throw 'Process identity changed before cleanup' }; "
             "$target | Stop-Process -Force -ErrorAction Stop; "
-            f"if (-not $target.WaitForExit({int(_KILL_GRACE_SECONDS * 1000)})) {{ "
+            f"if (-not $target.WaitForExit({int(_KILL_GRACE_SECONDS * MS_PER_SECOND)})) {{ "
             "throw ('Timed out waiting for process ' + $pending[$i] + ' to exit') } } "
             "} finally { $target.Dispose() } } }; "
             # An absent launcher is expected after its child exits. Its final

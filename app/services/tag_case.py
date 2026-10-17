@@ -31,10 +31,10 @@ def build_preferred_tag_case_map(exact_tag_counts: Mapping[str, int]) -> dict[st
 def prefer_existing_tag_case(term: str, preferred_by_casefold: Mapping[str, str]) -> str:
     if not isinstance(term, str):
         raise TypeError(f"tag term must be a string, got {type(term)}")
-    preferred = preferred_by_casefold.get(term.casefold())
-    if preferred is None:
+    # A term no existing tag spells keeps its own case.
+    if term.casefold() not in preferred_by_casefold:
         return term
-    return preferred
+    return preferred_by_casefold[term.casefold()]
 
 
 def dedupe_tag_terms_by_casefold(terms: list[str]) -> list[str]:

@@ -40,6 +40,8 @@ _BLOCK_TAGS = frozenset(
 )
 _TABLE_CONTAINER_TAGS = frozenset({"table", "thead", "tbody", "tfoot"})
 _TABLE_CELL_TAGS = frozenset({"td", "th"})
+# Empty lines that end the text before a new paragraph, so paragraphs are separated by a blank line.
+_PARAGRAPH_GAP_EMPTY_LINES = 2
 _TEXT_WHITESPACE_RE = re.compile(r"[\t\n\r\f\v ]+")
 _TEXT_LINE_BREAK_RE = re.compile(r"\r\n|\r|\n")
 _LINE_BREAK_PRESERVING_WHITE_SPACE_VALUES = frozenset(
@@ -203,7 +205,7 @@ class _HtmlLineBuilder:
             trailing_empty_lines += 1
         if trailing_empty_lines == len(self._lines):
             return
-        while trailing_empty_lines < 2:
+        while trailing_empty_lines < _PARAGRAPH_GAP_EMPTY_LINES:
             self._lines.append([])
             trailing_empty_lines += 1
 

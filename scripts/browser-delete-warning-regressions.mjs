@@ -90,7 +90,7 @@ async function answer(page, button) {
 async function startEditing(page, noteId) {
   await page.evaluate(id => document.querySelector(`.note[data-note-id="${id}"]`).scrollIntoView({block: 'center'}), noteId);
   const box = await (await page.$(`.note[data-note-id="${noteId}"] > .note-content`)).boundingBox();
-  await page.mouse.click(box.x + box.width - 10, box.y + box.height / 2);  // shockharness: ignore[MAGIC001] reason="near the end of the line, at its middle"
+  await page.mouse.click(box.x + box.width - 10, box.y + box.height / 2);
   await idle(page);
   const state = await modeState(page);
   assert.deepEqual([state.editing, state.current], [true, noteId], `editing ${noteId}`);
@@ -106,7 +106,7 @@ async function shortcut(page, key) {
 
 async function menuDelete(page, noteId) {
   const box = await (await page.$(`.note[data-note-id="${noteId}"] > .note-content`)).boundingBox();
-  await page.mouse.click(box.x + box.width - 10, box.y + box.height / 2, {button: 'right'});  // shockharness: ignore[MAGIC001] reason="near the end of the line, at its middle"
+  await page.mouse.click(box.x + box.width - 10, box.y + box.height / 2, {button: 'right'});
   await page.waitForSelector('#context-menu.is-visible');
   const item = await page.evaluateHandle(() => [...document.querySelectorAll('.context-menu-item')]
     .filter(node => node.offsetParent !== null).find(node => node.textContent.trim().startsWith('Delete Note')));
@@ -241,12 +241,106 @@ async function unreferencedCase(page) {
   assert.equal(await noteShown(page, ids.cut), false, 'D3: cut at once');
 }
 
+// Deleting the note being edited, unreferenced, in every shape it comes in:
+// with children, holding an embed, just added, and from the note's menu.
+async function editedShapesCase(page) {
+  const ids = await createNotes(page, [
+    ['parent', '<p>A parent note</p>', null],
+    ['child', '<p>Its child</p>', 'parent'],
+    ['grandchild', '<p>Its grandchild</p>', 'child'],
+    ['source', '<p>Embedded source</p>', null],
+    ['holder', '<p>[[source]]</p>', null],
+    ['menu', '<p>Deleted from its menu</p>', null],
+  ]);
+  await reloadApp(page);
+  await startEditing(page, ids.parent);
+  await shortcut(page, 'Backspace');
+  assert.equal(await noteShown(page, ids.parent), false, 'edited parent: deleted with its children');
+  await startEditing(page, ids.menu);
+  await menuDelete(page, ids.menu);
+  assert.equal(await noteShown(page, ids.menu), false, 'edited note: deleted from its menu');
+  await startEditing(page, ids.source);
+  await shortcut(page, 'Enter');
+  await page.keyboard.type('Just added');
+  await pause(SETTLE_MS);
+  await shortcut(page, 'Backspace');
+  const added = await page.evaluate(() => [...document.querySelectorAll('.note > .note-content')].some(node => node.textContent.includes('Just added')));
+  assert.equal(added, false, 'a just-added note: deleted');
+  await deleteNotes(page, [ids.holder, ids.source]);
+}
+
+async function searchFor(page, query) {
+  await page.click('#search-input');
+  await page.evaluate(() => document.getElementById('search-input').select());
+  await page.keyboard.press('Backspace');
+  if (query.length > 0) await page.keyboard.type(query);
+  await pause(1200);
+  await idle(page);
+  await page.keyboard.press('Escape');
+  await pause(SETTLE_MS);
+}
+
+// In a tag search: edit a matching note, copy its selected text, click it
+// again, and delete it (a user handing notes off one by one).
+async function searchCopyDeleteCase(page) {
+  const ids = await createNotes(page, [
+    ['first', '<p>First handoff note</p>', null],
+    ['second', '<p>Second handoff note</p>', null],
+    ['other', '<p>Not in the search</p>', null],
+  ]);
+  await page.evaluate(async ids => {
+    const {NotesAPI} = await import('/static/js/modules/api-client.js');
+    await NotesAPI.saveNote(ids.first, '<p>First handoff note</p>', 'handofftag');
+    await NotesAPI.saveNote(ids.second, '<p>Second handoff note</p>', 'handofftag');
+  }, ids);
+  await reloadApp(page);
+  await searchFor(page, 'handofftag');
+  for (const name of ['first', 'second']) {
+    await startEditing(page, ids[name]);
+    await shortcut(page, 'a');
+    await shortcut(page, 'c');
+    await startEditing(page, ids[name]);
+    await shortcut(page, 'Backspace');
+    assert.equal(await noteShown(page, ids[name]), false, `search ${name}: deleted`);
+    await assertNoFatalOverlay(page, `search ${name}`);
+  }
+  await searchFor(page, '');
+  await deleteNotes(page, [ids.other]);
+}
+
+// A note on screen without a cached hash (the cache keeps only what the last
+// view rendered): deleting it while editing it still works.
+async function uncachedHashDeleteCase(page) {
+  const ids = await createNotes(page, [
+    ['uncached', '<p>Shown without a cached hash</p>', null],
+    ['uncachedChild', '<p>Its child</p>', 'uncached'],
+  ]);
+  await reloadApp(page);
+  await startEditing(page, ids.uncached);
+  await page.evaluate(async id => {
+    const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
+    mode.removeNoteHash(id);
+  }, ids.uncachedChild);
+  await shortcut(page, 'Backspace');
+  assert.equal(await noteShown(page, ids.uncached), false, 'uncached hash: the edited note is deleted');
+}
+
+// MetaList shows a failure in its red overlay; a case that raised one has failed.
+async function assertNoFatalOverlay(page, label) {
+  const overlay = await page.evaluate(() => {
+    const element = document.getElementById('fatal-error-overlay');
+    if (element === null) return null;
+    return element.textContent;
+  });
+  assert.equal(overlay, null, `${label}: MetaList showed a fatal error`);
+}
+
 export async function checkDeleteWarning(page) {
   await reloadApp(page);
-  await unreferencedCase(page);
-  await menuDeleteCase(page);
-  await editingDeleteCase(page);
-  await cutCase(page);
-  await childReferencedCase(page);
+  const cases = [uncachedHashDeleteCase, searchCopyDeleteCase, editedShapesCase, unreferencedCase, menuDeleteCase, editingDeleteCase, cutCase, childReferencedCase];
+  for (const deleteCase of cases) {
+    await deleteCase(page);
+    await assertNoFatalOverlay(page, deleteCase.name);
+  }
   await reloadApp(page);
 }

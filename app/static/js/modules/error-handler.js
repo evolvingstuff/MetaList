@@ -2,12 +2,20 @@
  * Error Handler - Centralized error handling for authentication and network errors
  */
 
+import { parseDecimalInteger } from './decimal-integer.js';
 import { ModeContextInstance as ModeContext } from './mode-manager/mode-context.js';
 import { Auth } from './auth.js';
 import { classifyApiFailure } from './api-failure-classification-service.js';
 import { clearEditingStateForDisconnect } from './disconnect-editing-state-service.js';
+import { MS_PER_SECOND } from './time-units.js';
 
 const RESTORE_TRANSITION_UNTIL_KEY = 'metalist_restore_transition_until_ms';
+// Lets the banner's hidden state render first so the slide-in transition runs.
+const BANNER_SHOW_DELAY_MS = 10;
+// Matches the .error-banner transform transition in main.css.
+const BANNER_SLIDE_OUT_MS = 300;
+const HTTP_ERROR_BANNER_SECONDS = 5;
+const RECONNECTED_BANNER_SECONDS = 3;
 
 
 function _isRestoreTransitionActive() {
@@ -19,7 +27,7 @@ function _isRestoreTransitionActive() {
         sessionStorage.removeItem(RESTORE_TRANSITION_UNTIL_KEY);
         return false;
     }
-    const untilMs = Number.parseInt(rawValue, 10);
+    const untilMs = parseDecimalInteger(rawValue);
     if (!Number.isInteger(untilMs)) {
         sessionStorage.removeItem(RESTORE_TRANSITION_UNTIL_KEY);
         return false;
@@ -77,7 +85,7 @@ export const ErrorHandler = {
             throw new Error('ErrorHandler.handleHttpError requires message string');
         }
         console.log('[ErrorHandler] HTTP error');
-        this.showErrorBanner(message, 'error', 5000, true);
+        this.showErrorBanner(message, 'error', HTTP_ERROR_BANNER_SECONDS * MS_PER_SECOND, true);
     },
     
     /**
@@ -121,7 +129,7 @@ export const ErrorHandler = {
             if (ModeContext.connectionErrorBannerVisible) {
                 ModeContext.setConnectionErrorBannerVisible(false);
                 this.hideErrorBanner();
-                this.showSuccessBanner('Reconnected to MetaList. Editing is available again.', 3000);
+                this.showSuccessBanner('Reconnected to MetaList. Editing is available again.', RECONNECTED_BANNER_SECONDS * MS_PER_SECOND);
                 this.enableEditingUI();
             }
         }
@@ -235,7 +243,7 @@ export const ErrorHandler = {
         }
         
         // Animate in
-        setTimeout(() => banner.classList.add('error-banner-visible'), 10);
+        setTimeout(() => banner.classList.add('error-banner-visible'), BANNER_SHOW_DELAY_MS);
     },
     
     /**
@@ -249,7 +257,7 @@ export const ErrorHandler = {
                 if (banner.parentNode) {
                     banner.parentNode.removeChild(banner);
                 }
-            }, 300);
+            }, BANNER_SLIDE_OUT_MS);
         }
     },
     

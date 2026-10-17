@@ -101,7 +101,7 @@ function shownNoteIds(page) {
 
 async function startEditing(page, noteId) {
   const box = await (await page.$(`.note[data-note-id="${noteId}"] > .note-content`)).boundingBox();
-  await page.mouse.click(box.x + box.width - 10, box.y + box.height / 2);  // shockharness: ignore[MAGIC001] reason="near the end of the line, at its middle"
+  await page.mouse.click(box.x + box.width - 10, box.y + box.height / 2);
   await idle(page);
   await page.keyboard.press('End');
 }

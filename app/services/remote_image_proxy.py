@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from http import HTTPStatus
 from collections import OrderedDict
 from dataclasses import dataclass
 from io import BytesIO
@@ -22,6 +23,7 @@ from app.services.public_http import PinnedPublicHTTPTransport
 from app.services.public_http import PublicHttpTargetRejected
 from app.services.public_http import ResolvedPublicHttpTarget
 from app.services.public_http import resolve_public_http_target
+from app.utils.sent_fields import sent_or_none
 
 
 _FETCH_TIMEOUT_SECONDS = 8.0
@@ -30,6 +32,10 @@ _MAX_IMAGE_BYTES = 10_485_760
 _MAX_IMAGE_PIXELS = 16_000_000
 _USER_AGENT = "MetaList/remote-image-proxy"
 _TOKEN_PATTERN = re.compile(r"^[A-Za-z0-9_-]{32}$")
+# secrets.token_urlsafe encodes this many random bytes as the 32 characters above.
+_TOKEN_RANDOM_BYTES = 24
+_TOKEN_COLLISION_ATTEMPTS = 8
+_REGISTRY_MAX_ENTRIES = 50_000
 _IMG_TAG_RE = re.compile(r"<img\b(?:[^>\"']|\"[^\"]*\"|'[^']*')*>", re.IGNORECASE)
 _SRC_ATTRIBUTE_RE = re.compile(
     r"\bsrc\s*=\s*(?:\"(?P<double>[^\"]*)\"|'(?P<single>[^']*)'|(?P<bare>[^\s>]+))",
@@ -80,7 +86,7 @@ class RemoteImageProxyRegistry:
                 return existing_token
 
             token = ""
-            for _ in range(8):
+            for _ in range(_TOKEN_COLLISION_ATTEMPTS):
                 candidate = self._token_factory()
                 if not isinstance(candidate, str) or _TOKEN_PATTERN.fullmatch(candidate) is None:
                     raise RuntimeError("Remote image proxy token factory returned an invalid token")
@@ -116,8 +122,8 @@ class RemoteImageProxyRegistry:
 
 
 remote_image_proxy_registry = RemoteImageProxyRegistry(
-    max_entries=50_000,
-    token_factory=lambda: secrets.token_urlsafe(24),
+    max_entries=_REGISTRY_MAX_ENTRIES,
+    token_factory=lambda: secrets.token_urlsafe(_TOKEN_RANDOM_BYTES),
 )
 
 
@@ -225,17 +231,17 @@ def _request_image(url: str, target: ResolvedPublicHttpTarget) -> tuple[bytes | 
         },
     ) as client:
         with client.stream("GET", url) as response:
-            if 300 <= response.status_code < 400:
-                location = response.headers.get("location")
+            if httpx.codes.is_redirect(response.status_code):
+                location = sent_or_none(response.headers, "location")
                 if location is None or location.strip() == "":
                     return None, None, "redirect_without_location"
                 next_url = normalize_url_for_link_title(str(httpx.URL(url).join(location)))
                 if next_url is None:
                     return None, None, "unsupported_redirect"
                 return None, next_url, None
-            if response.status_code >= 400:
+            if response.status_code >= HTTPStatus.BAD_REQUEST:
                 return None, None, f"http_{response.status_code}"
-            declared_length = response.headers.get("content-length")
+            declared_length = sent_or_none(response.headers, "content-length")
             if declared_length is not None:
                 normalized_length = declared_length.strip()
                 if not normalized_length.isdecimal():

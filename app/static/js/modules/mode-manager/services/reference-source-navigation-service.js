@@ -1,3 +1,4 @@
+import { NOT_FOUND } from '../../not-found.js';
 import { ApplicationState } from '../../application-state.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 
@@ -161,12 +162,12 @@ function findReferenceNavigationEntryIndexForTab(tabId) {
             return i;
         }
     }
-    return -1;
+    return NOT_FOUND;
 }
 
 export function isViewingReferenceSource() {
     pruneReferenceNavigationStackToExistingTabs();
-    return findReferenceNavigationEntryIndexForActiveTab() !== -1;
+    return findReferenceNavigationEntryIndexForActiveTab() !== NOT_FOUND;
 }
 
 
@@ -178,7 +179,7 @@ export function isViewingReferenceSource() {
 export function getReferenceNavigationLabelForTab(tabId) {
     pruneReferenceNavigationStackToExistingTabs();
     const entryIndex = findReferenceNavigationEntryIndexForTab(tabId);
-    if (entryIndex === -1) return '';
+    if (entryIndex === NOT_FOUND) return '';
     return moduleState.referenceNavigationStack[entryIndex].viewKind === 'backlinks'
         ? 'Referenced by' : 'Reference source';
 }
@@ -186,7 +187,7 @@ export function getReferenceNavigationLabelForTab(tabId) {
 export function getActiveReferenceSourceQuery() {
     pruneReferenceNavigationStackToExistingTabs();
     const entryIndex = findReferenceNavigationEntryIndexForActiveTab();
-    if (entryIndex === -1) {
+    if (entryIndex === NOT_FOUND) {
         return '';
     }
     const entry = moduleState.referenceNavigationStack[entryIndex];
@@ -199,7 +200,7 @@ export function getActiveReferenceSourceQuery() {
 export function getActiveReferenceOriginScope() {
     pruneReferenceNavigationStackToExistingTabs();
     const entryIndex = findReferenceNavigationEntryIndexForActiveTab();
-    if (entryIndex === -1) {
+    if (entryIndex === NOT_FOUND) {
         throw new Error('Active tab is not a reference source');
     }
     return copyOriginScope(moduleState.referenceNavigationStack[entryIndex].originScope);
@@ -274,7 +275,7 @@ export function replaceActiveReferenceNavigationQuery(referenceQuery, viewKind) 
     }
     pruneReferenceNavigationStackToExistingTabs();
     const entryIndex = findReferenceNavigationEntryIndexForActiveTab();
-    if (entryIndex === -1) {
+    if (entryIndex === NOT_FOUND) {
         throw new Error('Cannot replace reference query outside reference source mode');
     }
     const entry = moduleState.referenceNavigationStack[entryIndex];
@@ -290,7 +291,7 @@ export function replaceActiveReferenceNavigationQuery(referenceQuery, viewKind) 
 export function popReferenceNavigationEntryForActiveTab() {
     pruneReferenceNavigationStackToExistingTabs();
     const entryIndex = findReferenceNavigationEntryIndexForActiveTab();
-    if (entryIndex === -1) {
+    if (entryIndex === NOT_FOUND) {
         updateReferenceSourceIndicator();
         return null;
     }

@@ -36,9 +36,6 @@ export class AlphabetizeRootNotesModal extends BaseModal {
         };
     }
 
-    shouldCloseOnClickOutside() {
-        return true;
-    }
 
     validateCleanState() {
         if (ModeContext.isLoading) {

@@ -240,7 +240,7 @@ function handleScrollEvent() {
         const current = getCurrentScrollY();
         if (current !== moduleState.lastScrollY) {
             moduleState.lastScrollY = current;
-            const effectiveTabId = moduleState.pendingTabId ? moduleState.pendingTabId : ModeContext.activeTabId;
+            const effectiveTabId = moduleState.pendingTabId === null ? ModeContext.activeTabId : moduleState.pendingTabId;  // shockharness: ignore[DEF002] reason="null means no tab switch is pending"
             // A programmatic restore can update ModeContext before the browser scroll event lands.
             if (ModeContext.getTabScrollPosition(effectiveTabId) !== current) {
                 ModeContext.updateTabScroll(effectiveTabId, current, true);

@@ -48,7 +48,7 @@ function getActiveTabState() {
     if (!tabId) {
         tabId = '0';
     }
-    const searchKey = (ModeContext.searchQuery || '').toString();
+    const searchKey = ModeContext.searchQuery;
     const key = `${tabId}::${searchKey}`;
     if (!moduleState.tabPollState[key]) {
         moduleState.tabPollState[key] = {
@@ -129,7 +129,7 @@ async function handlePoll() {
     if (CommandGate.isBusy()) return;
     if (ModeContext.isLoading) return;
 
-    const searchQuery = (ModeContext.searchQuery || '').toString();
+    const searchQuery = ModeContext.searchQuery;
     const executedSearchQuery = ModeContext.getExecutedSearchQuery();
     if (searchQuery !== executedSearchQuery) {
         // Search context has changed but hasn't been executed yet.
@@ -161,7 +161,7 @@ async function handlePoll() {
 
 function currentTotalRoots() {
     return selectInfiniteScrollRootTotal({
-        searchQuery: (ModeContext.searchQuery || '').toString(),
+        searchQuery: ModeContext.searchQuery,
         isUntaggedView: ModeContext.isUntaggedView,
         rootCountTotal: ModeContext.rootCountTotal,
         searchRootCountTotal: ModeContext.searchRootCountTotal,

@@ -4,6 +4,9 @@ from dataclasses import dataclass
 import re
 from typing import Dict, FrozenSet, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 
+# An escape is a backslash and the character it escapes.
+_ESCAPE_LENGTH = 2
+
 
 @dataclass(frozen=True, slots=True)
 class OntologyParseError(Exception):
@@ -190,7 +193,7 @@ def _parse_rule_line(*, raw_line: str, filename: str, line_number: int) -> List[
     op: Optional[str] = None
     if line.startswith("=>", index):
         op = "=>"
-        index += 2
+        index += len(op)
     elif index < len(line) and line[index] == "=":
         op = "="
         index += 1
@@ -315,7 +318,7 @@ def _read_quoted_phrase(*, line: str, index: int, filename: str, line_number: in
             nxt = line[index + 1]
             if nxt == quote or nxt == "\\":
                 out += nxt
-                index += 2
+                index += _ESCAPE_LENGTH
                 continue
             out += "\\"
             index += 1
@@ -347,10 +350,10 @@ def _read_regex_literal(*, line: str, index: int, filename: str, line_number: in
                 nxt = line[index + 1]
                 if nxt == "/":
                     pattern += "/"
-                    index += 2
+                    index += _ESCAPE_LENGTH
                     continue
                 pattern += f"\\{nxt}"
-                index += 2
+                index += _ESCAPE_LENGTH
                 continue
             pattern += "\\"
             index += 1
@@ -431,9 +434,12 @@ class TagOntology:
         if not isinstance(tag, str) or not tag:
             raise TypeError("tag must be a non-empty string")
 
-        equals = self.scc_members_by_tag.get(tag, frozenset({tag}))
-        left = self.implied_by_closure.get(tag, frozenset())
-        right = self.implication_closure.get(tag, frozenset())
+        # The three maps hold every tag a rule names; any other tag stands alone.
+        if tag not in self.scc_members_by_tag:
+            return frozenset(), frozenset({tag}), frozenset()
+        equals = self.scc_members_by_tag[tag]
+        left = self.implied_by_closure[tag]
+        right = self.implication_closure[tag]
         return (
             frozenset(t for t in left if t not in equals),
             equals,
@@ -496,6 +502,12 @@ class TagOntology:
         return frozenset(tags)
 
 
+def _add_tag_node(out_edges: Dict[str, Set[str]], tag: str) -> None:
+    """Every tag a rule names is a node of the implication graph, with or without edges."""
+    if tag not in out_edges:
+        out_edges[tag] = set()
+
+
 def compile_rules(*, rules: Sequence[Rule], filename: str) -> TagOntology:
     if not rules:
         return TagOntology.empty()
@@ -506,8 +518,9 @@ def compile_rules(*, rules: Sequence[Rule], filename: str) -> TagOntology:
     for rule in rules:
         if len(rule.lhs) == 1 and isinstance(rule.lhs[0], TagAtom):
             src = rule.lhs[0].tag
-            out_edges.setdefault(src, set()).add(rule.rhs)
-            out_edges.setdefault(rule.rhs, set())
+            _add_tag_node(out_edges, src)
+            _add_tag_node(out_edges, rule.rhs)
+            out_edges[src].add(rule.rhs)
             continue
 
         required_tags: Set[str] = set()
@@ -537,7 +550,7 @@ def compile_rules(*, rules: Sequence[Rule], filename: str) -> TagOntology:
                 rhs=rule.rhs,
             )
         )
-        out_edges.setdefault(rule.rhs, set())
+        _add_tag_node(out_edges, rule.rhs)
 
     frozen_out: Dict[str, FrozenSet[str]] = {
         key: frozenset(value) for key, value in out_edges.items()
@@ -560,7 +573,8 @@ def _compute_implied_by_closure(
     output: Dict[str, Set[str]] = {tag: set() for tag in closure.keys()}
     for src, implied in closure.items():
         for dst in implied:
-            output.setdefault(dst, set()).add(src)
+            # The closure holds every node, implied ones included.
+            output[dst].add(src)
     return {tag: frozenset(value) for tag, value in output.items()}
 
 
@@ -571,7 +585,8 @@ def _compute_implication_closure_and_scc_members(
     for children in out_edges.values():
         nodes.update(children)
 
-    forward: Dict[str, List[str]] = {node: list(out_edges.get(node, frozenset())) for node in nodes}
+    # compile_rules makes every implied tag a node, so every node has its edges.
+    forward: Dict[str, List[str]] = {node: list(out_edges[node]) for node in nodes}
     reverse: Dict[str, List[str]] = {node: [] for node in nodes}
     for src, children in forward.items():
         for dst in children:

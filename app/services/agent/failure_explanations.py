@@ -29,6 +29,7 @@ _WEB_LABELS = {"none": "web access off", "contextual": "contextual web access", 
 
 # Long free-text fields are left out of "It chose: …".
 _FREE_TEXT_FIELDS = frozenset({"reason", "basis", "rationale", "answer"})
+_JSON_QUOTE = '"'
 _SIMPLE_FIELD_RE = re.compile(r'"([A-Za-z_]+)"\s*:\s*("(?:[^"\\]|\\.)*"|\[[^\[\]]*\]|-?\d+(?:\.\d+)?|true|false|null)')
 
 _CUT_OFF, _FORMAT, _EMPTY, _REFUSED, _SILENT, _OTHER = "cut_off", "format", "empty", "refused", "silent", "other"
@@ -119,7 +120,7 @@ def _chosen_fields(content: str) -> str:
             items = [item.strip().strip('"') for item in raw_value[1:-1].split(",") if item.strip() != ""]
             parts.append(f"{name}=[{', '.join(items)}]")
         else:
-            parts.append(f"{name}={raw_value.strip(chr(34))}")
+            parts.append(f"{name}={raw_value.strip(_JSON_QUOTE)}")
     return ", ".join(parts)
 
 

@@ -59,18 +59,27 @@ from app.services.agent.web_evidence import citation_references_for_pages
 from app.services.agent.web_evidence import web_evidence_store
 from app.services.bulk_operation import bulk_operation_guard
 from app.services.agent.history import record_history
+from app.utils.time_units import MS_PER_SECOND
 
 
 _STAGED_SUMMARY_CONCURRENCY = 4
 _MAX_STAGED_SUMMARY_REDUCTION_LEVELS = 8
+# One batch is a plain summary; staging starts at two.
+_MIN_STAGED_SUMMARY_BATCHES = 2
+# The final response is retried once after a provider failure that produced no output.
+_FINAL_RESPONSE_MAX_ATTEMPTS = 2
 # One corrective request when a summary cites IDs that were not disclosed as evidence.
 _SUMMARY_CITATION_CORRECTIONS = 1
 # Streamed batch previews are throttled per batch and trimmed to a compact tail.
 _SUMMARY_STREAM_INTERVAL_SECONDS = 0.3
 _SUMMARY_PREVIEW_TAIL_CHARACTERS = 240
+_OPENAI_FINAL_RESPONSE_MAX_OUTPUT_TOKENS = 8_192
 _FINAL_RESPONSE_MAX_OUTPUT_TOKENS_BY_PROVIDER = {
-    "OpenAI": 8_192,
+    "OpenAI": _OPENAI_FINAL_RESPONSE_MAX_OUTPUT_TOKENS,
 }
+# While the final response streams, its output-token count is reported again
+# after at least this many more tokens.
+_OUTPUT_PROGRESS_REPORT_TOKENS = 8
 
 
 
@@ -483,7 +492,7 @@ class AgentRuntime(AgentLoopMixin):
         has_succeeded = False
         # lint: allow-PY001 rationale="keep a failed summary's finished batches, then re-raise with how many were kept"
         try:
-            if len(plan.batches) < 2:
+            if len(plan.batches) < _MIN_STAGED_SUMMARY_BATCHES:
                 raise ValueError("Staged scope summary requires at least two batches")
             # aclosing guarantees worker cancellation when the client abandons the stream.
             async with aclosing(self._stream_staged_summary_batches(  # shockharness: ignore[EXC003] reason="the staged summary (batches, reduction, final answer) is the operation whose failure says how many batches were kept"
@@ -599,7 +608,7 @@ class AgentRuntime(AgentLoopMixin):
         failure then propagates, so no final synthesis runs on partial results.
         """
         batch_count = len(plan.batches)
-        assert batch_count >= 2
+        assert batch_count >= _MIN_STAGED_SUMMARY_BATCHES
         assert len(summaries) == batch_count
         batch_states = ["queued"] * batch_count
         batch_output_tokens = [0] * batch_count
@@ -1266,7 +1275,7 @@ class AgentRuntime(AgentLoopMixin):
         started_at = time.perf_counter()
         state = _FinalStreamState(thinking="", content="", usage={}, did_finish=False)
         last_reported_output_tokens = 0
-        for attempt in (1, 2):
+        for attempt in range(1, _FINAL_RESPONSE_MAX_ATTEMPTS + 1):
             state = _FinalStreamState(thinking="", content="", usage={}, did_finish=False)
             # Shown as "Waiting for OpenAI" until the provider's first signal.
             yield self._status_event("provider_wait", "started", f"Waiting for {self._provider_label}",
@@ -1294,7 +1303,7 @@ class AgentRuntime(AgentLoopMixin):
                     output_tokens_received = estimate_text_tokens(
                         f"{state.thinking}{state.content}"
                     )
-                    if output_tokens_received >= last_reported_output_tokens + 8:
+                    if output_tokens_received >= last_reported_output_tokens + _OUTPUT_PROGRESS_REPORT_TOKENS:
                         last_reported_output_tokens = output_tokens_received
                         yield self._output_status_event(
                             "respond",
@@ -1302,7 +1311,7 @@ class AgentRuntime(AgentLoopMixin):
                             "Writing response",
                             approx_input_tokens=final_input_tokens,
                             output_tokens_received=output_tokens_received,
-                            duration_ms=(time.perf_counter() - started_at) * 1_000,
+                            duration_ms=(time.perf_counter() - started_at) * MS_PER_SECOND,
                         )
                     if should_yield:
                         if event["type"] == "content_delta":
@@ -1318,7 +1327,7 @@ class AgentRuntime(AgentLoopMixin):
                 has_partial_output = any(
                     (state.thinking != "", state.content != "")
                 )
-                if has_partial_output or attempt == 2:
+                if has_partial_output or attempt == _FINAL_RESPONSE_MAX_ATTEMPTS:
                     raise
                 yield self._status_event(
                     "respond",
@@ -1332,7 +1341,7 @@ class AgentRuntime(AgentLoopMixin):
                 continue
             break
         self._validate_final_stream(state)
-        duration_ms = (time.perf_counter() - started_at) * 1_000
+        duration_ms = (time.perf_counter() - started_at) * MS_PER_SECOND
         self._record_final_response(run=run, state=state, duration_ms=duration_ms)
         self._trace_store.complete_run(session_key=run.session_key, run_id=run.run_id)
         final_output_tokens = estimate_text_tokens(
@@ -1468,7 +1477,7 @@ class AgentRuntime(AgentLoopMixin):
                 run=run,
                 purpose=InferencePurpose.FINAL_RESPONSE,
                 attempt=attempt,
-                max_attempts=2,
+                max_attempts=_FINAL_RESPONSE_MAX_ATTEMPTS,
                 wire_request=wire_request,
             )
         return record

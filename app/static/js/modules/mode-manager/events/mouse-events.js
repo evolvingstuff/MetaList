@@ -1,3 +1,4 @@
+import { half } from '../../half.js';
 import { ApplicationState } from '../../application-state.js';
 import { rethrowUnexpectedError } from '../../expected-errors.js';
 import { navigateToFootnoteWithExpansion } from '../services/footnote-navigation-service.js';
@@ -45,6 +46,7 @@ import {
     ensureShellOutputStructure,
     renderShellError,
     renderShellSnapshot,
+    NO_EXIT_CODE,
 } from '../services/shell-output-service.js';
 import {
     navigateBackFromReferenceContext,
@@ -79,6 +81,13 @@ const COLLAPSED_CHILDREN_INDICATOR_SELECTOR = '.note-collapsed-children-indicato
 const TAG_PROPOSAL_ACTION_SELECTOR = '.note-tag-proposal-action';
 const SHELL_RUN_TIMEOUT_SECONDS = 0;
 const SHELL_POLL_INTERVAL_MS = 250;
+// The click a browser fires on release after a drag is ignored for this long.
+const CLICK_AFTER_DRAG_IGNORE_MS = 500;
+const INDENT_DROP_LINE_MIN_WIDTH_PX = 24;
+// How many elements under a press the log names, innermost first.
+const PRESS_PATH_LOG_DEPTH = 6;
+// The length of the meta-credential-copied animation in main.css (0.7s).
+const COPY_FEEDBACK_ANIMATION_MS = 700;
 const copyFeedbackTimers = ApplicationState.createWeakCollection('copyFeedbackTimers', 'map');
 
 export function initMouseEvents() {
@@ -226,6 +235,11 @@ function isMouseDownOutsideEditExclusion(target) {
             '#scroll-to-bottom-button',
             // The card offering a format for a paste acts on the note being edited.
             '.paste-format-offer',
+            // App notices (a new release, the backup reminder) act on their own: a button
+            // that opens a dialog saves and leaves the note itself, and × leaves it be.
+            '.app-notice-stack',
+            // The Reminders popup (reminder-surface-service.js) handles its own presses too.
+            '#reminder-surface',
             '#ai-chat-panel',
             '.add-note',
             '#trash-can',
@@ -883,7 +897,7 @@ function describeDropIndicator(noteElement, drop, pointerTarget) {
         const right = targetRect.left + targetRect.width;
         return {
             targetRect,
-            line: { left: lineLeft, top: targetRect.top + targetRect.height + 1, width: Math.max(24, right - lineLeft) },
+            line: { left: lineLeft, top: targetRect.top + targetRect.height + 1, width: Math.max(INDENT_DROP_LINE_MIN_WIDTH_PX, right - lineLeft) },
         };
     }
     if (drop.kind === 'outdent') {
@@ -977,7 +991,7 @@ function resolveVerticalMoveDestination(noteId, dropY, dragDirection, eventTarge
             const rect = element.getBoundingClientRect();
             return {
                 id: DOMUtils.getNoteId(element),
-                midY: rect.top + (rect.height / 2),
+                midY: rect.top + half(rect.height),
             };
         });
 
@@ -1020,7 +1034,7 @@ function handleMoveDragMouseUp(event) {
     const distanceSq = dx * dx + dy * dy;
     if (context.hasCrossedActivationThreshold) {
         moduleState.ignoreClickAfterMoveDrag = {
-            ignoreUntil: performance.now() + 500,
+            ignoreUntil: performance.now() + CLICK_AFTER_DRAG_IGNORE_MS,
         };
         event.preventDefault();
         event.stopPropagation();
@@ -1118,7 +1132,7 @@ function handleSelectionDragMouseUp(event) {
 
     moduleState.ignoreClickAfterSelectionDrag = {
         noteId: context.noteId,
-        ignoreUntil: performance.now() + 500,
+        ignoreUntil: performance.now() + CLICK_AFTER_DRAG_IGNORE_MS,
     };
 }
 
@@ -1188,7 +1202,7 @@ function isWritingAssistantInteraction(event) {
 function describePressPath(event) {
     return event.composedPath()
         .filter(target => target instanceof Element)
-        .slice(0, 6)
+        .slice(0, PRESS_PATH_LOG_DEPTH)
         .map((element) => {
             let label = element.localName;
             if (element.id !== '') label += `#${element.id}`;
@@ -1216,6 +1230,8 @@ function handleClick(event) {
     if (isWritingAssistantInteraction(event)) return;
     // The card offering a format for a paste handles its own clicks (paste-format-offer-service.js).
     if (event.target instanceof Element && event.target.closest('.paste-format-offer')) return;
+    // App notices (a new release, the backup reminder) and the Reminders popup handle their own clicks too.
+    if (event.target instanceof Element && event.target.closest('.app-notice-stack, #reminder-surface')) return;
 
     if (isViewModeNoteDisclosureToggle(event.target)) {
         return;
@@ -2243,7 +2259,7 @@ function handleShellRunClick(event) {
     renderShellSnapshot(outputElement, shellElement, {
         runId: '',
         status: 'running',
-        exitCode: -1,
+        exitCode: NO_EXIT_CODE,
         stdout: '',
         stderr: '',
         durationMs: 0,
@@ -2363,7 +2379,7 @@ function triggerCopyFeedback(valueElement, feedbackClass) {
 
     const timer = window.setTimeout(() => {
         valueElement.classList.remove(feedbackClass);
-    }, 700);
+    }, COPY_FEEDBACK_ANIMATION_MS);
     copyFeedbackTimers.set(valueElement, timer);
 }
 

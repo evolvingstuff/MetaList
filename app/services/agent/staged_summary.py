@@ -9,12 +9,16 @@ from pydantic import field_validator
 
 from app.services.agent.token_estimation import estimate_input_tokens
 
+SUMMARY_FINDING_MAX_CHARS = 2_000
+SUMMARY_FINDING_MAX_SUPPORTING_NOTES = 24
+SUMMARY_MAX_FINDINGS = 128
+
 
 class SummaryFinding(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    text: str = Field(..., min_length=1, max_length=2_000)
-    supporting_note_ids: list[str] = Field(..., min_length=1, max_length=24)
+    text: str = Field(..., min_length=1, max_length=SUMMARY_FINDING_MAX_CHARS)
+    supporting_note_ids: list[str] = Field(..., min_length=1, max_length=SUMMARY_FINDING_MAX_SUPPORTING_NOTES)
 
     @field_validator("text")
     @classmethod
@@ -37,7 +41,7 @@ class SummaryFinding(BaseModel):
 class SummaryFindingsResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    findings: list[SummaryFinding] = Field(..., max_length=128)
+    findings: list[SummaryFinding] = Field(..., max_length=SUMMARY_MAX_FINDINGS)
 
 
 class SummaryBatchResult(SummaryFindingsResult):

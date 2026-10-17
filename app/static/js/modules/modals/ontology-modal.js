@@ -1,6 +1,9 @@
+import { NO_SELECTION } from '../list-selection.js';
+import { parseDecimalInteger } from '../decimal-integer.js';
 import { ApplicationState, stateValuesEqual } from '../application-state.js';
 import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
+import { contextMenuIconMarkup } from '../context-menu/context-menu-service.js';
 import { CommandGate } from '../mode-manager/services/command-gate-service.js';
 import { buildSessionHeaders } from '../session-auth.js';
 import { handleDictationPasteEvent } from '../mode-manager/services/dictation-paste-service.js';
@@ -10,6 +13,18 @@ const TAG_LIMIT = 20;
 const DIALOG_SUGGESTION_LIMIT = 8;
 const DIALOG_SUGGESTION_DEBOUNCE_MS = 50;
 const DIALOG_DELETE_TAG_RESULT = Object.freeze({ action: 'delete-tag' });
+const SEARCH_INPUT_FOCUS_DELAY_MS = 50;
+const DIALOG_FOCUS_DELAY_MS = 30;
+// The dialog sits this fraction of the window height from the top, within these bounds.
+const DIALOG_TOP_OFFSET_VIEWPORT_FRACTION = 0.12;
+const DIALOG_MIN_TOP_OFFSET_PX = 32;
+const DIALOG_MAX_TOP_OFFSET_PX = 140;
+// Window height kept clear below the dialog, beyond its top offset.
+const DIALOG_BOTTOM_CLEARANCE_PX = 64;
+// A backslash and the character it escapes.
+const ESCAPE_SEQUENCE_LENGTH = 2;
+// An opening and a closing quote.
+const QUOTED_TOKEN_MIN_LENGTH = 2;
 
 function escapeHtml(value) {
     if (typeof value !== 'string') {
@@ -114,7 +129,7 @@ function parseDialogSuggestionContext(rawValue, cursorIndex) {
 
         if (quoteChar !== null) {
             if (ch === '\\' && index + 1 < cursorIndex) {
-                index += 2;
+                index += ESCAPE_SEQUENCE_LENGTH;
                 continue;
             }
             if (ch === quoteChar) {
@@ -127,7 +142,7 @@ function parseDialogSuggestionContext(rawValue, cursorIndex) {
 
         if (inRegex) {
             if (ch === '\\' && index + 1 < cursorIndex) {
-                index += 2;
+                index += ESCAPE_SEQUENCE_LENGTH;
                 continue;
             }
             if (ch === '/') {
@@ -220,7 +235,7 @@ function parseIncomingAtoms(raw) {
                 if (c === '\\') {
                     if (index + 1 < raw.length) {
                         token += raw[index + 1];
-                        index += 2;
+                        index += ESCAPE_SEQUENCE_LENGTH;
                         continue;
                     }
                     index += 1;
@@ -232,7 +247,7 @@ function parseIncomingAtoms(raw) {
                 }
                 index += 1;
             }
-            if (token.length < 2 || token[token.length - 1] !== quote) {
+            if (token.length < QUOTED_TOKEN_MIN_LENGTH || token[token.length - 1] !== quote) {
                 return { atoms: null, error: `Unclosed quote: ${quote}` };
             }
             atoms.push(token);
@@ -247,7 +262,7 @@ function parseIncomingAtoms(raw) {
                 if (c === '\\') {
                     if (index + 1 < raw.length) {
                         token += raw[index + 1];
-                        index += 2;
+                        index += ESCAPE_SEQUENCE_LENGTH;
                         continue;
                     }
                     index += 1;
@@ -386,14 +401,14 @@ export class OntologyModal extends BaseModal {
         super('ontologyModal', 'ontology-modal');
         this._abortController = null;
         this._rulesCache = null;
-        this._searchSelectedIndex = -1;
+        this._searchSelectedIndex = NO_SELECTION;
         this._suppressNextSearchResults = false;
         this._shouldFocusSearchInput = true;
         this._dialogState = null;
         this._dialogAbortController = null;
         this._dialogSuggestionTimer = null;
         this._dialogRequestSerial = 0;
-        this._dialogSelectedIndex = -1;
+        this._dialogSelectedIndex = NO_SELECTION;
         this._dialogSuggestionWasExplicitlyNavigated = false;
         this._dialogPointerSelectionPendingEnter = false;
         this._dialogSuggestionContext = null;
@@ -441,7 +456,7 @@ export class OntologyModal extends BaseModal {
 
         this._closeDialog(null);
         if (this._rulesCache !== null) this._rulesCache = null;
-        if (this._searchSelectedIndex !== -1) this._searchSelectedIndex = -1;
+        if (this._searchSelectedIndex !== NO_SELECTION) this._searchSelectedIndex = NO_SELECTION;
         if (this._suppressNextSearchResults) this._suppressNextSearchResults = false;
         if (!this._shouldFocusSearchInput) this._shouldFocusSearchInput = true;
     }
@@ -590,7 +605,7 @@ export class OntologyModal extends BaseModal {
             } else {
                 this._shouldFocusSearchInput = true;
             }
-        }, 50);
+        }, SEARCH_INPUT_FOCUS_DELAY_MS);
     }
 
     hideModalElement() {
@@ -727,7 +742,7 @@ export class OntologyModal extends BaseModal {
             event.preventDefault();
             let currentIndex = this._searchSelectedIndex;
             if (!Number.isInteger(currentIndex)) {
-                currentIndex = -1;
+                throw new Error('Ontology search selection index must be an integer');
             }
             let nextIndex = currentIndex + 1;
             if (nextIndex < 0) {
@@ -746,7 +761,7 @@ export class OntologyModal extends BaseModal {
             event.preventDefault();
             let currentIndex = this._searchSelectedIndex;
             if (!Number.isInteger(currentIndex)) {
-                currentIndex = 0;
+                throw new Error('Ontology search selection index must be an integer');
             }
             let nextIndex = currentIndex - 1;
             if (nextIndex < 0) {
@@ -908,7 +923,7 @@ export class OntologyModal extends BaseModal {
         if (!Array.isArray(tags) || tags.length === 0) {
             container.innerHTML = '';
             container.style.display = 'none';
-            if (this._searchSelectedIndex !== -1) this._searchSelectedIndex = -1;
+            if (this._searchSelectedIndex !== NO_SELECTION) this._searchSelectedIndex = NO_SELECTION;
             return;
         }
 
@@ -932,7 +947,9 @@ export class OntologyModal extends BaseModal {
 
         container.innerHTML = rows
             .map((row) => {
-                const countBadge = row.count === null ? '' : `<span class="ontology-search-count">${row.count}</span>`;
+                // A tag without a known note count shows no badge.
+                let countBadge = '';
+                if (row.count !== null) countBadge = `<span class="ontology-search-count">${row.count}</span>`;
                 return (
                     `<button class="ontology-search-result" data-action="focus" data-tag="${escapeHtml(row.tag)}">` +
                     `<span class="ontology-search-label">${escapeHtml(row.tag)}</span>` +
@@ -1152,10 +1169,13 @@ export class OntologyModal extends BaseModal {
         }
 
         const elements = this._getDialogElements();
-        const topOffset = Math.max(32, Math.min(140, Math.round(window.innerHeight * 0.12)));
+        const topOffset = Math.max(
+            DIALOG_MIN_TOP_OFFSET_PX,
+            Math.min(DIALOG_MAX_TOP_OFFSET_PX, Math.round(window.innerHeight * DIALOG_TOP_OFFSET_VIEWPORT_FRACTION)),
+        );
         elements.overlay.style.paddingTop = `${topOffset}px`;
         elements.overlay.style.paddingBottom = '32px';
-        elements.dialog.style.maxHeight = `calc(100vh - ${topOffset + 64}px)`;
+        elements.dialog.style.maxHeight = `calc(100vh - ${topOffset + DIALOG_BOTTOM_CLEARANCE_PX}px)`;
         elements.overlay.classList.add('is-visible');
         elements.overlay.setAttribute('aria-hidden', 'false');
 
@@ -1217,7 +1237,7 @@ export class OntologyModal extends BaseModal {
             } else {
                 elements.submitButton.focus();
             }
-        }, 30);
+        }, DIALOG_FOCUS_DELAY_MS);
     }
 
     _attachDialogListeners(elements) {
@@ -1301,7 +1321,7 @@ export class OntologyModal extends BaseModal {
             this._dialogAbortController = null;
         }
         this._dialogRequestSerial += 1;
-        if (this._dialogSelectedIndex !== -1) this._dialogSelectedIndex = -1;
+        if (this._dialogSelectedIndex !== NO_SELECTION) this._dialogSelectedIndex = NO_SELECTION;
         this._clearDialogNavigation();
         if (this._dialogSuggestionContext !== null) this._dialogSuggestionContext = null;
     }
@@ -1317,7 +1337,7 @@ export class OntologyModal extends BaseModal {
         elements.suggestions.innerHTML = '';
         elements.suggestions.classList.add('is-hidden');
         ApplicationState.receiveOwnerSnapshot(this, {
-            _dialogSelectedIndex: -1,
+            _dialogSelectedIndex: NO_SELECTION,
             _dialogSuggestionWasExplicitlyNavigated: false,
             _dialogSuggestionContext: null,
         });
@@ -1350,7 +1370,8 @@ export class OntologyModal extends BaseModal {
 
         elements.suggestions.innerHTML = rows
             .map((row) => {
-                const countBadge = row.count === null ? '' : `<span class="ontology-dialog-suggestion-count">${row.count}</span>`;
+                let countBadge = '';
+                if (row.count !== null) countBadge = `<span class="ontology-dialog-suggestion-count">${row.count}</span>`;
                 return (
                     `<button type="button" class="ontology-dialog-suggestion" data-tag="${escapeHtml(row.tag)}">` +
                     `<span class="ontology-dialog-suggestion-label">${escapeHtml(row.tag)}</span>` +
@@ -1361,7 +1382,7 @@ export class OntologyModal extends BaseModal {
             .join('');
         elements.suggestions.classList.remove('is-hidden');
         ApplicationState.receiveOwnerSnapshot(this, {
-            _dialogSelectedIndex: -1,
+            _dialogSelectedIndex: NO_SELECTION,
             _dialogSuggestionWasExplicitlyNavigated: false,
         });
         this._updateDialogSuggestionSelection(elements.suggestions);
@@ -1399,7 +1420,7 @@ export class OntologyModal extends BaseModal {
         }
         const items = Array.from(container.querySelectorAll('.ontology-dialog-suggestion'));
         if (items.length === 0) {
-            if (this._dialogSelectedIndex !== -1) this._dialogSelectedIndex = -1;
+            if (this._dialogSelectedIndex !== NO_SELECTION) this._dialogSelectedIndex = NO_SELECTION;
             return;
         }
         if (!Number.isInteger(this._dialogSelectedIndex)) {
@@ -1411,7 +1432,7 @@ export class OntologyModal extends BaseModal {
         items.forEach((item, index) => {
             item.classList.toggle('is-selected', index === this._dialogSelectedIndex);
         });
-        if (this._dialogSelectedIndex === -1) {
+        if (this._dialogSelectedIndex === NO_SELECTION) {
             return;
         }
         const selected = items[this._dialogSelectedIndex];
@@ -1529,7 +1550,7 @@ export class OntologyModal extends BaseModal {
             ApplicationState.receiveOwnerSnapshot(this, {
                 _dialogPointerSelectionPendingEnter: false,
                 _dialogSuggestionWasExplicitlyNavigated: true,
-                _dialogSelectedIndex: this._dialogSelectedIndex === -1 ? 0 : Math.min(this._dialogSelectedIndex + 1, items.length - 1),
+                _dialogSelectedIndex: this._dialogSelectedIndex === NO_SELECTION ? 0 : Math.min(this._dialogSelectedIndex + 1, items.length - 1),
             });
             this._updateDialogSuggestionSelection(container);
             return;
@@ -1541,7 +1562,7 @@ export class OntologyModal extends BaseModal {
             ApplicationState.receiveOwnerSnapshot(this, {
                 _dialogPointerSelectionPendingEnter: false,
                 _dialogSuggestionWasExplicitlyNavigated: true,
-                _dialogSelectedIndex: this._dialogSelectedIndex === -1 ? items.length - 1 : Math.max(this._dialogSelectedIndex - 1, 0),
+                _dialogSelectedIndex: this._dialogSelectedIndex === NO_SELECTION ? items.length - 1 : Math.max(this._dialogSelectedIndex - 1, 0),
             });
             this._updateDialogSuggestionSelection(container);
             return;
@@ -1834,7 +1855,7 @@ export class OntologyModal extends BaseModal {
         }
         const items = Array.from(container.querySelectorAll('.ontology-search-result'));
         if (items.length === 0) {
-            if (this._searchSelectedIndex !== -1) this._searchSelectedIndex = -1;
+            if (this._searchSelectedIndex !== NO_SELECTION) this._searchSelectedIndex = NO_SELECTION;
             return;
         }
         if (!Number.isInteger(this._searchSelectedIndex)) {
@@ -2145,7 +2166,7 @@ export class OntologyModal extends BaseModal {
                 <button class="ontology-tag" data-action="focus" data-tag="${escapeHtml(focusTag)}">${escapeHtml(focusTag)}</button>
                 <div class="ontology-row-actions">
                     <button class="ontology-edit" data-action="rename-focus" aria-label="Edit tag">✎</button>
-                    <span class="ontology-spacer"></span>
+                    <button class="ontology-remove ontology-delete-tag" data-action="delete-focus" aria-label="Delete tag" title="Delete tag">${contextMenuIconMarkup('trash', 'ontology-delete-tag-icon')}</button>
                 </div>
             </div>
         `);
@@ -2607,6 +2628,16 @@ export class OntologyModal extends BaseModal {
                 return;
             }
 
+            // Deleting the focused tag is also inside its edit dialog; here it is one click away.
+            if (action === 'delete-focus') {
+                const focusTag = this.getModalState().focusTag;
+                if (typeof focusTag !== 'string' || focusTag.trim() === '') {
+                    throw new Error('Focus tag missing');
+                }
+                await this._deleteFocusedTag(focusTag);
+                return;
+            }
+
             if (action === 'add-tag') {
                 const newTag = await this._openDialog({
                     title: 'Add new tag',
@@ -2654,7 +2685,7 @@ export class OntologyModal extends BaseModal {
                 .split(',')
                 .map((value) => value.trim())
                 .filter((value) => value !== '')
-                .map((value) => Number.parseInt(value, 10));
+                .map((value) => parseDecimalInteger(value));
             if (ruleIds.length === 0) {
                 throw new Error('remove action missing ruleIds');
             }
@@ -2706,7 +2737,7 @@ export class OntologyModal extends BaseModal {
             if (typeof rawRuleId !== 'string' || rawRuleId.trim() === '') {
                 throw new Error('edit action missing ruleId');
             }
-            const ruleId = Number.parseInt(rawRuleId, 10);
+            const ruleId = parseDecimalInteger(rawRuleId);
             if (!Number.isInteger(ruleId) || ruleId < 0) {
                 throw new Error(`invalid rule id: ${rawRuleId}`);
             }
@@ -2732,7 +2763,7 @@ export class OntologyModal extends BaseModal {
             if (typeof rawRuleId !== 'string' || rawRuleId.trim() === '') {
                 throw new Error('edit action missing ruleId');
             }
-            const ruleId = Number.parseInt(rawRuleId, 10);
+            const ruleId = parseDecimalInteger(rawRuleId);
             if (!Number.isInteger(ruleId) || ruleId < 0) {
                 throw new Error(`invalid rule id: ${rawRuleId}`);
             }

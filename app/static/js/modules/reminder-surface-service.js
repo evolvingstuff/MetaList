@@ -1,10 +1,24 @@
+import { localDateText } from './local-date-text.js';
+import {
+    HOURS_PER_DAY,
+    MINUTES_PER_HOUR,
+    MS_PER_DAY,
+    MS_PER_HOUR,
+    MS_PER_MINUTE,
+    MS_PER_SECOND,
+    SECONDS_PER_MINUTE,
+} from './time-units.js';
 import { ApplicationState } from './application-state.js';
 import { ReminderStore } from './reminder-store.js';
 import { loadClientState, persistClientPreferences } from './client-state-api.js';
 
 const NON_IDLE_THROTTLE_MS = 30_000;
 const ELAPSED_UPDATE_MS = 1_000;
+const DATE_ONLY_TEXT_LENGTH = 'YYYY-MM-DD'.length;
 const REMINDER_RENDER_ICON = '🔔';
+// Fallback for a missed transitionend: a little longer than the 180ms
+// .reminder-surface-item height transition in main.css.
+const SURFACE_ITEM_TRANSITION_FALLBACK_MS = 240;
 
 const OCCURRENCE_KIND_MAIN = 'main';
 const OCCURRENCE_KIND_PRE = 'pre';
@@ -43,25 +57,25 @@ function formatElapsedSince(value, now) {
     if (Number.isNaN(dueAt.getTime())) {
         throw new Error('formatElapsedSince requires valid datetime');
     }
-    const elapsedSeconds = Math.max(0, Math.floor((now.getTime() - dueAt.getTime()) / 1000));
+    const elapsedSeconds = Math.max(0, Math.floor((now.getTime() - dueAt.getTime()) / MS_PER_SECOND));
     if (elapsedSeconds < 1) {
         return 'Due now';
     }
-    if (elapsedSeconds < 60) {
+    if (elapsedSeconds < SECONDS_PER_MINUTE) {
         return `Due ${elapsedSeconds} sec ago`;
     }
-    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
-    const remainingSeconds = elapsedSeconds % 60;
-    if (elapsedMinutes < 60) {
+    const elapsedMinutes = Math.floor(elapsedSeconds / SECONDS_PER_MINUTE);
+    const remainingSeconds = elapsedSeconds % SECONDS_PER_MINUTE;
+    if (elapsedMinutes < MINUTES_PER_HOUR) {
         return `Due ${elapsedMinutes} min ${remainingSeconds} sec ago`;
     }
-    const elapsedHours = Math.floor(elapsedMinutes / 60);
-    const remainingMinutes = elapsedMinutes % 60;
-    if (elapsedHours < 24) {
+    const elapsedHours = Math.floor(elapsedMinutes / MINUTES_PER_HOUR);
+    const remainingMinutes = elapsedMinutes % MINUTES_PER_HOUR;
+    if (elapsedHours < HOURS_PER_DAY) {
         return `Due ${elapsedHours} hr ${remainingMinutes} min ago`;
     }
-    const elapsedDays = Math.floor(elapsedHours / 24);
-    const remainingHours = elapsedHours % 24;
+    const elapsedDays = Math.floor(elapsedHours / HOURS_PER_DAY);
+    const remainingHours = elapsedHours % HOURS_PER_DAY;
     return `Due ${elapsedDays} day ${remainingHours} hr ago`;
 }
 
@@ -76,25 +90,25 @@ function formatTimeUntilDateTime(value, now) {
     if (Number.isNaN(eventAt.getTime())) {
         throw new Error('formatTimeUntilDateTime requires valid datetime');
     }
-    const remainingSeconds = Math.max(0, Math.ceil((eventAt.getTime() - now.getTime()) / 1000));
+    const remainingSeconds = Math.max(0, Math.ceil((eventAt.getTime() - now.getTime()) / MS_PER_SECOND));
     if (remainingSeconds < 1) {
         return 'Event now';
     }
-    if (remainingSeconds < 60) {
+    if (remainingSeconds < SECONDS_PER_MINUTE) {
         return `Event in ${remainingSeconds} sec`;
     }
-    const remainingMinutes = Math.floor(remainingSeconds / 60);
-    const leftoverSeconds = remainingSeconds % 60;
-    if (remainingMinutes < 60) {
+    const remainingMinutes = Math.floor(remainingSeconds / SECONDS_PER_MINUTE);
+    const leftoverSeconds = remainingSeconds % SECONDS_PER_MINUTE;
+    if (remainingMinutes < MINUTES_PER_HOUR) {
         return `Event in ${remainingMinutes} min ${leftoverSeconds} sec`;
     }
-    const remainingHours = Math.floor(remainingMinutes / 60);
-    const leftoverMinutes = remainingMinutes % 60;
-    if (remainingHours < 24) {
+    const remainingHours = Math.floor(remainingMinutes / MINUTES_PER_HOUR);
+    const leftoverMinutes = remainingMinutes % MINUTES_PER_HOUR;
+    if (remainingHours < HOURS_PER_DAY) {
         return `Event in ${remainingHours} hr ${leftoverMinutes} min`;
     }
-    const remainingDays = Math.floor(remainingHours / 24);
-    const leftoverHours = remainingHours % 24;
+    const remainingDays = Math.floor(remainingHours / HOURS_PER_DAY);
+    const leftoverHours = remainingHours % HOURS_PER_DAY;
     return `Event in ${remainingDays} day ${leftoverHours} hr`;
 }
 
@@ -102,14 +116,11 @@ function localDateStringFromDate(value) {
     if (!(value instanceof Date)) {
         throw new Error('localDateStringFromDate requires Date');
     }
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const day = String(value.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return localDateText(value);
 }
 
 function formatTimeUntilDateOnly(value, now) {
-    if (typeof value !== 'string' || value.length !== 10) {
+    if (typeof value !== 'string' || value.length !== DATE_ONLY_TEXT_LENGTH) {
         throw new Error('formatTimeUntilDateOnly requires YYYY-MM-DD');
     }
     if (!(now instanceof Date)) {
@@ -130,7 +141,7 @@ function formatTimeUntilDateOnly(value, now) {
     if (Number.isNaN(todayDate.getTime())) {
         throw new Error('formatTimeUntilDateOnly requires valid dates');
     }
-    const remainingDays = Math.round((eventDate.getTime() - todayDate.getTime()) / (24 * 60 * 60 * 1000));
+    const remainingDays = Math.round((eventDate.getTime() - todayDate.getTime()) / MS_PER_DAY);
     if (remainingDays === 1) {
         return 'Event tomorrow';
     }
@@ -167,7 +178,7 @@ function reminderPreReminder(reminder) {
 }
 
 function subtractLocalDays(dateValue, days) {
-    if (typeof dateValue !== 'string' || dateValue.length !== 10) {
+    if (typeof dateValue !== 'string' || dateValue.length !== DATE_ONLY_TEXT_LENGTH) {
         throw new Error('subtractLocalDays requires YYYY-MM-DD');
     }
     if (!Number.isInteger(days) || days < 1) {
@@ -178,10 +189,7 @@ function subtractLocalDays(dateValue, days) {
         throw new Error('subtractLocalDays requires valid date');
     }
     date.setDate(date.getDate() - days);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return localDateText(date);
 }
 
 function localDateFromDateTime(value) {
@@ -192,10 +200,7 @@ function localDateFromDateTime(value) {
     if (Number.isNaN(parsed.getTime())) {
         throw new Error('localDateFromDateTime requires valid datetime');
     }
-    const year = parsed.getFullYear();
-    const month = String(parsed.getMonth() + 1).padStart(2, '0');
-    const day = String(parsed.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return localDateText(parsed);
 }
 
 function preReminderKey(reminder, triggerValue, eventValue) {
@@ -569,8 +574,8 @@ class ReminderSurfaceService {
             throw new Error('Reminder mirror has invalid next_fire_at');
         }
         const offsetMs = preReminder.unit === 'hours'
-            ? preReminder.amount * 60 * 60 * 1000
-            : preReminder.amount * 60 * 1000;
+            ? preReminder.amount * MS_PER_HOUR
+            : preReminder.amount * MS_PER_MINUTE;
         const triggerDate = new Date(fireAt.getTime() - offsetMs);
         const triggerValue = triggerDate.toISOString();
         return {
@@ -668,10 +673,7 @@ class ReminderSurfaceService {
         if (!(value instanceof Date)) {
             throw new Error('_localDate requires Date');
         }
-        const year = value.getFullYear();
-        const month = String(value.getMonth() + 1).padStart(2, '0');
-        const day = String(value.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+        return localDateText(value);
     }
 
     _ensureContainer() {
@@ -1166,7 +1168,7 @@ class ReminderSurfaceService {
         window.requestAnimationFrame(() => {
             item.style.height = '0px';
         });
-        window.setTimeout(removeAfterTransition, 240);
+        window.setTimeout(removeAfterTransition, SURFACE_ITEM_TRANSITION_FALLBACK_MS);
     }
 
     _animateSurfaceItemEnter(item) {
@@ -1195,7 +1197,7 @@ class ReminderSurfaceService {
             item.classList.remove('is-entering');
             item.style.height = `${targetHeight}px`;
         });
-        window.setTimeout(finishEnter, 240);
+        window.setTimeout(finishEnter, SURFACE_ITEM_TRANSITION_FALLBACK_MS);
     }
 
     _animateSurfaceItemStackCollapse(item) {
@@ -1244,7 +1246,7 @@ class ReminderSurfaceService {
             item.removeAttribute('aria-hidden');
             item.style.height = `${targetHeight}px`;
         });
-        window.setTimeout(finishExpand, 240);
+        window.setTimeout(finishExpand, SURFACE_ITEM_TRANSITION_FALLBACK_MS);
     }
 
     _measureExpandedSurfaceItemHeight(item) {

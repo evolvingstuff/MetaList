@@ -18,6 +18,7 @@ from app.services.view_cache import ViewCache
 from app.services.view_state import ViewState
 from app.services import undo_state, snapshot, html_export, note_store as note_store_module, sync
 from app.services.note_store import NoteStore
+from app.services.note_store import NotePosition
 from app.services.search_index import SearchIndex
 from app.services.tag_ontology import TagOntology
 from app.services.agent.evidence_serialization import serialize_evidence_result_trees
@@ -156,7 +157,7 @@ def deep_store(monkeypatch):
         parent_id = None
         if i > 0:
             parent_id = str(i - 1)
-        rows.append(dict(id=str(i), parent_id=parent_id, prev_id=None, next_id=None, is_collapsed=False))
+        rows.append(dict(id=str(i), parent_id=parent_id, prev_id=None, next_id=None, is_collapsed=False, created_at=None, updated_at=None))
     store.load_from_db(None, prefetched_rows=rows)
     return store, rows
 
@@ -172,8 +173,8 @@ def test_deep_chain_hydrates_views_copies_exports_and_serializes(monkeypatch, de
     assert len(state.structure) == 256
     assert len(copy_note.snapshot_subtree_preorder('0')) == 256
     assert 'level-255' in json.dumps(copy_note._build_serialized_tree('0'))
-    assert 'level-255' in html_export.build_notes_export_document(search=None, sort_mode='normal', is_untagged_view=False, theme='light', token='fixture-token', root_note_id=None, purpose='download', title='', include_credentials=False)
-    parents = {row['id']: row['parent_id'] or '' for row in rows}
+    assert 'level-255' in html_export.build_notes_export_document(search=None, sort_mode='normal', is_untagged_view=False, theme='light', token='fixture-token', root_note_id=None, purpose='download', title='', include_credentials=False, editing_note_id=None)
+    parents = {row['id']: row['parent_id'] or '' for row in rows}  # shockharness: ignore[DEF003] reason="a root row has no parent"
     children = {row['id']: tuple(store.get_children(row['id'])) for row in rows}
     payload = serialize_evidence_result_trees(root_ids=('0',), evidence_payloads_by_id={'255': {'note_id':'255','content_text':'deep evidence'}}, parent_id_by_id=parents, child_ids_by_id=children)
     assert 'deep evidence' in json.dumps(payload)
@@ -270,7 +271,7 @@ def test_cycles_fail_in_view_copy_and_export(monkeypatch, deep_store):
     with pytest.raises(RuntimeError, match='[Cc]ycle'):
         copy_note.snapshot_subtree_preorder('0')
     with pytest.raises(RuntimeError, match='[Cc]ycle'):
-        html_export._render_exported_note(note_id='0', allowed_note_ids=None, embed_render_context=None, collapsible=True, redact_credentials=True)
+        html_export._render_exported_note(note_id='0', allowed_note_ids=None, embed_render_context=None, collapsible=True, open_note_ids=frozenset(), redact_credentials=True)
 
 
 def test_sort_aggregates_follow_edits_moves_deletes_and_hydration(monkeypatch, deep_store):
@@ -278,9 +279,9 @@ def test_sort_aggregates_follow_edits_moves_deletes_and_hydration(monkeypatch, d
     monkeypatch.setattr(root_sorting, 'note_store', store)
     root_sorting.clear_root_sort_cache()
     initial = root_sorting._get_root_subtree_content_volume('0')
-    store.update_note_from_db(SimpleNamespace(id='255'), plaintext='x'*100, tags='', proposed_tags='')
+    store.update_note_content(note_id='255', plaintext='x'*100, tags='', proposed_tags='', updated_at=store.get_note('255').updated_at)
     assert root_sorting._get_root_subtree_content_volume('0') == initial - len('level-255') + 100
-    store.bulk_update_metadata([SimpleNamespace(id='0', next_id='255'), SimpleNamespace(id='255',parent_id=None,prev_id='0',next_id=None)], rebuild=True)
+    store.move_notes([NotePosition(note_id='0', parent_id=None, prev_id=None, next_id='255'), NotePosition(note_id='255', parent_id=None, prev_id='0', next_id=None)])
     assert root_sorting._get_root_subtree_content_volume('255') == 100
     assert root_sorting._get_root_subtree_content_volume('0') == initial - len('level-255')
     store.remove_note('255')
@@ -301,10 +302,14 @@ def test_timestamp_sort_does_not_parse_html(monkeypatch, deep_store):
     root_sorting.clear_root_sort_cache()
 
 
+def _reload_with_root_dates(store, rows, when):
+    store.load_from_db(None, prefetched_rows=[dict(rows[0], created_at=when, updated_at=when), *rows[1:]])
+
+
 def test_timestamp_aggregate_does_not_hide_invalid_descendant_dates(monkeypatch, deep_store):
-    store, _ = deep_store
+    store, rows = deep_store
     now = datetime.now(timezone.utc)
-    store.update_note_from_db(SimpleNamespace(id='0', created_at=now, updated_at=now), plaintext='root', tags='', proposed_tags='')
+    _reload_with_root_dates(store, rows, now)
     monkeypatch.setattr(root_sorting, 'note_store', store)
     root_sorting.clear_root_sort_cache()
     with pytest.raises(RuntimeError, match='timestamps'):
@@ -313,9 +318,9 @@ def test_timestamp_aggregate_does_not_hide_invalid_descendant_dates(monkeypatch,
 
 
 def test_creation_sort_reads_only_roots_without_snapshotting_descendants(monkeypatch, deep_store):
-    store, _ = deep_store
+    store, rows = deep_store
     now = datetime.now(timezone.utc)
-    store.update_note_from_db(SimpleNamespace(id='0', created_at=now, updated_at=now), plaintext='root', tags='', proposed_tags='')
+    _reload_with_root_dates(store, rows, now)
     monkeypatch.setattr(root_sorting, 'note_store', store)
     monkeypatch.setattr(store, 'snapshot', lambda: pytest.fail('Creation sorting traversed descendants'))
     assert root_sorting.get_root_sort_timestamps('created') == {'0': now}

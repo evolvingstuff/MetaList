@@ -1,3 +1,4 @@
+import { isServerErrorStatus } from './http-status.js';
 import { ApplicationState } from './application-state.js';
 import { HttpRequestError, rethrowUnexpectedError } from './expected-errors.js';
 import { closeAllFloatingNotes } from './mode-manager/services/floating-note-service.js';
@@ -18,9 +19,16 @@ import {
     parseLoginNamespaceCatalog,
 } from './login-namespace-picker.js';
 import { formatElapsedDuration } from './elapsed-time.js';
+import { MS_PER_SECOND } from './time-units.js';
 
 // Matches the 350 ms slide in main.css (.login-view-leaving).
 const LOGIN_SLIDE_MS = 350;
+// How long past the slide to wait for its animationend before swapping anyway.
+const LOGIN_SLIDE_GRACE_MS = 100;
+const HYDRATION_POLL_INTERVAL_MS = 200;
+const FULL_PROGRESS_PERCENT = 100;
+// With a single namespace there is nothing to switch to.
+const MIN_NAMESPACES_FOR_SWITCHER = 2;
 
 export const Auth = {
     hasPassword: null,
@@ -200,7 +208,7 @@ export const Auth = {
         select.innerHTML = optionsHtml;
         select.value = catalog.currentNamespace;
         select.disabled = disabled;
-        switcher.dataset.hasChoices = catalog.namespaces.length >= 2 ? 'true' : 'false';
+        switcher.dataset.hasChoices = catalog.namespaces.length >= MIN_NAMESPACES_FOR_SWITCHER ? 'true' : 'false';
         this._syncLoginNamespaceVisibility();
     },
 
@@ -269,7 +277,7 @@ export const Auth = {
     },
 
     _setLoginProgress(percent) {
-        if (!Number.isInteger(percent) || percent < 0 || percent > 100) {
+        if (!Number.isInteger(percent) || percent < 0 || percent > FULL_PROGRESS_PERCENT) {
             throw new Error('Auth._setLoginProgress requires an integer percent 0-100');
         }
         // A later phase can report less than an earlier one; the bar holds its place.
@@ -290,7 +298,7 @@ export const Auth = {
         this._stopLoadingElapsed();
         this._loadingStartedAt = window.performance.now();
         this._showLoadingElapsed();
-        this._loadingTimerId = window.setInterval(() => this._showLoadingElapsed(), 1000);
+        this._loadingTimerId = window.setInterval(() => this._showLoadingElapsed(), MS_PER_SECOND);
     },
 
     // Stops counting; the last time stays shown (it stays visible after a failure).
@@ -354,7 +362,7 @@ export const Auth = {
         };
         formView.addEventListener('animationend', finish, { once: true });
         // Background tabs may not run the animation; the swap still completes.
-        window.setTimeout(finish, LOGIN_SLIDE_MS + 100);
+        window.setTimeout(finish, LOGIN_SLIDE_MS + LOGIN_SLIDE_GRACE_MS);
     },
 
     _setLoginSubmitBusy(isBusy) {
@@ -447,7 +455,7 @@ export const Auth = {
         if (typeof status.overall_percent !== 'number') {
             throw new Error('Hydration status requires overall_percent');
         }
-        this._setLoginProgress(Math.min(100, Math.max(0, Math.floor(status.overall_percent))));
+        this._setLoginProgress(Math.min(FULL_PROGRESS_PERCENT, Math.max(0, Math.floor(status.overall_percent))));
     },
 
     async _runHydrationFlow() {
@@ -483,7 +491,7 @@ export const Auth = {
                     : 'server returned no error detail';
                 throw new Error(`Hydration failed during ${failedPhase}: ${failedMessage}`);
             }
-            await new Promise((resolve) => setTimeout(resolve, 200));
+            await new Promise((resolve) => setTimeout(resolve, HYDRATION_POLL_INTERVAL_MS));
             const pollResponse = await fetch(CONFIG.API.AUTH.HYDRATION_STATUS, { headers });
             if (!pollResponse.ok) {
                 const detail = await pollResponse.text();
@@ -624,7 +632,7 @@ export const Auth = {
         }
 
         if (!response.ok) {
-            const fallbackPrefix = response.status >= 500
+            const fallbackPrefix = isServerErrorStatus(response.status)
                 ? 'Database check or login failed on the server'
                 : 'Login failed';
             this._rejectLoginAttempt(await this._readResponseDetail(response, fallbackPrefix));
@@ -673,6 +681,8 @@ export const Auth = {
                 this.revealMainApp();
                 startupPhase = 'starting reminders';
                 await ReminderSurface.start();
+                startupPhase = 'starting the backup reminder';
+                await CommandPalette.startBackupReminder();
                 document.body.dataset.appReady = 'true';
                 CommandPalette.notifyAppUpdate();
             } else {

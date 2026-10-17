@@ -26,11 +26,11 @@
     --note-vertical-spacing: 2px;
     --note-corner-radius: 12px;
     --note-corner-radius-nested: 10px;
-    /* Embeds: the first level, then each embed inside an embed a shade deeper. */
-    --embed-tint-1: #afd7fb;
-    --embed-tint-2: #96c8f7;
-    --embed-tint-3: #7db8f2;
-    --embed-edge: rgba(23, 92, 170, 0.28);
+    /* Embeds: greys, the first level, then each embed inside an embed a shade deeper. */
+    --embed-tint-1: #f1f3f5;
+    --embed-tint-2: #e5e8eb;
+    --embed-tint-3: #d8dce0;
+    --embed-edge: rgba(0, 0, 0, 0.12);
     /* The light theme's header bar (search, tabs icon, result count): black,
        with white on it, as it long was. */
     --search-shell-surface: #000000;
@@ -1408,6 +1408,20 @@ body.ontology-modal-open #ontology-modal {
 .ontology-edit:hover {
     background: rgba(255, 255, 255, 0.08);
     color: rgba(255, 255, 255, 0.9);
+}
+
+/* The focused tag's 🗑: deletes it everywhere (after the same confirmation as
+   Edit tag → Delete tag…). */
+.ontology-delete-tag-icon {
+    width: 14px;
+    height: 14px;
+    /* A click goes to the button (the dialog reads actions from HTML elements). */
+    pointer-events: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 .ontology-spacer {
@@ -3997,6 +4011,14 @@ html[data-theme="dark"] .ai-chat-header-actions #ai-chat-spend-toggle[aria-press
 .note-content img {
     max-width: 100%;
     height: auto;
+}
+
+/* While a note is edited its text is raw, so the editor gives each image its
+   size directly (a display-only property, never saved), with the same rule as
+   .meta-size: a fraction of the size that fits. */
+.note.editing .note-content img {
+    max-width: calc(100% * var(--editing-image-size, 1));
+    zoom: var(--editing-image-size, 1);
 }
 
 /* Preformatted blocks (Markdown code, raw CSV, diagram source) wrap too,
@@ -6622,9 +6644,13 @@ body.tab-drag-active * {
     display: block;
 }
 
+/* A size is a fraction of the size that fits: the note's width caps the content
+   first, then the size scales it (zoom resolves a percentage width after
+   scaling, so the cap is scaled by the same factor). Every step shows, however
+   wide the picture or the note. */
 .meta-size {
     display: inline-block;
-    max-width: 100%;
+    max-width: calc(100% * var(--meta-size-factor));
     zoom: var(--meta-size-factor);
 }
 
@@ -7983,10 +8009,10 @@ html[data-theme="dark"] .note-embed-collapse-toggle:hover {
 }
 
 html[data-theme="dark"] {
-    --embed-tint-1: #173350;
-    --embed-tint-2: #1d3f63;
-    --embed-tint-3: #244b76;
-    --embed-edge: rgba(147, 197, 253, 0.22);
+    --embed-tint-1: #202224;
+    --embed-tint-2: #2a2d30;
+    --embed-tint-3: #35393d;
+    --embed-edge: rgba(235, 235, 235, 0.14);
 }
 
 html[data-theme="dark"] .note:not(.editing):has(> .note-content > .note-reference-only) {
@@ -9639,13 +9665,24 @@ body.ai-tagging-locked .ai-chat-tag-operation select:enabled { cursor: pointer !
 }
 
 
-/* Release notices use the reminder card styling without sharing reminder state. */
-.app-update-notice {
+/* App notices (app-notice-stack.js) stack in one bottom-right column, so a release
+   notice and the backup reminder never cover each other. */
+.app-notice-stack {
     position: fixed;
     right: 18px;
     bottom: 18px;
     z-index: 1100;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
     max-width: min(460px, calc(100vw - 36px));
+    pointer-events: none;
+}
+
+/* Release notices use the reminder card styling without sharing reminder state. */
+.app-update-notice {
+    max-width: 100%;
     display: flex;
     align-items: center;
     gap: 12px;

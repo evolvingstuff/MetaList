@@ -13,6 +13,9 @@ from app.services.agent.tagging import (
 )
 from app.services.agent.inference import InferenceProviderError
 from app.services.agent.inference import StructuredInferenceError
+# The context room kept for the model's answer when checking that a batch fits is the
+# batch's own output cap.
+from app.services.agent.structured_inference import TAG_BATCH_MAX_OUTPUT_TOKENS
 from app.services.agent.failure_explanations import FailureSetup, explain_structured_failure
 from app.services.agent.context import format_active_skill
 from app.services.agent.token_estimation import estimate_message_tokens, estimate_input_tokens
@@ -28,6 +31,7 @@ from app.services.sync import get_current_sync_uuid
 from app.services.tokens import token_service
 from app.services.snapshot import resolve_view_scope_membership
 from app.usecases.bulk_tag_proposals import apply_bulk_proposals, prepare_proposal_changes
+from app.services.preference_values import preference_or_default
 
 
 _TAGGING_CORRECTION_ATTEMPTS = 3
@@ -136,7 +140,8 @@ async def infer_validated_batch(
     validation_failures = []
     for attempt in range(_TAGGING_CORRECTION_ATTEMPTS + 1):
         required_tokens = (estimate_message_tokens(attempt_messages)
-                           + estimate_input_tokens(TagBatchResult.model_json_schema()) + 8192)
+                           + estimate_input_tokens(TagBatchResult.model_json_schema())
+                           + TAG_BATCH_MAX_OUTPUT_TOKENS)
         if required_tokens > context_tokens:
             raise InferenceProviderError("The tagging request exceeds this model's context. Reduce the tagging batch window or narrow the search; nothing was applied.")
         response = await infer_with_progress(inference, run, attempt_messages, TagBatchResult, lambda progress: None)
@@ -255,7 +260,7 @@ class TaggingRun:
         # lint: allow-PY001 rationale="evidence budget can legitimately be insufficient for user-selected scope"
         except ValueError as exc:
             raise InferenceProviderError(str(exc)) from exc
-        policy = self.preferences.get(TAGGING_POLICY_KEY, "")
+        policy = preference_or_default(self.preferences, TAGGING_POLICY_KEY, default="")
         total_tokens = make_batch(trees).tokens
         coverage_note = ""
         focus_was_selected = False
@@ -272,7 +277,7 @@ class TaggingRun:
             all_choices = ("proceed",)
             prefix_choices = ("use_prefix",)
             if chooses_focus:
-                default_focus = self.preferences.get(TAGGING_FOCUS_KEY, "existing")
+                default_focus = preference_or_default(self.preferences, TAGGING_FOCUS_KEY, default="existing")
                 all_choices = ("focus_existing", "focus_new", "focus_both")
                 prefix_choices = ("prefix_focus_existing", "prefix_focus_new", "prefix_focus_both")
             assert default_focus in {"existing", "new", "both"}
@@ -361,7 +366,8 @@ class TaggingRun:
                     "prior_batch_new_tags": prior_batch_new_tags},
             )
             required_tokens = (estimate_message_tokens(messages)
-                               + estimate_input_tokens(TagBatchResult.model_json_schema()) + 8192)
+                               + estimate_input_tokens(TagBatchResult.model_json_schema())
+                               + TAG_BATCH_MAX_OUTPUT_TOKENS)
             if required_tokens > context.loaded_tokens:
                 raise InferenceProviderError("The tagging batch, shared vocabulary, instructions, and response allowance exceed this model's context. Reduce the tagging batch window or narrow the search; nothing was applied.")
             validated = await infer_validated_batch(

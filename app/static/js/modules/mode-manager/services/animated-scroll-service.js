@@ -1,7 +1,10 @@
+import { clampNumber, getScrollMaxY } from './viewport-reference.js';
 import { ApplicationState } from '../../application-state.js';
 const SCROLL_PIXELS_PER_MS = 60;
 const MIN_SCROLL_DURATION_MS = 70;
 const MAX_SCROLL_DURATION_MS = 160;
+// Cubic ease-out.
+const EASE_OUT_EXPONENT = 3;
 // Announced before the app scrolls on purpose (e.g. up to a new note), so a
 // viewport hold keeping the user's place stops instead of scrolling back.
 export const DELIBERATE_SCROLL_EVENT = 'metalist:deliberate-scroll';
@@ -9,21 +12,6 @@ export const DELIBERATE_SCROLL_EVENT = 'metalist:deliberate-scroll';
 const moduleState = ApplicationState.createFields('animated-scroll-service', {
     activeAnimationFrame: null,
 });
-
-function clampNumber(value, min, max) {
-    if (typeof value !== 'number' || Number.isNaN(value)) {
-        throw new Error('clampNumber requires a number');
-    }
-    if (value < min) return min;
-    if (value > max) return max;
-    return value;
-}
-
-function getScrollMaxY() {
-    const doc = document.documentElement;
-    const max = doc.scrollHeight - window.innerHeight;
-    return Math.max(0, Math.round(max));
-}
 
 function prefersReducedMotion() {
     if (!window.matchMedia) {
@@ -71,7 +59,7 @@ export function scrollWindowToYFastAnimated(targetScrollY) {
     const tick = (now) => {
         const elapsed = now - startTime;
         const t = Math.max(0, Math.min(1, elapsed / durationMs));
-        const eased = 1 - Math.pow(1 - t, 3);
+        const eased = 1 - Math.pow(1 - t, EASE_OUT_EXPONENT);
         const nextY = Math.round(startY + (clampedTarget - startY) * eased);
         window.scrollTo(0, nextY);
 

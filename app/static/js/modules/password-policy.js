@@ -1,6 +1,7 @@
 export const PASSWORD_MIN_LENGTH = 12;
 export const PASSWORD_MAX_LENGTH = 72;
 export const PASSWORD_MIN_ZXCVBN_SCORE = 3;
+const PERCENT_OF_WHOLE = 100;
 
 
 export function calculatePasswordLengthProgress(password) {
@@ -11,7 +12,7 @@ export function calculatePasswordLengthProgress(password) {
     return {
         characterCount,
         remainingCharacterCount: Math.max(PASSWORD_MIN_LENGTH - characterCount, 0),
-        progressPercent: Math.min(characterCount / PASSWORD_MIN_LENGTH, 1) * 100,
+        progressPercent: Math.min(characterCount / PASSWORD_MIN_LENGTH, 1) * PERCENT_OF_WHOLE,
         meetsMinimumLength: characterCount >= PASSWORD_MIN_LENGTH,
     };
 }

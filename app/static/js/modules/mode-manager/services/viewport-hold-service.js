@@ -11,12 +11,16 @@
 // input or scroll, once the layout has been still for a moment, or after a
 // maximum time.
 
+import { NOT_FOUND } from '../../not-found.js';
+import { half } from '../../half.js';
 import { ApplicationState } from '../../application-state.js';
-import { getViewportTopInset } from './scroll-restoration-service.js';
+import { getViewportTopInset } from './viewport-reference.js';
 import { DELIBERATE_SCROLL_EVENT } from './animated-scroll-service.js';
 
 // How much of a kept-visible note must remain below the search controls.
 const MIN_VISIBLE_PX = 24;
+// The reading caret is probed this far into the note's text at most.
+const READING_PROBE_MAX_INSET_PX = 40;
 const QUIET_MS = 700;
 const MAX_HOLD_MS = 4000;
 // Characters of context recorded on each side of an anchored text position.
@@ -26,6 +30,8 @@ const USER_INPUT_EVENTS = ['wheel', 'touchstart', 'keydown', 'mousedown', 'point
 const MIN_MATCH_CHARS = 8;
 // The longest LaTeX delimiter ($$, \\[, \\( and their closers).
 const FORMULA_DELIMITER_CHARS = 2;
+// With no caret in view, the anchor is read a third of the way down the visible area.
+const READING_LINE_DIVISOR = 3;
 
 const moduleState = ApplicationState.createFields('viewport-hold-service', {
     session: null,
@@ -139,8 +145,10 @@ export function captureEditingFocus(noteElement) {
     };
 }
 
+// The node, while it is still in the content; else the text position (a focus
+// recorded as positions only has no node).
 function restoredPoint(content, node, offset, position) {
-    if (node.isConnected && content.contains(node)) {
+    if (node !== null && node.isConnected && content.contains(node)) {
         return { node, offset };
     }
     const point = textPositionToNodePoint(content, position, 'backward');
@@ -216,7 +224,7 @@ export function findTextPosition(text, anchor) {
         }
         let best = null;
         let index = text.indexOf(needle);
-        while (index !== -1) {
+        while (index !== NOT_FOUND) {
             const position = index + shift;
             if (best === null || Math.abs(position - anchor.textOffset) < Math.abs(best - anchor.textOffset)) {
                 best = position;
@@ -279,7 +287,7 @@ export function findTextPosition(text, anchor) {
     if (anchor.runText.trim() !== '') {
         let best = null;
         let index = text.indexOf(anchor.runText);
-        while (index !== -1) {
+        while (index !== NOT_FOUND) {
             if (best === null || Math.abs(index - proportional) < Math.abs(best - proportional)) {
                 best = index;
             }
@@ -369,10 +377,10 @@ export function captureNoteAnchor(noteElement) {
         }
     }
 
-    const readingLineY = inset + (viewportBottom - inset) / 3;
+    const readingLineY = inset + (viewportBottom - inset) / READING_LINE_DIVISOR;
     const contentRect = content.getBoundingClientRect();
     if (contentRect.top <= readingLineY && contentRect.bottom >= readingLineY) {
-        const position = caretPositionAt(contentRect.left + Math.min(40, contentRect.width / 2), readingLineY);
+        const position = caretPositionAt(contentRect.left + Math.min(READING_PROBE_MAX_INSET_PX, half(contentRect.width)), readingLineY);
         if (position !== null && content.contains(position.node)) {
             const reading = textAnchorAt(position.node, position.offset);
             if (reading !== null) {
@@ -587,15 +595,15 @@ function captureFormulaClickAnchor({ content, noteId, noteTop, x, y }) {
 // edited), or null.
 function formulaAtEditedOffset(content, editText, textOffset) {
     for (const formula of formulasIn(content)) {
-        let index = -1;
+        let index = NOT_FOUND;
         for (let repeat = 0; repeat <= formula.occurrence; repeat += 1) {
             index = editText.indexOf(formula.source, index + 1);
-            if (index === -1) {
+            if (index === NOT_FOUND) {
                 break;
             }
         }
         // The delimiters around the source ($$, \( …) count as the formula too.
-        if (index !== -1 && textOffset >= index - FORMULA_DELIMITER_CHARS
+        if (index !== NOT_FOUND && textOffset >= index - FORMULA_DELIMITER_CHARS
             && textOffset <= index + formula.source.length + FORMULA_DELIMITER_CHARS) {
             return formula.element;
         }
@@ -655,7 +663,7 @@ function findSourcePosition(text, reference) {
     const positions = [];
     for (const needle of reference.needles) {
         let index = text.indexOf(needle.text);
-        while (index !== -1) {
+        while (index !== NOT_FOUND) {
             positions.push(index + needle.shift);
             index = text.indexOf(needle.text, index + 1);
         }

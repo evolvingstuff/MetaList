@@ -41,10 +41,9 @@ class _FakeStore:
             return []
         return list(self.root_ids)
 
-    def bulk_update_metadata(self, notes, *, rebuild: bool) -> None:
-        assert rebuild is True
-        payload = list(notes)
-        self.root_ids = [note.id for note in payload]
+    def move_notes(self, positions) -> None:
+        payload = list(positions)
+        self.root_ids = [position.note_id for position in payload]
 
 
 def _install_root_reorder_fakes(
@@ -364,7 +363,7 @@ def test_prioritize_tag_suggestions_route_normalizes_empty_search_query(
     monkeypatch.setattr(
         notes_route,
         "list_prioritize_tag_suggestions",
-        lambda *, search_query, query, limit: captured.update(
+        lambda *, search_query, query, limit: captured.update(  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
             search_query=search_query,
             query=query,
             limit=limit,
@@ -394,7 +393,7 @@ def test_search_suggestions_route_uses_configured_limit(
     monkeypatch.setattr(
         notes_route.search_index,
         "suggest_all_tag_completions",
-        lambda *, query: captured.update(query=query) or [f"tag-{index}" for index in range(10)],
+        lambda *, query: captured.update(query=query) or [f"tag-{index}" for index in range(10)],  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
     )
     # The made-up tags are on no note; only the cut to the limit is checked here.
     monkeypatch.setattr(notes_route.search_index, "describe_search_suggestions", lambda *, query, terms: None)
@@ -496,7 +495,7 @@ def test_delete_tag_interactions_route_resets_active_namespace_history(
     monkeypatch.setattr(
         notes_route,
         "reset_search_history",
-        lambda *, token: captured.update(token=token) or 17,
+        lambda *, token: captured.update(token=token) or 17,  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
     )
 
     result = notes_route.delete_tag_interactions(object())
@@ -517,7 +516,7 @@ def test_get_tag_interactions_route_returns_search_suggestion_statistics(
     monkeypatch.setattr(
         notes_route,
         "list_search_suggestion_statistics",
-        lambda *, token: captured.update(token=token) or statistics,
+        lambda *, token: captured.update(token=token) or statistics,  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
     )
 
     result = notes_route.get_tag_interactions(object())
@@ -561,7 +560,7 @@ def test_prioritize_tag_suggestions_route_uses_configured_tag_limit(
     monkeypatch.setattr(
         notes_route,
         "list_prioritize_tag_suggestions",
-        lambda *, search_query, query, limit: captured.update(
+        lambda *, search_query, query, limit: captured.update(  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
             search_query=search_query,
             query=query,
             limit=limit,
@@ -595,7 +594,7 @@ def test_note_tag_suggestions_route_uses_configured_tag_limit(
     monkeypatch.setattr(
         notes_route,
         "suggest_tags_with_reasons_for_note",
-        lambda *, note_id, anchors, explicit_tags, prefix, content_html, limit, include_already_applying: captured.update(
+        lambda *, note_id, anchors, explicit_tags, prefix, content_html, limit, include_already_applying: captured.update(  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
             note_id=note_id,
             anchors=anchors,
             explicit_tags=explicit_tags,

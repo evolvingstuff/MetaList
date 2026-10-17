@@ -1,5 +1,7 @@
 """Server-owned resource budgets and conservative retained-object accounting."""
 
+from app.utils.byte_sizes import MIB
+from app.utils.time_units import SECONDS_PER_MINUTE
 from dataclasses import fields, is_dataclass
 import os
 import sys
@@ -14,14 +16,27 @@ def configured_limit(name: str, default: int) -> int:
     return value
 
 
-VIEW_BYTES = configured_limit('METALIST_VIEW_CACHE_BYTES', 64 * 1024 * 1024)
-UNDO_BYTES = configured_limit('METALIST_UNDO_BYTES', 32 * 1024 * 1024)
-UNDO_OPERATIONS = configured_limit('METALIST_UNDO_OPERATIONS', 100)
-CLIENT_ENTRIES = configured_limit('METALIST_CLIENT_ENTRIES', 32)
-CLIENT_IDLE_SECONDS = configured_limit('METALIST_CLIENT_IDLE_SECONDS', 1800)
-SHELL_SECONDS = configured_limit('METALIST_SHELL_MAX_SECONDS', 1800)
-SHELL_RUNS = configured_limit('METALIST_SHELL_MAX_RUNS', 4)
-SHELL_OUTPUT_BYTES = configured_limit('METALIST_SHELL_OUTPUT_BYTES', 4 * 1024 * 1024)
+# Defaults for the budgets below; each can be overridden by its environment
+# variable (docs/security/README.md, "Runtime memory and shell budgets").
+_DEFAULT_UNDO_MIB = 32
+_DEFAULT_UNDO_OPERATIONS = 100
+_DEFAULT_CLIENT_ENTRIES = 32
+_DEFAULT_CLIENT_IDLE_MINUTES = 30
+_DEFAULT_SHELL_MAX_MINUTES = 30
+_DEFAULT_SHELL_MAX_RUNS = 4
+_DEFAULT_SHELL_OUTPUT_MIB = 4
+
+UNDO_BYTES = configured_limit('METALIST_UNDO_BYTES', _DEFAULT_UNDO_MIB * MIB)
+UNDO_OPERATIONS = configured_limit('METALIST_UNDO_OPERATIONS', _DEFAULT_UNDO_OPERATIONS)
+CLIENT_ENTRIES = configured_limit('METALIST_CLIENT_ENTRIES', _DEFAULT_CLIENT_ENTRIES)
+CLIENT_IDLE_SECONDS = configured_limit('METALIST_CLIENT_IDLE_SECONDS', _DEFAULT_CLIENT_IDLE_MINUTES * SECONDS_PER_MINUTE)
+SHELL_SECONDS = configured_limit('METALIST_SHELL_MAX_SECONDS', _DEFAULT_SHELL_MAX_MINUTES * SECONDS_PER_MINUTE)
+SHELL_RUNS = configured_limit('METALIST_SHELL_MAX_RUNS', _DEFAULT_SHELL_MAX_RUNS)
+SHELL_OUTPUT_BYTES = configured_limit('METALIST_SHELL_OUTPUT_BYTES', _DEFAULT_SHELL_OUTPUT_MIB * MIB)
+# Each sensitive memoization cache retains at most this much (docs/security/README.md,
+# "Runtime memory and shell budgets"); a cache that needs a different budget names its own.
+_SENSITIVE_MEMO_MIB = 16
+SENSITIVE_MEMO_BYTES = _SENSITIVE_MEMO_MIB * MIB
 
 
 def retained_bytes(value: object) -> int:

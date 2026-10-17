@@ -1,4 +1,5 @@
 import { ApplicationState } from '../../app/static/js/modules/application-state.js';
+import { MS_PER_SECOND } from '../../app/static/js/modules/time-units.js';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -13,9 +14,12 @@ function extractFunction(source, name) {
     return source.slice(start, next < 0 ? undefined : start + 1 + next).replace(/^export /, '');
 }
 
+// The module's named numbers (const NAME = ...;), so extracted functions see them.
+const namedConstants = (source) => source.match(/^const [A-Z][A-Z0-9_]* = [^;\n]+;$/gm).join('\n');
 const uiSource = readFileSync(new URL(
     '../../app/static/js/modules/mode-manager/actions/ui-actions.js', import.meta.url,
 ), 'utf8');
+const uiNamedConstants = namedConstants(uiSource);
 const keyboardSource = readFileSync(new URL(
     '../../app/static/js/modules/mode-manager/events/keyboard-events.js', import.meta.url,
 ), 'utf8');
@@ -47,6 +51,7 @@ function buildHarness() {
         restoreScrollForActiveTabNow() { events.push(`scroll-now:${this.activeTabId}`); },
     };
     const uiDependencies = {
+        MS_PER_SECOND,
         ModeContext,
         moduleState: ApplicationState.createFields(`test.tab-switch.${Math.random()}`, { viewRequestInFlight: false }),
         Logger: { logAction() {}, logDebug() {}, logNoop() {} },
@@ -80,7 +85,7 @@ function buildHarness() {
     if (/function waitForViewRequestIdle\(/.test(uiSource)) uiFunctionNames.push('waitForViewRequestIdle');
     const uiActions = new Function(
         ...Object.keys(uiDependencies),
-        `${uiFunctionNames.map((name) => extractFunction(uiSource, name)).join('\n')}\nreturn { ${uiFunctionNames.join(', ')} };`,
+        `${uiNamedConstants}\n${uiFunctionNames.map((name) => extractFunction(uiSource, name)).join('\n')}\nreturn { ${uiFunctionNames.join(', ')} };`,
     )(...Object.values(uiDependencies));
 
     const switchFunctionNames = ['switchToTabContext'];

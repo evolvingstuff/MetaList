@@ -27,7 +27,7 @@ class _FakeStore:
         self.children_by_parent: dict[str | None, list[str]] = {}
         for record in records:
             self.children_by_parent.setdefault(record.parent_id, []).append(record.id)
-        self.bulk_updates: list[SimpleNamespace] = []
+        self.updated_at_writes: list[str] = []
 
     def get(self, note_id: str) -> _FakeRecord:
         return self._records[note_id]
@@ -35,13 +35,10 @@ class _FakeStore:
     def children(self, parent_id: str | None) -> list[str]:
         return list(self.children_by_parent.get(parent_id, []))
 
-    def bulk_update_metadata(self, notes, *, rebuild: bool) -> None:
-        assert rebuild is True
-        payload = list(notes)
-        self.bulk_updates.extend(payload)
-        for note in payload:
-            record = self._records[note.id]
-            record.updated_at = note.updated_at
+    def set_updated_ats(self, updated_ats) -> None:
+        for note_id, updated_at in updated_ats.items():
+            self.updated_at_writes.append(note_id)
+            self._records[note_id].updated_at = updated_at
 
 
 def _install_db_fakes(monkeypatch: pytest.MonkeyPatch) -> list[str]:
@@ -101,7 +98,7 @@ def test_reset_updated_at_updates_changed_notes_in_current_search_root_subtrees(
     ).execute()
 
     assert changed_ids == ["root-a", "child-a", "child-b"]
-    assert [note.id for note in fake_store.bulk_updates] == ["root-a", "child-a", "child-b"]
+    assert fake_store.updated_at_writes == ["root-a", "child-a", "child-b"]
     assert fake_store.get("root-a").updated_at == created
     assert fake_store.get("child-a").updated_at == created
     assert fake_store.get("child-b").updated_at == created

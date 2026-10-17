@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.security.crypto_sizes import AES_256_KEY_BYTES
 import asyncio
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -19,8 +20,11 @@ from app.security.authenticated_logging import EncryptedLogSink
 from app.security.authenticated_logging import EncryptedTextStream
 from app.security.sensitive_logging import traceback_frame_summary
 from app.server_runtime import resolve_runtime_logs_directory
+from app.utils.time_units import MS_PER_SECOND
 
 
+# Smaller than any file's size, so the first log file counts as the largest so far.
+_BELOW_ANY_FILE_SIZE = -1
 _LOG_ROTATION = "25 MB"
 _LOG_RETENTION = "14 days"
 _DIRECT_APPEND_LOG_MAX_BYTES = 25 * 1024 * 1024
@@ -38,6 +42,8 @@ _EVENT_LOOP_STALL_LOG_INTERVAL_SECONDS = 5.0
 _SLOW_REQUEST_SECONDS = 10.0
 _SLOW_REQUEST_LOG_INTERVAL_SECONDS = 10.0
 _REQUEST_WATCH_INTERVAL_SECONDS = 2.0
+# Random bytes in the session id that names each authenticated log file.
+_LOG_SESSION_ID_RANDOM_BYTES = 8
 _diagnostic_file_handle = None
 _process_diagnostics_configured = False
 _request_watchdog_started = False
@@ -103,7 +109,7 @@ def _new_authenticated_log_path(*, namespace: str) -> Path:
     logs_directory = resolve_runtime_logs_directory()
     logs_directory.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
-    session_id = secrets.token_hex(8)
+    session_id = secrets.token_hex(_LOG_SESSION_ID_RANDOM_BYTES)
     return logs_directory / f"{namespace}-server.auth-{timestamp}-{session_id}.log.enc"
 
 
@@ -190,8 +196,8 @@ def activate_authenticated_logging(*, namespace: str, dek: bytes) -> Path:
 
     if not isinstance(namespace, str) or namespace.strip() == "":
         raise ValueError("namespace must be a non-empty string")
-    if not isinstance(dek, bytes) or len(dek) != 32:
-        raise ValueError("authenticated logging requires a 32-byte DEK")
+    if not isinstance(dek, bytes) or len(dek) != AES_256_KEY_BYTES:
+        raise ValueError(f"authenticated logging requires a {AES_256_KEY_BYTES}-byte DEK")
 
     with _authenticated_logging_lock:
         if _authenticated_logging_active:
@@ -377,7 +383,7 @@ def calculate_log_disk_usage(*, logs_directory: Path) -> LogDiskUsage:
 
     total_bytes = 0
     largest_file_path = log_files[0]
-    largest_file_bytes = -1
+    largest_file_bytes = _BELOW_ANY_FILE_SIZE
     for path in log_files:
         size_bytes = path.stat().st_size
         total_bytes += size_bytes
@@ -579,7 +585,7 @@ def begin_request(
 def finish_request(*, request_id: str, ended_at: float) -> float:
     with _active_requests_lock:
         request = _active_requests.pop(request_id)
-    duration_ms = (ended_at - request.started_at) * 1000
+    duration_ms = (ended_at - request.started_at) * MS_PER_SECOND
     return duration_ms
 
 
@@ -735,8 +741,9 @@ def _handle_asyncio_exception(
     loop: asyncio.AbstractEventLoop,
     context: dict[str, object],
 ) -> None:
-    exception = context.get("exception")
-    if isinstance(exception, BaseException):
+    # asyncio's error context carries an exception only when one was raised.
+    if "exception" in context and isinstance(context["exception"], BaseException):
+        exception = context["exception"]
         log_unexpected_exception(
             context="asyncio task", exception=exception, request_id="", level="ERROR",
         )

@@ -18,7 +18,9 @@ from app.services.resource_limits import CLIENT_IDLE_SECONDS
 # Editors normally close within minutes; these only bound sessions left behind by closed windows.
 # An editor open longer than the age limit still saves, but no longer forms a single undo step.
 MAX_OPEN_FILE_EDIT_SESSIONS = 8
-FILE_EDIT_SESSION_MAX_AGE_SECONDS = CLIENT_IDLE_SECONDS * 16
+# Sixteen client idle periods: with the default 30-minute idle limit, 8 hours.
+_MAX_AGE_IN_IDLE_PERIODS = 16
+FILE_EDIT_SESSION_MAX_AGE_SECONDS = CLIENT_IDLE_SECONDS * _MAX_AGE_IN_IDLE_PERIODS
 
 
 class FileEditSessionMissing(LookupError):

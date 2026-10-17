@@ -2,6 +2,9 @@ import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
 import { ModeContextInstance as ModeContext } from '../mode-manager/mode-context.js';
 
+// The most earlier suggestions the server accepts (MAX_PREVIOUS_TITLES in
+// app/services/agent/export_title_suggestions.py).
+const MAX_PREVIOUS_TITLES = 10;
 
 // Export and Print options (docs/ui/controls.md), one step before the file or
 // the browser's print dialog. Both set their title (the heading and page title;
@@ -189,7 +192,7 @@ class ExportOptionsModal extends BaseModal {
         button.classList.add('is-asking');
         button.setAttribute('aria-label', 'Stop asking the AI');
         // The titles it gave in this opening (the last ten), so it gives another.
-        const { title, failure } = await this._suggestTitle(this._suggestedTitles.slice(-10), asking.signal);
+        const { title, failure } = await this._suggestTitle(this._suggestedTitles.slice(-MAX_PREVIOUS_TITLES), asking.signal);
         if (this._asking !== asking) {
             // Stopped, or the dialog closed: the answer is not wanted.
             return;

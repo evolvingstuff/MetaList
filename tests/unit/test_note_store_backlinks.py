@@ -16,7 +16,7 @@ CHILD = "33333333-3333-4333-8333-333333333333"
 
 def _row(note_id, parent_id, prev_id, next_id):
     return dict(id=note_id, parent_id=parent_id, prev_id=prev_id,
-                next_id=next_id, is_collapsed=False)
+                next_id=next_id, is_collapsed=False, created_at=None, updated_at=None)
 
 
 @pytest.fixture
@@ -61,15 +61,14 @@ def test_edits_reindex_only_changed_content_or_accepted_tags(hydrated_store, mon
 
     monkeypatch.setattr(backlink_index_module, "collect_active_reference_tokens", track_parse)
     content = f"[[{TARGET}]]"
-    note = SimpleNamespace(id=REFERRER)
-    hydrated_store.update_note_from_db(note, content, "", "")
+    hydrated_store.update_note_content(note_id=REFERRER, plaintext=content, tags="", proposed_tags="", updated_at=None)
     assert parsed == [content]
     assert hydrated_store.get_backlink_counts(TARGET) == {REFERRER: 1, CHILD: 1}
-    hydrated_store.update_note_from_db(note, content, "", "suggestion")
+    hydrated_store.update_note_content(note_id=REFERRER, plaintext=content, tags="", proposed_tags="suggestion", updated_at=None)
     hydrated_store.apply_bulk_tag_sources({REFERRER: ("", "other-proposal")})
     assert parsed == [content]
     # A note-id link is a link even beside a [[...]] formatting wrapper tag.
-    hydrated_store.update_note_from_db(note, content, "[[@red]]", "")
+    hydrated_store.update_note_content(note_id=REFERRER, plaintext=content, tags="[[@red]]", proposed_tags="", updated_at=None)
     assert hydrated_store.get_backlink_counts(TARGET) == {REFERRER: 1, CHILD: 1}
     hydrated_store.apply_bulk_tag_sources({REFERRER: ("", "")})
     assert parsed == [content, content, content]
@@ -109,8 +108,8 @@ def test_reset_and_rehydration_discard_previous_namespace_edges(hydrated_store):
 
 
 def test_self_references_never_count_as_backlinks(hydrated_store):
-    hydrated_store.update_note_from_db(
-        SimpleNamespace(id=TARGET), f"[[{TARGET}]] ![[{TARGET}]]", "", "")
+    hydrated_store.update_note_content(
+        note_id=TARGET, plaintext=f"[[{TARGET}]] ![[{TARGET}]]", tags="", proposed_tags="", updated_at=None)
     assert hydrated_store.get_backlink_counts(TARGET) == {REFERRER: 2, CHILD: 1}
 
 

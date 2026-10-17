@@ -18,7 +18,9 @@ named_constant_definitions = "allow"
 # "error": MAGIC001 findings fail the gate. "review": reported, never gating (a deviation).
 severity = "error"
 allowed_values = [0, 1]
-allow_unary_negative_one = false
+# -1 is the last-item index, the all-but-last slice and the not-found marker:
+# idioms, not magic values (the user's call, 2026-10-16).
+allow_unary_negative_one = true
 exclude_configuration_files = true
 # Basenames (or path globs) that are tooling configuration rather than application
 # source. Matching files are exempt from MAGIC001 and listed in the report.
@@ -73,6 +75,12 @@ truthiness_fallbacks = "review"     # DEF003: x or v, x || v (also replace legit
 nullish_fallbacks = "forbid"        # DEF004: x ?? v, x if x is not None else v
 configuration_fallbacks = "forbid"  # DEF006: os.getenv("X", v), process.env.X || v
 # DEF005 (a handler that returns a default) has no mode: it is always an error.
+
+# AGENTS.md asks for asserts as executable invariants. Since 0.7.0 ASSERT001 reports
+# only an assert on external input (which needs a real check that survives -O), and
+# ASSERT002 asks for one startup check that refuses to run with asserts stripped.
+[tool.shockharness.rules.assertions]
+enabled = true
 
 # Complexity metrics and the call graph (CPLX001-CPLX005): advisory warnings, reported
 # under metrics.complexity and metrics.graph, never failing a plain `check`. Each
@@ -586,8 +594,15 @@ reason = "fetch rejects with a TypeError whose cause is ECONNREFUSED while the s
 # step) before rethrowing. MetaList's own startup gates still apply their rules there.
 [[tool.shockharness.overrides]]
 paths = ["tests/**"]
+disable = ["MAGIC001", "DEF001", "DEF002"]
+reason = "Assertions and fixtures spell out the literal values they expect; test doubles and fixture builders take defaults, and answer a missing key with a default as the stores they stand in for do"
+
+# The browser test suites are tests too; their numbers are click offsets,
+# waits and expected positions.
+[[tool.shockharness.overrides]]
+paths = ["scripts/browser-*.mjs", "scripts/browser-validation/**", "scripts/suite-outcome.mjs"]
 disable = ["MAGIC001"]
-reason = "Assertions and fixtures spell out the literal values they expect"
+reason = "Browser test suites spell out the positions, offsets and waits they check, like the unit tests"
 
 [tool.shockharness.cache]
 enabled = true

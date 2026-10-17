@@ -28,6 +28,10 @@ import {
 import { actionSaveNote } from './content-actions.js';
 import { actionDeselectNote, actionSaveAndExitEditingWithoutRefreshing, actionSwitchNotes, actionSelectNote } from './selection-actions.js';
 import { actionRefreshAndMaybeSelect } from './ui-actions.js';
+import { MS_PER_SECOND } from '../../time-units.js';
+
+const ROOT_REORDER_BLOCKED_BANNER_SECONDS = 5;
+const COPIED_NOTE_MISSING_BANNER_SECONDS = 6;
 
 function hideCaretAfterProgrammaticEdit() {
     // Repeated structural commands can run while the caret is already hidden from the first command.
@@ -100,20 +104,27 @@ function removeCachedHashesForDomSubtree(noteId) {
         throw new Error('removeCachedHashesForDomSubtree requires noteId string');
     }
 
+    // The cache holds only what the last view rendered, so a note on screen may
+    // have no entry (the differential view forgets entries the same way).
+    const forgetCachedHash = (id) => {
+        if (ModeContext.hasNoteHash(id)) {
+            ModeContext.removeNoteHash(id);
+        }
+    };
     const noteElement = document.querySelector(`[data-note-id="${noteId}"]`);
     if (!noteElement) {
-        ModeContext.removeNoteHash(noteId);
+        forgetCachedHash(noteId);
         return;
     }
 
-    ModeContext.removeNoteHash(noteId);
+    forgetCachedHash(noteId);
     const descendantElements = noteElement.querySelectorAll('[data-note-id]');
     descendantElements.forEach((element) => {
         const descendantId = element.dataset.noteId;
         if (typeof descendantId !== 'string' || descendantId.length === 0) {
             throw new Error('Deleted subtree descendant missing note id');
         }
-        ModeContext.removeNoteHash(descendantId);
+        forgetCachedHash(descendantId);
     });
 }
 
@@ -139,7 +150,7 @@ function shouldBlockRootReorder(noteId, contextLabel) {
     });
     ErrorHandler.showInfoBanner(
         'Root-note reordering is disabled while a sort order is active.',
-        5000,
+        ROOT_REORDER_BLOCKED_BANNER_SECONDS * MS_PER_SECOND,
     );
     return true;
 }
@@ -1255,7 +1266,7 @@ async function pasteAsSibling(actionName, requestPaste) {
         ErrorHandler.showErrorBanner(
             'The copied note is no longer available. Copy it again, then paste.',
             'error',
-            6000,
+            COPIED_NOTE_MISSING_BANNER_SECONDS * MS_PER_SECOND,
             true,
         );
         return false;
@@ -1307,7 +1318,7 @@ async function pasteAsChild(actionName, requestPaste) {
         ErrorHandler.showErrorBanner(
             'The copied note is no longer available. Copy it again, then paste.',
             'error',
-            6000,
+            COPIED_NOTE_MISSING_BANNER_SECONDS * MS_PER_SECOND,
             true,
         );
         return false;

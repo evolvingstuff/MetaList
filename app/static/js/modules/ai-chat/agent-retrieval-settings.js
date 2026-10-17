@@ -3,12 +3,17 @@ export const OPENAI_AGENT_RETRIEVAL_PREFERENCE_KEYS = Object.freeze({
     taggingBatchTokens: 'pref.ai.openai.tagging.batch_tokens',
 });
 
+// The same limits as app/services/agent/retrieval_settings.py.
+const DEFAULT_OPENAI_MAX_PAGE_APPROXIMATE_TOKENS = 500000;
+const DEFAULT_OPENAI_TAGGING_BATCH_TOKENS = 100000;
+
 export const DEFAULT_OPENAI_AGENT_RETRIEVAL_SETTINGS = Object.freeze({
-    maxPageApproximateTokens: 500000,
-    taggingBatchTokens: 100000,
+    maxPageApproximateTokens: DEFAULT_OPENAI_MAX_PAGE_APPROXIMATE_TOKENS,
+    taggingBatchTokens: DEFAULT_OPENAI_TAGGING_BATCH_TOKENS,
 });
 
 const LEGACY_DEFAULT_OPENAI_MAX_PAGE_APPROXIMATE_TOKENS = 24000;
+// The tagging batch is validated against the same range as the evidence payload.
 const MINIMUM_PAGE_APPROXIMATE_TOKENS = 500;
 const MAXIMUM_OPENAI_PAGE_APPROXIMATE_TOKENS = 500000;
 
@@ -46,7 +51,7 @@ export function getAgentRetrievalSettingsValidationMessage(settings, provider) {
         maximum,
     );
     if (evidenceError !== '') return evidenceError;
-    return integerRangeError(settings.taggingBatchTokens, 'Tagging batch tokens', 500, maximum);
+    return integerRangeError(settings.taggingBatchTokens, 'Tagging batch tokens', MINIMUM_PAGE_APPROXIMATE_TOKENS, maximum);
 }
 
 

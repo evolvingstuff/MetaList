@@ -1,3 +1,7 @@
+import { PORT_RANGE_TEXT, isTcpPort } from '../tcp-ports.js';
+import { parseDecimalInteger } from '../decimal-integer.js';
+import { KIB } from '../byte-sizes.js';
+import { isAnsweredStatus } from '../http-status.js';
 import { ApplicationState } from '../application-state.js';
 import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
@@ -12,6 +16,9 @@ const RESTORE_TRANSITION_UNTIL_KEY = 'metalist_restore_transition_until_ms';
 const SERVER_REACHABILITY_POLL_INTERVAL_MS = 300;
 const SERVER_REACHABILITY_REQUEST_TIMEOUT_MS = 1000;
 const RESTORE_RECONNECT_CURSOR_CLASS = 'restore-reconnect-loading';
+// TCP port numbers are 16-bit.
+// The backup list grows with its entries up to this many rows, then scrolls.
+const BACKUP_LIST_MAX_VISIBLE_ROWS = 8;
 
 
 function parseResponseError(responseBody, statusCode) {
@@ -70,9 +77,9 @@ function parsePort(rawValue, label) {
     if (!/^[0-9]+$/.test(trimmed)) {
         throw new Error(`${label} must be numeric`);
     }
-    const port = Number.parseInt(trimmed, 10);
-    if (!Number.isInteger(port) || port < 1 || port > 65535) {
-        throw new Error(`${label} must be between 1 and 65535`);
+    const port = parseDecimalInteger(trimmed);
+    if (!isTcpPort(port)) {
+        throw new Error(`${label} must be ${PORT_RANGE_TEXT}`);
     }
     return port;
 }
@@ -132,9 +139,6 @@ export class BackupRestoreModal extends BaseModal {
         };
     }
 
-    shouldCloseOnClickOutside() {
-        return true;
-    }
 
     showModalElement() {
         let modalElement = document.getElementById(this.modalElementId);
@@ -273,7 +277,7 @@ export class BackupRestoreModal extends BaseModal {
         if (typeof selectedBackup === 'undefined') {
             selectedBackup = null;
         }
-        const selectSize = backups.length > 1 ? Math.min(backups.length, 8) : 1;
+        const selectSize = backups.length > 1 ? Math.min(backups.length, BACKUP_LIST_MAX_VISIBLE_ROWS) : 1;
         const optionsHtml = backups.map((backup) => {
             if (!backup || typeof backup !== 'object') {
                 throw new Error('Invalid backup list entry');
@@ -295,7 +299,7 @@ export class BackupRestoreModal extends BaseModal {
             }
             const sourceLabel = backupSourceLabel(backup.source);
             const isSelected = backup.backup_id === selectedBackupId ? 'selected' : '';
-            const label = `${sourceLabel} · ${backup.namespace} · ${backup.filename} (${Math.round(backup.size_bytes / 1024)} KB, ${backup.created_at})`;
+            const label = `${sourceLabel} · ${backup.namespace} · ${backup.filename} (${Math.round(backup.size_bytes / KIB)} KB, ${backup.created_at})`;
             return `<option value="${escapeHtml(backup.backup_id)}" ${isSelected}>${escapeHtml(label)}</option>`;
         }).join('');
 
@@ -446,9 +450,11 @@ export class BackupRestoreModal extends BaseModal {
         if (select instanceof HTMLSelectElement) {
             select.onchange = () => {
                 const backups = this.getModalState().backups;
-                const selectedBackup = Array.isArray(backups)
-                    ? backups.find((backup) => backup.backup_id === select.value) || null
-                    : null;
+                let selectedBackup = null;
+                if (Array.isArray(backups)) {
+                    const found = backups.find((backup) => backup.backup_id === select.value);
+                    if (found !== undefined) selectedBackup = found;
+                }
                 const nextNamespace = selectedBackup && typeof selectedBackup.namespace === 'string'
                     ? selectedBackup.namespace
                     : '';
@@ -932,7 +938,7 @@ export class BackupRestoreModal extends BaseModal {
             rethrowUnexpectedError(outcome.reason);
             return false;
         }
-        return outcome.value.status >= 200 && outcome.value.status < 600;
+        return isAnsweredStatus(outcome.value.status);
     }
 
     _sleep(delayMs) {

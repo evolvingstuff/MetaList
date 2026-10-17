@@ -1,3 +1,6 @@
+import { MIB } from './byte-sizes.js';
+import { MS_PER_SECOND } from './time-units.js';
+
 // Toggle the notes API base here to switch between v1 and v2
 const API_BASE = '/api2'; // change to '/api' to switch back to v1
 const API_NOTES_BASE = `${API_BASE}/notes`;
@@ -5,6 +8,17 @@ const API_AUTH_BASE = `${API_BASE}/auth`;
 const API_FILES_BASE = `${API_BASE}/files`;
 const API_REMINDERS_BASE = `${API_BASE}/reminders`;
 const API_AI_BASE = `${API_BASE}/ai`;
+const BACKUP_RETENTION_SUGGESTED_KEEP_COUNT = 3;
+const BACKUP_RETENTION_PROMPT_THRESHOLD = 25;
+const SYNC_POLL_INTERVAL_SECONDS = 5;
+const LOADING_SPINNER_DELAY_SECONDS = 1;
+const SEARCH_DEBOUNCE_MS = 300;
+const INITIAL_FADE_DURATION_MS = 150;
+const MAX_DATA_IMAGE_MIB = 10;
+const EMBED_TARGET_IMAGE_BYTES = 350_000;
+const EMBED_MAX_DIMENSION_PX = 1_600;
+const MAX_CLIPBOARD_IMAGE_MIB = 30;
+const MAX_TABS = 1000;
 
 export const CONFIG = {
     API: {
@@ -26,6 +40,7 @@ export const CONFIG = {
             TOGGLE_TODO: (noteId) => `${API_NOTES_BASE}/${noteId}/toggle-todo`,
             UNFORMAT: (noteId) => `${API_NOTES_BASE}/${noteId}/unformat`,
             RESIZE_IMAGE: (noteId) => `${API_NOTES_BASE}/${noteId}/resize-image`,
+            EDITING_IMAGE_SIZES: (noteId) => `${API_NOTES_BASE}/${noteId}/editing-image-sizes`,
             RUN_SHELL: (noteId) => `${API_NOTES_BASE}/${noteId}/run-shell`,
             RUN_SHELL_STATUS: (noteId, runId) => `${API_NOTES_BASE}/${noteId}/run-shell/${runId}`,
             REFERENCE_MODE: (noteId) => `${API_NOTES_BASE}/${noteId}/reference-mode`,
@@ -118,6 +133,7 @@ export const CONFIG = {
             SETTINGS: `${API_BASE}/backup/settings`,
             RUN: `${API_BASE}/backup/run`,
             LIST: `${API_BASE}/backup/list`,
+            TIMES: `${API_BASE}/backup/times`,
             RESTORE: `${API_BASE}/backup/restore`,
             RESTORE_PREFLIGHT: `${API_BASE}/backup/restore/preflight`,
             RESTORE_IMPORT: `${API_BASE}/backup/restore/import`,
@@ -179,7 +195,7 @@ export const CONFIG = {
     },
 
     SYNC: {
-        POLL_INTERVAL_MS: 5_000,
+        POLL_INTERVAL_MS: SYNC_POLL_INTERVAL_SECONDS * MS_PER_SECOND,
     },
 
     DEBUG: {
@@ -192,18 +208,18 @@ export const CONFIG = {
 
         ARTIFICIAL_DELAY: 0,
 
-        SPINNER_DELAY: 1000,
+        SPINNER_DELAY: LOADING_SPINNER_DELAY_SECONDS * MS_PER_SECOND,
 
         BLOCK_ACTIONS: true
     },
 
     SEARCH: {
-        DEBOUNCE_MS: 300  // Delay before executing search after typing stops
+        DEBOUNCE_MS: SEARCH_DEBOUNCE_MS  // Delay before executing search after typing stops
     },
 
     TRANSITIONS: {
         ENABLE_INITIAL_FADE: true,  // Enable fade effect on initial page load only
-        FADE_DURATION_MS: 150       // Duration of fade effect in milliseconds
+        FADE_DURATION_MS: INITIAL_FADE_DURATION_MS       // Duration of fade effect in milliseconds
     },
 
     EDITOR: {
@@ -211,14 +227,14 @@ export const CONFIG = {
     },
 
     PASTE: {
-        MAX_DATA_IMAGE_BYTES: 10_485_760,
-        EMBED_TARGET_IMAGE_BYTES: 350_000,
-        EMBED_MAX_DIMENSION_PX: 1_600,
-        MAX_CLIPBOARD_IMAGE_BYTES: 31_457_280,
+        MAX_DATA_IMAGE_BYTES: MAX_DATA_IMAGE_MIB * MIB,
+        EMBED_TARGET_IMAGE_BYTES,
+        EMBED_MAX_DIMENSION_PX,
+        MAX_CLIPBOARD_IMAGE_BYTES: MAX_CLIPBOARD_IMAGE_MIB * MIB,
     },
 
     TABS: {
-        MAX_TABS: 1000,
+        MAX_TABS,
         CREATE_AND_SWITCH: true,
     },
 
@@ -227,7 +243,7 @@ export const CONFIG = {
     },
 
     BACKUP: {
-        RETENTION_PROMPT_THRESHOLD: 25,
-        RETENTION_SUGGESTED_KEEP_COUNT: 3,
+        RETENTION_PROMPT_THRESHOLD: BACKUP_RETENTION_PROMPT_THRESHOLD,
+        RETENTION_SUGGESTED_KEEP_COUNT: BACKUP_RETENTION_SUGGESTED_KEEP_COUNT,
     },
 };

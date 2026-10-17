@@ -1,7 +1,14 @@
+import { MS_PER_SECOND } from '../../time-units.js';
+
 export const SHELL_SELECTOR = '.meta-shell';
 export const SHELL_OUTPUT_SELECTOR = '.meta-shell-output';
 export const SHELL_CLOSE_SELECTOR = '.meta-shell-output-close';
 export const SHELL_RUNNING_CLASS = 'meta-shell-running';
+// The exitCode of a run that has no exit status (still running, or never started);
+// the server sends the same value (NO_EXIT_CODE in app/services/shell_session_service.py).
+export const NO_EXIT_CODE = -1;
+// Durations shorter than this show tenths of a second.
+const TENTHS_SHOWN_BELOW_SECONDS = 10;
 
 export function ensureShellOutputElement(shellElement) {
     if (!(shellElement instanceof HTMLElement)) {
@@ -122,8 +129,8 @@ function formatShellDuration(durationMs) {
     if (durationMs === 0) {
         return '0s';
     }
-    const durationSeconds = durationMs / 1000;
-    if (durationSeconds < 10) {
+    const durationSeconds = durationMs / MS_PER_SECOND;
+    if (durationSeconds < TENTHS_SHOWN_BELOW_SECONDS) {
         return `${durationSeconds.toFixed(1)}s`;
     }
     return `${Math.round(durationSeconds)}s`;
@@ -293,7 +300,7 @@ export function renderShellError(outputElement, shellElement, error) {
     renderShellSnapshot(outputElement, shellElement, {
         runId,
         status: 'error',
-        exitCode: -1,
+        exitCode: NO_EXIT_CODE,
         stdout: '',
         stderr: '',
         durationMs: 0,

@@ -6,6 +6,12 @@ import {
     loadAiHistory,
     setAiDebugExactDetails,
 } from './ai-chat-api.js';
+import { MS_PER_SECOND } from '../time-units.js';
+
+// Spaces per level in the debug JSON shown, copied and downloaded.
+const DEBUG_JSON_INDENT = 2;
+// The history download's object URL is released this long after the click.
+const HISTORY_DOWNLOAD_URL_LIFETIME_SECONDS = 1;
 
 
 function requireElement(id, constructor) {
@@ -189,7 +195,7 @@ class AgentDebugViewController {
 
     async _exportHistory() {
         const pairs = await loadAiHistory();
-        const blob = new Blob([JSON.stringify(pairs, null, 2)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify(pairs, null, DEBUG_JSON_INDENT)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -197,7 +203,7 @@ class AgentDebugViewController {
         document.body.appendChild(link);
         link.click();
         link.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        setTimeout(() => URL.revokeObjectURL(url), HISTORY_DOWNLOAD_URL_LIFETIME_SECONDS * MS_PER_SECOND);
     }
 
     async _copyAll() {
@@ -207,7 +213,7 @@ class AgentDebugViewController {
         if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
             throw new Error('Clipboard text writing is unavailable');
         }
-        await navigator.clipboard.writeText(JSON.stringify(this._snapshot.run, null, 2));
+        await navigator.clipboard.writeText(JSON.stringify(this._snapshot.run, null, DEBUG_JSON_INDENT));
         this._setStatus('Copied complete trace to clipboard.');
     }
 
@@ -266,7 +272,7 @@ class AgentDebugViewController {
             type.className = 'ai-agent-debug-event-type';
             type.textContent = `${event.type} · ${event.timestamp}`;
             const payload = document.createElement('pre');
-            payload.textContent = JSON.stringify(event.detail, null, 2);
+            payload.textContent = JSON.stringify(event.detail, null, DEBUG_JSON_INDENT);
             details.append(summary, type);
             if (showExactDetails) {
                 details.appendChild(payload);

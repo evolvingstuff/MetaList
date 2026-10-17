@@ -450,8 +450,15 @@ async function checkEncryptedLogin(context, origin) {
     }
   } catch (error) { // shockharness: ignore[EXC001] reason="the page's state and a screenshot are recorded for the report, then the error is rethrown unchanged"
     const [pageStateOutcome] = await Promise.allSettled([page.evaluate(() => ({
-      appReady: document.body?.dataset.appReady ?? null,
-      bodyLoading: document.body?.classList.contains('loading') ?? null,
+      // The page may have failed before it had a body, or before it was ready.
+      appReady: (() => {
+        if (document.body === null || !('appReady' in document.body.dataset)) return null;
+        return document.body.dataset.appReady;
+      })(),
+      bodyLoading: (() => {
+        if (document.body === null) return null;
+        return document.body.classList.contains('loading');
+      })(),
       loginVisible: document.querySelector('#login-password')?.getBoundingClientRect().height > 0,
       mainVisible: document.querySelector('#main-app')?.getBoundingClientRect().height > 0,
       storedIdentity: sessionStorage.getItem('metalist_tab_id'),

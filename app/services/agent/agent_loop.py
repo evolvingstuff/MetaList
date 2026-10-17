@@ -54,6 +54,7 @@ from app.services.agent.citation_tokens import ShortCitationTranslator
 from app.services.agent.note_aliases import NoteAliases
 from app.services.agent.execution_errors import AgentExecutionError
 from app.services.agent.action_log import describe_action
+from app.utils.time_units import MS_PER_SECOND
 
 
 MAX_AGENT_TURNS = 8
@@ -191,7 +192,7 @@ class AgentLoopMixin:
         yield self._status_event(
             "scope", "completed",
             f"Scope ready · {snapshot.descriptor.label} · {snapshot.note_count} notes in "
-            f"{snapshot.result_tree_count} result trees · prepared in {snapshot.preparation_ms / 1_000:.1f} s",
+            f"{snapshot.result_tree_count} result trees · prepared in {snapshot.preparation_ms / MS_PER_SECOND:.1f} s",
             approx_input_tokens=estimate_tool_conversation_tokens(messages),
         )
         async for event in self._ensure_model_context(run=run, messages=messages):
@@ -349,14 +350,14 @@ class AgentLoopMixin:
             label="Model response: agent-turn",
             detail={"raw_response": turn["content"], "tool_calls": list(turn["calls"]),
                     "usage": turn["done"]["usage"], "finish_reason": turn["done"]["finish_reason"]},
-            duration_ms=(time.perf_counter() - started_at) * 1_000,
+            duration_ms=(time.perf_counter() - started_at) * MS_PER_SECOND,
         )
         yield self._output_status_event(
             "agent_turn", "completed", self._turn_completed_label(turn["calls"]),
             approx_input_tokens=input_tokens,
             output_tokens_received=estimate_text_tokens(turn["content"] + "".join(
                 call["arguments"] for call in turn["calls"])),
-            duration_ms=(time.perf_counter() - started_at) * 1_000,
+            duration_ms=(time.perf_counter() - started_at) * MS_PER_SECOND,
         )
 
     @staticmethod

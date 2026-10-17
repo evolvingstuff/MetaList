@@ -1,3 +1,4 @@
+import { KIB, MIB, GIB } from '../byte-sizes.js';
 import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
 
@@ -32,16 +33,16 @@ function _assertNonNegativeInteger(value, fieldName) {
 export function formatBackupSize(sizeBytes) {
     _assertNonNegativeInteger(sizeBytes, 'sizeBytes');
 
-    if (sizeBytes < 1024) {
+    if (sizeBytes < KIB) {
         return `${sizeBytes} B`;
     }
-    if (sizeBytes < 1024 * 1024) {
-        return `${(sizeBytes / 1024).toFixed(1)} KB`;
+    if (sizeBytes < MIB) {
+        return `${(sizeBytes / KIB).toFixed(1)} KB`;
     }
-    if (sizeBytes < 1024 * 1024 * 1024) {
-        return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+    if (sizeBytes < GIB) {
+        return `${(sizeBytes / MIB).toFixed(1)} MB`;
     }
-    return `${(sizeBytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+    return `${(sizeBytes / GIB).toFixed(1)} GB`;
 }
 
 
@@ -105,9 +106,6 @@ export class BackupResultModal extends BaseModal {
         };
     }
 
-    shouldCloseOnClickOutside() {
-        return true;
-    }
 
     showModalElement() {
         let modalElement = document.getElementById(this.modalElementId);

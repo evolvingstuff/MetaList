@@ -26,6 +26,17 @@ const ISOLATED_EVENTS = Object.freeze([
     'mousemove', 'mouseover', 'mouseout', 'click', 'dblclick', 'contextmenu',
     'keydown', 'keyup', 'keypress', 'beforeinput', 'input', 'paste', 'cut', 'copy', 'dragstart',
 ]);
+// Floating notes stack from this z-index upward, frontmost last.
+const FLOATING_NOTE_BASE_Z_INDEX = 2500;
+const FLOATING_NOTE_REFRESH_INTERVAL_MS = 500;
+// A new window opens below and to the right of the previous one; after this many the cascade starts over.
+const CASCADE_POSITIONS = 8;
+const CASCADE_STEP_PX = 28;
+const FIRST_WINDOW_LEFT_PX = 80;
+const FIRST_WINDOW_TOP_PX = 90;
+const NEW_WINDOW_WIDTH_PX = 460;
+const NEW_WINDOW_HEIGHT_PX = 380;
+const RESIZE_KEY_STEP_PX = 20;
 
 function viewport() {
     return {width: window.innerWidth, height: window.innerHeight};
@@ -35,7 +46,7 @@ function bringToFront(id) {
     if (moduleState.order.at(-1) === id) return;
     moduleState.order = [...moduleState.order.filter(existing => existing !== id), id];
     moduleState.order.forEach((windowId, index) => {
-        moduleState.windows[windowId].element.style.zIndex = String(2500 + index);
+        moduleState.windows[windowId].element.style.zIndex = String(FLOATING_NOTE_BASE_Z_INDEX + index);
     });
 }
 
@@ -85,7 +96,7 @@ function startWindowEvents() {
     window.addEventListener('resize', fitWindows);
     window.addEventListener('blur', finishGesture);
     moduleState.listening = true;
-    moduleState.timer = window.setInterval(() => { void refreshFloatingNotes(); }, 500);
+    moduleState.timer = window.setInterval(() => { void refreshFloatingNotes(); }, FLOATING_NOTE_REFRESH_INTERVAL_MS);
 }
 
 export async function openFloatingNote(noteId) {
@@ -94,8 +105,8 @@ export async function openFloatingNote(noteId) {
     if (!(mainApp instanceof HTMLElement)) throw new Error('Floating note requires main app');
     const id = crypto.randomUUID();
     const elements = createFloatingNoteElements(id);
-    const offset = (moduleState.order.length % 8) * 28;
-    const rect = constrainFloatingNoteRect({x: 80 + offset, y: 90 + offset, width: 460, height: 380}, viewport());
+    const offset = (moduleState.order.length % CASCADE_POSITIONS) * CASCADE_STEP_PX;
+    const rect = constrainFloatingNoteRect({x: FIRST_WINDOW_LEFT_PX + offset, y: FIRST_WINDOW_TOP_PX + offset, width: NEW_WINDOW_WIDTH_PX, height: NEW_WINDOW_HEIGHT_PX}, viewport());
     moduleState.windows[id] = {...elements, noteId, rect, revision: '', markup: ''};
     applyFloatingNoteRect(elements.element, rect);
     mainApp.appendChild(elements.element);
@@ -240,8 +251,8 @@ function handleWindowEvent(event) {
             closeFloatingNote(id);
         } else if (target.closest('.floating-note-resize') && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
             event.preventDefault();
-            const width = entry.rect.width + (event.key === 'ArrowRight' ? 20 : event.key === 'ArrowLeft' ? -20 : 0);
-            const height = entry.rect.height + (event.key === 'ArrowDown' ? 20 : event.key === 'ArrowUp' ? -20 : 0);
+            const width = entry.rect.width + (event.key === 'ArrowRight' ? RESIZE_KEY_STEP_PX : event.key === 'ArrowLeft' ? -RESIZE_KEY_STEP_PX : 0);
+            const height = entry.rect.height + (event.key === 'ArrowDown' ? RESIZE_KEY_STEP_PX : event.key === 'ArrowUp' ? -RESIZE_KEY_STEP_PX : 0);
             setRect(entry, constrainFloatingNoteRect({...entry.rect, width, height}, viewport()));
         }
     } else if (['beforeinput', 'paste', 'cut', 'dragstart'].includes(event.type)) {

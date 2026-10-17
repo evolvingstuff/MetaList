@@ -10,6 +10,7 @@ from app.services.input_errors import NamespaceInputRejected
 
 
 _JOB_ID_PATTERN = re.compile(r"^[a-f0-9-]{36}$")
+_JOB_RECORD_JSON_INDENT = 2
 
 
 def create_namespace_deletion_job(
@@ -115,6 +116,6 @@ def _coerce_job_record(*, payload: dict[str, object], job_id: str) -> dict[str, 
 
 def _write_job_record(*, job_id: str, job_record: dict[str, str]) -> None:
     normalized_job_id = _validate_job_id(job_id=job_id)
-    serialized = json.dumps(job_record, indent=2, sort_keys=True)
+    serialized = json.dumps(job_record, indent=_JOB_RECORD_JSON_INDENT, sort_keys=True)
     job_path = _resolve_job_path(job_id=normalized_job_id)
     job_path.write_text(serialized, encoding="utf-8")

@@ -116,3 +116,39 @@ assert response.json() == {
         timeout=30,
     )
     assert result.returncode == 0, result.stderr[-3000:]
+
+
+def test_the_request_log_names_the_handler_that_answered(tmp_path):
+    # Routing picks the handler while the request runs, so the answer's line
+    # names it; a path no route matches says so.
+    script = '''
+from fastapi.testclient import TestClient
+from app.main import app
+from app.config import API_PREFIX
+from app.services.tokens import token_service
+
+def request_log_fixture_view():
+    return {"ok": True}
+
+app.add_api_route(API_PREFIX + "/request-log-fixture", request_log_fixture_view)
+token = token_service.create_token(client_info="fixture", owner_tab_id="tab", dek=None)
+headers = {"Authorization": "Bearer " + token, "X-Metalist-Tab-Id": "tab", "Origin": "http://localhost"}
+with TestClient(app, base_url="http://localhost", raise_server_exceptions=False) as client:
+    assert client.get(API_PREFIX + "/request-log-fixture", headers=headers).status_code == 200
+    assert client.get(API_PREFIX + "/request-log-missing", headers=headers).status_code == 404
+    # A mounted app (the static files) answers too: the page's stylesheet must load.
+    assert client.get("/static/css/main.css").status_code == 200
+'''
+    environment = dict(os.environ, METALIST_DATA_DIRECTORY=str(tmp_path), METALIST_ENVIRONMENT="production")
+    result = subprocess.run(
+        [sys.executable, "-c", script], env=environment, capture_output=True, text=True, timeout=30,
+    )
+    assert result.returncode == 0, result.stderr[-3000:]
+    output = result.stdout + result.stderr
+    answered = [line for line in output.splitlines() if "⇐ 200 GET" in line and "/request-log-fixture" in line]
+    assert len(answered) == 1 and "handler=request_log_fixture_view " in answered[0], output[-3000:]
+    missing = [line for line in output.splitlines() if "⇐ 404 GET" in line and "/request-log-missing" in line]
+    assert len(missing) == 1 and "handler=(no route) " in missing[0], output[-3000:]
+    static = [line for line in output.splitlines() if "⇐ 200 GET" in line and "/static/css/main.css" in line]
+    assert len(static) == 1 and "handler=NoCacheStaticFiles " in static[0], output[-3000:]
+    assert "handler=unknown" not in output

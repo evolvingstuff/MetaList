@@ -14,6 +14,9 @@ Create backup now is an operation, not merely opening a dialog. It can prompt fo
 backup folder/settings and creates one versioned .tar.gz archive per namespace
 containing its notes database and sibling files database when present. The result
 shows one row per namespace. The help action cannot invoke backup creation.
+Backup reminder (menu: Off, Daily, Weekly, Every 2 weeks, Monthly; Weekly by
+default) floats a card when this namespace's newest backup is older than that;
+its Back Up Now opens Backup Settings and × hides it for a day.
 Restore from backup opens a picker for configured-folder snapshots. The user
 chooses and confirms a restore; success is confirmed with OK before reloading.
 Opening this picker neither restores data nor changes backups. Existing backup
@@ -29,8 +32,10 @@ as an HTML export.
 Export as HTML exports the current view for viewing/sharing, not a full restorable
 database backup. It and Print (note menu, view menu, palette `Print view`) show
 the view as it is shown (search, sort, Untagged; notes a search leaves out are
-absent), fully expanded, after a dialog setting the title (it heads the file and
-names it; Suggest with AI can propose one); a print is light, without arrows.
+absent), after a dialog setting the title (it heads the file and names it;
+Suggest with AI can propose one). An exported file starts collapsed and expanded
+as MetaList shows the notes (embeds too), its arrows working; a print is light,
+fully expanded, without arrows, keeping MetaList's colours.
 When @password or @username notes would show, an Include Unredacted Passwords
 (Usernames, or Usernames and Passwords) checkbox appears (unchecked: shown as
 ••••••••; checked: readable, and the file or print is not encrypted).

@@ -112,10 +112,7 @@ def load_backup_settings(*, token: str) -> dict[str, object]:
         service = _resolve_encryption_service(token=token)
         if service is None:
             raise RuntimeError("backup settings decryption requires an active DEK")
-        decrypt_fn = getattr(service, "decrypt_from_storage", None)
-        if not callable(decrypt_fn):
-            raise TypeError("encryption service must expose decrypt_from_storage")
-        plaintext = decrypt_fn(stored_json, nonce, tag)
+        plaintext = service.decrypt_from_storage(stored_json, nonce, tag)
         if not isinstance(plaintext, str):
             raise TypeError("decrypted backup settings payload must be a string")
         return _deserialize_settings_payload(plaintext)
@@ -134,10 +131,7 @@ def save_backup_settings(*, token: str, settings: dict[str, object]) -> dict[str
 
     service = _resolve_encryption_service(token=token)
     if service is not None:
-        encrypt_fn = getattr(service, "encrypt_for_storage", None)
-        if not callable(encrypt_fn):
-            raise TypeError("encryption service must expose encrypt_for_storage")
-        stored_json, nonce, tag = encrypt_fn(plaintext_json)
+        stored_json, nonce, tag = service.encrypt_for_storage(plaintext_json)
     elif is_encryption_required():
         raise RuntimeError("backup settings persistence requires an active DEK")
 

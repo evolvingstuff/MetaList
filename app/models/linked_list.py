@@ -28,16 +28,6 @@ class LinkedListManager:
     def _would_create_cycle(db: SafeSession, note_id: str, new_parent_id: str) -> bool:
         return ListTraversal.would_create_cycle(db, note_id, new_parent_id)
 
-    # Undo/redo operations are handled by app.services.undo_state
-    # These methods are deprecated and should not be used
-    @staticmethod
-    def undo(db: SafeSession) -> bool:
-        raise NotImplementedError("Use UndoRedoService instead")
-
-    @staticmethod
-    def redo(db: SafeSession) -> bool:
-        raise NotImplementedError("Use UndoRedoService instead")
-
     # Delegate to NoteCRUD
     @staticmethod
     def create_note_top(db: SafeSession, note_id: str, parent_id: Optional[str]) -> None:

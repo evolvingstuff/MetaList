@@ -75,7 +75,15 @@ def resolve_openai_reasoning_effort(thinking_level: str) -> str:
 # on Luna (first signal in 0.7-2 s, streaming gaps under 0.4 s, also with a
 # 180,000-token input). Medium and High may think silently before their first
 # word, so their limits are generous; they are not measured.
-_OPENAI_SILENCE_LIMIT_SECONDS = {"off": 15.0, "low": 15.0, "medium": 60.0, "high": 120.0}
+_MEASURED_SILENCE_LIMIT_SECONDS = 15.0
+_MEDIUM_THINKING_SILENCE_LIMIT_SECONDS = 60.0
+_HIGH_THINKING_SILENCE_LIMIT_SECONDS = 120.0
+_OPENAI_SILENCE_LIMIT_SECONDS = {
+    "off": _MEASURED_SILENCE_LIMIT_SECONDS,
+    "low": _MEASURED_SILENCE_LIMIT_SECONDS,
+    "medium": _MEDIUM_THINKING_SILENCE_LIMIT_SECONDS,
+    "high": _HIGH_THINKING_SILENCE_LIMIT_SECONDS,
+}
 
 
 def openai_silence_limit_seconds(thinking_level: str) -> float:
@@ -120,11 +128,15 @@ def _create_instructor_client(
     )
 
 
+# Longest provider error detail kept in the message.
+_PROVIDER_ERROR_DETAIL_CHARS = 500
+
+
 def _provider_error_message(exc: APIError) -> str:
     detail = " ".join(str(exc).split())
     if detail == "":
         return "OpenAI API request failed"
-    return f"OpenAI API request failed: {detail[:500]}"
+    return f"OpenAI API request failed: {detail[:_PROVIDER_ERROR_DETAIL_CHARS]}"
 
 
 def _required_usage_integer(*, usage: dict[str, object], field_name: str) -> int:

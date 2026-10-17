@@ -24,13 +24,18 @@ const SPACED_PREFIX_WARNING = 'In a search, + or - must be directly followed by 
 
 const QUOTE_CHARS = new Set(['"', "'" ]);
 const OR_OPERATOR = 'OR';
+// A backslash and the character it escapes.
+const ESCAPE_SEQUENCE_LENGTH = 2;
+// Printable ASCII runs from the space through the tilde.
+const FIRST_PRINTABLE_ASCII_CODE = ' '.charCodeAt(0);
+const LAST_PRINTABLE_ASCII_CODE = '~'.charCodeAt(0);
 
 function isAsciiPrintable(char) {
     if (typeof char !== 'string' || char.length === 0) {
         return false;
     }
     const code = char.charCodeAt(0);
-    return code >= 0x20 && code <= 0x7e;
+    return code >= FIRST_PRINTABLE_ASCII_CODE && code <= LAST_PRINTABLE_ASCII_CODE;
 }
 
 function isWhitespace(char) {
@@ -90,7 +95,7 @@ function readQuotedInner(rawInput, startIndex, quoteChar) {
                 const nextChar = rawInput[index + 1];
                 if (nextChar === quoteChar || nextChar === '\\') {
                     normalizedInner += `\\${nextChar}`;
-                    index += 2;
+                    index += ESCAPE_SEQUENCE_LENGTH;
                     continue;
                 }
             }

@@ -1,3 +1,4 @@
+import { half } from '../../half.js';
 import { ApplicationState } from '../../application-state.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import * as Logger from '../mode-logger.js';
@@ -8,6 +9,10 @@ import { scrollWindowToYFastAnimated } from '../services/animated-scroll-service
 import { initializeTagSuggestions, updateTagSuggestions } from '../services/tag-suggestions-service.js';
 import { handleDictationPasteEvent, isDictationRawInsertInProgress, noteDictationEditSeen } from '../services/dictation-paste-service.js';
 
+
+// The editing caret counts as visible while it is within this distance of the viewport.
+const EDITING_CARET_VIEWPORT_MARGIN_PX = 40;
+
 const moduleState = ApplicationState.createFields('input-events', {
     lastKeyPressed: null,
 });
@@ -17,8 +22,8 @@ function scrollViewportToCenterRect(rect) {
         throw new Error('scrollViewportToCenterRect requires a DOMRect-like object');
     }
 
-    const centerY = rect.top + rect.height / 2;
-    const targetScrollY = Math.max(0, window.scrollY + centerY - window.innerHeight / 2);
+    const centerY = rect.top + half(rect.height);
+    const targetScrollY = Math.max(0, window.scrollY + centerY - half(window.innerHeight));
     scrollWindowToYFastAnimated(Math.round(targetScrollY));
 }
 
@@ -61,7 +66,7 @@ function ensureEditingCaretVisible(noteContentElement) {
         throw new Error('ensureEditingCaretVisible requires a measurable target rect');
     }
 
-    const margin = 40;
+    const margin = EDITING_CARET_VIEWPORT_MARGIN_PX;
     if (targetRect.bottom >= margin && targetRect.top <= window.innerHeight - margin) {
         return;
     }

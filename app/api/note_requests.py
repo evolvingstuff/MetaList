@@ -1,17 +1,28 @@
 """Required HTTP request contracts; null remains explicit where the protocol allows it."""
 
+from app.utils.byte_sizes import KIB, MIB
 from typing import Annotated, Literal
 from app.services.resource_limits import SHELL_SECONDS
+from app.services.search_history_storage import MAX_TAG_ACTIVITY_RETENTION_DAYS
 from typing_extensions import TypedDict
 from pydantic import AfterValidator, ConfigDict, Field, with_config
 
-Identifier = Annotated[str, Field(min_length=1, max_length=256)]
-Text = Annotated[str, Field(max_length=1024 * 1024)]
-Content = Annotated[str, Field(max_length=16 * 1024 * 1024)]
+MAX_IDENTIFIER_LENGTH = 256
+MAX_TAG_ACTIVITY_WINDOWS = 20
+# The AI proposes at most this many tags for one note.
+MAX_PROPOSED_TAGS_PER_NOTE = 12
+MAX_TAG_PROPOSAL_NOTES = 20_000
+
+Identifier = Annotated[str, Field(min_length=1, max_length=MAX_IDENTIFIER_LENGTH)]
+Text = Annotated[str, Field(max_length=MIB)]
+# The longest note content (HTML) one request may carry, in characters: 16 Mi (2**24),
+# so a single request cannot make the server hold an unbounded note.
+MAX_NOTE_CONTENT_CHARS = 16_777_216
+Content = Annotated[str, Field(max_length=MAX_NOTE_CONTENT_CHARS)]
 # Clients build undo contexts as "tab:<id>|search:<executed query>|epoch:<n>", so the
 # limit must admit any Text-sized search query (for example an "Open all references"
 # query ORing every cited note ID) plus that small fixed envelope.
-UndoContext = Annotated[str, Field(min_length=1, max_length=1024 * 1024 + 1024)]
+UndoContext = Annotated[str, Field(min_length=1, max_length=MIB + KIB)]
 Nonnegative = Annotated[int, Field(ge=0)]
 
 
@@ -21,7 +32,11 @@ def _unique_windows(value):
     return value
 
 
-WindowDays = Annotated[list[Annotated[int, Field(ge=1, le=365)]], Field(max_length=20), AfterValidator(_unique_windows)]
+WindowDays = Annotated[
+    list[Annotated[int, Field(ge=1, le=MAX_TAG_ACTIVITY_RETENTION_DAYS)]],
+    Field(max_length=MAX_TAG_ACTIVITY_WINDOWS),
+    AfterValidator(_unique_windows),
+]
 
 @with_config(ConfigDict(strict=True))
 class SortKey(TypedDict):
@@ -206,8 +221,8 @@ class AcceptTagProposalRequest(TypedDict):
 @with_config(ConfigDict(strict=True))
 class AddTagProposalsRequest(TypedDict):
     # note id -> the AI's tags for it: the edited note and maybe notes below it.
-    proposals: Annotated[dict[Identifier, Annotated[list[Identifier], Field(min_length=1, max_length=12)]],
-                         Field(min_length=1, max_length=20_000)]
+    proposals: Annotated[dict[Identifier, Annotated[list[Identifier], Field(min_length=1, max_length=MAX_PROPOSED_TAGS_PER_NOTE)]],
+                         Field(min_length=1, max_length=MAX_TAG_PROPOSAL_NOTES)]
     clientId: Identifier
     undoContext: UndoContext
     viewport: Viewport
@@ -268,6 +283,13 @@ class ResizeNoteImageRequest(TypedDict):
     action: Literal['bigger', 'smaller', 'reset']
     undoContext: UndoContext
     viewport: Viewport
+
+# The edited note's text and tags as the editor has them, unsaved; image sources
+# may be left out (only the structure decides sizes).
+@with_config(ConfigDict(strict=True))
+class EditingImageSizesRequest(TypedDict):
+    content: Content
+    tags: Text
 
 @with_config(ConfigDict(strict=True))
 class FinishFileEditSessionRequest(TypedDict):

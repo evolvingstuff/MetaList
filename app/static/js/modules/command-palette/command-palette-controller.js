@@ -1,7 +1,9 @@
+import { AI_CHAT_COMPOSER_MAXIMUM_HEIGHT, AI_CHAT_COMPOSER_MINIMUM_HEIGHT, AI_CHAT_MAXIMUM_WIDTH, AI_CHAT_MINIMUM_WIDTH } from '../ai-chat/ai-chat-size-limits.js';
 import { openAgentMenu } from '../ai-chat/agent-menu-actions.js';
 import { addDiagramToNote } from '../excalidraw/excalidraw-actions.js';
 import { captureActiveAgentScope } from '../ai-chat/ai-chat-panel-controller.js';
 import { showUpdateNotice } from '../app-update-service.js';
+import { BackupReminder } from '../backup-reminder-service.js';
 import { receiveSearchSuggestionPreferences } from '../mode-manager/services/search-suggestion-windows-service.js';
 import { ApplicationState, stateValuesEqual } from '../application-state.js';
 import { HttpRequestError } from '../expected-errors.js';
@@ -137,6 +139,19 @@ import {
     applyNoteLayoutSettings,
     validateNoteLayoutSettings,
 } from './note-layout-preferences.js';
+import { MS_PER_SECOND } from '../time-units.js';
+
+const DEFAULT_OPENAI_MODEL = 'gpt-5.6-luna';
+
+// Bounds on the stored AI chat panel width and composer height, in pixels.
+
+// How long banners stay up: a short notice, a command's outcome, an error.
+const NOTICE_BANNER_SECONDS = 5;
+const RESULT_BANNER_SECONDS = 6;
+const ERROR_BANNER_SECONDS = 10;
+
+// Command-gate watchdog for commands that may run long (file upload, prioritize, backup run).
+const LONG_COMMAND_TIMEOUT_SECONDS = 120;
 
 function trimToken(token) {
     if (typeof token !== 'string') {
@@ -147,6 +162,7 @@ function trimToken(token) {
 
 const BACKUP_COMMAND_AVAILABILITY_TIMEOUT_MS = 30000;
 const BACKUP_COMMAND_AVAILABILITY_POLL_INTERVAL_MS = 50;
+const MAX_SUGGESTED_TAGS = 10;
 
 function tokenizeQuery(rawQuery) {
     if (typeof rawQuery !== 'string') {
@@ -309,7 +325,7 @@ function computeSuggestedTags(matches, committedTokens, prefix, usageSnapshot) {
         return a.tag.localeCompare(b.tag);
     });
 
-    return suggestions.slice(0, 10).map((s) => s.tag);
+    return suggestions.slice(0, MAX_SUGGESTED_TAGS).map((s) => s.tag);
 }
 
 class CommandPaletteController {
@@ -581,6 +597,8 @@ class CommandPaletteController {
 
         applyNoteLayoutSettings(document.body, this._readNoteLayoutSettings());
 
+        void BackupReminder.preferencesChanged();
+
         const theme = this._getSelect('pref.theme', ['system', 'light', 'dark'], 'system');
         if (theme === 'system') {
             document.documentElement.removeAttribute('data-theme');
@@ -716,7 +734,8 @@ class CommandPaletteController {
         const modelPreferenceKey = 'pref.ai.openai_model';
         return {
             provider,
-            model: this._preferences.getRaw(modelPreferenceKey) ?? 'gpt-5.6-luna',
+            // A user who never chose a model uses the default one.
+            model: this._getText(modelPreferenceKey, DEFAULT_OPENAI_MODEL),
             thinkingLevel: this._getSelect(
                 'pref.ai.thinking_level',
                 AI_THINKING_LEVEL_OPTIONS.map((option) => option.value),
@@ -741,8 +760,8 @@ class CommandPaletteController {
         const width = Number(rawWidth);
         if (
             !Number.isInteger(width)
-            || width < 280
-            || width > 5000
+            || width < AI_CHAT_MINIMUM_WIDTH
+            || width > AI_CHAT_MAXIMUM_WIDTH
             || String(width) !== rawWidth
         ) {
             throw new Error('Stored AI chat width is invalid');
@@ -751,8 +770,8 @@ class CommandPaletteController {
     }
 
     async saveAiChatPanelWidth(width) {
-        if (!Number.isInteger(width) || width < 280 || width > 5000) {
-            throw new Error('AI chat width must be an integer from 280 to 5000');
+        if (!Number.isInteger(width) || width < AI_CHAT_MINIMUM_WIDTH || width > AI_CHAT_MAXIMUM_WIDTH) {
+            throw new Error(`AI chat width must be an integer from ${AI_CHAT_MINIMUM_WIDTH} to ${AI_CHAT_MAXIMUM_WIDTH}`);
         }
         await this._preferences.setRaw('pref.ai.chat_width', String(width));
     }
@@ -790,8 +809,8 @@ class CommandPaletteController {
         const height = Number(rawHeight);
         if (
             !Number.isInteger(height)
-            || height < 74
-            || height > 220
+            || height < AI_CHAT_COMPOSER_MINIMUM_HEIGHT
+            || height > AI_CHAT_COMPOSER_MAXIMUM_HEIGHT
             || String(height) !== rawHeight
         ) {
             throw new Error('Stored AI chat composer height is invalid');
@@ -800,8 +819,12 @@ class CommandPaletteController {
     }
 
     async saveAiChatComposerHeight(height) {
-        if (!Number.isInteger(height) || height < 74 || height > 220) {
-            throw new Error('AI chat composer height must be an integer from 74 to 220');
+        if (
+            !Number.isInteger(height)
+            || height < AI_CHAT_COMPOSER_MINIMUM_HEIGHT
+            || height > AI_CHAT_COMPOSER_MAXIMUM_HEIGHT
+        ) {
+            throw new Error(`AI chat composer height must be an integer from ${AI_CHAT_COMPOSER_MINIMUM_HEIGHT} to ${AI_CHAT_COMPOSER_MAXIMUM_HEIGHT}`);
         }
         await this._preferences.setRaw('pref.ai.composer_height', String(height));
     }
@@ -1483,20 +1506,23 @@ class CommandPaletteController {
             }
             const file = await pickFileForAttachment();
             if (file === null) {
-                ErrorHandler.showInfoBanner('Attach file canceled or no file was selected.', 5000);
+                ErrorHandler.showInfoBanner(
+                    'Attach file canceled or no file was selected.',
+                    NOTICE_BANNER_SECONDS * MS_PER_SECOND,
+                );
                 return null;
             }
 
             const result = await CommandGate.run('commandPalette.attachFileToCurrentNote', async () => {
                 return await attachPickedFileToCurrentNote(file, preferredNoteId);
             }, {
-                timeoutMs: 120000,
+                timeoutMs: LONG_COMMAND_TIMEOUT_SECONDS * MS_PER_SECOND,
             });
             if (result === null) {
                 ErrorHandler.showErrorBanner(
                     'Attach file did not start because another command is still running.',
                     'error',
-                    10000,
+                    ERROR_BANNER_SECONDS * MS_PER_SECOND,
                     true,
                 );
             }
@@ -1515,7 +1541,7 @@ class CommandPaletteController {
             ErrorHandler.showErrorBanner(
                 `Attach file failed: ${message}`,
                 'error',
-                10000,
+                ERROR_BANNER_SECONDS * MS_PER_SECOND,
                 true,
             );
         }
@@ -1569,7 +1595,7 @@ class CommandPaletteController {
 
         ErrorHandler.showInfoBanner(
             `Trimmed ${result.deleted_count} unused file(s).`,
-            6000,
+            RESULT_BANNER_SECONDS * MS_PER_SECOND,
         );
     }
 
@@ -1595,7 +1621,7 @@ class CommandPaletteController {
         if (isRootReorderLocked(ModeContext.activeTabSortMode)) {
             ErrorHandler.showInfoBanner(
                 'Root-note reordering is disabled while a sort order is active.',
-                5000,
+                NOTICE_BANNER_SECONDS * MS_PER_SECOND,
             );
             return;
         }
@@ -1624,7 +1650,7 @@ class CommandPaletteController {
             ErrorHandler.showErrorBanner(
                 'That input is not a valid tag token. This action only supports a single tag (no spaces, quotes, regex, or parentheses).',
                 'error',
-                10000,
+                ERROR_BANNER_SECONDS * MS_PER_SECOND,
                 true,
             );
             return;
@@ -1651,18 +1677,24 @@ class CommandPaletteController {
             return payload;
         }, {
             showLoadingImmediately: true,
-            timeoutMs: 120000,
+            timeoutMs: LONG_COMMAND_TIMEOUT_SECONDS * MS_PER_SECOND,
         });
         if (result === null) {
             return;
         }
         if (result.status === 'noop') {
             if (result.reason === 'no_matches') {
-                ErrorHandler.showInfoBanner(`No root notes matched tag "${tag}".`, 6000);
+                ErrorHandler.showInfoBanner(
+                    `No root notes matched tag "${tag}".`,
+                    RESULT_BANNER_SECONDS * MS_PER_SECOND,
+                );
                 return;
             }
             if (result.reason === 'already_prioritized') {
-                ErrorHandler.showInfoBanner(`Tag "${tag}" is already prioritized to the ${direction}.`, 6000);
+                ErrorHandler.showInfoBanner(
+                    `Tag "${tag}" is already prioritized to the ${direction}.`,
+                    RESULT_BANNER_SECONDS * MS_PER_SECOND,
+                );
                 return;
             }
         }
@@ -1683,7 +1715,7 @@ class CommandPaletteController {
         if (isRootReorderLocked(ModeContext.activeTabSortMode)) {
             ErrorHandler.showInfoBanner(
                 'Root-note reordering is disabled while a sort order is active.',
-                5000,
+                NOTICE_BANNER_SECONDS * MS_PER_SECOND,
             );
             return;
         }
@@ -1730,12 +1762,18 @@ class CommandPaletteController {
         }
         if (result.status === 'noop') {
             if (result.reason === 'not_enough_roots') {
-                ErrorHandler.showInfoBanner('There are not enough visible root notes to alphabetize.', 6000);
+                ErrorHandler.showInfoBanner(
+                    'There are not enough visible root notes to alphabetize.',
+                    RESULT_BANNER_SECONDS * MS_PER_SECOND,
+                );
                 return;
             }
             if (result.reason === 'already_alphabetized') {
                 const directionLabel = direction === 'asc' ? 'A-Z' : 'Z-A';
-                ErrorHandler.showInfoBanner(`Visible root notes are already alphabetized ${directionLabel}.`, 6000);
+                ErrorHandler.showInfoBanner(
+                    `Visible root notes are already alphabetized ${directionLabel}.`,
+                    RESULT_BANNER_SECONDS * MS_PER_SECOND,
+                );
                 return;
             }
         }
@@ -1795,16 +1833,25 @@ class CommandPaletteController {
         }
         if (result.status === 'noop') {
             if (result.reason === 'no_roots') {
-                ErrorHandler.showInfoBanner('There are no root notes in the current view.', 6000);
+                ErrorHandler.showInfoBanner(
+                    'There are no root notes in the current view.',
+                    RESULT_BANNER_SECONDS * MS_PER_SECOND,
+                );
                 return;
             }
             if (result.reason === 'already_reset') {
-                ErrorHandler.showInfoBanner('Root updated times already match created times in the current view.', 6000);
+                ErrorHandler.showInfoBanner(
+                    'Root updated times already match created times in the current view.',
+                    RESULT_BANNER_SECONDS * MS_PER_SECOND,
+                );
                 return;
             }
         }
         if (result.status === 'updated') {
-            ErrorHandler.showInfoBanner(`Reset updated time on ${result.changedNoteCount} note(s).`, 6000);
+            ErrorHandler.showInfoBanner(
+                `Reset updated time on ${result.changedNoteCount} note(s).`,
+                RESULT_BANNER_SECONDS * MS_PER_SECOND,
+            );
         }
     }
 
@@ -2148,7 +2195,7 @@ class CommandPaletteController {
             }
             return payload.results;
         }, {
-            timeoutMs: 120000,
+            timeoutMs: LONG_COMMAND_TIMEOUT_SECONDS * MS_PER_SECOND,
         });
         if (backupResult === null) {
             throw new Error('Backup command was dropped after waiting for browser availability');
@@ -2157,6 +2204,7 @@ class CommandPaletteController {
             throw new Error('Backup run expected results array from CommandGate');
         }
 
+        await BackupReminder.backupMade();
         await this._openBackupResultModal({
             results: backupResult,
         });
@@ -2397,6 +2445,14 @@ class CommandPaletteController {
             this._reminderModal = new ReminderModal();
         }
         await this._reminderModal.open({ search });
+    }
+
+    async startBackupReminder() {
+        await BackupReminder.start({
+            preferences: this._preferences,
+            fetchBackupTimes: () => this._authRequest(CONFIG.API.BACKUP.TIMES, 'GET', null),
+            openBackup: () => this.createBackup(),
+        });
     }
 
     async notifyAppUpdate() {

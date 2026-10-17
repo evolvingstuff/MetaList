@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Iterable, Optional, Any
 
 from .engine import GuardedConnection
+from .raw_connection import raw_sqlite_connection
 from .schema import NOTES_TABLE
 from app.services.hierarchy import validate_database_parent
 
@@ -15,11 +16,7 @@ _DELETE_CHUNK_SIZE = 900
 
 
 def _conn(connection: GuardedConnection | sqlite3.Connection) -> sqlite3.Connection:
-    raw_connection = getattr(connection, "raw_connection", None)
-    if isinstance(raw_connection, sqlite3.Connection):
-        return raw_connection
-    assert isinstance(connection, sqlite3.Connection)
-    return connection
+    return raw_sqlite_connection(connection)
 
 
 def _serialize_datetime(value: datetime) -> str:
@@ -448,22 +445,27 @@ def fetch_children_ordered(
 
     notes = [_deserialize_row(row) for row in rows]
     by_id = {note["id"]: note for note in notes}
-    head = next((note for note in notes if note["prev_id"] is None))
-    if not head:
-        return list(notes)
+    # Corrupt links fail loudly, as the note store's ordering does on load.
+    heads = [note for note in notes if note["prev_id"] is None]
+    if len(heads) != 1:
+        raise RuntimeError(f"Sibling list under {parent_id!r} has {len(heads)} head notes, not one")
 
     ordered: list[dict] = []
-    current = head
     seen: set[str] = set()
-    while current["id"] not in seen:
+    current = heads[0]
+    while True:
+        if current["id"] in seen:
+            raise RuntimeError(f"Sibling list under {parent_id!r} has a cycle at {current['id']}")
         ordered.append(current)
         seen.add(current["id"])
         next_id = current["next_id"]
         if next_id is None:
             break
-        current = by_id.get(next_id)
-        if current is None:
-            break
+        if next_id not in by_id:
+            raise RuntimeError(f"Note {current['id']} links to a missing sibling {next_id}")
+        current = by_id[next_id]
+    if len(ordered) != len(notes):
+        raise RuntimeError(f"Sibling list under {parent_id!r} is disconnected: {len(notes) - len(ordered)} notes unreachable")
     return ordered
 
 

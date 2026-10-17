@@ -19,6 +19,9 @@ from app.services.file_storage import FileSnapshot, restore_file_snapshot
 
 logger = logging.getLogger(__name__)
 
+# Undo/redo stack logs show at most this many of the newest operations.
+_LOGGED_STACK_TAIL_OPS = 12
+
 
 def _summarize_op(op: dict) -> str:
     if not isinstance(op, dict):
@@ -270,23 +273,19 @@ def _compute_focus_note_id(op: dict, *, direction: str) -> str:
         if not isinstance(records, list) or not records:
             raise RuntimeError(f"Undo op {op_type}.records must be a non-empty list | op={op}")
         first = records[0]
-        root_id = getattr(first, "id", None)
-        if root_id is None:
-            raise RuntimeError(f"Undo op {op_type}.records[0] missing id | op={op}")
+        # Undo records are NodeRecords: every field is always there.
+        root_id = first.id
         if not isinstance(root_id, str) or not root_id:
             raise RuntimeError(f"Undo op {op_type}.records[0].id must be a non-empty string | op={op}")
         if direction == "redo" and op_type == "delete_subtree":
-            return _pick_focus_neighbor(getattr(first, "prev_id", None), getattr(first, "next_id", None))
+            return _pick_focus_neighbor(first.prev_id, first.next_id)
         if direction == "undo" and op_type == "paste_subtree":
-            prev_id = getattr(first, "prev_id", None)
-            if isinstance(prev_id, str) and prev_id:
-                return prev_id
-            parent_id = getattr(first, "parent_id", None)
-            if isinstance(parent_id, str) and parent_id:
-                return parent_id
-            next_id = getattr(first, "next_id", None)
-            if isinstance(next_id, str) and next_id:
-                return next_id
+            if isinstance(first.prev_id, str) and first.prev_id:
+                return first.prev_id
+            if isinstance(first.parent_id, str) and first.parent_id:
+                return first.parent_id
+            if isinstance(first.next_id, str) and first.next_id:
+                return first.next_id
             return ""
         return root_id
 
@@ -930,8 +929,8 @@ def undo(client_id: str, token: str) -> Optional[Dict[str, object]]:
         client_id,
         len(ctx.history),
         len(ctx.redo),
-        _summarize_stack(ctx.history, 12),
-        _summarize_stack(ctx.redo, 12),
+        _summarize_stack(ctx.history, _LOGGED_STACK_TAIL_OPS),
+        _summarize_stack(ctx.redo, _LOGGED_STACK_TAIL_OPS),
     )
 
     op = ctx.history.pop()
@@ -1120,8 +1119,8 @@ def undo(client_id: str, token: str) -> Optional[Dict[str, object]]:
         focus_note_id,
         len(ctx.history),
         len(ctx.redo),
-        _summarize_stack(ctx.history, 12),
-        _summarize_stack(ctx.redo, 12),
+        _summarize_stack(ctx.history, _LOGGED_STACK_TAIL_OPS),
+        _summarize_stack(ctx.redo, _LOGGED_STACK_TAIL_OPS),
     )
     # The op moved between stacks; re-check the budget before returning.
     _enforce_undo_limits()
@@ -1138,8 +1137,8 @@ def redo(client_id: str, token: str) -> Optional[Dict[str, object]]:
         client_id,
         len(ctx.history),
         len(ctx.redo),
-        _summarize_stack(ctx.history, 12),
-        _summarize_stack(ctx.redo, 12),
+        _summarize_stack(ctx.history, _LOGGED_STACK_TAIL_OPS),
+        _summarize_stack(ctx.redo, _LOGGED_STACK_TAIL_OPS),
     )
 
     op = ctx.redo.pop()
@@ -1309,8 +1308,8 @@ def redo(client_id: str, token: str) -> Optional[Dict[str, object]]:
         focus_note_id,
         len(ctx.history),
         len(ctx.redo),
-        _summarize_stack(ctx.history, 12),
-        _summarize_stack(ctx.redo, 12),
+        _summarize_stack(ctx.history, _LOGGED_STACK_TAIL_OPS),
+        _summarize_stack(ctx.redo, _LOGGED_STACK_TAIL_OPS),
     )
     # The op moved between stacks; re-check the budget before returning.
     _enforce_undo_limits()
