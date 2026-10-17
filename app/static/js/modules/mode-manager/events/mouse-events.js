@@ -235,6 +235,9 @@ function isMouseDownOutsideEditExclusion(target) {
             '#scroll-to-bottom-button',
             // The card offering a format for a paste acts on the note being edited.
             '.paste-format-offer',
+            // App notices (a new release, the backup reminder) act on their own: a button
+            // that opens a dialog saves and leaves the note itself, and × leaves it be.
+            '.app-notice-stack',
             '#ai-chat-panel',
             '.add-note',
             '#trash-can',
@@ -1225,6 +1228,8 @@ function handleClick(event) {
     if (isWritingAssistantInteraction(event)) return;
     // The card offering a format for a paste handles its own clicks (paste-format-offer-service.js).
     if (event.target instanceof Element && event.target.closest('.paste-format-offer')) return;
+    // App notices (a new release, the backup reminder) handle their own clicks too.
+    if (event.target instanceof Element && event.target.closest('.app-notice-stack')) return;
 
     if (isViewModeNoteDisclosureToggle(event.target)) {
         return;
