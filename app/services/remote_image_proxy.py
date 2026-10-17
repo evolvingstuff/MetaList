@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from http import HTTPStatus
 from collections import OrderedDict
 from dataclasses import dataclass
 from io import BytesIO
@@ -226,7 +227,7 @@ def _request_image(url: str, target: ResolvedPublicHttpTarget) -> tuple[bytes | 
         },
     ) as client:
         with client.stream("GET", url) as response:
-            if 300 <= response.status_code < 400:
+            if httpx.codes.is_redirect(response.status_code):
                 location = sent_or_none(response.headers, "location")
                 if location is None or location.strip() == "":
                     return None, None, "redirect_without_location"
@@ -234,7 +235,7 @@ def _request_image(url: str, target: ResolvedPublicHttpTarget) -> tuple[bytes | 
                 if next_url is None:
                     return None, None, "unsupported_redirect"
                 return None, next_url, None
-            if response.status_code >= 400:
+            if response.status_code >= HTTPStatus.BAD_REQUEST:
                 return None, None, f"http_{response.status_code}"
             declared_length = sent_or_none(response.headers, "content-length")
             if declared_length is not None:

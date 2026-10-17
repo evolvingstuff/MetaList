@@ -1,3 +1,5 @@
+import { KIB } from '../byte-sizes.js';
+import { isAnsweredStatus } from '../http-status.js';
 import { ApplicationState } from '../application-state.js';
 import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
@@ -295,7 +297,7 @@ export class BackupRestoreModal extends BaseModal {
             }
             const sourceLabel = backupSourceLabel(backup.source);
             const isSelected = backup.backup_id === selectedBackupId ? 'selected' : '';
-            const label = `${sourceLabel} · ${backup.namespace} · ${backup.filename} (${Math.round(backup.size_bytes / 1024)} KB, ${backup.created_at})`;
+            const label = `${sourceLabel} · ${backup.namespace} · ${backup.filename} (${Math.round(backup.size_bytes / KIB)} KB, ${backup.created_at})`;
             return `<option value="${escapeHtml(backup.backup_id)}" ${isSelected}>${escapeHtml(label)}</option>`;
         }).join('');
 
@@ -934,7 +936,7 @@ export class BackupRestoreModal extends BaseModal {
             rethrowUnexpectedError(outcome.reason);
             return false;
         }
-        return outcome.value.status >= 200 && outcome.value.status < 600;
+        return isAnsweredStatus(outcome.value.status);
     }
 
     _sleep(delayMs) {

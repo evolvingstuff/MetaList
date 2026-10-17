@@ -1,3 +1,4 @@
+import { HTTP_STATUS } from './http-status.js';
 import { HttpRequestError } from './expected-errors.js';
 import { CONFIG } from './config.js';
 import { buildSessionHeaders } from './session-auth.js';
@@ -34,7 +35,7 @@ async function readResponsePayload(response, fallbackMessage) {
                 errorMessage = `${fallbackMessage}: ${errorPayload.detail}`;
             }
         }
-        if (response.status === 401) {
+        if (response.status === HTTP_STATUS.UNAUTHORIZED) {
             throw new AuthenticationRequiredError(errorMessage);
         }
         throw new HttpRequestError(errorMessage);

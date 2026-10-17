@@ -1,10 +1,12 @@
+import { isServerErrorStatus } from './http-status.js';
+
 const ERROR_TYPE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const CODE_LOCATION = /^(?:app(?:\/[A-Za-z_][A-Za-z0-9_]*)+\.py:\d+|external)$/;
 const REQUEST_ID = /^[a-f0-9]{8}$/;
 
 export async function describeApiFailure(response) {
     const base = `API call failed: ${response.status} ${response.statusText}`;
-    if (response.status < 500 || !response.headers.get('content-type')?.includes('application/json')) {
+    if (!isServerErrorStatus(response.status) || !response.headers.get('content-type')?.includes('application/json')) {
         return base;
     }
 

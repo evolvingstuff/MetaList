@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.utils.byte_sizes import MIB
 import hashlib
 import json
 from dataclasses import dataclass
@@ -631,7 +632,7 @@ def _select_view(
 # content has a literal URL image source are skipped up front, and renders
 # that still emitted a proxy source (e.g. from an embedded note) are not stored.
 _REMOTE_IMAGE_PROXY_MARKER = "data-remote-image-proxy-src="
-_VIEW_RENDER_MEMO = SensitiveMemo(maxsize=65536, max_bytes=64 * 1024 * 1024)
+_VIEW_RENDER_MEMO = SensitiveMemo(maxsize=65536, max_bytes=64 * MIB)
 
 
 def _is_render_cacheable(content_html: str) -> bool:

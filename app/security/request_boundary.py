@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from http import HTTPStatus
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
@@ -161,13 +162,13 @@ class RequestBoundaryMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         host_headers = request.headers.getlist("host")
         if len(host_headers) != 1:
-            return JSONResponse(status_code=400, content={"detail": "Exactly one Host header required"})
+            return JSONResponse(status_code=HTTPStatus.BAD_REQUEST, content={"detail": "Exactly one Host header required"})
         lengths = request.headers.getlist("content-length")
         transfers = request.headers.getlist("transfer-encoding")
         if len(lengths) > 1 or len(request.headers.getlist("origin")) > 1 or (lengths and transfers):
-            return JSONResponse(status_code=400, content={"detail": "Ambiguous request headers"})
+            return JSONResponse(status_code=HTTPStatus.BAD_REQUEST, content={"detail": "Ambiguous request headers"})
         if lengths and (not lengths[0].isascii() or not lengths[0].isdigit()):
-            return JSONResponse(status_code=400, content={"detail": "Invalid Content-Length"})
+            return JSONResponse(status_code=HTTPStatus.BAD_REQUEST, content={"detail": "Invalid Content-Length"})
         rejection = evaluate_request_boundary(
             method=request.method,
             request_scheme=request.scope["scheme"],

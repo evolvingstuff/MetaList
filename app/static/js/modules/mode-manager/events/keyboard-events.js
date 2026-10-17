@@ -1,3 +1,4 @@
+import { KIB, MIB } from '../../byte-sizes.js';
 import { ApplicationState } from '../../application-state.js';
 import { rethrowUnexpectedError } from '../../expected-errors.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
@@ -1642,14 +1643,14 @@ function formatKiB(bytes) {
     if (!Number.isFinite(bytes) || bytes < 0) {
         throw new Error(`formatKiB invalid bytes: ${bytes}`);
     }
-    return `${(bytes / 1024).toFixed(1)} KiB`;
+    return `${(bytes / KIB).toFixed(1)} KiB`;
 }
 
 function formatMiB(bytes) {
     if (!Number.isFinite(bytes) || bytes < 0) {
         throw new Error(`formatMiB invalid bytes: ${bytes}`);
     }
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
+    return `${(bytes / MIB).toFixed(1)} MiB`;
 }
 
 function showImageTooLargeForEmbedError(fileName) {
@@ -2308,7 +2309,7 @@ async function pasteClipboardImagesAsEmbeddedContent(files, selectionRange) {
         }
         const maxClipboardBytes = getMaxClipboardImageBytes();
         if (file.size > maxClipboardBytes) {
-            const maxMiB = (maxClipboardBytes / (1024 * 1024)).toFixed(1);
+            const maxMiB = (maxClipboardBytes / MIB).toFixed(1);
             ErrorHandler.showErrorBanner(
                 `Image too large to process. Max allowed is ${maxMiB} MiB.`,
                 'error',

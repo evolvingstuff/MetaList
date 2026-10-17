@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from http import HTTPStatus
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
@@ -1209,12 +1210,12 @@ def _fetch_page(url: str, target: _ResolvedHttpTarget) -> _LinkTitleFetchResult 
             if redirect_result is not None:
                 return redirect_result
 
-            if response.status_code == 429:
+            if response.status_code == HTTPStatus.TOO_MANY_REQUESTS:
                 _host_pacer.cool_down(
                     _pacing_host(url),
                     _rate_limit_cooldown_seconds(sent_or_none(response.headers, "retry-after")),
                 )
-            if response.status_code >= 400:
+            if response.status_code >= HTTPStatus.BAD_REQUEST:
                 return _LinkTitleFetchResult(
                     url=url,
                     title=None,
@@ -1287,9 +1288,9 @@ def _fetch_oembed_title(*, page_url: str, oembed_url: str) -> _LinkTitleFetchRes
     if response is None:
         return None
     status_code, content = response
-    if status_code == 429:
+    if status_code == HTTPStatus.TOO_MANY_REQUESTS:
         return _LinkTitleFetchResult(url=page_url, title=None, status="failed", last_error_kind="http_429")
-    if status_code != 200:
+    if status_code != HTTPStatus.OK:
         return None
     json_capture = CapturedExceptionContext(json.JSONDecodeError, UnicodeDecodeError, boundary='app/services/link_titles.py:_fetch_oembed_title:json_capture')
     payload = None
@@ -1316,12 +1317,12 @@ def _request_oembed(oembed_url: str, target: _ResolvedHttpTarget) -> tuple[int, 
         with client.stream("GET", oembed_url) as response:
             status_code = response.status_code
             content = b""
-            if status_code == 429:
+            if status_code == HTTPStatus.TOO_MANY_REQUESTS:
                 _host_pacer.cool_down(
                     _pacing_host(oembed_url),
                     _rate_limit_cooldown_seconds(sent_or_none(response.headers, "retry-after")),
                 )
-            if status_code == 200:
+            if status_code == HTTPStatus.OK:
                 chunks: list[bytes] = []
                 total_bytes = 0
                 for chunk in response.iter_bytes():
@@ -1352,7 +1353,7 @@ def _download_oembed(oembed_url: str, target: _ResolvedHttpTarget) -> tuple[int,
 
 
 def _redirect_result_from_response(*, url: str, response: httpx.Response) -> _LinkTitleFetchResult | None:
-    if 300 > response.status_code or response.status_code >= 400:
+    if not httpx.codes.is_redirect(response.status_code):
         return None
     location = sent_or_none(response.headers, "location")
     if location is None or location.strip() == "":

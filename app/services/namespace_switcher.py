@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from http import HTTPStatus
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from http.client import HTTPConnection
@@ -1784,7 +1785,7 @@ def _status_payload(connection: HTTPConnection, *, api_prefix: str) -> bytes | N
         headers={"X-Metalist-Tab-Id": _PROBE_TAB_ID},
     )
     response = connection.getresponse()
-    if response.status != 200:
+    if response.status != HTTPStatus.OK:
         return None
     return response.read()
 

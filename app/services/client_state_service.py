@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.utils.byte_sizes import KIB
 import hashlib
 import json
 import re
@@ -343,7 +344,7 @@ def _validate_usage_state(usage_state: dict[str, object]) -> dict[str, dict[str,
 # them each time. Keyed by the session token: a new login reads them again; every
 # save goes through save_client_preferences, which replaces the copy. Cleared with
 # the other sensitive caches (lock, logout, restore) and never kept while locked.
-_preferences_in_memory = SensitiveMemo(maxsize=2, max_bytes=256 * 1024)
+_preferences_in_memory = SensitiveMemo(maxsize=2, max_bytes=256 * KIB)
 
 
 def _preferences_memory_key(token: str) -> str:

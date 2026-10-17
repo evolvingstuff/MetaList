@@ -1,5 +1,6 @@
 """Enforce limits before multipart spooling and before creating a complete blob."""
 
+from http import HTTPStatus
 from threading import BoundedSemaphore
 
 from fastapi import HTTPException, UploadFile
@@ -18,7 +19,7 @@ async def read_attachment(file: UploadFile) -> bytes:
                 return bytes(content)
             content.extend(chunk)
             if len(content) > MAX_ATTACHMENT_BYTES:
-                raise HTTPException(status_code=413, detail='Attachment exceeds the configured size limit')
+                raise HTTPException(status_code=HTTPStatus.REQUEST_ENTITY_TOO_LARGE, detail='Attachment exceeds the configured size limit')
     finally:
         await file.close()
 
@@ -50,7 +51,7 @@ class UploadLimitMiddleware:
             await self.app(scope, receive, send)
             return
         if not self._slots.acquire(blocking=False):
-            await JSONResponse({'detail': 'Too many attachment transfers; retry after another finishes'}, status_code=429)(scope, receive, send)
+            await JSONResponse({'detail': 'Too many attachment transfers; retry after another finishes'}, status_code=HTTPStatus.TOO_MANY_REQUESTS)(scope, receive, send)
             return
         try:
             if is_upload:
@@ -63,7 +64,7 @@ class UploadLimitMiddleware:
     async def _receive_upload(self, scope, receive, send):
         lengths = [value for key, value in scope['headers'] if key == b'content-length']
         if len(lengths) == 1 and lengths[0].isdigit() and int(lengths[0]) > MAX_UPLOAD_REQUEST_BYTES:
-            await JSONResponse({'detail': 'Upload exceeds the configured size limit'}, status_code=413)(scope, receive, send)
+            await JSONResponse({'detail': 'Upload exceeds the configured size limit'}, status_code=HTTPStatus.REQUEST_ENTITY_TOO_LARGE)(scope, receive, send)
             return
         received = 0
         exceeded = False
@@ -80,6 +81,6 @@ class UploadLimitMiddleware:
             return message
         async def limited_send(message):
             if exceeded and message['type'] == 'http.response.start':
-                message = dict(message, status=413)
+                message = dict(message, status=HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
             await send(message)
         await self.app(scope, limited_receive, limited_send)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.utils.byte_sizes import MIB
 import html
 import re
 from dataclasses import dataclass
@@ -372,7 +373,7 @@ def _iter_collapsed_preview_meaningful_fragments(content_html: str) -> Iterator[
         yield "".join(fragment_parts).strip()
 
 
-@sensitive_lru_cache(maxsize=8192, max_bytes=32 * 1024 * 1024)
+@sensitive_lru_cache(maxsize=8192, max_bytes=32 * MIB)
 def _collapsed_preview_head(content_html: str) -> Tuple[str, bool]:
     """First meaningful fragment and whether another follows.
 

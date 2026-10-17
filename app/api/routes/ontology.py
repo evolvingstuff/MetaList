@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.utils.byte_sizes import MIB
+from http import HTTPStatus
 from fastapi import APIRouter, HTTPException, Request
 import re
 from typing import Annotated
@@ -25,6 +27,9 @@ from app.usecases.rename_tag import apply_rename_tag_everywhere
 from app.usecases.delete_tag import apply_delete_tag_everywhere
 from app.utils.text_utils import strip_html
 
+# The longest tag a rename or delete accepts, in characters.
+MAX_TAG_LENGTH = 1024
+
 
 def _maybe_bearer_token(request: Request) -> str:
     token = get_request_auth_token(request)
@@ -35,18 +40,18 @@ def _maybe_bearer_token(request: Request) -> str:
 
 @with_config(ConfigDict(strict=True))
 class RuleTextRequest(TypedDict):
-    text: Annotated[str, Field(min_length=1, max_length=1024 * 1024)]
+    text: Annotated[str, Field(min_length=1, max_length=MIB)]
 
 
 @with_config(ConfigDict(strict=True))
 class RenameTagRequest(TypedDict):
-    old: Annotated[str, Field(min_length=1, max_length=1024)]
-    new: Annotated[str, Field(min_length=1, max_length=1024)]
+    old: Annotated[str, Field(min_length=1, max_length=MAX_TAG_LENGTH)]
+    new: Annotated[str, Field(min_length=1, max_length=MAX_TAG_LENGTH)]
 
 
 @with_config(ConfigDict(strict=True))
 class DeleteTagRequest(TypedDict):
-    tag: Annotated[str, Field(min_length=1, max_length=1024)]
+    tag: Annotated[str, Field(min_length=1, max_length=MAX_TAG_LENGTH)]
 
 
 router = APIRouter(prefix="/ontology", tags=["ontology2"])
@@ -141,9 +146,9 @@ def list_rules() -> dict:
 def create_rule(request: Request, payload: RuleTextRequest) -> dict:
     text = payload["text"]
     if not isinstance(text, str):
-        raise HTTPException(status_code=400, detail="text must be a string")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="text must be a string")
     if text.strip() == "":
-        raise HTTPException(status_code=400, detail="text must be non-empty")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="text must be non-empty")
     candidate_note_ids: set[str] = set()
     if note_store.loaded:
         candidate_note_ids = _collect_candidate_note_ids_for_texts(
@@ -164,14 +169,14 @@ def create_rule(request: Request, payload: RuleTextRequest) -> dict:
 def update_rule(request: Request, rule_id: int, payload: RuleTextRequest) -> dict:
     text = payload["text"]
     if not isinstance(text, str):
-        raise HTTPException(status_code=400, detail="text must be a string")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="text must be a string")
     if text.strip() == "":
-        raise HTTPException(status_code=400, detail="text must be non-empty")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="text must be non-empty")
 
     existing_lines = list_rule_lines()
     existing_by_id = {existing_id for existing_id, _text in existing_lines}
     if rule_id not in existing_by_id:
-        raise HTTPException(status_code=404, detail=f"Rule not found: {rule_id}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Rule not found: {rule_id}")
 
     candidate_note_ids: set[str] = set()
     if note_store.loaded:
@@ -202,7 +207,7 @@ def delete_rule(rule_id: int) -> dict:
     existing_lines = list_rule_lines()
     existing_by_id = {existing_id for existing_id, _text in existing_lines}
     if rule_id not in existing_by_id:
-        raise HTTPException(status_code=404, detail=f"Rule not found: {rule_id}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Rule not found: {rule_id}")
 
     candidate_note_ids: set[str] = set()
     if note_store.loaded:
@@ -232,11 +237,11 @@ def rename_tag(request: Request, payload: RenameTagRequest) -> dict:
     old = payload["old"]
     new = payload["new"]
     if not isinstance(old, str) or old.strip() == "":
-        raise HTTPException(status_code=400, detail="old must be a non-empty string")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="old must be a non-empty string")
     if not isinstance(new, str) or new.strip() == "":
-        raise HTTPException(status_code=400, detail="new must be a non-empty string")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="new must be a non-empty string")
     if old.strip() == new.strip():
-        raise HTTPException(status_code=400, detail="old and new must differ")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="old and new must differ")
 
     token = _maybe_bearer_token(request)
     return apply_rename_tag_everywhere(old=old, new=new, token=token)
@@ -247,7 +252,7 @@ def rename_tag(request: Request, payload: RenameTagRequest) -> dict:
 def delete_tag(request: Request, payload: DeleteTagRequest) -> dict:
     tag = payload["tag"]
     if not isinstance(tag, str) or tag.strip() == "":
-        raise HTTPException(status_code=400, detail="tag must be a non-empty string")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="tag must be a non-empty string")
     token = _maybe_bearer_token(request)
     return apply_delete_tag_everywhere(tag=tag, token=token)
 

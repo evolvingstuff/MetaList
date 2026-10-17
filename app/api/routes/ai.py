@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from app.utils.byte_sizes import MIB
+from http import HTTPStatus
 import json
 import math
 from collections.abc import AsyncIterator
@@ -93,7 +95,7 @@ def _require_ai_connection(*, provider: AiProvider, token: str, session_key: str
         return connect_to_ai(provider=provider, token=token, session_key=session_key)
     # lint: allow-PY001 rationale="the user removed or never added the AI's key: an expected 409, not a defect"
     except AiNotSetUp as exc:
-        raise HTTPException(status_code=409, detail="The AI is not set up: add its API key in AI settings") from exc
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail="The AI is not set up: add its API key in AI settings") from exc
 
 
 def _agent_runtime(*, inference: InferenceAdapter) -> AgentRuntime:
@@ -193,8 +195,8 @@ class NoteTagSuggestionAvailabilityRequest(BaseModel):
 
     provider: AiProvider
     # The note as it is being edited, unsaved changes included.
-    tags: str = Field(..., max_length=1024 * 1024)
-    content_html: str = Field(..., max_length=16 * 1024 * 1024)
+    tags: str = Field(..., max_length=MIB)
+    content_html: str = Field(..., max_length=16 * MIB)
 
 
 class NoteTagSuggestionAvailabilityResponse(BaseModel):
@@ -210,7 +212,7 @@ class NoteTagSuggestionRequest(BaseModel):
     # The note alone, or it and the notes below it the view shows.
     include_children: bool
     # The view the note is in ('' for no search).
-    search: str = Field(..., max_length=1024 * 1024)
+    search: str = Field(..., max_length=MIB)
     tab_id: str = Field(..., min_length=1, max_length=256)
     is_untagged_view: bool
 
@@ -226,7 +228,7 @@ class ExportTitleScope(BaseModel):
 
     provider: AiProvider
     # The view exported or printed, or the one its note is in ('' for no search).
-    search: str = Field(..., max_length=1024 * 1024)
+    search: str = Field(..., max_length=MIB)
     tab_id: str = Field(..., min_length=1, max_length=256)
     is_untagged_view: bool
     # A note with its children ("note"), or the view as it is shown ("view", note_id '').
@@ -396,7 +398,7 @@ def put_openai_credential(
         api_key = validate_openai_api_key(submitted_api_key)
     # lint: allow-PY001 rationale="return a concise validation error without echoing the secret"
     except OpenAICredentialInputError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise HTTPException(status_code=HTTPStatus.UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     status = openai_credential_store.configure(
         token=token,
         session_key=session_key,
@@ -440,7 +442,7 @@ def note_tag_suggestion_availability(
     """Whether "Suggest Tags with AI" applies: an AI is set up and may see the note as edited."""
     response.headers["Cache-Control"] = "no-store"
     if not note_store.has_note(note_id):
-        raise HTTPException(status_code=404, detail=f"Note not found: {note_id}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Note not found: {note_id}")
     session_key = token_service.get_session_key(token)
     if not describe_ai_setup(token=token, session_key=session_key).is_ready_for(payload.provider):
         return NoteTagSuggestionAvailabilityResponse(is_available=False)
@@ -472,7 +474,7 @@ def suggest_tags_for_note_with_ai(
     (POST /notes/{id}/tag-proposals/add), one undo step.
     """
     if not note_store.has_note(note_id):
-        raise HTTPException(status_code=404, detail=f"Note not found: {note_id}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Note not found: {note_id}")
     session_key = token_service.get_session_key(token)
     connection = _require_ai_connection(provider=payload.provider, token=token, session_key=session_key)
     preferences = load_client_preferences(token=token)
@@ -487,7 +489,7 @@ def suggest_tags_for_note_with_ai(
         is_untagged_view=payload.is_untagged_view,
     )
     if note_id not in scope.allowed_note_ids:
-        raise HTTPException(status_code=409, detail="The note is not in this view any more")
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail="The note is not in this view any more")
     request = build_note_tag_request(
         note_id=note_id, include_children=payload.include_children, boundary=boundary,
         tag_skill=DEFAULT_AGENT_SKILLS.for_action("tag_proposals"), scope_note_ids=scope.allowed_note_ids,
@@ -537,7 +539,7 @@ def _export_title_request(scope: ExportTitleScope, token: str) -> ExportTitleReq
     if scope.exported == "note":
         note_id = scope.note_id
         if not note_store.has_note(note_id):
-            raise HTTPException(status_code=404, detail=f"Note not found: {note_id}")
+            raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Note not found: {note_id}")
     search = None
     if scope.search != "":
         search = scope.search
@@ -655,7 +657,7 @@ def preview_cloud_privacy(
     ]
     if missing_note_ids:
         raise HTTPException(
-            status_code=409,
+            status_code=HTTPStatus.CONFLICT,
             detail="Visible note set changed before privacy preview",
         )
     preferences = load_client_preferences(token=token)
@@ -798,7 +800,7 @@ def copy_ai_message(
     token: Annotated[str, Depends(require_request_auth_token)],
 ) -> AiCopyMessageResponse:
     if message_id.strip() == "":
-        raise HTTPException(status_code=404, detail="AI response not found")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="AI response not found")
     session_key = token_service.get_session_key(token)
     snapshot = ai_chat_store.snapshot(session_key=session_key)
     matching_messages = [
@@ -807,16 +809,16 @@ def copy_ai_message(
         if message["id"] == message_id and message["role"] == "assistant"
     ]
     if len(matching_messages) == 0:
-        raise HTTPException(status_code=404, detail="AI response not found")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="AI response not found")
     if len(matching_messages) != 1:
         raise RuntimeError("AI chat session contains duplicate message ids")
 
     message = matching_messages[0]
     if message["status"] != "complete":
-        raise HTTPException(status_code=409, detail="AI response is not complete")
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail="AI response is not complete")
     content = message["content"]
     if content == "":
-        raise HTTPException(status_code=409, detail="AI response is empty")
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail="AI response is empty")
 
     tags = "@llm"
     note_content = _render_ai_response_note_content(
@@ -869,7 +871,7 @@ def stream_ai_chat(
     authoritative_active_tab_id = tab_state_store.get_active_tab_id()
     if payload.scope.active_tab_id != authoritative_active_tab_id:
         raise HTTPException(
-            status_code=409,
+            status_code=HTTPStatus.CONFLICT,
             detail="Active MetaList tab changed before Send",
         )
     authoritative_search_query = tab_state_store.get_search_query(
@@ -973,7 +975,7 @@ async def acknowledge_menu_result(payload: MenuResult, token: Annotated[str, Dep
         menu_action_store.acknowledge(session_key=session_key, result=payload)
     # lint: allow-PY001 rationale="reject invalid external menu acknowledgment with a conflict response"
     except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail=str(exc)) from exc
     return {"acknowledged": True}
 
 
@@ -1007,7 +1009,7 @@ async def answer_bulk_question(payload: BulkAnswerRequest, token: Annotated[str,
         bulk_operation_guard.answer(session_key, payload.question_id, payload.value)
     # lint: allow-PY001 rationale="invalid or stale user answers are expected request failures"
     except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail=str(exc)) from exc
     return {"status": "answered"}
 
 
@@ -1023,9 +1025,9 @@ class BulkManageRequest(BaseModel):
 @transactional_route
 def manage_bulk_proposals(payload: BulkManageRequest, token: Annotated[str, Depends(require_request_auth_token)]):
     if payload.scope.active_tab_id != tab_state_store.get_active_tab_id():
-        raise HTTPException(status_code=409, detail="Active tab changed")
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail="Active tab changed")
     if payload.scope.search_query != tab_state_store.get_search_query(tab_id=payload.scope.scope_tab_id):
-        raise HTTPException(status_code=409, detail="Search context changed")
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail="Search context changed")
     async def execute():
         with bulk_operation_guard.acquire(token_service.get_session_key(token)):
             note_ids = proposal_scope_ids(payload.scope)

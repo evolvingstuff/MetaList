@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.utils.byte_sizes import MIB
 from dataclasses import dataclass
 from contextlib import closing
 from datetime import datetime, timezone
@@ -308,7 +309,7 @@ def _copy_file_from_archive(archive_handle: tarfile.TarFile, *, archive_name: st
 def _sha256_for_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+        for chunk in iter(lambda: handle.read(MIB), b""):
             digest.update(chunk)
     return digest.hexdigest()
 
@@ -645,7 +646,7 @@ def _validate_archive_contents(
             digest = hashlib.sha256()
             size_bytes = 0
             try:
-                for chunk in iter(lambda: extracted.read(1024 * 1024), b""):
+                for chunk in iter(lambda: extracted.read(MIB), b""):
                     digest.update(chunk)
                     size_bytes += len(chunk)
             finally:

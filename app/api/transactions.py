@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from http import HTTPStatus
 from functools import wraps
 from contextlib import ExitStack, nullcontext, contextmanager
 import inspect
@@ -30,7 +31,7 @@ def _mutation_slot():
             slot.enter_context(mutation)
         # lint: allow-PY001 rationale="translate expected request-admission contention to HTTP 409"
         except BulkOperationBusy as exc:
-            raise HTTPException(status_code=409, detail=str(exc)) from exc
+            raise HTTPException(status_code=HTTPStatus.CONFLICT, detail=str(exc)) from exc
         yield
 
 
@@ -129,9 +130,9 @@ def assert_mutation_routes_wrapped(app: FastAPI) -> None:
 
 def _check_bulk_guard(endpoint_name: str) -> None:
     if endpoint_name in _STORAGE_TRANSITIONS and bulk_operation_guard.active_mutations > 1:
-        raise HTTPException(status_code=409, detail="Wait for the current request to finish before changing namespace storage.")
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail="Wait for the current request to finish before changing namespace storage.")
     # Preferences never touch notes, and every operation reads them once when it
     # starts, so saving them (e.g. the chat panel width) cannot disturb it.
     permitted = {"answer_bulk_question", "preview_cloud_privacy", "put_ai_debug_details", "put_client_preferences"}
     if bulk_operation_guard.operation_id and endpoint_name not in permitted:
-        raise HTTPException(status_code=409, detail="A bulk operation is running. Wait or cancel it before changing the app.")
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail="A bulk operation is running. Wait or cancel it before changing the app.")

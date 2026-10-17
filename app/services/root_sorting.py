@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.utils.byte_sizes import MIB
 from threading import RLock
 
 from datetime import datetime
@@ -210,7 +211,7 @@ def _get_root_subtree_updated_timestamp(root_id: str):
     return value
 
 
-@sensitive_lru_cache(maxsize=32768, max_bytes=16 * 1024 * 1024)
+@sensitive_lru_cache(maxsize=32768, max_bytes=16 * MIB)
 def _alphabetical_key(content: str):
     text = strip_html(content).strip()
     return text.casefold(), text, len(text)

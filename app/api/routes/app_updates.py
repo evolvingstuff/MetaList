@@ -1,6 +1,7 @@
 """Authenticated in-app update initiation and opaque restart-safe job status."""
 from __future__ import annotations
 
+from http import HTTPStatus
 from fastapi import APIRouter, HTTPException
 import httpx
 from pydantic import BaseModel, Field
@@ -27,7 +28,7 @@ def check_update():
     with release:
         status = app_updates.check_for_update()
     if release.captured_exception is not None:
-        raise HTTPException(status_code=503, detail='Could not reach the release server. Please try again.') from release.captured_exception
+        raise HTTPException(status_code=HTTPStatus.SERVICE_UNAVAILABLE, detail='Could not reach the release server. Please try again.') from release.captured_exception
     return JSONResponse(content=status, headers={'Cache-Control': 'no-store'})
 
 
@@ -39,8 +40,8 @@ def start_update(body: AppUpdateRequest):
     with admission:
         record = app_updates.create_update_job(body.target_version)
     if admission.captured_exception is not None:
-        raise HTTPException(status_code=409, detail=str(admission.captured_exception)) from admission.captured_exception
-    return JSONResponse(status_code=202, content=record,
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail=str(admission.captured_exception)) from admission.captured_exception
+    return JSONResponse(status_code=HTTPStatus.ACCEPTED, content=record,
                         background=BackgroundTask(app_updates.launch_update_job, record['job_id']))
 
 
@@ -51,5 +52,5 @@ def update_status(job_id: str):
     with lookup:
         record = app_updates.read_job(job_id)
     if lookup.captured_exception is not None:
-        raise HTTPException(status_code=404, detail='Update job not found') from lookup.captured_exception
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='Update job not found') from lookup.captured_exception
     return JSONResponse(content=record, headers={'Cache-Control': 'no-store'})

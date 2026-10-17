@@ -1,6 +1,7 @@
 """Publish one validated MetaList version through the GitHub/PyPI release path."""
 from __future__ import annotations
 
+from http import HTTPStatus
 import argparse
 import ast
 from collections import Counter
@@ -291,7 +292,7 @@ class GitHubClient:
             timeout=30,
         )
         response.raise_for_status()
-        if response.status_code != 302:
+        if response.status_code != HTTPStatus.FOUND:
             raise ReleaseError(f"GitHub artifact request returned HTTP {response.status_code}, expected 302")
         download = requests.get(response.headers["Location"], timeout=60)
         download.raise_for_status()
@@ -470,11 +471,11 @@ def wait_for_pypi(*, version: str, console: Console) -> dict[str, object]:
         progress.add_task(f"Waiting for metalist {version} on PyPI", total=None)
         while time.monotonic() < deadline:
             response = requests.get(url, timeout=30)
-            if response.status_code == 200:
+            if response.status_code == HTTPStatus.OK:
                 payload = response.json()
                 assert isinstance(payload, dict)
                 return payload
-            if response.status_code != 404:
+            if response.status_code != HTTPStatus.NOT_FOUND:
                 raise ReleaseError(f"PyPI returned HTTP {response.status_code} for {version}")
             time.sleep(POLL_SECONDS)
     raise ReleaseError(f"Timed out waiting for metalist {version} on PyPI")

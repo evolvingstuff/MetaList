@@ -1,17 +1,18 @@
 """Required HTTP request contracts; null remains explicit where the protocol allows it."""
 
+from app.utils.byte_sizes import KIB, MIB
 from typing import Annotated, Literal
 from app.services.resource_limits import SHELL_SECONDS
 from typing_extensions import TypedDict
 from pydantic import AfterValidator, ConfigDict, Field, with_config
 
 Identifier = Annotated[str, Field(min_length=1, max_length=256)]
-Text = Annotated[str, Field(max_length=1024 * 1024)]
-Content = Annotated[str, Field(max_length=16 * 1024 * 1024)]
+Text = Annotated[str, Field(max_length=MIB)]
+Content = Annotated[str, Field(max_length=16 * MIB)]
 # Clients build undo contexts as "tab:<id>|search:<executed query>|epoch:<n>", so the
 # limit must admit any Text-sized search query (for example an "Open all references"
 # query ORing every cited note ID) plus that small fixed envelope.
-UndoContext = Annotated[str, Field(min_length=1, max_length=1024 * 1024 + 1024)]
+UndoContext = Annotated[str, Field(min_length=1, max_length=MIB + KIB)]
 Nonnegative = Annotated[int, Field(ge=0)]
 
 

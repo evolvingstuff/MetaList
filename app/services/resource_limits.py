@@ -1,5 +1,6 @@
 """Server-owned resource budgets and conservative retained-object accounting."""
 
+from app.utils.byte_sizes import MIB
 from dataclasses import fields, is_dataclass
 import os
 import sys
@@ -14,14 +15,14 @@ def configured_limit(name: str, default: int) -> int:
     return value
 
 
-VIEW_BYTES = configured_limit('METALIST_VIEW_CACHE_BYTES', 64 * 1024 * 1024)
-UNDO_BYTES = configured_limit('METALIST_UNDO_BYTES', 32 * 1024 * 1024)
+VIEW_BYTES = configured_limit('METALIST_VIEW_CACHE_BYTES', 64 * MIB)
+UNDO_BYTES = configured_limit('METALIST_UNDO_BYTES', 32 * MIB)
 UNDO_OPERATIONS = configured_limit('METALIST_UNDO_OPERATIONS', 100)
 CLIENT_ENTRIES = configured_limit('METALIST_CLIENT_ENTRIES', 32)
 CLIENT_IDLE_SECONDS = configured_limit('METALIST_CLIENT_IDLE_SECONDS', 1800)
 SHELL_SECONDS = configured_limit('METALIST_SHELL_MAX_SECONDS', 1800)
 SHELL_RUNS = configured_limit('METALIST_SHELL_MAX_RUNS', 4)
-SHELL_OUTPUT_BYTES = configured_limit('METALIST_SHELL_OUTPUT_BYTES', 4 * 1024 * 1024)
+SHELL_OUTPUT_BYTES = configured_limit('METALIST_SHELL_OUTPUT_BYTES', 4 * MIB)
 
 
 def retained_bytes(value: object) -> int:

@@ -1,6 +1,7 @@
 """Verified pre-update archives without importing app configuration or opening a namespace."""
 from __future__ import annotations
 
+from app.utils.byte_sizes import MIB
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -83,7 +84,7 @@ def _read_encryption_enabled(snapshot_path: Path) -> bool:
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as source:
-        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+        for chunk in iter(lambda: source.read(MIB), b""):
             digest.update(chunk)
     return digest.hexdigest()
 
@@ -107,7 +108,7 @@ def _verify_archive(archive_path: Path, manifest: dict) -> None:
             assert stream is not None
             digest = hashlib.sha256()
             with stream:
-                for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                for chunk in iter(lambda: stream.read(MIB), b""):
                     digest.update(chunk)
             if member.size != entry["size_bytes"] or digest.hexdigest() != entry["sha256"]:
                 raise RuntimeError(f"Backup checksum verification failed: {archive_path}")

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from http import HTTPStatus
 from fastapi import HTTPException, Request, Response
 
 from app.config import ACTIVE_NAMESPACE
@@ -38,14 +39,14 @@ def read_request_auth_token(request: Request) -> tuple[str | None, str | None]:
 def get_request_auth_token(request: Request) -> str | None:
     token, error_detail = read_request_auth_token(request)
     if error_detail is not None:
-        raise HTTPException(status_code=401, detail=error_detail)
+        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED, detail=error_detail)
     return token
 
 
 def require_request_auth_token(request: Request) -> str:
     token = get_request_auth_token(request)
     if token is None:
-        raise HTTPException(status_code=401, detail="Authentication required")
+        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED, detail="Authentication required")
     return token
 
 

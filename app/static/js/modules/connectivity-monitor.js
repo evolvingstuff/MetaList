@@ -1,3 +1,4 @@
+import { HTTP_STATUS } from './http-status.js';
 import { ApplicationState } from './application-state.js';
 import { rethrowUnexpectedError } from './expected-errors.js';
 /**
@@ -76,7 +77,7 @@ export const ConnectivityMonitor = {
 
         if (response.ok) {
             ErrorHandler.handleConnectionRestored();
-        } else if (response.status === 401) {
+        } else if (response.status === HTTP_STATUS.UNAUTHORIZED) {
             ErrorHandler.handleApiError(null, response);
         } else {
             console.log('[ConnectivityMonitor] Server returned error:', response.status);

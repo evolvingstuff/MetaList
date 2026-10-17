@@ -1,3 +1,5 @@
+import { HTTP_STATUS, isErrorStatus, isServerErrorStatus } from './http-status.js';
+
 export function isNetworkTransportError(error) {
     if (!error || typeof error !== 'object') {
         return false;
@@ -30,19 +32,19 @@ export function classifyApiFailure(error, response) {
         if (!Number.isInteger(response.status)) {
             throw new Error('classifyApiFailure response.status must be an integer');
         }
-        if (response.status === 401) {
+        if (response.status === HTTP_STATUS.UNAUTHORIZED) {
             return {
                 kind: 'auth',
                 message: 'Your session has expired. Please log in again.',
             };
         }
-        if (response.status >= 500) {
+        if (isServerErrorStatus(response.status)) {
             return {
                 kind: 'http',
                 message: `Server error (${response.status}). Please try again.`,
             };
         }
-        if (response.status >= 400) {
+        if (isErrorStatus(response.status)) {
             return {
                 kind: 'http',
                 message: `Request failed (${response.status}). Please check your input and try again.`,

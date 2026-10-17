@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from http import HTTPStatus
 import logging
 from functools import partial
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
@@ -476,33 +477,33 @@ def _verify_token(
 
 def _require_auth(token: Annotated[Optional[str], Depends(_verify_token)]) -> str:
     if not token:
-        raise HTTPException(status_code=401, detail="Authentication required")
+        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED, detail="Authentication required")
     return token
 
 
 def _require_body_object(payload: object) -> dict[str, object]:
     if not isinstance(payload, dict):
-        raise HTTPException(status_code=400, detail="Request body must be a JSON object")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Request body must be a JSON object")
     return payload
 
 
 def _require_string_field(payload: dict[str, object], field_name: str) -> str:
     if field_name not in payload:
-        raise HTTPException(status_code=400, detail=f"{field_name} is required")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{field_name} is required")
     value = payload[field_name]
     if not isinstance(value, str):
-        raise HTTPException(status_code=400, detail=f"{field_name} must be a string")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{field_name} must be a string")
     if value.strip() == "":
-        raise HTTPException(status_code=400, detail=f"{field_name} must not be empty")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{field_name} must not be empty")
     return value
 
 
 def _require_int_field(payload: dict[str, object], field_name: str) -> int:
     if field_name not in payload:
-        raise HTTPException(status_code=400, detail=f"{field_name} is required")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{field_name} is required")
     value = payload[field_name]
     if not isinstance(value, int):
-        raise HTTPException(status_code=400, detail=f"{field_name} must be an integer")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{field_name} must be an integer")
     return value
 
 
@@ -513,16 +514,16 @@ def _optional_int_field(payload: dict[str, object], field_name: str) -> int | No
     if value is None:
         return None
     if not isinstance(value, int):
-        raise HTTPException(status_code=400, detail=f"{field_name} must be an integer or null")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{field_name} must be an integer or null")
     return value
 
 
 def _require_list_field(payload: dict[str, object], field_name: str) -> list[object]:
     if field_name not in payload:
-        raise HTTPException(status_code=400, detail=f"{field_name} is required")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{field_name} is required")
     value = payload[field_name]
     if not isinstance(value, list):
-        raise HTTPException(status_code=400, detail=f"{field_name} must be a list")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{field_name} must be a list")
     return value
 
 
@@ -540,16 +541,16 @@ def login(
     allowed, retry_after_seconds = login_rate_limiter.check_allowed(rate_limit_key)
     if not allowed:
         raise HTTPException(
-            status_code=429,
+            status_code=HTTPStatus.TOO_MANY_REQUESTS,
             detail=f"Too many login attempts. Try again in {retry_after_seconds} seconds.",
         )
 
     auth = AuthService(db)
     if not auth.has_password():
-        raise HTTPException(status_code=400, detail="No password is set. Please set a password first.")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="No password is set. Please set a password first.")
     if not auth.verify_password(submitted_password):
         login_rate_limiter.record_failure(rate_limit_key)
-        raise HTTPException(status_code=401, detail="Invalid password")
+        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED, detail="Invalid password")
 
     dek = auth.unwrap_dek_for_password(submitted_password)
     auth.run_authenticated_database_migrations(dek=dek)
@@ -683,7 +684,7 @@ def create_passwordless_session(
 ):
     auth = AuthService(db)
     if auth.has_password():
-        raise HTTPException(status_code=400, detail="Password is set. Use /login instead.")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Password is set. Use /login instead.")
 
     invalidate_runtime_work()
     clear_sensitive_caches()
@@ -792,7 +793,7 @@ def open_login_namespace_route(payload: LoginNamespaceOpenRequest):
         )
     if launch_capture.captured_exception is not None:
         exc = launch_capture.captured_exception
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)) from exc
     if result is None:
         raise RuntimeError("Namespace login open did not return a result")
     return LoginNamespaceOpenResponse(
@@ -833,7 +834,7 @@ def open_namespace(
         )
     if launch_capture.captured_exception is not None:
         exc = launch_capture.captured_exception
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)) from exc
     if result is None:
         raise RuntimeError("Namespace launch did not return a result")
     return {
@@ -865,7 +866,7 @@ def save_namespace_ports(
     requested_profiles: list[NamespaceLaunchProfile] = []
     for raw_profile in raw_profiles:
         if not isinstance(raw_profile, dict):
-            raise HTTPException(status_code=400, detail="profiles entries must be objects")
+            raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="profiles entries must be objects")
         namespace = _require_string_field(raw_profile, "namespace")
         port = _require_int_field(raw_profile, "port")
         https_port = _optional_int_field(raw_profile, "https_port")
@@ -892,7 +893,7 @@ def save_namespace_ports(
         )
     if save_capture.captured_exception is not None:
         exc = save_capture.captured_exception
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)) from exc
     if result is None:
         raise RuntimeError("Namespace ports save did not return a result")
     return {
@@ -925,7 +926,7 @@ def _delete_namespace_from_body(*, body: dict[str, object], target_namespace: st
         )
     if delete_capture.captured_exception is not None:
         exc = delete_capture.captured_exception
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)) from exc
     if result is None:
         raise RuntimeError("Namespace deletion did not return a result")
 
@@ -1023,7 +1024,7 @@ def rename_active_namespace(
         )
     if rename_capture.captured_exception is not None:
         exc = rename_capture.captured_exception
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)) from exc
     if result is None:
         raise RuntimeError("Namespace rename did not return a result")
     return {
@@ -1045,9 +1046,9 @@ def namespace_delete_job_status(
         job_record = load_namespace_deletion_job(job_id=job_id)
     if job_record_capture.captured_exception is not None:
         exc = job_record_capture.captured_exception
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)) from exc
     if job_record is None:
-        raise HTTPException(status_code=404, detail=f"Namespace deletion job not found: {job_id}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Namespace deletion job not found: {job_id}")
     return job_record
 
 
@@ -1059,9 +1060,9 @@ def namespace_rename_job_status(job_id: str):
         job_record = load_namespace_rename_job(job_id=job_id)
     if job_record_capture.captured_exception is not None:
         exc = job_record_capture.captured_exception
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)) from exc
     if job_record is None:
-        raise HTTPException(status_code=404, detail=f"Namespace rename job not found: {job_id}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Namespace rename job not found: {job_id}")
     return job_record
 
 
@@ -1073,7 +1074,7 @@ def hydrate_cache(
 ):
     auth = AuthService(db)
     if not auth.has_password():
-        raise HTTPException(status_code=400, detail="Hydration is only required when a password is set.")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Hydration is only required when a password is set.")
 
     needs_hydration = auth_cache_state.cache_refresh_needed()
     if not note_store.loaded:
@@ -1100,10 +1101,10 @@ def create_password(
 ):
     auth = AuthService(db)
     if auth.has_password():
-        raise HTTPException(status_code=400, detail="Password already exists. Use change endpoint instead.")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Password already exists. Use change endpoint instead.")
     success, message = auth.set_password(payload.password.get_secret_value(), KDF_TIME_COST)
     if not success:
-        raise HTTPException(status_code=400, detail=message)
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=message)
     token_service.revoke_all_tokens()
     invalidate_runtime_work()
     clear_sensitive_caches()
@@ -1130,7 +1131,7 @@ def change_password(
         KDF_TIME_COST,
     )
     if not success:
-        raise HTTPException(status_code=400, detail=message)
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=message)
     token_service.revoke_all_tokens()
     invalidate_runtime_work()
     clear_sensitive_caches()
@@ -1153,7 +1154,7 @@ def remove_password(
     auth = AuthService(db)
     success, message = auth.remove_password(payload.current_password.get_secret_value())
     if not success:
-        raise HTTPException(status_code=400, detail=message)
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=message)
     token_service.revoke_all_tokens()
     invalidate_runtime_work()
     clear_sensitive_caches()

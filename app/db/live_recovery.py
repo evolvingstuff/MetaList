@@ -5,6 +5,7 @@ ready manifest is durable before the first live write. An absent committed
 marker means startup restores the entire original set, including absent files.
 """
 
+from app.utils.byte_sizes import MIB
 from contextlib import contextmanager
 import hashlib
 import json
@@ -54,7 +55,7 @@ def _sync_file(path: Path) -> None:
 def _digest(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open('rb') as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b''):
+        for chunk in iter(lambda: handle.read(MIB), b''):
             digest.update(chunk)
     return digest.hexdigest()
 

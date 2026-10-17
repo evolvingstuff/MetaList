@@ -1,3 +1,4 @@
+import { isServerErrorStatus } from './http-status.js';
 import { ApplicationState } from './application-state.js';
 import { HttpRequestError, rethrowUnexpectedError } from './expected-errors.js';
 import { closeAllFloatingNotes } from './mode-manager/services/floating-note-service.js';
@@ -624,7 +625,7 @@ export const Auth = {
         }
 
         if (!response.ok) {
-            const fallbackPrefix = response.status >= 500
+            const fallbackPrefix = isServerErrorStatus(response.status)
                 ? 'Database check or login failed on the server'
                 : 'Login failed';
             this._rejectLoginAttempt(await this._readResponseDetail(response, fallbackPrefix));

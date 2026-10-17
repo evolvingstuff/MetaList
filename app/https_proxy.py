@@ -1,5 +1,6 @@
 """Bounded HTTP transport for the namespace HTTPS listener."""
 
+from http import HTTPStatus
 import http.client
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import logging
@@ -105,7 +106,7 @@ def make_proxy_handler(*, backend_host: str, backend_port: int, forward_headers)
             for key, value in response.getheaders():
                 if key.casefold() not in HOP_HEADERS | response_tokens | {'content-length'}:
                     self.send_header(key, value)
-            has_body = self.command != 'HEAD' and response.status not in {204, 304} and response.status >= 200
+            has_body = self.command != 'HEAD' and response.status not in {HTTPStatus.NO_CONTENT, HTTPStatus.NOT_MODIFIED} and response.status >= HTTPStatus.OK
             if has_body:
                 self.send_header('Transfer-Encoding', 'chunked')
             elif response.getheader('Content-Length') is not None and self.command == 'HEAD':

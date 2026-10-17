@@ -1,6 +1,7 @@
 """Exercise the installed CLI and namespace children against disposable data."""
 from __future__ import annotations
 
+from http import HTTPStatus
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack, suppress
@@ -36,7 +37,7 @@ def _request(port: int, path: str, *, host: str, use_https: bool, tls_context: s
         connection.request("GET", path, headers={"X-Metalist-Tab-Id": "00000000-0000-4000-8000-000000000001"})
         response = connection.getresponse()
         body = response.read()
-        assert response.status == 200, f"{path}: HTTP {response.status}: {body[:500]!r}"
+        assert response.status == HTTPStatus.OK, f"{path}: HTTP {response.status}: {body[:500]!r}"
         return body
     finally:
         connection.close()
@@ -195,7 +196,7 @@ def _verify_asset_batch(*, port: int, use_https: bool, tls_context: ssl.SSLConte
                 connection.request('GET', path, headers={'Accept-Encoding': 'gzip'})
                 response = connection.getresponse()
                 body = response.read()
-                assert response.status == 200, f'{path}: HTTP {response.status}'
+                assert response.status == HTTPStatus.OK, f'{path}: HTTP {response.status}'
                 encoding = response.getheader('Content-Encoding')
                 assert encoding in (None, 'gzip'), f'{path}: unexpected encoding {encoding}'
                 if encoding == 'gzip':
@@ -230,7 +231,7 @@ def _verify_remote_http_redirect(*, host: str, http_port: int, https_port: int, 
         connection.request('GET', path)
         response = connection.getresponse()
         response.read()
-        assert response.status == 307, f'Expected remote HTTP redirect: {response.status}'
+        assert response.status == HTTPStatus.TEMPORARY_REDIRECT, f'Expected remote HTTP redirect: {response.status}'
         assert response.getheader('Location') == f'https://{host}:{https_port}{path}'
     finally:
         connection.close()

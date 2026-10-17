@@ -1,5 +1,6 @@
 """Authentication middleware for API requests."""
 
+from http import HTTPStatus
 from fastapi import Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -60,7 +61,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         # Block any v1 API usage with an explicit 410 Gone (no DB access)
         if path.startswith('/api') and not (path.startswith(API_PREFIX) or path == API_PREFIX):
-            return JSONResponse(status_code=410, content={"detail": "Use the current API version"})
+            return JSONResponse(status_code=HTTPStatus.GONE, content={"detail": "Use the current API version"})
         
         # Check if maintenance mode is active first
         if maintenance_service.is_active():
@@ -69,7 +70,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 return await call_next(request)
             
             # Redirect all other requests to maintenance page
-            return RedirectResponse(url="/maintenance", status_code=302)
+            return RedirectResponse(url="/maintenance", status_code=HTTPStatus.FOUND)
         
         if self.is_public_path(path=path):
             return await call_next(request)
@@ -80,16 +81,16 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         token, error_detail = read_request_auth_token(request)
         if error_detail is not None:
-            return JSONResponse(status_code=401, content={"detail": error_detail})
+            return JSONResponse(status_code=HTTPStatus.UNAUTHORIZED, content={"detail": error_detail})
 
         if token is None:
             return JSONResponse(
-                status_code=401,
+                status_code=HTTPStatus.UNAUTHORIZED,
                 content={"detail": "Authentication required"}
             )
 
         if "x-metalist-tab-id" not in request.headers or request.headers["x-metalist-tab-id"] == "":
-            return JSONResponse(status_code=400, content={"detail": "X-Metalist-Tab-Id header required"})
+            return JSONResponse(status_code=HTTPStatus.BAD_REQUEST, content={"detail": "X-Metalist-Tab-Id header required"})
         tab_id = request.headers["x-metalist-tab-id"]
 
         # A tab claims the session once, after login; other requests leave the header out.
@@ -99,7 +100,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         if not token_service.verify_token_for_tab(token, tab_id):
             return JSONResponse(
-                status_code=401,
+                status_code=HTTPStatus.UNAUTHORIZED,
                 content={"detail": "Authentication required"}
             )
 

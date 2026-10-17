@@ -18,7 +18,9 @@ named_constant_definitions = "allow"
 # "error": MAGIC001 findings fail the gate. "review": reported, never gating (a deviation).
 severity = "error"
 allowed_values = [0, 1]
-allow_unary_negative_one = false
+# -1 is the last-item index, the all-but-last slice and the not-found marker:
+# idioms, not magic values (the user's call, 2026-10-16).
+allow_unary_negative_one = true
 exclude_configuration_files = true
 # Basenames (or path globs) that are tooling configuration rather than application
 # source. Matching files are exempt from MAGIC001 and listed in the report.

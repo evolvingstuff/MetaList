@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from http import HTTPStatus
 import asyncio
 import codecs
 from dataclasses import dataclass, replace
@@ -378,7 +379,7 @@ def _exchange_web_request(url: str, target: ResolvedPublicHttpTarget) -> _Downlo
         },
     ) as client:
         with client.stream("GET", url) as response:
-            if 300 <= response.status_code < 400:
+            if httpx.codes.is_redirect(response.status_code):
                 location = sent_or_none(response.headers, "location")
                 if location is None or location.strip() == "":
                     return _download_error(url, "redirect_without_location")
@@ -394,7 +395,7 @@ def _exchange_web_request(url: str, target: ResolvedPublicHttpTarget) -> _Downlo
                     truncated=False,
                     error_kind="",
                 )
-            if response.status_code >= 400:
+            if response.status_code >= HTTPStatus.BAD_REQUEST:
                 return _download_error(url, f"http_{response.status_code}")
             # A response without a content type is judged by its bytes below.
             content_type = sent_or_none(response.headers, "content-type")

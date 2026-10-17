@@ -1,3 +1,4 @@
+import { HTTP_STATUS } from './http-status.js';
 import { FileEditSessionExpiredError, FileRevisionConflictError, HttpRequestError, ServerInputRejectedError, rethrowUnexpectedError } from './expected-errors.js';
 import { CONFIG } from './config.js';
 import { DOMUtils } from './dom-utils.js';
@@ -54,10 +55,10 @@ async function postFileEditSession(url, body, description) {
         headers: buildSessionHeaders(true),
         body: JSON.stringify(body),
     });
-    if (response.status === 409) {
+    if (response.status === HTTP_STATUS.CONFLICT) {
         await throwFileRevisionConflict(response, description);
     }
-    if (response.status === 410) {
+    if (response.status === HTTP_STATUS.GONE) {
         throw new FileEditSessionExpiredError(`${description}: the editing session is no longer open`);
     }
     if (!response.ok) {
@@ -188,7 +189,7 @@ export const NotesAPI = {
                 headers: headers
             });
 
-            if (response.status === 400 && response.headers.get('content-type')?.includes('application/json')) {
+            if (response.status === HTTP_STATUS.BAD_REQUEST && response.headers.get('content-type')?.includes('application/json')) {
                 const rejection = await response.clone().json();
                 if (rejection.inputRejected === true && typeof rejection.detail === 'string') {
                     throw new ServerInputRejectedError(rejection.detail);
@@ -1366,7 +1367,7 @@ export const FilesAPI = {
             headers: buildAuthHeaders(false),
             body: formData,
         });
-        if (response.status === 409) {
+        if (response.status === HTTP_STATUS.CONFLICT) {
             await throwFileRevisionConflict(response, 'File changed elsewhere');
         }
         if (!response.ok) {
@@ -1394,7 +1395,7 @@ export const FilesAPI = {
             headers: buildAuthHeaders(false),
             body: formData,
         });
-        if (response.status === 409) {
+        if (response.status === HTTP_STATUS.CONFLICT) {
             await throwFileRevisionConflict(response, 'File changed before its preview was saved');
         }
         if (!response.ok) {
@@ -1462,7 +1463,7 @@ export const FilesAPI = {
             method: 'GET',
             headers: buildAuthHeaders(false),
         });
-        if (response.status === 404) {
+        if (response.status === HTTP_STATUS.NOT_FOUND) {
             return { status: 'missing' };
         }
         if (!response.ok) {

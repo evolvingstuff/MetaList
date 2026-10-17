@@ -1,3 +1,4 @@
+from http import HTTPStatus
 from starlette.concurrency import run_in_threadpool
 from fastapi import FastAPI, Request, Depends
 from app.db.files_sql import AttachmentSizeExceeded
@@ -159,19 +160,19 @@ async def start_diagnostics_watchdogs():
 @app.exception_handler(RequestValidationError)
 async def request_validation_error(request: Request, exc: RequestValidationError):
     # External input errors are not internal programming failures.
-    return JSONResponse(status_code=422, content={"detail": summarize_validation_errors(exc.errors())})
+    return JSONResponse(status_code=HTTPStatus.UNPROCESSABLE_ENTITY, content={"detail": summarize_validation_errors(exc.errors())})
 
 
 @app.exception_handler(InputRejected)
 async def handle_input_rejected(request: Request, exc: InputRejected):
     # Expected, validated user-input failures (e.g. a search that does not
     # parse): a polite 400 the browser shows as a warning, never a 500.
-    return JSONResponse(status_code=400, content={"detail": str(exc), "inputRejected": True})
+    return JSONResponse(status_code=HTTPStatus.BAD_REQUEST, content={"detail": str(exc), "inputRejected": True})
 
 
 @app.exception_handler(OntologyParseError)
 async def handle_ontology_parse_error(request: Request, exc: OntologyParseError):
-    return JSONResponse(status_code=400, content={"detail": str(exc)})
+    return JSONResponse(status_code=HTTPStatus.BAD_REQUEST, content={"detail": str(exc)})
 
 
 def _diagnostic_request_id(request: Request) -> str:
@@ -219,7 +220,7 @@ async def handle_unexpected_server_error(request: Request, exc: Exception):
     if request_id:
         diagnostic["requestId"] = request_id
     return JSONResponse(
-        status_code=500,
+        status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
         content={
             "detail": "Internal server error",
             "diagnostic": diagnostic,
@@ -347,7 +348,7 @@ else:
 class NoCacheStaticFiles(StarletteStaticFiles):
     async def get_response(self, path, scope):
         response = await super().get_response(path, scope)
-        if response.status_code == 200:
+        if response.status_code == HTTPStatus.OK:
             # Set no-cache headers for all static files
             response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
             response.headers['Pragma'] = 'no-cache'
@@ -397,12 +398,12 @@ if TEST_MODE:
 @app.api_route(f"{V1_API_PREFIX}/{{rest_of_path:path}}", methods=["GET","POST","PUT","DELETE","PATCH","OPTIONS","HEAD"])
 @transactional_route
 async def block_v1_any(rest_of_path: str):
-    return JSONResponse(status_code=410, content={"detail": "Use the current API version"})
+    return JSONResponse(status_code=HTTPStatus.GONE, content={"detail": "Use the current API version"})
 
 @app.api_route(f"{V1_API_PREFIX}", methods=["GET","POST","PUT","DELETE","PATCH","OPTIONS","HEAD"])
 @transactional_route
 async def block_v1_root():
-    return JSONResponse(status_code=410, content={"detail": "Use the current API version"})
+    return JSONResponse(status_code=HTTPStatus.GONE, content={"detail": "Use the current API version"})
 
 
 @app.middleware("http")
@@ -420,7 +421,7 @@ async def redirect_remote_http_to_https(request: Request, call_next):
         request_query=request.url.query,
     )
     if redirect_url is not None:
-        return RedirectResponse(url=redirect_url, status_code=307)
+        return RedirectResponse(url=redirect_url, status_code=HTTPStatus.TEMPORARY_REDIRECT)
     return await call_next(request)
 
 
@@ -594,16 +595,16 @@ def _build_force_reauth_url(*, url: str) -> str:
 async def namespace_deleted_page(request: Request):
     job_id = _page_param(request, "job")
     if job_id is None:
-        return HTMLResponse("Missing namespace deletion job", status_code=400)
+        return HTMLResponse("Missing namespace deletion job", status_code=HTTPStatus.BAD_REQUEST)
     job_record_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/main.py:namespace_deleted_page:job_record_capture')
     job_record: dict[str, object] | None = None
     with job_record_capture:
         job_record = load_namespace_deletion_job(job_id=job_id)
     if job_record_capture.captured_exception is not None:
         exc = job_record_capture.captured_exception
-        return HTMLResponse(str(exc), status_code=400)
+        return HTMLResponse(str(exc), status_code=HTTPStatus.BAD_REQUEST)
     if job_record is None:
-        return HTMLResponse(f"Namespace deletion job not found: {job_id}", status_code=404)
+        return HTMLResponse(f"Namespace deletion job not found: {job_id}", status_code=HTTPStatus.NOT_FOUND)
 
     template = templates.get_template("namespace_deleted.html")
     namespace_links = _build_namespace_deleted_links(
@@ -646,26 +647,26 @@ def _open_catalog_namespace(*, namespace: str) -> NamespaceOpenResult:
 async def namespace_deleted_open_page(request: Request):
     job_id = _page_param(request, "job")
     if job_id is None:
-        return HTMLResponse("Missing namespace deletion job", status_code=400)
+        return HTMLResponse("Missing namespace deletion job", status_code=HTTPStatus.BAD_REQUEST)
     namespace = _page_param(request, "namespace")
     if namespace is None:
-        return HTMLResponse("Missing namespace", status_code=400)
+        return HTMLResponse("Missing namespace", status_code=HTTPStatus.BAD_REQUEST)
     job_record_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/main.py:namespace_deleted_open_page:job_record_capture')
     job_record: dict[str, object] | None = None
     with job_record_capture:
         job_record = load_namespace_deletion_job(job_id=job_id)
     if job_record_capture.captured_exception is not None:
         exc = job_record_capture.captured_exception
-        return HTMLResponse(str(exc), status_code=400)
+        return HTMLResponse(str(exc), status_code=HTTPStatus.BAD_REQUEST)
     if job_record is None:
-        return HTMLResponse(f"Namespace deletion job not found: {job_id}", status_code=404)
+        return HTMLResponse(f"Namespace deletion job not found: {job_id}", status_code=HTTPStatus.NOT_FOUND)
     if job_record["status"] == "pending":
-        return HTMLResponse("Namespace deletion is still in progress", status_code=409)
+        return HTMLResponse("Namespace deletion is still in progress", status_code=HTTPStatus.CONFLICT)
     if (
         namespace == job_record["deleted_namespace"]
         and namespace != job_record["redirect_namespace"]
     ):
-        return HTMLResponse("Deleted namespace is unavailable", status_code=400)
+        return HTMLResponse("Deleted namespace is unavailable", status_code=HTTPStatus.BAD_REQUEST)
 
     launch_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/main.py:namespace_deleted_open_page:launch_capture')
     result = None
@@ -673,10 +674,10 @@ async def namespace_deleted_open_page(request: Request):
         result = _open_catalog_namespace(namespace=namespace)
     if launch_capture.captured_exception is not None:
         exc = launch_capture.captured_exception
-        return HTMLResponse(str(exc), status_code=400)
+        return HTMLResponse(str(exc), status_code=HTTPStatus.BAD_REQUEST)
     if result is None:
         raise RuntimeError("Namespace launch did not return a result")
-    response = RedirectResponse(url=_build_force_reauth_url(url=result.url), status_code=307)
+    response = RedirectResponse(url=_build_force_reauth_url(url=result.url), status_code=HTTPStatus.TEMPORARY_REDIRECT)
     clear_auth_cookie(response=response)
     return response
 
@@ -685,16 +686,16 @@ async def namespace_deleted_open_page(request: Request):
 async def namespace_renamed_page(request: Request):
     job_id = _page_param(request, "job")
     if job_id is None:
-        return HTMLResponse("Missing namespace rename job", status_code=400)
+        return HTMLResponse("Missing namespace rename job", status_code=HTTPStatus.BAD_REQUEST)
     job_record_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/main.py:namespace_renamed_page:job_record_capture')
     job_record: dict[str, object] | None = None
     with job_record_capture:
         job_record = load_namespace_rename_job(job_id=job_id)
     if job_record_capture.captured_exception is not None:
         exc = job_record_capture.captured_exception
-        return HTMLResponse(str(exc), status_code=400)
+        return HTMLResponse(str(exc), status_code=HTTPStatus.BAD_REQUEST)
     if job_record is None:
-        return HTMLResponse(f"Namespace rename job not found: {job_id}", status_code=404)
+        return HTMLResponse(f"Namespace rename job not found: {job_id}", status_code=HTTPStatus.NOT_FOUND)
 
     page_state = json.dumps(
         {
@@ -721,21 +722,21 @@ async def namespace_renamed_page(request: Request):
 async def namespace_renamed_open_page(request: Request):
     job_id = _page_param(request, "job")
     if job_id is None:
-        return HTMLResponse("Missing namespace rename job", status_code=400)
+        return HTMLResponse("Missing namespace rename job", status_code=HTTPStatus.BAD_REQUEST)
     job_record_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/main.py:namespace_renamed_open_page:job_record_capture')
     job_record: dict[str, object] | None = None
     with job_record_capture:
         job_record = load_namespace_rename_job(job_id=job_id)
     if job_record_capture.captured_exception is not None:
         exc = job_record_capture.captured_exception
-        return HTMLResponse(str(exc), status_code=400)
+        return HTMLResponse(str(exc), status_code=HTTPStatus.BAD_REQUEST)
     if job_record is None:
-        return HTMLResponse(f"Namespace rename job not found: {job_id}", status_code=404)
+        return HTMLResponse(f"Namespace rename job not found: {job_id}", status_code=HTTPStatus.NOT_FOUND)
     if job_record["status"] != "succeeded":
-        return HTMLResponse("Namespace rename is not complete", status_code=409)
+        return HTMLResponse("Namespace rename is not complete", status_code=HTTPStatus.CONFLICT)
     if ACTIVE_NAMESPACE != job_record["target_namespace"]:
-        return HTMLResponse("Renamed namespace is not running here", status_code=409)
-    response = RedirectResponse(url="/?force_reauth=1", status_code=307)
+        return HTMLResponse("Renamed namespace is not running here", status_code=HTTPStatus.CONFLICT)
+    response = RedirectResponse(url="/?force_reauth=1", status_code=HTTPStatus.TEMPORARY_REDIRECT)
     clear_auth_cookie(response=response)
     return response
 
@@ -757,42 +758,42 @@ async def locked_page(request: Request, db: Annotated[SafeSession, Depends(get_d
 
 @app.exception_handler(AttachmentSizeExceeded)
 async def attachment_size_error(request: Request, exc: AttachmentSizeExceeded):
-    return JSONResponse(status_code=413, content={"detail": "Attachment exceeds METALIST_MAX_ATTACHMENT_BYTES; increase this limit to download a larger legacy attachment"})
+    return JSONResponse(status_code=HTTPStatus.REQUEST_ENTITY_TOO_LARGE, content={"detail": "Attachment exceeds METALIST_MAX_ATTACHMENT_BYTES; increase this limit to download a larger legacy attachment"})
 
 
 @app.exception_handler(FileRevisionConflict)
 async def file_revision_conflict(request: Request, exc: FileRevisionConflict):
-    return JSONResponse(status_code=409, content={"detail": str(exc), "currentRevision": exc.current_revision})
+    return JSONResponse(status_code=HTTPStatus.CONFLICT, content={"detail": str(exc), "currentRevision": exc.current_revision})
 
 
 @app.exception_handler(FileNotEditable)
 async def file_not_editable(request: Request, exc: FileNotEditable):
-    return JSONResponse(status_code=400, content={"detail": str(exc)})
+    return JSONResponse(status_code=HTTPStatus.BAD_REQUEST, content={"detail": str(exc)})
 
 
 @app.exception_handler(InvalidFileContent)
 async def invalid_file_content(request: Request, exc: InvalidFileContent):
-    return JSONResponse(status_code=400, content={"detail": str(exc)})
+    return JSONResponse(status_code=HTTPStatus.BAD_REQUEST, content={"detail": str(exc)})
 
 
 @app.exception_handler(FilePreviewMissing)
 async def file_preview_missing(request: Request, exc: FilePreviewMissing):
-    return JSONResponse(status_code=404, content={"detail": str(exc)})
+    return JSONResponse(status_code=HTTPStatus.NOT_FOUND, content={"detail": str(exc)})
 
 
 @app.exception_handler(FileEditSessionMissing)
 async def file_edit_session_missing(request: Request, exc: FileEditSessionMissing):
-    return JSONResponse(status_code=410, content={"detail": str(exc)})
+    return JSONResponse(status_code=HTTPStatus.GONE, content={"detail": str(exc)})
 
 
 @app.exception_handler(HierarchyError)
 async def hierarchy_error(request: Request, exc: HierarchyError):
-    return JSONResponse(status_code=422, content={'detail': str(exc)})
+    return JSONResponse(status_code=HTTPStatus.UNPROCESSABLE_ENTITY, content={'detail': str(exc)})
 
 
 @app.exception_handler(ShellCapacityError)
 async def shell_capacity_error(request: Request, exc: ShellCapacityError):
-    return JSONResponse(status_code=429, content={'detail': str(exc)})
+    return JSONResponse(status_code=HTTPStatus.TOO_MANY_REQUESTS, content={'detail': str(exc)})
 
 
 @app.on_event('shutdown')
@@ -802,9 +803,9 @@ async def stop_shell_runs():
 
 @app.exception_handler(ClipboardCapacityError)
 async def clipboard_capacity_error(request: Request, exc: ClipboardCapacityError):
-    return JSONResponse(status_code=413, content={'detail': str(exc)})
+    return JSONResponse(status_code=HTTPStatus.REQUEST_ENTITY_TOO_LARGE, content={'detail': str(exc)})
 
 
 @app.exception_handler(ShellRunNotFound)
 async def shell_run_not_found(request: Request, exc: ShellRunNotFound):
-    return JSONResponse(status_code=404, content={"detail": str(exc)})
+    return JSONResponse(status_code=HTTPStatus.NOT_FOUND, content={"detail": str(exc)})

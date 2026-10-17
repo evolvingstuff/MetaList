@@ -6,6 +6,7 @@ URL to our disposable index, and invokes the extracted standalone repair ZIP.
 """
 from __future__ import annotations
 
+from http import HTTPStatus
 import base64
 import csv
 import hashlib
@@ -107,7 +108,7 @@ def _has_updated_namespace(*, port: int, namespace: str, version: str) -> bool:
         )
     if probe_capture.captured_exception is not None:
         return False  # Expected while this disposable server is restarting.
-    if response.status_code != 200:
+    if response.status_code != HTTPStatus.OK:
         return False
     status = response.json()
     return status["namespace"] == namespace and status["version"] == version
@@ -152,7 +153,7 @@ def run(wheel: Path, *, repair: bool) -> None:
             else:
                 self.send_error(404)
                 return
-            self.send_response(200)
+            self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
