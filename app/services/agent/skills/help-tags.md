@@ -141,6 +141,7 @@ Unclosed comments behave like unclosed wrappers:
 
 ## Tag Suggestions
 - Suggestions appear only while the tag bar input is focused.
+- Enter and the arrow keys act only on a suggestion list built for the text in the tag bar. While the list for what you just typed is on its way, the one on screen is for older text: Enter then closes it and leaves what you typed alone, and the arrows wait for the new list.
 - The tag bar keeps a muted tag icon inside the input before and during typing; hovering the field shows a `Tags` tooltip.
 - While typing inside a tag token, matching is segment-aware for connector-separated tags: a prefix can match the start of the whole tag or the start of any connector-separated segment (`-`, `_`, `.`, `/`). Example: `wor` suggests both `workspaces` and `databricks-workspaces`, while `orksp` suggests neither.
 - The active typed prefix and note content provide complementary literal evidence. Once a prefix identifies a connector-separated segment, the remaining tag segments are matched against the note, so typing `GPT` in content containing `5.6 sol` promotes `GPT-5.6-sol` over more frequently used `GPT-*` tags.
