@@ -1,3 +1,5 @@
+import { DAYS_PER_WEEK, MS_PER_DAY } from './time-units.js';
+
 // When the backup reminder is due: the namespace's newest backup is older than the
 // chosen period (or there is none), and the user has not hidden the reminder for now.
 
@@ -7,14 +9,12 @@ export const BACKUP_REMINDER_OFF = 'off';
 // Until the user picks another frequency, the reminder runs weekly.
 export const BACKUP_REMINDER_DEFAULT = 'weekly';
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-const DAYS_IN_A_WEEK = 7;
-const DAYS_IN_TWO_WEEKS = 14;
+const WEEKS_IN_A_FORTNIGHT = 2;
 const DAYS_IN_A_MONTH = 30;
 const PERIOD_DAYS_BY_FREQUENCY = Object.freeze({
     daily: 1,
-    weekly: DAYS_IN_A_WEEK,
-    every_2_weeks: DAYS_IN_TWO_WEEKS,
+    weekly: DAYS_PER_WEEK,
+    every_2_weeks: WEEKS_IN_A_FORTNIGHT * DAYS_PER_WEEK,
     monthly: DAYS_IN_A_MONTH,
 });
 // Dismissing the reminder hides it for this long.

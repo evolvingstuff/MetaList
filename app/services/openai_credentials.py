@@ -17,6 +17,8 @@ from app.security.encryption import is_encryption_required
 
 _MINIMUM_API_KEY_CHARACTERS = 20
 _MAXIMUM_API_KEY_CHARACTERS = 512
+# ASCII control characters are the codes below the space.
+_FIRST_NON_CONTROL_CODE = ord(" ")
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,7 +44,7 @@ def validate_openai_api_key(api_key: str) -> str:
         raise OpenAICredentialInputError("OpenAI API key is too short")
     if len(api_key) > _MAXIMUM_API_KEY_CHARACTERS:
         raise OpenAICredentialInputError("OpenAI API key is too long")
-    if any(character.isspace() or ord(character) < 32 for character in api_key):
+    if any(character.isspace() or ord(character) < _FIRST_NON_CONTROL_CODE for character in api_key):
         raise OpenAICredentialInputError(
             "OpenAI API key must not contain whitespace or control characters"
         )

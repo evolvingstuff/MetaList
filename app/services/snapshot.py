@@ -37,6 +37,7 @@ from app.services.view_state import ViewState
 from app.services.editing_image_sizes import editing_image_size_factors
 from app.security.sensitive_cache import SensitiveMemo
 from app.utils.text_utils import strip_html
+from app.utils.time_units import MS_PER_SECOND
 
 # Windowing constants (tuned later)
 # The window is a band of roots around the ones the browser can see: this many
@@ -637,7 +638,9 @@ def _select_view(
 # content has a literal URL image source are skipped up front, and renders
 # that still emitted a proxy source (e.g. from an embedded note) are not stored.
 _REMOTE_IMAGE_PROXY_MARKER = "data-remote-image-proxy-src="
-_VIEW_RENDER_MEMO = SensitiveMemo(maxsize=65536, max_bytes=64 * MIB)
+_VIEW_RENDER_MEMO_ENTRIES = 65536
+_VIEW_RENDER_MEMO_MIB = 64
+_VIEW_RENDER_MEMO = SensitiveMemo(maxsize=_VIEW_RENDER_MEMO_ENTRIES, max_bytes=_VIEW_RENDER_MEMO_MIB * MIB)
 
 
 def _is_render_cacheable(content_html: str) -> bool:
@@ -1045,7 +1048,7 @@ def build_view_state(
     }
 
     if filter_active:
-        elapsed_ms = (time.perf_counter() - t0) * 1000
+        elapsed_ms = (time.perf_counter() - t0) * MS_PER_SECOND
         logger.bind(
             metrics={
                 "elapsed_ms": elapsed_ms,

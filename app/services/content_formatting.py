@@ -102,7 +102,8 @@ _REMOVABLE_FORMATTING_TAGS = frozenset(set(_META_TAG_TO_CLASS) | set(_RENDERER_T
 _CREDENTIAL_TAGS = frozenset({"username", "password"})
 # A hidden password or username shows this, whatever its length, so the length
 # stays hidden too.
-CREDENTIAL_MASK = "\u2022" * 8
+_CREDENTIAL_MASK_LENGTH = 8
+CREDENTIAL_MASK = "\u2022" * _CREDENTIAL_MASK_LENGTH
 _EMAIL_TAGS = frozenset({"email"})
 
 _CREDENTIAL_META = {
@@ -183,6 +184,7 @@ _URL_LABEL_ANCHOR_RE = re.compile(
     r'(?P<opener><a\b[^>]*>)(?P<label>https?://[^<]*)</a\s*>', re.IGNORECASE,
 )
 _NEW_TAB_REL_TOKENS = ("noopener", "noreferrer")
+_SELF_CLOSING_TAG_END = "/>"
 _BLOCK_HTML_TAG_RE = re.compile(
     r"<(?:blockquote|div|dl|fieldset|figure|figcaption|footer|form|h[1-6]|header|hr|li|ol|p|pre|section|table|tbody|td|tfoot|th|thead|tr|ul)\b",
     re.IGNORECASE,
@@ -844,8 +846,8 @@ def _normalize_anchor_tag(tag_html: str) -> str:
 def _ensure_anchor_target_attr(tag_html: str) -> str:
     if _ANCHOR_TARGET_ATTR_RE.search(tag_html):
         return _ANCHOR_TARGET_ATTR_RE.sub(r'\1\2_blank\2', tag_html, count=1)
-    if tag_html.endswith("/>"):
-        return f'{tag_html[:-2]} target="_blank"/>'
+    if tag_html.endswith(_SELF_CLOSING_TAG_END):
+        return f'{tag_html[:-len(_SELF_CLOSING_TAG_END)]} target="_blank"/>'
     return f'{tag_html[:-1]} target="_blank">'
 
 
@@ -863,8 +865,8 @@ def _ensure_anchor_rel_attr(tag_html: str) -> str:
             tag_html,
             count=1,
         )
-    if tag_html.endswith("/>"):
-        return f'{tag_html[:-2]} rel="noopener noreferrer"/>'
+    if tag_html.endswith(_SELF_CLOSING_TAG_END):
+        return f'{tag_html[:-len(_SELF_CLOSING_TAG_END)]} rel="noopener noreferrer"/>'
     return f'{tag_html[:-1]} rel="noopener noreferrer">'
 
 

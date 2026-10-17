@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import unicodedata
 
+_LETTERS_PER_TOKEN = 4
 # Added before dividing a letter run, so it rounds to the nearest token.
 _LETTER_RUN_ROUNDING = 2
 _DIGITS_PER_TOKEN = 3
@@ -30,7 +31,7 @@ def estimate_text_tokens(text: str) -> int:
             while end < len(text) and text[end].isascii() and text[end].isalpha():
                 end += 1
             run_length = end - index
-            estimate += max(1, (run_length + _LETTER_RUN_ROUNDING) // 4)
+            estimate += max(1, (run_length + _LETTER_RUN_ROUNDING) // _LETTERS_PER_TOKEN)
             index = end
             continue
         if character.isascii() and character.isdecimal():

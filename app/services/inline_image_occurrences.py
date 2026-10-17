@@ -12,6 +12,7 @@ _OCCURRENCE_ATTRIBUTE_RE = re.compile(
     r"\sdata-inline-image-occurrence\s*=\s*(?:\"[^\"]*\"|'[^']*'|[^\s>]+)",
     re.IGNORECASE,
 )
+_IMAGE_TAG_OPENING_LENGTH = len("<img")
 
 
 def annotate_inline_image_occurrences(content_html: str) -> str:
@@ -24,7 +25,7 @@ def annotate_inline_image_occurrences(content_html: str) -> str:
         image_tag = _OCCURRENCE_ATTRIBUTE_RE.sub("", match.group(0))
         pieces.append(content_html[cursor : match.start()])
         pieces.append(
-            f'<img data-inline-image-occurrence="{occurrence_index}"{image_tag[4:]}'
+            f'<img data-inline-image-occurrence="{occurrence_index}"{image_tag[_IMAGE_TAG_OPENING_LENGTH:]}'
         )
         cursor = match.end()
     pieces.append(content_html[cursor:])

@@ -52,6 +52,9 @@ _SPOKEN_JOINERS = {"dash": "-", "hyphen": "-", "underscore": "_", "slash": "/"}
 _SENTENCE_PUNCTUATION = ",.?!;:"
 _TAG_DISALLOWED = frozenset(':,"\\><=[]{}()*|;~`')
 _TAG_START_DISALLOWED = frozenset("-+/")
+# A tag character is printable ASCII other than the space: after the space, through the tilde.
+_ASCII_SPACE_CODE = ord(" ")
+_LAST_PRINTABLE_ASCII_CODE = ord("~")
 
 # "foo-Dash bar", "foo - Dash bar", "foo dash bar": a spoken joiner between two
 # words, with or without the symbol Superwhisper also types before it.
@@ -342,7 +345,7 @@ def _new_tag(text: str) -> str:
         else:
             words.append(word.lower())
     candidate = "".join(
-        char for char in "-".join(words) if 0x20 < ord(char) <= 0x7E and char not in _TAG_DISALLOWED
+        char for char in "-".join(words) if _ASCII_SPACE_CODE < ord(char) <= _LAST_PRINTABLE_ASCII_CODE and char not in _TAG_DISALLOWED
     )
     candidate = candidate.lstrip("".join(_TAG_START_DISALLOWED))
     if candidate == "OR":

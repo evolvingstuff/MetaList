@@ -17,6 +17,7 @@ from app.db.file_schema import initialize_file_schema
 from app.models.database import SafeSession
 
 _FILE_MEMORY_URI = "file:metalist_files_memory?mode=memory&cache=shared"
+_ROLLBACK_STACK_FRAME_LIMIT = 50
 
 
 def resolve_file_database_path(note_database_path: Path) -> Path:
@@ -102,7 +103,7 @@ class FileSession:
 
     def rollback(self) -> None:
         self._connection.rollback()
-        stack = "".join(traceback.format_stack(limit=50))
+        stack = "".join(traceback.format_stack(limit=_ROLLBACK_STACK_FRAME_LIMIT))
         exc_type, _, _ = sys.exc_info()
         if exc_type is None:
             logger.error(

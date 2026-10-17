@@ -1,7 +1,8 @@
+import { MINUTES_PER_HOUR } from './time-units.js';
+
 // Local dates, clock times and UTC offsets as text (2026-10-16, 09:05, +02:00),
 // written one way for every caller.
 
-const MINUTES_PER_HOUR = 60;
 // Months, days, hours, minutes and seconds are written with this many digits.
 const CLOCK_FIELD_DIGITS = 2;
 

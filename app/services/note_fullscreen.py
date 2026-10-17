@@ -10,6 +10,10 @@ from app.services.file_registry import file_registry
 from app.services.file_storage import get_file_reference_record
 from app.services.note_store import store as note_store
 
+# Content and children sit two levels deep (inside the article and its div),
+# at two spaces per level.
+_NESTED_BLOCK_INDENT_SPACES = 4
+
 
 def build_note_fullscreen_markup(note_id: str) -> str:
     if not isinstance(note_id, str) or note_id == "":
@@ -72,7 +76,7 @@ def _render_fullscreen_note(
     lines = [
         f'<article class="{" ".join(classes)}">',
         '  <div class="note-content" contenteditable="false">',
-        _indent_block(rendered_content, 4),
+        _indent_block(rendered_content, _NESTED_BLOCK_INDENT_SPACES),
         "  </div>",
         f'  <div class="note-tags" aria-hidden="true">{html.escape(record.tags)}</div>',
     ]
@@ -90,7 +94,7 @@ def _render_fullscreen_note(
         lines.extend(
             [
                 '  <div class="note-children">',
-                _indent_block(child_markup, 4),
+                _indent_block(child_markup, _NESTED_BLOCK_INDENT_SPACES),
                 "  </div>",
             ]
         )

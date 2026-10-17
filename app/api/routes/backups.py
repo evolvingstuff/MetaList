@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.utils.tcp_ports import HIGHEST_PORT
 from http import HTTPStatus
 import secrets
 import shutil
@@ -58,6 +59,7 @@ _FOLDER_PATH_REQUIRED_MESSAGE = "Folder backups require an absolute folder path.
 # A folder backup id is "folder::<namespace>::<filename>".
 _FOLDER_BACKUP_ID_SEPARATOR = "::"
 _FOLDER_BACKUP_ID_PART_COUNT = 3
+_RESTART_AFTER_RESTORE_DELAY_SECONDS = 0.5
 
 
 class BackupSettingsResponse(BaseModel):
@@ -658,7 +660,7 @@ def _next_available_port(*, start_port: int, occupied_ports: set[int]) -> int:
     port = start_port
     while port in occupied_ports:
         port += 1
-    if port > 65535:
+    if port > HIGHEST_PORT:
         raise HTTPException(
             status_code=HTTPStatus.CONFLICT,
             detail=f"No available port found at or above {start_port}",
@@ -1058,7 +1060,7 @@ def restore_backup(
             _reset_runtime_state_after_restore()
         finally:
             maintenance_service.exit_maintenance()
-        _schedule_server_restart_after_restore(delay_seconds=0.5)
+        _schedule_server_restart_after_restore(delay_seconds=_RESTART_AFTER_RESTORE_DELAY_SECONDS)
         active_namespace_restarted = True
         open_namespace_suggested = False
     else:
@@ -1151,7 +1153,7 @@ def import_backup(
             _reset_runtime_state_after_restore()
         finally:
             maintenance_service.exit_maintenance()
-        _schedule_server_restart_after_restore(delay_seconds=0.5)
+        _schedule_server_restart_after_restore(delay_seconds=_RESTART_AFTER_RESTORE_DELAY_SECONDS)
     else:
         stop_namespace_for_restore(namespace=target_namespace)
         _restore_import_to_target(

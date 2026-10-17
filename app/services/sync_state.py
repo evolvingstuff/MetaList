@@ -2,6 +2,8 @@ import uuid
 import time
 from typing import Dict, Optional, Any
 
+NOTE_LOCK_TIMEOUT_SECONDS = 5.0
+
 # Global in-memory sync state - THIS IS MUTABLE SERVER STATE
 _current_update_uuid = str(uuid.uuid4())
 
@@ -46,7 +48,7 @@ def cleanup_expired_locks() -> bool:
     expired_notes = []
     
     for note_id, lock_info in _note_locks.items():
-        if current_time - lock_info["timestamp"] >= 5.0:
+        if current_time - lock_info["timestamp"] >= NOTE_LOCK_TIMEOUT_SECONDS:
             expired_notes.append(note_id)
     
     for note_id in expired_notes:
@@ -79,7 +81,7 @@ def acquire_note_lock(note_id: str, client_id: str) -> tuple[bool, bool]:
             return True, False
             
         # If locked by different client, check if lock is expired (5 second timeout)
-        if current_time - lock_info["timestamp"] < 5.0:
+        if current_time - lock_info["timestamp"] < NOTE_LOCK_TIMEOUT_SECONDS:
             return False, False
         
         # Lock is expired, remove it and continue to acquire
@@ -128,7 +130,7 @@ def is_note_locked_by_other_client(note_id: str, client_id: str) -> bool:
     
     # Check if lock is expired (5 second timeout)
     current_time = time.time()
-    if current_time - lock_info["timestamp"] >= 5.0:
+    if current_time - lock_info["timestamp"] >= NOTE_LOCK_TIMEOUT_SECONDS:
         return False
         
     return lock_info["client_id"] != client_id

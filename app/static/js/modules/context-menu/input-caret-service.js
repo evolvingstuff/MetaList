@@ -1,6 +1,7 @@
+import { half } from '../half.js';
+
 const MEASURE_CANVAS = document.createElement('canvas');
 const MEASURE_CONTEXT = MEASURE_CANVAS.getContext('2d');
-const HALF_DIVISOR = 2;
 
 function resolveFontString(style) {
     if (!style) {
@@ -127,7 +128,7 @@ export function getInputCaretIndexFromPoint(input, clientX) {
     let low = 0;
     let high = rawValue.length;
     while (low < high) {
-        const mid = Math.floor((low + high) / HALF_DIVISOR);
+        const mid = Math.floor(half(low + high));
         const width = measureTextWidth(rawValue.slice(0, mid), letterSpacing);
         if (width < textX) {
             low = mid + 1;

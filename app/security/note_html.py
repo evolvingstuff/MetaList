@@ -12,6 +12,9 @@ import nh3
 _POLICY_PATH = Path(__file__).resolve().parents[1] / "static" / "note-html-policy.json"
 # Base64 writes every 3 bytes as 4 characters.
 _BASE64_BYTES_PER_GROUP = 3
+# The longest MathML length value (width="2em" and the like); must match
+# MATHML_LENGTH_VALUE_MAX_CHARACTERS in app/static/js/modules/note-html-sanitizer.js.
+_MATHML_LENGTH_VALUE_MAX_CHARACTERS = 80
 _BASE64_CHARS_PER_GROUP = 4
 _DATA_IMAGE_PATTERN = re.compile(
     r"^data:image/(?:png|jpe?g|gif|webp|bmp|avif);base64,([a-z0-9+/=\s]+)$",
@@ -242,7 +245,7 @@ def _sanitize_mathml_attribute(*, attribute_name: str, value: str) -> str | None
             return None
         return value
     if attribute_name in _MATHML_LENGTH_ATTRIBUTES:
-        if len(value) > 80:
+        if len(value) > _MATHML_LENGTH_VALUE_MAX_CHARACTERS:
             return None
         if _MATHML_LENGTH_VALUE_PATTERN.fullmatch(value) is None:
             return None

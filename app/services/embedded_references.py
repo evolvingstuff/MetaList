@@ -378,7 +378,11 @@ def _iter_collapsed_preview_meaningful_fragments(content_html: str) -> Iterator[
         yield "".join(fragment_parts).strip()
 
 
-@sensitive_lru_cache(maxsize=8192, max_bytes=32 * MIB)
+_COLLAPSED_PREVIEW_MEMO_ENTRIES = 8192
+_COLLAPSED_PREVIEW_MEMO_MIB = 32
+
+
+@sensitive_lru_cache(maxsize=_COLLAPSED_PREVIEW_MEMO_ENTRIES, max_bytes=_COLLAPSED_PREVIEW_MEMO_MIB * MIB)
 def _collapsed_preview_head(content_html: str) -> Tuple[str, bool]:
     """First meaningful fragment and whether another follows.
 

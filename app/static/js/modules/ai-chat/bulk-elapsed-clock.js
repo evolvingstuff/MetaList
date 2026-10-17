@@ -1,3 +1,5 @@
+import { MS_PER_SECOND } from '../time-units.js';
+
 // Count processing time, excluding time spent answering preflight questions.
 export function createBulkElapsedClock(now) {
     let accumulated = 0;
@@ -15,7 +17,7 @@ export function createBulkElapsedClock(now) {
             running = false;
         },
         seconds() {
-            return Math.floor((accumulated + (running ? now() - started : 0)) / 1000);
+            return Math.floor((accumulated + (running ? now() - started : 0)) / MS_PER_SECOND);
         },
     };
 }

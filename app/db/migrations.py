@@ -370,21 +370,21 @@ def _migration_7_to_8(
     return rewritten_count
 
 
-_MIGRATIONS: dict[
-    int,
-    Callable[..., int],
-] = {
-    0: _migration_0_to_1,
-    1: _migration_1_to_2,
-    2: _migration_2_to_3,
-    3: _migration_3_to_4,
-    4: _migration_4_to_5,
-    5: _migration_5_to_6,
-    6: _migration_6_to_7,
-    7: _migration_7_to_8,
-    8: retire_sounds,
-    9: add_editable_file_schema,
-}
+# One step per database version, in order: the step at position N upgrades version N to N + 1.
+_MIGRATION_STEPS: tuple[Callable[..., int], ...] = (
+    _migration_0_to_1,
+    _migration_1_to_2,
+    _migration_2_to_3,
+    _migration_3_to_4,
+    _migration_4_to_5,
+    _migration_5_to_6,
+    _migration_6_to_7,
+    _migration_7_to_8,
+    retire_sounds,
+    add_editable_file_schema,
+)
+_MIGRATIONS: dict[int, Callable[..., int]] = dict(enumerate(_MIGRATION_STEPS))
+assert len(_MIGRATION_STEPS) == CURRENT_DATABASE_VERSION, "every database version below the current one needs a step"
 
 
 def run_database_migrations(

@@ -109,7 +109,7 @@ class BackupReminderService {
 
     _frequency() {
         const stored = this._preferences.getRaw(BACKUP_REMINDER_PREFERENCE);
-        return stored === null ? BACKUP_REMINDER_DEFAULT : stored;
+        return stored === null ? BACKUP_REMINDER_DEFAULT : stored;  // shockharness: ignore[DEF004] reason="an unset preference means the reminder's default, Weekly"
     }
 
     _hiddenUntil() {

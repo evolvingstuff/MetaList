@@ -33,6 +33,14 @@ _DICTATION_PHRASE_MIN_CHARS = 2
 _DICTATION_PHRASE_MAX_CHARS = 64
 # Sessions whose decrypted preferences may be held in memory at once.
 _PREFERENCES_MEMO_MAX_SESSIONS = 2
+_PREFERENCES_MEMO_MAX_KIB = 256
+# The same bounds as the browser's AI chat panel and search suggestion windows.
+_AI_CHAT_MINIMUM_WIDTH = 280
+_AI_CHAT_MAXIMUM_WIDTH = 5000
+_AI_CHAT_COMPOSER_MINIMUM_HEIGHT = 74
+_AI_CHAT_COMPOSER_MAXIMUM_HEIGHT = 220
+_MAX_SEARCH_SUGGESTION_WINDOW_SLOTS = 20
+_MAX_SEARCH_SUGGESTION_WINDOW_DAYS = 365
 
 _ALLOWED_CLIENT_PREFERENCES = {
     "pref.ai.tagging.vocabulary": {"existing", "new"},
@@ -274,7 +282,7 @@ def _validate_ai_chat_width_preference(*, key: str, value: str) -> None:
     if re.fullmatch(r"[1-9][0-9]*", value) is None:
         raise ClientStateValidationError(f"Invalid client preference value for {key}: {value}")
     width = int(value)
-    if width < 280 or width > 5000:
+    if width < _AI_CHAT_MINIMUM_WIDTH or width > _AI_CHAT_MAXIMUM_WIDTH:
         raise ClientStateValidationError(f"Invalid client preference value for {key}: {value}")
 
 
@@ -282,7 +290,7 @@ def _validate_ai_chat_composer_height_preference(*, key: str, value: str) -> Non
     if re.fullmatch(r"[1-9][0-9]*", value) is None:
         raise ClientStateValidationError(f"Invalid client preference value for {key}: {value}")
     height = int(value)
-    if height < 74 or height > 220:
+    if height < _AI_CHAT_COMPOSER_MINIMUM_HEIGHT or height > _AI_CHAT_COMPOSER_MAXIMUM_HEIGHT:
         raise ClientStateValidationError(f"Invalid client preference value for {key}: {value}")
 
 
@@ -290,13 +298,13 @@ def _validate_tag_activity_windows_preference(*, key: str, value: str) -> None:
     parsed = json.loads(value)
     if not isinstance(parsed, list):
         raise ClientStateValidationError(f"Invalid client preference value for {key}: expected a list")
-    if len(parsed) > 20:
+    if len(parsed) > _MAX_SEARCH_SUGGESTION_WINDOW_SLOTS:
         raise ClientStateValidationError(f"Invalid client preference value for {key}: too many slots")
     seen: set[int] = set()
     for day_count in parsed:
         if not isinstance(day_count, int) or isinstance(day_count, bool):
             raise ClientStateValidationError(f"Invalid client preference value for {key}: expected integers")
-        if day_count < 1 or day_count > 365:
+        if day_count < 1 or day_count > _MAX_SEARCH_SUGGESTION_WINDOW_DAYS:
             raise ClientStateValidationError(f"Invalid client preference value for {key}: out-of-range window")
         if day_count in seen:
             raise ClientStateValidationError(f"Invalid client preference value for {key}: duplicate window")
@@ -355,7 +363,7 @@ def _validate_usage_state(usage_state: dict[str, object]) -> dict[str, dict[str,
 # them each time. Keyed by the session token: a new login reads them again; every
 # save goes through save_client_preferences, which replaces the copy. Cleared with
 # the other sensitive caches (lock, logout, restore) and never kept while locked.
-_preferences_in_memory = SensitiveMemo(maxsize=_PREFERENCES_MEMO_MAX_SESSIONS, max_bytes=256 * KIB)
+_preferences_in_memory = SensitiveMemo(maxsize=_PREFERENCES_MEMO_MAX_SESSIONS, max_bytes=_PREFERENCES_MEMO_MAX_KIB * KIB)
 
 
 def _preferences_memory_key(token: str) -> str:

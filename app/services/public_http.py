@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from app.utils.tcp_ports import is_tcp_port
 from dataclasses import dataclass
 import ipaddress
 import socket
@@ -12,6 +13,10 @@ import httpcore
 import httpx
 
 from app.services.exception_capture import CapturedExceptionContext
+
+# TCP port numbers are 16 bits: a valid port is below this.
+HTTP_DEFAULT_PORT = 80
+HTTPS_DEFAULT_PORT = 443
 
 
 class PublicHttpTargetRejected(Exception):
@@ -34,7 +39,7 @@ class ResolvedPublicHttpTarget:
     def __post_init__(self) -> None:
         if self.hostname == "":
             raise ValueError("Resolved public HTTP target hostname must not be empty")
-        if not 0 < self.port < 65536:
+        if not is_tcp_port(self.port):
             raise ValueError(f"Resolved public HTTP target port is invalid: {self.port}")
         if len(self.public_addresses) == 0:
             raise ValueError("Resolved public HTTP target requires an address")
@@ -156,9 +161,9 @@ def normalize_public_http_url(url: str) -> str | None:
     if ":" in hostname:
         netloc = f"[{hostname}]"
     if port is not None:
-        default_port = 443
+        default_port = HTTPS_DEFAULT_PORT
         if scheme == "http":
-            default_port = 80
+            default_port = HTTP_DEFAULT_PORT
         if port != default_port:
             netloc = f"{netloc}:{port}"
     return urlunsplit((scheme, netloc, parsed.path, parsed.query, ""))
@@ -174,9 +179,9 @@ def resolve_public_http_target(url: str) -> ResolvedPublicHttpTarget:
     request_hostname = httpx.URL(url).raw_host.decode("ascii")
     port = parsed.port
     if port is None:
-        port = 80
+        port = HTTP_DEFAULT_PORT
         if parsed.scheme == "https":
-            port = 443
+            port = HTTPS_DEFAULT_PORT
     resolve_capture = CapturedExceptionContext(
         socket.gaierror,
         boundary='app/services/public_http.py:resolve_public_http_target:resolve_capture')
@@ -190,8 +195,8 @@ def resolve_public_http_target(url: str) -> ResolvedPublicHttpTarget:
     if not infos:
         raise PublicHttpTargetRejected("dns_error")
     public_addresses: list[str] = []
-    for info in infos:
-        ip = ipaddress.ip_address(info[4][0])
+    for _family, _type, _proto, _canonname, socket_address in infos:
+        ip = ipaddress.ip_address(socket_address[0])
         if not ip.is_global:
             raise PublicHttpTargetRejected("blocked_private_address")
         normalized_address = str(ip)

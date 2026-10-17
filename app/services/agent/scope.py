@@ -23,6 +23,15 @@ from app.services.root_sorting import normalize_sort_mode
 from app.services.search_index import extract_ordered_tags_for_search
 from app.services.snapshot import ResolvedViewScope
 from app.services.snapshot import resolve_view_scope_membership
+from app.services.tab_state import MAX_TAB_ID_LENGTH
+from app.utils.time_units import MS_PER_SECOND
+
+_SEARCH_QUERY_MAX_LENGTH = 8_000
+_SORT_MODE_MAX_LENGTH = 64
+_REFERENCE_ROOT_IDS_MAX_COUNT = 100
+_SCOPE_LABEL_MAX_LENGTH = 512
+# How many outside-the-roots note ids the scope error message lists.
+_MISSING_NOTE_IDS_SHOWN = 12
 
 
 class AgentScopeDescriptor(BaseModel):
@@ -31,12 +40,12 @@ class AgentScopeDescriptor(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     scope_kind: Literal["search", "all_notes", "untagged", "reference"]
-    active_tab_id: str = Field(..., min_length=1, max_length=128)
-    scope_tab_id: str = Field(..., min_length=1, max_length=128)
-    search_query: str = Field(..., max_length=8_000)
-    sort_mode: str = Field(..., min_length=1, max_length=64)
-    reference_root_ids: list[str] = Field(..., max_length=100)
-    label: str = Field(..., min_length=1, max_length=512)
+    active_tab_id: str = Field(..., min_length=1, max_length=MAX_TAB_ID_LENGTH)
+    scope_tab_id: str = Field(..., min_length=1, max_length=MAX_TAB_ID_LENGTH)
+    search_query: str = Field(..., max_length=_SEARCH_QUERY_MAX_LENGTH)
+    sort_mode: str = Field(..., min_length=1, max_length=_SORT_MODE_MAX_LENGTH)
+    reference_root_ids: list[str] = Field(..., max_length=_REFERENCE_ROOT_IDS_MAX_COUNT)
+    label: str = Field(..., min_length=1, max_length=_SCOPE_LABEL_MAX_LENGTH)
 
     @field_validator("active_tab_id", "scope_tab_id", "label")
     @classmethod
@@ -115,8 +124,8 @@ def describe_text_extraction(*, before: tuple[int, float], after: tuple[int, flo
         noun = "note"
     duration_ms = after[1] - before[1]
     # Like the chat's step durations: milliseconds under a second.
-    duration_text = f"{duration_ms / 1_000:.1f} s"
-    if duration_ms < 1_000:
+    duration_text = f"{duration_ms / MS_PER_SECOND:.1f} s"
+    if duration_ms < MS_PER_SECOND:
         duration_text = f"{round(duration_ms)} ms"
     return f" · text extracted for {note_count:,} {noun} in {duration_text}"
 
@@ -157,7 +166,7 @@ class NoteText:
             if is_redacted:
                 raise RuntimeError("Privacy boundary admitted an @password note into agent scope")
             self.extracted_text = text
-            self.meter.record((time.perf_counter() - started_at) * 1_000)
+            self.meter.record((time.perf_counter() - started_at) * MS_PER_SECOND)
         return self.extracted_text
 
 
@@ -399,7 +408,7 @@ class ScopedSearchSnapshotFactory:
             ordered_note_ids=ordered_note_ids,
             notes_by_id=MappingProxyType(frozen_notes),
             tree_nodes_by_id=MappingProxyType(tree_nodes),
-            preparation_ms=(time.perf_counter() - started_at) * 1_000,
+            preparation_ms=(time.perf_counter() - started_at) * MS_PER_SECOND,
             text_extraction=text_extraction,
             selected_note=selected_note,
         )
@@ -516,7 +525,7 @@ class ScopedSearchSnapshotFactory:
             stack.extend(reversed(children))
         missing = candidate_ids - visited
         if missing:
-            raise RuntimeError(f"Scoped notes are outside resolved roots: {sorted(missing)[:12]}")
+            raise RuntimeError(f"Scoped notes are outside resolved roots: {sorted(missing)[:_MISSING_NOTE_IDS_SHOWN]}")
         return ordered
 
     def _root_note_id(self, note_id: str) -> str:

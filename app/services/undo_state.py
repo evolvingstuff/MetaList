@@ -19,6 +19,9 @@ from app.services.file_storage import FileSnapshot, restore_file_snapshot
 
 logger = logging.getLogger(__name__)
 
+# Undo/redo stack logs show at most this many of the newest operations.
+_LOGGED_STACK_TAIL_OPS = 12
+
 
 def _summarize_op(op: dict) -> str:
     if not isinstance(op, dict):
@@ -926,8 +929,8 @@ def undo(client_id: str, token: str) -> Optional[Dict[str, object]]:
         client_id,
         len(ctx.history),
         len(ctx.redo),
-        _summarize_stack(ctx.history, 12),
-        _summarize_stack(ctx.redo, 12),
+        _summarize_stack(ctx.history, _LOGGED_STACK_TAIL_OPS),
+        _summarize_stack(ctx.redo, _LOGGED_STACK_TAIL_OPS),
     )
 
     op = ctx.history.pop()
@@ -1116,8 +1119,8 @@ def undo(client_id: str, token: str) -> Optional[Dict[str, object]]:
         focus_note_id,
         len(ctx.history),
         len(ctx.redo),
-        _summarize_stack(ctx.history, 12),
-        _summarize_stack(ctx.redo, 12),
+        _summarize_stack(ctx.history, _LOGGED_STACK_TAIL_OPS),
+        _summarize_stack(ctx.redo, _LOGGED_STACK_TAIL_OPS),
     )
     # The op moved between stacks; re-check the budget before returning.
     _enforce_undo_limits()
@@ -1134,8 +1137,8 @@ def redo(client_id: str, token: str) -> Optional[Dict[str, object]]:
         client_id,
         len(ctx.history),
         len(ctx.redo),
-        _summarize_stack(ctx.history, 12),
-        _summarize_stack(ctx.redo, 12),
+        _summarize_stack(ctx.history, _LOGGED_STACK_TAIL_OPS),
+        _summarize_stack(ctx.redo, _LOGGED_STACK_TAIL_OPS),
     )
 
     op = ctx.redo.pop()
@@ -1305,8 +1308,8 @@ def redo(client_id: str, token: str) -> Optional[Dict[str, object]]:
         focus_note_id,
         len(ctx.history),
         len(ctx.redo),
-        _summarize_stack(ctx.history, 12),
-        _summarize_stack(ctx.redo, 12),
+        _summarize_stack(ctx.history, _LOGGED_STACK_TAIL_OPS),
+        _summarize_stack(ctx.redo, _LOGGED_STACK_TAIL_OPS),
     )
     # The op moved between stacks; re-check the budget before returning.
     _enforce_undo_limits()

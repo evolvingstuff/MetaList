@@ -2,6 +2,9 @@ import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import * as Logger from '../mode-logger.js';
 import { ErrorHandler } from '../../error-handler.js';
 import { rootNoteCreationBlockMessage } from './root-sort-service.js';
+import { MS_PER_SECOND } from '../../time-units.js';
+
+const BLOCKED_REASON_BANNER_SECONDS = 6;
 
 // Sorted tabs limit where new root notes may go (rootNoteCreationBlockMessage).
 // Shows the reason and returns true when this one is blocked. Flows that do
@@ -20,7 +23,7 @@ export function blockRootNoteCreation(placement, contextLabel) {
         context: contextLabel,
         sortMode: ModeContext.activeTabSortMode,
     });
-    ErrorHandler.showInfoBanner(message, 6000);
+    ErrorHandler.showInfoBanner(message, BLOCKED_REASON_BANNER_SECONDS * MS_PER_SECOND);
     return true;
 }
 

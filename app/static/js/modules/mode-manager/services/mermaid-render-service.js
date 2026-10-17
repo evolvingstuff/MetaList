@@ -7,6 +7,15 @@ const MERMAID_CODE_SELECTOR = (
 const MERMAID_SCRIPT_URL = '/static/js/vendor/mermaid-11.16.1.min.js';
 // Widths are rounded to this many pixels so tiny resizes keep the same rendering.
 const SIZE_KEY_WIDTH_STEP_PX = 10;
+// 32-bit FNV-1a parameters.
+const FNV_OFFSET_BASIS_32 = 0x811c9dc5;
+const FNV_PRIME_32 = 0x01000193;
+const HEX_RADIX = 16;
+// Compact flowchart layout, in pixels (see buildMermaidConfig).
+const FLOWCHART_NODE_SPACING_PX = 24;
+const FLOWCHART_RANK_SPACING_PX = 28;
+const FLOWCHART_LABEL_PADDING_PX = 6;
+const FLOWCHART_DIAGRAM_PADDING_PX = 4;
 
 const moduleState = ApplicationState.createFields('mermaid-render-service', {
     mermaidLoadPromise: null,
@@ -20,12 +29,12 @@ const moduleState = ApplicationState.createFields('mermaid-render-service', {
 
 // FNV-1a: keys the size cache without keeping the diagram's text.
 function hashSource(source) {
-    let hash = 0x811c9dc5;
+    let hash = FNV_OFFSET_BASIS_32;
     for (let index = 0; index < source.length; index += 1) {
         hash ^= source.charCodeAt(index);
-        hash = Math.imul(hash, 0x01000193) >>> 0;
+        hash = Math.imul(hash, FNV_PRIME_32) >>> 0;
     }
-    return hash.toString(16);
+    return hash.toString(HEX_RADIX);
 }
 
 function sizeKey(source, sourceBlock) {
@@ -107,10 +116,10 @@ export function buildMermaidConfig(theme) {
         flowchart: {
             htmlLabels: true,
             useMaxWidth: true,
-            nodeSpacing: 24,
-            rankSpacing: 28,
-            padding: 6,
-            diagramPadding: 4,
+            nodeSpacing: FLOWCHART_NODE_SPACING_PX,
+            rankSpacing: FLOWCHART_RANK_SPACING_PX,
+            padding: FLOWCHART_LABEL_PADDING_PX,
+            diagramPadding: FLOWCHART_DIAGRAM_PADDING_PX,
         },
     };
 }

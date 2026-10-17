@@ -32,6 +32,12 @@ from app.services.content_formatting import extract_note_text_for_agent
 _VALID_EXPORT_THEMES = frozenset({"dark", "light"})
 # Spaces for one level of nesting in the exported HTML.
 _HTML_INDENT_LEVEL_SPACES = 2
+# Two indent levels: the content of a tag that is itself one level in.
+_HTML_INNER_INDENT_SPACES = 4
+# A note ID is a UUID written like this.
+_NOTE_ID_SHAPE = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+_NOTE_ID_LENGTH = len(_NOTE_ID_SHAPE)
+_NOTE_ID_HYPHEN_COUNT = _NOTE_ID_SHAPE.count("-")
 _EXPORT_STYLE_OVERRIDES = """
 /* The scrollbar's place is kept, as in MetaList: collapsing or expanding a
    note can stop or start the page scrolling, and the centred page must not
@@ -358,7 +364,7 @@ def build_notes_export_document(
         '  <meta name="viewport" content="width=device-width, initial-scale=1" />',
         f"  <title>{html.escape(document_title)}</title>",
         "  <style>",
-        _indent_block(stylesheet, 4),
+        _indent_block(stylesheet, _HTML_INNER_INDENT_SPACES),
         "  </style>",
         "</head>",
         '<body class="html-export-body">',
@@ -367,10 +373,10 @@ def build_notes_export_document(
         lines.append(f'  <h1 class="html-export-title">{html.escape(title.strip())}</h1>')
     lines.append('  <main id="notes-container">')
     if notes_markup != "":
-        lines.append(_indent_block(notes_markup, 4))
+        lines.append(_indent_block(notes_markup, _HTML_INNER_INDENT_SPACES))
     lines.append("  </main>")
     if is_download:
-        lines.extend(["  <script>", _indent_block(_EXPORT_SCRIPT, 4), "  </script>"])
+        lines.extend(["  <script>", _indent_block(_EXPORT_SCRIPT, _HTML_INNER_INDENT_SPACES), "  </script>"])
     lines.extend(["</body>", "</html>"])
     return "\n".join(lines)
 
@@ -416,7 +422,7 @@ def default_export_title(*, search: str | None, is_untagged_view: bool, root_not
 
 def _is_note_id_search(search: str) -> bool:
     # A references view searches for note IDs: no use as a title.
-    return any(len(word) == 36 and word.count("-") == 4 for word in search.replace(":", " ").split())
+    return any(len(word) == _NOTE_ID_LENGTH and word.count("-") == _NOTE_ID_HYPHEN_COUNT for word in search.replace(":", " ").split())
 
 
 
@@ -678,7 +684,7 @@ def _render_exported_note_node(
         lines = [
             f'<article class="{class_attr}" id="note-{escaped_note_id}">',
             '  <div class="note-content">',
-            _indent_block(rendered_content, 4),
+            _indent_block(rendered_content, _HTML_INNER_INDENT_SPACES),
             "  </div>",
         ]
     else:
@@ -705,10 +711,10 @@ def _render_exported_note_node(
             f'<article class="{class_attr}" id="note-{escaped_note_id}" data-can-collapse="true">',
             f'  <button type="button" class="note-collapse-toggle" aria-expanded="{expanded_attr}" aria-label="{toggle_label}"></button>',
             '  <div class="note-content">',
-            _indent_block(rendered_content, 4),
+            _indent_block(rendered_content, _HTML_INNER_INDENT_SPACES),
             "  </div>",
             '  <div class="note-content note-content-collapsed">',
-            _indent_block(collapsed_content, 4),
+            _indent_block(collapsed_content, _HTML_INNER_INDENT_SPACES),
             "  </div>",
         ]
     if children_html != "":

@@ -2,6 +2,9 @@ const MARKER_ATTR = 'data-selection-marker';
 const ZERO_WIDTH_CHAR = '\u200b';
 // Math.random().toString(36) starts with this before the random digits.
 const RANDOM_FRACTION_PREFIX = '0.';
+// Marker IDs use base-36 digits (0-9, a-z), this many of them after the prefix.
+const ALPHANUMERIC_RADIX = 36;
+const MARKER_RANDOM_DIGITS = 5;
 
 function createMarker(id) {
     const span = document.createElement('span');
@@ -32,7 +35,7 @@ export function insertSelectionMarkers(container) {
         return null;
     }
 
-    const baseId = `rt-marker-${Date.now()}-${Math.random().toString(36).slice(RANDOM_FRACTION_PREFIX.length, 7)}`;
+    const baseId = `rt-marker-${Date.now()}-${Math.random().toString(ALPHANUMERIC_RADIX).slice(RANDOM_FRACTION_PREFIX.length, RANDOM_FRACTION_PREFIX.length + MARKER_RANDOM_DIGITS)}`;
     const startId = `${baseId}-start`;
     const endId = `${baseId}-end`;
     const startMarker = createMarker(startId);

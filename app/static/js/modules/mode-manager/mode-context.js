@@ -10,6 +10,11 @@ import { stateValuesEqual, ApplicationState, immutableSnapshot } from '../applic
 const DEFAULT_ANCHOR_NEAR_END_DISTANCE = 3;
 // The browser asks to move a band edge once the viewport is within half the server's margin.
 const ROOT_BAND_REFETCH_MARGIN_DIVISOR = 2;
+// A later scroll-restore pass is skipped once the page has moved more than this
+// from where the restore put it (the user scrolled in between).
+const SCROLL_RESTORE_USER_MOVE_PX = 60;
+// The last scroll-restore pass, after late layout shifts such as images loading.
+const LATE_SCROLL_RESTORE_DELAY_MS = 250;
 
 class ModeContext {
     constructor() {
@@ -1647,7 +1652,7 @@ class ModeContext {
             }
             if (lastProgrammaticScrollY !== null) {
                 const current = Math.max(0, Math.round(window.scrollY));
-                if (Math.abs(current - lastProgrammaticScrollY) > 60) {
+                if (Math.abs(current - lastProgrammaticScrollY) > SCROLL_RESTORE_USER_MOVE_PX) {
                     return;
                 }
             }
@@ -1668,7 +1673,7 @@ class ModeContext {
             });
             window.setTimeout(() => {
                 maybeApplyRestore();
-            }, 250);
+            }, LATE_SCROLL_RESTORE_DELAY_MS);
         });
     }
 

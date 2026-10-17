@@ -41,9 +41,13 @@ _ResolvedHttpTarget = ResolvedPublicHttpTarget
 _FETCH_TIMEOUT_SECONDS = 4.0
 _MAX_REDIRECTS = 5
 _MAX_RESPONSE_BYTES = 1024 * 1024
-_OK_REFRESH_AFTER = timedelta(days=90)
-_NO_TITLE_REFRESH_AFTER = timedelta(days=30)
-_FAILED_REFRESH_AFTER = timedelta(days=7)
+_OK_REFRESH_AFTER_DAYS = 90
+_NO_TITLE_REFRESH_AFTER_DAYS = 30
+_FAILED_REFRESH_AFTER_DAYS = 7
+_OK_REFRESH_AFTER = timedelta(days=_OK_REFRESH_AFTER_DAYS)
+_NO_TITLE_REFRESH_AFTER = timedelta(days=_NO_TITLE_REFRESH_AFTER_DAYS)
+_FAILED_REFRESH_AFTER = timedelta(days=_FAILED_REFRESH_AFTER_DAYS)
+_MAX_TITLE_LENGTH = 300
 _USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -53,20 +57,24 @@ _USER_AGENT = (
 _AUTO_RETRY_STATUSES = {"ok", "no_title", "failed"}
 # "Retry failed link titles" asks these again; unsupported and blocked links are final.
 _MANUAL_RETRY_STATUSES = {"no_title", "failed"}
+_FAILED_SECOND_RETRY_MINUTES = 5
+_FAILED_THIRD_RETRY_MINUTES = 30
+_FAILED_FOURTH_RETRY_HOURS = 6
 _FAILED_RETRY_DELAYS = (
     timedelta(minutes=1),
-    timedelta(minutes=5),
-    timedelta(minutes=30),
-    timedelta(hours=6),
+    timedelta(minutes=_FAILED_SECOND_RETRY_MINUTES),
+    timedelta(minutes=_FAILED_THIRD_RETRY_MINUTES),
+    timedelta(hours=_FAILED_FOURTH_RETRY_HOURS),
     timedelta(days=1),
     _FAILED_REFRESH_AFTER,
 )
 # A site that answered HTTP 429 (too many requests) is retried more slowly.
 _RATE_LIMITED_FIRST_RETRY_MINUTES = 10
+_RATE_LIMITED_THIRD_RETRY_HOURS = 6
 _RATE_LIMITED_RETRY_DELAYS = (
     timedelta(minutes=_RATE_LIMITED_FIRST_RETRY_MINUTES),
     timedelta(hours=1),
-    timedelta(hours=6),
+    timedelta(hours=_RATE_LIMITED_THIRD_RETRY_HOURS),
     timedelta(days=1),
     _FAILED_REFRESH_AFTER,
 )
@@ -78,12 +86,13 @@ _RATE_LIMIT_DEFAULT_COOLDOWN_SECONDS = 10 * 60
 _RATE_LIMIT_MIN_COOLDOWN_SECONDS = 60
 _RATE_LIMIT_MAX_COOLDOWN_SECONDS = 6 * 60 * 60
 _NO_TITLE_SECOND_RETRY_MINUTES = 10
+_NO_TITLE_FIFTH_RETRY_DAYS = 7
 _NO_TITLE_RETRY_DELAYS = (
     timedelta(minutes=1),
     timedelta(minutes=_NO_TITLE_SECOND_RETRY_MINUTES),
     timedelta(hours=1),
     timedelta(days=1),
-    timedelta(days=7),
+    timedelta(days=_NO_TITLE_FIFTH_RETRY_DAYS),
     _NO_TITLE_REFRESH_AFTER,
 )
 _INTERSTITIAL_TITLE_EXACT_MATCHES = {
@@ -567,7 +576,7 @@ def display_domain_for_url(url: str) -> str:
         raise RuntimeError(f"Normalized URL missing hostname: {normalized}")
     hostname = parsed.hostname
     if hostname.startswith("www."):
-        hostname = hostname[4:]
+        hostname = hostname[len("www."):]
     return hostname
 
 
@@ -1394,8 +1403,8 @@ def _clean_title_text(value: str | None) -> str | None:
     cleaned = " ".join(value.split())
     if cleaned == "":
         return None
-    if len(cleaned) > 300:
-        cleaned = cleaned[:300].rstrip()
+    if len(cleaned) > _MAX_TITLE_LENGTH:
+        cleaned = cleaned[:_MAX_TITLE_LENGTH].rstrip()
     return cleaned
 
 
@@ -1420,6 +1429,7 @@ def _is_placeholder_title(*, title: str, url: str) -> bool:
 # Second-level labels under a country code ("bbc.co.uk"): the site's name is the label before.
 _COUNTRY_SECOND_LEVEL_LABELS = {"ac", "co", "com", "edu", "gov", "net", "org"}
 _COUNTRY_CODE_LENGTH = 2
+_SECOND_LEVEL_LABEL_INDEX = -2  # "co" in "bbc.co.uk"
 _SITE_DOMAIN_LABEL_COUNT = 2  # "reddit", "com"
 _COUNTRY_SITE_DOMAIN_LABEL_COUNT = 3  # "bbc", "co", "uk"
 
@@ -1430,7 +1440,7 @@ def _site_domain_labels(url: str) -> list[str]:
     if (
         len(labels) >= _COUNTRY_SITE_DOMAIN_LABEL_COUNT
         and len(labels[-1]) == _COUNTRY_CODE_LENGTH
-        and labels[-2] in _COUNTRY_SECOND_LEVEL_LABELS
+        and labels[_SECOND_LEVEL_LABEL_INDEX] in _COUNTRY_SECOND_LEVEL_LABELS
     ):
         return labels[-_COUNTRY_SITE_DOMAIN_LABEL_COUNT:]
     return labels[-_SITE_DOMAIN_LABEL_COUNT:]

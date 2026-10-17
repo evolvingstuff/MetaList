@@ -26,6 +26,10 @@ _UUID_RE = re.compile(
     r"[0-9a-fA-F]{4}-"
     r"[0-9a-fA-F]{12}$"
 )
+# The browser enforces the same limit (CONFIG.TABS.MAX_TABS in config.js).
+_MAX_TABS = 1000
+# Tab ids are UUIDs (36 characters); a request may carry at most this many, everywhere.
+MAX_TAB_ID_LENGTH = 128
 
 
 def _normalize_tab_sort_mode(sort_mode: object, *, from_storage: bool) -> str:
@@ -53,8 +57,6 @@ def _is_uuid_string(value: str) -> bool:
 
 class TabStateStore:
     """Server-owned tab state with namespace-scoped persistence in SQLite."""
-
-    _MAX_TABS = 1000
 
     def __init__(self) -> None:
         self._lock = Lock()
@@ -128,8 +130,8 @@ class TabStateStore:
             self._try_decrypt_locked(token="", require_success=True)
             if copy_from_tab_id not in self._tabs:
                 raise InputRejected("copyFromTabId must reference an existing tab")
-            if len(self._tabs) >= self._MAX_TABS:
-                raise InputRejected(f"max tabs reached ({self._MAX_TABS})")
+            if len(self._tabs) >= _MAX_TABS:
+                raise InputRejected(f"max tabs reached ({_MAX_TABS})")
 
             new_tab_id = self._new_tab_id()
             while new_tab_id in self._tabs:
@@ -444,8 +446,8 @@ class TabStateStore:
             raise InputRejected("tabOrder must be a non-empty list")
         if len(incoming_order) != len(tabs):
             raise InputRejected("tabOrder must match tabs length")
-        if len(incoming_order) > self._MAX_TABS:
-            raise InputRejected(f"tabOrder exceeds max tabs ({self._MAX_TABS})")
+        if len(incoming_order) > _MAX_TABS:
+            raise InputRejected(f"tabOrder exceeds max tabs ({_MAX_TABS})")
 
         normalized: List[str] = []
         seen = set()
@@ -463,8 +465,8 @@ class TabStateStore:
                         from_storage: bool) -> Dict[str, Dict[str, object]]:
         if not isinstance(tabs, dict) or not tabs:
             raise InputRejected("tabs must be a non-empty object")
-        if len(tabs) > self._MAX_TABS:
-            raise InputRejected(f"tabs must contain at most {self._MAX_TABS} entries")
+        if len(tabs) > _MAX_TABS:
+            raise InputRejected(f"tabs must contain at most {_MAX_TABS} entries")
         normalized: Dict[str, Dict[str, object]] = {}
         for key, value in tabs.items():
             tab_id = str(key)

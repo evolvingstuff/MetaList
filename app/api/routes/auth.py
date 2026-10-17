@@ -105,6 +105,11 @@ from app.services.link_title_retry import stop_link_title_retry
 router = APIRouter(prefix="/auth", tags=["auth2"])
 logger = logging.getLogger(__name__)
 
+_PERCENT_COMPLETE = 100
+# The sessions list shows at most this much of a browser's User-Agent.
+_SESSION_USER_AGENT_MAX_CHARS = 100
+_RESTART_AFTER_RESTORE_DELAY_SECONDS = 0.5
+
 
 class LoginRequest(BaseModel):
     password: SecretStr
@@ -367,7 +372,7 @@ def _build_hydration_status() -> HydrationStatusResponse:
         snapshot["status"] = "ready"
         snapshot["phase"] = "complete"
         snapshot["message"] = "Workspace ready"
-        snapshot["overall_percent"] = 100
+        snapshot["overall_percent"] = _PERCENT_COMPLETE
     return HydrationStatusResponse(**snapshot)
 
 
@@ -448,7 +453,7 @@ def _client_info(request: Request) -> str:
         client_host = request.client.host
     else:
         client_host = "Unknown"
-    return f"{user_agent[:100]} - {client_host}"
+    return f"{user_agent[:_SESSION_USER_AGENT_MAX_CHARS]} - {client_host}"
 
 
 def _login_rate_limit_key(request: Request) -> str:
@@ -664,7 +669,7 @@ def restore_from_backup(
     finally:
         maintenance_service.exit_maintenance()
 
-    _schedule_server_restart_after_restore(delay_seconds=0.5)
+    _schedule_server_restart_after_restore(delay_seconds=_RESTART_AFTER_RESTORE_DELAY_SECONDS)
 
     return BackupRestoreResponse(
         backup=_serialize_backup_file(backup_file),

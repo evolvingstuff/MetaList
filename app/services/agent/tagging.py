@@ -17,12 +17,17 @@ TAGGING_FOCUS_KEY = "pref.ai.tagging.focus"
 _HALF = 2
 # A proposal is rejected when more than this share of its entries or tags is invalid.
 _MAX_INVALID_PERCENT = 10
+_PERCENT_SCALE = 100
+# A rejection names at most this many of the invalid entries or tags.
+_MAX_REPORTED_INVALID = 5
+# The model may propose at most this many tags for one note.
+_MAX_TAGS_PER_NOTE = 12
 
 
 class NoteTagProposal(BaseModel):
     model_config = ConfigDict(extra="forbid")
     note_id: str = Field(..., min_length=1)
-    tags: list[str] = Field(..., max_length=12)
+    tags: list[str] = Field(..., max_length=_MAX_TAGS_PER_NOTE)
 
 
 class TagBatchResult(BaseModel):
@@ -179,14 +184,14 @@ def validate_proposals(
         if tags:
             proposals[proposal.note_id] = tuple(tags.values())
     errors = []
-    if len(invalid_entries) * 100 > total_entries * _MAX_INVALID_PERCENT:
-        details = "; ".join(invalid_entries[:5])
+    if len(invalid_entries) * _PERCENT_SCALE > total_entries * _MAX_INVALID_PERCENT:
+        details = "; ".join(invalid_entries[:_MAX_REPORTED_INVALID])
         errors.append(
             f"{len(invalid_entries)} of {total_entries} proposal entries have invalid note IDs, "
             f"exceeding {_MAX_INVALID_PERCENT}%: {details}"
         )
-    if len(invalid_tags) * 100 > total_assignments * _MAX_INVALID_PERCENT:
-        details = "; ".join(invalid_tags[:5])
+    if len(invalid_tags) * _PERCENT_SCALE > total_assignments * _MAX_INVALID_PERCENT:
+        details = "; ".join(invalid_tags[:_MAX_REPORTED_INVALID])
         errors.append(
             f"{len(invalid_tags)} of {total_assignments} tag assignments are invalid, "
             f"exceeding {_MAX_INVALID_PERCENT}%: {details}"

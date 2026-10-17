@@ -8,6 +8,10 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 from app.services.session_timeout_service import get_session_timeout_minutes
+from app.utils.time_units import SECONDS_PER_MINUTE
+
+# Random bytes in each authentication token (256 bits).
+_TOKEN_RANDOM_BYTES = 32
 
 
 def _synchronized(method):
@@ -68,7 +72,7 @@ class TokenService:
             self.tokens.clear()
 
         # Generate cryptographically secure token
-        token = secrets.token_urlsafe(32)
+        token = secrets.token_urlsafe(_TOKEN_RANDOM_BYTES)
         token_hash = self._hash_token(token)
         now = datetime.now(timezone.utc)
 
@@ -301,7 +305,7 @@ class TokenService:
             expires_in_minutes = None
             if expires_at is not None:
                 expires_in_minutes = int(
-                    (expires_at - now).total_seconds() / 60
+                    (expires_at - now).total_seconds() / SECONDS_PER_MINUTE
                 )
             sessions.append({
                 "client_info": info["client_info"],

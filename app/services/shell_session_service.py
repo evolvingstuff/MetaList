@@ -17,6 +17,8 @@ from typing import Dict, TextIO
 
 from app.services.exception_capture import CapturedExceptionContext
 from app.services.windows_process_control import stop_process_tree as stop_windows_process
+from app.utils.byte_sizes import KIB
+from app.utils.time_units import MS_PER_SECOND
 
 
 _STATUS_RUNNING = "running"
@@ -24,6 +26,10 @@ _STATUS_SUCCESS = "success"
 _STATUS_ERROR = "error"
 _STATUS_TIMEOUT = "timeout"
 _COMPLETED_RETENTION_SECONDS = 300.0
+_WORKER_STOP_TIMEOUT_SECONDS = 5
+# Output is read in pieces of this size: characters from a text stream, bytes otherwise.
+_OUTPUT_READ_CHUNK_KIB = 4
+_OUTPUT_READ_CHUNK_SIZE = _OUTPUT_READ_CHUNK_KIB * KIB
 
 
 class ShellRunNotFound(ValueError):
@@ -106,9 +112,9 @@ class _ShellRunRecord:
     def snapshot(self) -> Dict[str, object]:
         with self.lock:
             if self.status == _STATUS_RUNNING:
-                duration_ms = int((time.monotonic() - self.started_at_monotonic) * 1000)
+                duration_ms = int((time.monotonic() - self.started_at_monotonic) * MS_PER_SECOND)
             else:
-                duration_ms = int((self.finished_at_monotonic - self.started_at_monotonic) * 1000)
+                duration_ms = int((self.finished_at_monotonic - self.started_at_monotonic) * MS_PER_SECOND)
             return {
                 "runId": self.run_id,
                 "status": self.status,
@@ -138,7 +144,7 @@ class ShellSessionService:
                 _terminate_tree(record.process)
             for thread in workers:
                 if thread is not None:
-                    thread.join(timeout=5)
+                    thread.join(timeout=_WORKER_STOP_TIMEOUT_SECONDS)
                     if thread.is_alive():
                         raise RuntimeError('Shell worker did not stop during namespace lock')
             with record.lock:
@@ -249,9 +255,9 @@ class ShellSessionService:
         try:
             while True:
                 if isinstance(stream, io.TextIOBase):
-                    raw = stream.read(4096).encode('utf-8')
+                    raw = stream.read(_OUTPUT_READ_CHUNK_SIZE).encode('utf-8')
                 else:
-                    raw = stream.read1(4096)
+                    raw = stream.read1(_OUTPUT_READ_CHUNK_SIZE)
                 with record.lock:
                     available = max(0, SHELL_OUTPUT_BYTES - record.output_bytes)
                     accepted = raw[:available]
@@ -293,12 +299,12 @@ class ShellSessionService:
         _terminate_tree(record.process)
         stdout_thread = record.stdout_thread
         if stdout_thread is not None:
-            stdout_thread.join(timeout=5)
+            stdout_thread.join(timeout=_WORKER_STOP_TIMEOUT_SECONDS)
             if stdout_thread.is_alive():
                 raise RuntimeError('Shell stdout worker did not stop')
         stderr_thread = record.stderr_thread
         if stderr_thread is not None:
-            stderr_thread.join(timeout=5)
+            stderr_thread.join(timeout=_WORKER_STOP_TIMEOUT_SECONDS)
             if stderr_thread.is_alive():
                 raise RuntimeError('Shell stderr worker did not stop')
 

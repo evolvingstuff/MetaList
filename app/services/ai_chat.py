@@ -8,6 +8,7 @@ from threading import Lock
 from uuid import uuid4
 
 from app.services.ai_chat_rendering import strip_note_citations_for_history
+from app.utils.time_units import MS_PER_SECOND
 
 
 _MAX_MESSAGES_PER_SESSION = 100
@@ -58,17 +59,17 @@ class AiChatActivityTimer:
                 prior_label, prior_started_at = self._started[action]
                 should_start = prior_label != label
                 if not should_start:
-                    measured_duration = (observed_at - prior_started_at) * 1_000
+                    measured_duration = (observed_at - prior_started_at) * MS_PER_SECOND
             if should_start:
                 self._started[action] = (
                     label,
-                    observed_at - (float(supplied_duration) / 1_000),
+                    observed_at - (float(supplied_duration) / MS_PER_SECOND),
                 )
                 measured_duration = float(supplied_duration)
         else:
             if action in self._started:
                 _prior_label, prior_started_at = self._started.pop(action)
-                measured_duration = (observed_at - prior_started_at) * 1_000
+                measured_duration = (observed_at - prior_started_at) * MS_PER_SECOND
         duration_ms = max(float(supplied_duration), measured_duration)
         return {**event, "duration_ms": duration_ms}
 

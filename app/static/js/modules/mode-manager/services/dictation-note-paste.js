@@ -14,10 +14,11 @@ export const DICTATION_QUOTE_CLOSE_PREFERENCE = 'pref.dictation.quote_close';
 export const DEFAULT_DICTATION_NEGATE = 'minus';
 export const DICTATION_NEGATE_PREFERENCE = 'pref.dictation.negate';
 const DICTATION_TAG_PHRASE_MIN_LENGTH = 2;
+const DICTATION_TAG_PHRASE_MAX_LENGTH = 64;
 
 // Words of letters separated by single spaces (one unusual word is enough).
 export function isValidDictationTagPhrase(phrase) {
-    return typeof phrase === 'string' && phrase.length >= DICTATION_TAG_PHRASE_MIN_LENGTH && phrase.length <= 64
+    return typeof phrase === 'string' && phrase.length >= DICTATION_TAG_PHRASE_MIN_LENGTH && phrase.length <= DICTATION_TAG_PHRASE_MAX_LENGTH
         && /^[A-Za-z]+(?: [A-Za-z]+)*$/.test(phrase);
 }
 

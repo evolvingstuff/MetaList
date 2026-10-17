@@ -114,7 +114,7 @@ test('an accepted password slides the form out left and the loading view in from
     assert.match(body, /formView\.classList\.add\('login-view-leaving'\);/);
     assert.match(body, /loadingView\.classList\.add\('login-view-entering'\);/);
     assert.match(body, /if \(formView\.hidden \|\| reducedMotion\)/);
-    assert.match(body, /window\.setTimeout\(finish, LOGIN_SLIDE_MS \+ 100\);/);
+    assert.match(body, /window\.setTimeout\(finish, LOGIN_SLIDE_MS \+ LOGIN_SLIDE_GRACE_MS\);/);
 });
 
 

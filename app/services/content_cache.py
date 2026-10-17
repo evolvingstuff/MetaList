@@ -27,6 +27,10 @@ _proposed_tag_cache: Dict[str, str] = {}
 _text_cache: Dict[str, str] = {}
 
 _CACHE_TIMING_ENABLED = True
+# Startup timing is reported once per this many decrypted notes.
+_CACHE_TIMING_BATCH_NOTES = 1000
+# Debug logs show only the start of a note id.
+_LOGGED_NOTE_ID_PREFIX_LENGTH = 8
 
 
 def get_cached_content(note_id: str) -> str:
@@ -61,24 +65,24 @@ def cache_note(note_id: str, decrypted_content: str) -> None:
         decrypted_content: Plain text content to store in cache
     """
     _search_cache[note_id] = sanitize_note_html(decrypted_content)
-    logger.debug(f"Cached content for note {note_id[:8]}...")
+    logger.debug(f"Cached content for note {note_id[:_LOGGED_NOTE_ID_PREFIX_LENGTH]}...")
 
 
 def cache_note_tags(note_id: str, tags: str) -> None:
     _tag_cache[note_id] = tags
-    logger.debug(f"Cached tags for note {note_id[:8]}...")
+    logger.debug(f"Cached tags for note {note_id[:_LOGGED_NOTE_ID_PREFIX_LENGTH]}...")
 
 
 def cache_note_proposed_tags(note_id: str, proposed_tags: str) -> None:
     if not isinstance(proposed_tags, str):
         raise TypeError("proposed_tags must be a string")
     _proposed_tag_cache[note_id] = proposed_tags
-    logger.debug(f"Cached proposed tags for note {note_id[:8]}...")
+    logger.debug(f"Cached proposed tags for note {note_id[:_LOGGED_NOTE_ID_PREFIX_LENGTH]}...")
 
 
 def cache_note_text(note_id: str, raw_text: str) -> None:
     _text_cache[note_id] = raw_text
-    logger.debug(f"Cached raw text for note {note_id[:8]}...")
+    logger.debug(f"Cached raw text for note {note_id[:_LOGGED_NOTE_ID_PREFIX_LENGTH]}...")
 
 
 def remove_cached_note(note_id: str) -> None:
@@ -89,16 +93,16 @@ def remove_cached_note(note_id: str) -> None:
     """
     if note_id in _search_cache:
         del _search_cache[note_id]
-        logger.debug(f"Removed cached content for note {note_id[:8]}...")
+        logger.debug(f"Removed cached content for note {note_id[:_LOGGED_NOTE_ID_PREFIX_LENGTH]}...")
     if note_id in _tag_cache:
         del _tag_cache[note_id]
-        logger.debug(f"Removed cached tags for note {note_id[:8]}...")
+        logger.debug(f"Removed cached tags for note {note_id[:_LOGGED_NOTE_ID_PREFIX_LENGTH]}...")
     if note_id in _proposed_tag_cache:
         del _proposed_tag_cache[note_id]
-        logger.debug(f"Removed cached proposed tags for note {note_id[:8]}...")
+        logger.debug(f"Removed cached proposed tags for note {note_id[:_LOGGED_NOTE_ID_PREFIX_LENGTH]}...")
     if note_id in _text_cache:
         del _text_cache[note_id]
-        logger.debug(f"Removed cached raw text for note {note_id[:8]}...")
+        logger.debug(f"Removed cached raw text for note {note_id[:_LOGGED_NOTE_ID_PREFIX_LENGTH]}...")
 
 
 def get_cache_size() -> int:
@@ -270,16 +274,17 @@ def populate_cache_from_db(db: SafeSession | None) -> Sequence[Mapping[str, obje
         hydrated_text[note_id] = strip_html(sanitized_content)
 
         processed += 1
-        if _CACHE_TIMING_ENABLED and processed % 1000 == 0:
+        if _CACHE_TIMING_ENABLED and processed % _CACHE_TIMING_BATCH_NOTES == 0:
             now = time.perf_counter()
             batch_elapsed = now - last_checkpoint
             total_elapsed = now - loop_started
             print(
-                f"[startup] cache decrypted {processed} notes | last 1000 in {batch_elapsed:.2f}s | total {total_elapsed:.2f}s"
+                f"[startup] cache decrypted {processed} notes | last {_CACHE_TIMING_BATCH_NOTES} in {batch_elapsed:.2f}s | total {total_elapsed:.2f}s"
             )
             logger.info(
-                "[startup] cache decrypted %d notes | last 1000 in %.2fs | total %.2fs",
+                "[startup] cache decrypted %d notes | last %d in %.2fs | total %.2fs",
                 processed,
+                _CACHE_TIMING_BATCH_NOTES,
                 batch_elapsed,
                 total_elapsed,
             )

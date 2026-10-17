@@ -59,6 +59,7 @@ from app.services.agent.web_evidence import citation_references_for_pages
 from app.services.agent.web_evidence import web_evidence_store
 from app.services.bulk_operation import bulk_operation_guard
 from app.services.agent.history import record_history
+from app.utils.time_units import MS_PER_SECOND
 
 
 _STAGED_SUMMARY_CONCURRENCY = 4
@@ -72,9 +73,13 @@ _SUMMARY_CITATION_CORRECTIONS = 1
 # Streamed batch previews are throttled per batch and trimmed to a compact tail.
 _SUMMARY_STREAM_INTERVAL_SECONDS = 0.3
 _SUMMARY_PREVIEW_TAIL_CHARACTERS = 240
+_OPENAI_FINAL_RESPONSE_MAX_OUTPUT_TOKENS = 8_192
 _FINAL_RESPONSE_MAX_OUTPUT_TOKENS_BY_PROVIDER = {
-    "OpenAI": 8_192,
+    "OpenAI": _OPENAI_FINAL_RESPONSE_MAX_OUTPUT_TOKENS,
 }
+# While the final response streams, its output-token count is reported again
+# after at least this many more tokens.
+_OUTPUT_PROGRESS_REPORT_TOKENS = 8
 
 
 
@@ -1298,7 +1303,7 @@ class AgentRuntime(AgentLoopMixin):
                     output_tokens_received = estimate_text_tokens(
                         f"{state.thinking}{state.content}"
                     )
-                    if output_tokens_received >= last_reported_output_tokens + 8:
+                    if output_tokens_received >= last_reported_output_tokens + _OUTPUT_PROGRESS_REPORT_TOKENS:
                         last_reported_output_tokens = output_tokens_received
                         yield self._output_status_event(
                             "respond",
@@ -1306,7 +1311,7 @@ class AgentRuntime(AgentLoopMixin):
                             "Writing response",
                             approx_input_tokens=final_input_tokens,
                             output_tokens_received=output_tokens_received,
-                            duration_ms=(time.perf_counter() - started_at) * 1_000,
+                            duration_ms=(time.perf_counter() - started_at) * MS_PER_SECOND,
                         )
                     if should_yield:
                         if event["type"] == "content_delta":
@@ -1336,7 +1341,7 @@ class AgentRuntime(AgentLoopMixin):
                 continue
             break
         self._validate_final_stream(state)
-        duration_ms = (time.perf_counter() - started_at) * 1_000
+        duration_ms = (time.perf_counter() - started_at) * MS_PER_SECOND
         self._record_final_response(run=run, state=state, duration_ms=duration_ms)
         self._trace_store.complete_run(session_key=run.session_key, run_id=run.run_id)
         final_output_tokens = estimate_text_tokens(

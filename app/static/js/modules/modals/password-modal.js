@@ -35,6 +35,9 @@ const PASSWORD_MODAL_CONFIG = {
 };
 // Largest random step, in percent, of the simulated bulk-operation progress bar.
 const SIMULATED_PROGRESS_MAX_STEP_PERCENT = 10;
+// The simulated bar stops here to show it is waiting for the operation to finish.
+const SIMULATED_PROGRESS_CEILING_PERCENT = 90;
+const SIMULATED_PROGRESS_STEP_INTERVAL_MS = 200;
 
 
 class PasswordOperationModal extends BaseModal {
@@ -796,12 +799,12 @@ class PasswordOperationModal extends BaseModal {
         let progress = 0;
         const interval = setInterval(() => {
             progress += Math.random() * SIMULATED_PROGRESS_MAX_STEP_PERCENT;
-            if (progress >= 90) {
-                progress = 90; // Stop at 90% to show we're waiting for completion
+            if (progress >= SIMULATED_PROGRESS_CEILING_PERCENT) {
+                progress = SIMULATED_PROGRESS_CEILING_PERCENT;
                 clearInterval(interval);
             }
             progressFill.style.width = `${progress}%`;
-        }, 200);
+        }, SIMULATED_PROGRESS_STEP_INTERVAL_MS);
     }
     
     shouldCloseOnClickOutside() {

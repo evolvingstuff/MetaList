@@ -1,3 +1,4 @@
+import { clampNumber, getScrollMaxY } from './viewport-reference.js';
 import { ApplicationState } from '../../application-state.js';
 const SCROLL_PIXELS_PER_MS = 60;
 const MIN_SCROLL_DURATION_MS = 70;
@@ -11,21 +12,6 @@ export const DELIBERATE_SCROLL_EVENT = 'metalist:deliberate-scroll';
 const moduleState = ApplicationState.createFields('animated-scroll-service', {
     activeAnimationFrame: null,
 });
-
-function clampNumber(value, min, max) {
-    if (typeof value !== 'number' || Number.isNaN(value)) {
-        throw new Error('clampNumber requires a number');
-    }
-    if (value < min) return min;
-    if (value > max) return max;
-    return value;
-}
-
-function getScrollMaxY() {
-    const doc = document.documentElement;
-    const max = doc.scrollHeight - window.innerHeight;
-    return Math.max(0, Math.round(max));
-}
 
 function prefersReducedMotion() {
     if (!window.matchMedia) {

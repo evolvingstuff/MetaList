@@ -6,9 +6,12 @@ import {
     loadAiHistory,
     setAiDebugExactDetails,
 } from './ai-chat-api.js';
+import { MS_PER_SECOND } from '../time-units.js';
 
 // Spaces per level in the debug JSON shown, copied and downloaded.
 const DEBUG_JSON_INDENT = 2;
+// The history download's object URL is released this long after the click.
+const HISTORY_DOWNLOAD_URL_LIFETIME_SECONDS = 1;
 
 
 function requireElement(id, constructor) {
@@ -200,7 +203,7 @@ class AgentDebugViewController {
         document.body.appendChild(link);
         link.click();
         link.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        setTimeout(() => URL.revokeObjectURL(url), HISTORY_DOWNLOAD_URL_LIFETIME_SECONDS * MS_PER_SECOND);
     }
 
     async _copyAll() {

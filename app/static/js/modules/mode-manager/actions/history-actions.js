@@ -12,6 +12,11 @@ import { detachEditorSurface } from '../../editor-toolbar.js';
 import { clearTagBar } from '../services/tag-bar-service.js';
 import { resolveHistoryEditingState } from '../services/history-selection-policy-service.js';
 import { refreshEditingImageSizes } from '../services/editing-image-size-service.js';
+import { MS_PER_SECOND } from '../../time-units.js';
+
+const NOTHING_TO_UNDO_BANNER_SECONDS = 5;
+// After an undo or redo re-renders, the changed note is scrolled into view this much later.
+const SCROLL_TO_CHANGED_NOTE_DELAY_MS = 300;
 
 function applyScrollRestore(scrollRestore, contextLabel) {
     if (!scrollRestore || typeof scrollRestore !== 'object') {
@@ -148,7 +153,7 @@ export async function actionUndo() {
 
     if (result.status === 'noop') {
         Logger.logAction('undo_noop', { message: result.message });
-        ErrorHandler.showInfoBanner(result.message, 5000);
+        ErrorHandler.showInfoBanner(result.message, NOTHING_TO_UNDO_BANNER_SECONDS * MS_PER_SECOND);
         return; 
     }
 
@@ -193,7 +198,7 @@ export async function actionUndo() {
     if (focusNoteId) {
 		window.setTimeout(() => {
 			scrollNoteIntoView(focusNoteId, {});
-		}, 300);
+		}, SCROLL_TO_CHANGED_NOTE_DELAY_MS);
 	}
 
     if (ModeContext.currentContent !== newContent && newContent !== null) {
@@ -272,7 +277,7 @@ export async function actionRedo() {
     if (focusNoteId) {
 		window.setTimeout(() => {
 			scrollNoteIntoView(focusNoteId, {});
-		}, 300);
+		}, SCROLL_TO_CHANGED_NOTE_DELAY_MS);
 	}
 
     if (ModeContext.currentContent !== newContent && newContent !== null) {

@@ -7,6 +7,28 @@ const BASE64_CHARS_PER_GROUP = 4;
 const BASE64_DOUBLE_PADDING = '==';
 const BASE64_SINGLE_PADDING = '=';
 
+// Compressing a pasted image: try each quality in turn (best first) at the current
+// size; when none reaches the target bytes, shrink both sides by the downscale
+// factor and try again, until the longer side is at most the minimum dimension.
+// The qualities step down from the best by a tenth: WebP gets five tries
+// (0.82 to 0.42), JPEG four (0.82 to 0.52).
+const BEST_ENCODE_QUALITY = 0.82;
+const ENCODE_QUALITY_STEP = 0.1;
+// Each quality is rounded to two decimals, so a step lands exactly (0.72, not 0.7199…).
+const ENCODE_QUALITY_DECIMALS = 2;
+const WEBP_ENCODE_ATTEMPTS = 5;
+const JPEG_ENCODE_ATTEMPTS = 4;
+const WEBP_ENCODE_QUALITIES = encodeQualityLadder(WEBP_ENCODE_ATTEMPTS);
+const JPEG_ENCODE_QUALITIES = encodeQualityLadder(JPEG_ENCODE_ATTEMPTS);
+const DOWNSCALE_MINIMUM_DIMENSION_PX = 512;
+const DOWNSCALE_FACTOR = 0.85;
+
+function encodeQualityLadder(attempts) {
+    return Object.freeze(Array.from({ length: attempts }, (_, step) => (
+        Number((BEST_ENCODE_QUALITY - step * ENCODE_QUALITY_STEP).toFixed(ENCODE_QUALITY_DECIMALS))
+    )));
+}
+
 function getPastePositiveIntegerConfig(key) {
     if (typeof key !== 'string' || key.length === 0) {
         throw new Error('getPastePositiveIntegerConfig expects non-empty key');
@@ -220,8 +242,8 @@ export async function compressImageBlobForEmbedding(blob) {
     const initialSize = computeScaledDimensions(sourceImage.naturalWidth, sourceImage.naturalHeight, maxDimensionPx);
 
     const encodePlans = [
-        { mimeType: 'image/webp', qualities: [0.82, 0.72, 0.62, 0.52, 0.42] },
-        { mimeType: 'image/jpeg', qualities: [0.82, 0.72, 0.62, 0.52] },
+        { mimeType: 'image/webp', qualities: WEBP_ENCODE_QUALITIES },
+        { mimeType: 'image/jpeg', qualities: JPEG_ENCODE_QUALITIES },
     ];
 
     let bestBlob = null;
@@ -247,11 +269,11 @@ export async function compressImageBlobForEmbedding(blob) {
                 qualityIndex += 1;
             }
 
-            if (Math.max(width, height) <= 512) {
+            if (Math.max(width, height) <= DOWNSCALE_MINIMUM_DIMENSION_PX) {
                 break;
             }
-            width = Math.max(1, Math.floor(width * 0.85));
-            height = Math.max(1, Math.floor(height * 0.85));
+            width = Math.max(1, Math.floor(width * DOWNSCALE_FACTOR));
+            height = Math.max(1, Math.floor(height * DOWNSCALE_FACTOR));
         }
 
         planIndex += 1;

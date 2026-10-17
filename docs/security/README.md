@@ -735,7 +735,6 @@ All environment limits below are positive integers read at process startup. Chan
 
 | Setting | Default | Behavior at limit |
 |---|---:|---|
-| `METALIST_VIEW_CACHE_BYTES` | 67108864 (64 MiB) | Evict least-recent baselines; an uncached view receives a full snapshot. |
 | `METALIST_UNDO_BYTES` | 33554432 (32 MiB) | Global undo/redo payload budget; also used independently for server clipboard payloads. |
 | `METALIST_UNDO_OPERATIONS` | 100 | Discard complete oldest operations in each undo context. |
 | `METALIST_CLIENT_ENTRIES` | 32 | Bound client registries, view baselines, and retained shell run records. |
@@ -744,7 +743,7 @@ All environment limits below are positive integers read at process startup. Chan
 | `METALIST_SHELL_MAX_RUNS` | 4 | Additional active runs receive 429. |
 | `METALIST_SHELL_OUTPUT_BYTES` | 4194304 (4 MiB) | Combined stdout/stderr bytes; retain the bounded prefix, stop the run, and display the limit error. |
 
-A view cache retains only the latest search/sort baseline for each client/tab. Closed tabs and replaced/logged-out sessions discard obsolete client payloads. View diagnostics expose entry/hit/miss/eviction counts and estimated bytes only. Sensitive memoization caches each cap retained inputs/results at 16 MiB and are cleared on lock. Object accounting includes shared container/dataclass payloads but is an estimate of retained Python allocations, not a process-RSS guarantee. Namespace data, temporary serialization, database caches and request buffers have separate costs.
+The view cache (`app/services/view_cache.py`) keeps one warm view per client and tab: the hierarchy, per-note hashes and locks of the last view sent, never rendered note HTML. It has no byte budget; an entry lives until its tab is deleted or the session ends (login, passwordless claim, logout, lock, restore), so its size follows the number of open tabs. View diagnostics expose entry and note counts only. (`METALIST_VIEW_CACHE_BYTES` capped the earlier per-tab baseline cache and was removed with it.) Sensitive memoization caches each cap retained inputs/results at 16 MiB and are cleared on lock. Object accounting includes shared container/dataclass payloads but is an estimate of retained Python allocations, not a process-RSS guarantee. Namespace data, temporary serialization, database caches and request buffers have separate costs.
 
 Undo limits preserve whole operations. If a single operation exceeds the available budget, its context loses both older undo and redo so later undo cannot cross an untracked mutation. Reaching history trimmed by an operation/byte limit produces an explanatory info banner. Idle/client eviction or session replacement discards the whole context; users should not treat undo as durable recovery.
 

@@ -32,6 +32,10 @@ _MAX_IMAGE_BYTES = 10_485_760
 _MAX_IMAGE_PIXELS = 16_000_000
 _USER_AGENT = "MetaList/remote-image-proxy"
 _TOKEN_PATTERN = re.compile(r"^[A-Za-z0-9_-]{32}$")
+# secrets.token_urlsafe encodes this many random bytes as the 32 characters above.
+_TOKEN_RANDOM_BYTES = 24
+_TOKEN_COLLISION_ATTEMPTS = 8
+_REGISTRY_MAX_ENTRIES = 50_000
 _IMG_TAG_RE = re.compile(r"<img\b(?:[^>\"']|\"[^\"]*\"|'[^']*')*>", re.IGNORECASE)
 _SRC_ATTRIBUTE_RE = re.compile(
     r"\bsrc\s*=\s*(?:\"(?P<double>[^\"]*)\"|'(?P<single>[^']*)'|(?P<bare>[^\s>]+))",
@@ -82,7 +86,7 @@ class RemoteImageProxyRegistry:
                 return existing_token
 
             token = ""
-            for _ in range(8):
+            for _ in range(_TOKEN_COLLISION_ATTEMPTS):
                 candidate = self._token_factory()
                 if not isinstance(candidate, str) or _TOKEN_PATTERN.fullmatch(candidate) is None:
                     raise RuntimeError("Remote image proxy token factory returned an invalid token")
@@ -118,8 +122,8 @@ class RemoteImageProxyRegistry:
 
 
 remote_image_proxy_registry = RemoteImageProxyRegistry(
-    max_entries=50_000,
-    token_factory=lambda: secrets.token_urlsafe(24),
+    max_entries=_REGISTRY_MAX_ENTRIES,
+    token_factory=lambda: secrets.token_urlsafe(_TOKEN_RANDOM_BYTES),
 )
 
 

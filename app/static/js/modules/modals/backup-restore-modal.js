@@ -1,3 +1,4 @@
+import { PORT_RANGE_TEXT, isTcpPort } from '../tcp-ports.js';
 import { parseDecimalInteger } from '../decimal-integer.js';
 import { KIB } from '../byte-sizes.js';
 import { isAnsweredStatus } from '../http-status.js';
@@ -15,6 +16,9 @@ const RESTORE_TRANSITION_UNTIL_KEY = 'metalist_restore_transition_until_ms';
 const SERVER_REACHABILITY_POLL_INTERVAL_MS = 300;
 const SERVER_REACHABILITY_REQUEST_TIMEOUT_MS = 1000;
 const RESTORE_RECONNECT_CURSOR_CLASS = 'restore-reconnect-loading';
+// TCP port numbers are 16-bit.
+// The backup list grows with its entries up to this many rows, then scrolls.
+const BACKUP_LIST_MAX_VISIBLE_ROWS = 8;
 
 
 function parseResponseError(responseBody, statusCode) {
@@ -74,8 +78,8 @@ function parsePort(rawValue, label) {
         throw new Error(`${label} must be numeric`);
     }
     const port = parseDecimalInteger(trimmed);
-    if (!Number.isInteger(port) || port < 1 || port > 65535) {
-        throw new Error(`${label} must be between 1 and 65535`);
+    if (!isTcpPort(port)) {
+        throw new Error(`${label} must be ${PORT_RANGE_TEXT}`);
     }
     return port;
 }
@@ -276,7 +280,7 @@ export class BackupRestoreModal extends BaseModal {
         if (typeof selectedBackup === 'undefined') {
             selectedBackup = null;
         }
-        const selectSize = backups.length > 1 ? Math.min(backups.length, 8) : 1;
+        const selectSize = backups.length > 1 ? Math.min(backups.length, BACKUP_LIST_MAX_VISIBLE_ROWS) : 1;
         const optionsHtml = backups.map((backup) => {
             if (!backup || typeof backup !== 'object') {
                 throw new Error('Invalid backup list entry');

@@ -24,6 +24,7 @@ from app.services.agent.inference import InferenceAttempt
 from app.services.agent.inference import StructuredInferenceProgress
 from app.services.agent.inference import StructuredInferenceError
 from app.services.agent.token_estimation import estimate_text_tokens
+from app.utils.time_units import MS_PER_SECOND
 
 
 _STRUCTURED_MAX_RETRIES = 1
@@ -32,14 +33,19 @@ _STRUCTURED_MAX_RETRIES = 1
 # Medium or High thinking could use the whole budget and leave a cut-off,
 # rejected reply on every attempt.
 _STRUCTURED_MIN_OUTPUT_TOKENS = 8_192
+# Batch steps (a batch of tags, a batch of summaries) have their own budgets.
+_TAG_BATCH_MAX_OUTPUT_TOKENS = 8_192
+_SUMMARY_BATCH_MAX_OUTPUT_TOKENS = 8_192
+# Streamed output is reported again once this many more tokens have arrived.
+_OUTPUT_PROGRESS_STEP_TOKENS = 8
 
 
 def _structured_max_output_tokens(response_model: type[BaseModel]) -> int:
     limits = {
         OutputJudgment: _STRUCTURED_MIN_OUTPUT_TOKENS,
-        TagBatchResult: 8_192,
+        TagBatchResult: _TAG_BATCH_MAX_OUTPUT_TOKENS,
         ExportTitleAnswer: _STRUCTURED_MIN_OUTPUT_TOKENS,
-        SummaryBatchResult: 8_192,
+        SummaryBatchResult: _SUMMARY_BATCH_MAX_OUTPUT_TOKENS,
         SummaryFindingsResult: _STRUCTURED_MIN_OUTPUT_TOKENS,
     }
     if response_model not in limits:
@@ -148,7 +154,7 @@ class _InstructorTraceCapture:
             setattr(response, "_iterator", self._capture_stream(stream_iterator))
             return
         attempt.response = _json_object(response)
-        attempt.duration_ms = (time.perf_counter() - attempt.started_at) * 1_000
+        attempt.duration_ms = (time.perf_counter() - attempt.started_at) * MS_PER_SECOND
         attempt.output_tokens_received = self._response_output_tokens(attempt.response)
         self._emit_progress(
             phase="response_received",
@@ -166,7 +172,7 @@ class _InstructorTraceCapture:
             self._capture_chunk(attempt=attempt, chunk=_json_object(chunk))
             yield chunk
         attempt.response = self._assembled_stream_response(attempt)
-        attempt.duration_ms = (time.perf_counter() - attempt.started_at) * 1_000
+        attempt.duration_ms = (time.perf_counter() - attempt.started_at) * MS_PER_SECOND
         if attempt.output_tokens_received > attempt.last_reported_output_tokens:
             attempt.last_reported_output_tokens = attempt.output_tokens_received
             self._emit_progress(
@@ -226,7 +232,7 @@ class _InstructorTraceCapture:
         attempt.output_tokens_received = 0
         if generated_text != "":
             attempt.output_tokens_received = estimate_text_tokens(generated_text)
-        if attempt.output_tokens_received >= attempt.last_reported_output_tokens + 8:
+        if attempt.output_tokens_received >= attempt.last_reported_output_tokens + _OUTPUT_PROGRESS_STEP_TOKENS:
             attempt.last_reported_output_tokens = attempt.output_tokens_received
             self._emit_progress(
                 phase="output_progress",
@@ -347,7 +353,7 @@ class _InstructorTraceCapture:
         attempt.error = formatted_error
         if isinstance(error, ValidationError):
             attempt.validation_errors = _broken_rules(error)
-        attempt.duration_ms = (time.perf_counter() - attempt.started_at) * 1_000
+        attempt.duration_ms = (time.perf_counter() - attempt.started_at) * MS_PER_SECOND
         attempt_number = len(self._attempts)
         phase = "retrying"
         if attempt_number == self.max_attempts:

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { ApplicationState, stateValuesEqual } from '../../app/static/js/modules/application-state.js';
+import { MS_PER_SECOND } from '../../app/static/js/modules/time-units.js';
 
 function moduleSource(path) {
     return readFileSync(new URL(`../../app/static/js/modules/${path}`, import.meta.url), 'utf8')
@@ -60,6 +61,7 @@ function chatHarness(events) {
         streamAiChat: async ({ onEvent }) => { for (const event of events) onEvent(event); },
         clearAiChatSession: async () => {},
         closeBulkProgress: bulk.close, handleBulkEvent: bulk.event,
+        MS_PER_SECOND,
     };
     const panel = new Function(...Object.keys(dependencies), `${moduleSource('ai-chat/ai-chat-panel-controller.js')}
         captureActiveAgentScope = () => ({}); return AiChatPanel;`)(...Object.values(dependencies));

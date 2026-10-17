@@ -14,12 +14,14 @@ from app.services.remote_image_proxy import (
 )
 from app.services.input_errors import InputRejected, ResourceNotFound
 
+# The most remote images one request may ask about.
+_MAX_SOURCE_URLS_PER_REQUEST = 100
 
 router = APIRouter(prefix="/remote-images", tags=["remote-images"])
 
 
 class RemoteImageRegistrationRequest(BaseModel):
-    source_urls: list[str] = Field(min_length=1, max_length=100)
+    source_urls: list[str] = Field(min_length=1, max_length=_MAX_SOURCE_URLS_PER_REQUEST)
 
 
 class RemoteImageRegistrationEntryResponse(BaseModel):

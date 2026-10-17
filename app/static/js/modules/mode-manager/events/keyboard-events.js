@@ -1,4 +1,5 @@
 import { KIB, MIB } from '../../byte-sizes.js';
+import { MS_PER_SECOND } from '../../time-units.js';
 import { ApplicationState } from '../../application-state.js';
 import { rethrowUnexpectedError } from '../../expected-errors.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
@@ -136,6 +137,19 @@ const DELETE_KEYS = new Set(['Backspace', 'Delete']);
 const TAG_BAR_META_SHORTCUT_KEYS = new Set(['c', 'x', 'v', 'z', 'y', 'r', 's', 'j', 'u', 'p']);
 // Tabs can be dragged to reorder only when there are at least this many.
 const MIN_TABS_TO_DRAG = 2;
+// Clicks this soon after a tab drag ends belong to the drag, not to the tab.
+const TAB_DRAG_CLICK_SUPPRESSION_MS = 500;
+// Longer search queries are shortened in the tab list.
+const TAB_LIST_QUERY_MAX_LENGTH = 12;
+const PASTE_AND_DROP_TIMEOUT_SECONDS = 120;
+const COMMAND_BUSY_BANNER_SECONDS = 10;
+const FAILURE_BANNER_SECONDS = 6;
+const FAILURE_WITH_DETAIL_BANNER_SECONDS = 10;
+const IMAGE_TOO_LARGE_BANNER_SECONDS = 6;
+const IMAGE_SHRINK_FAILURE_BANNER_SECONDS = 6.5;
+const FILE_REFERENCE_PASTE_BANNER_SECONDS = 7;
+const TAB_LIMIT_BANNER_SECONDS = 6;
+const NO_BACKLINKS_BANNER_SECONDS = 3;
 
 const moduleState = ApplicationState.createFields('keyboard-events', {
     savedEditingSelection: null,
@@ -1664,7 +1678,7 @@ function showImageTooLargeForEmbedError(fileName) {
     ErrorHandler.showErrorBanner(
         `Could not shrink ${label} enough. Target ${formatKiB(targetBytes)}, hard max ${formatMiB(maxBytes)}.`,
         'error',
-        6500,
+        IMAGE_SHRINK_FAILURE_BANNER_SECONDS * MS_PER_SECOND,
         true,
     );
 }
@@ -2315,7 +2329,7 @@ async function pasteClipboardImagesAsEmbeddedContent(files, selectionRange) {
             ErrorHandler.showErrorBanner(
                 `Image too large to process. Max allowed is ${maxMiB} MiB.`,
                 'error',
-                6000,
+                IMAGE_TOO_LARGE_BANNER_SECONDS * MS_PER_SECOND,
                 true,
             );
             return false;
@@ -2435,7 +2449,7 @@ async function handleClipboardImageFiles(imageFiles, options) {
             }
             return inserted;
         }, {
-            timeoutMs: 120000,
+            timeoutMs: PASTE_AND_DROP_TIMEOUT_SECONDS * MS_PER_SECOND,
         });
         return {
             inserted: result === true,
@@ -2457,7 +2471,7 @@ async function handleClipboardImageFiles(imageFiles, options) {
             }
             return inserted;
         }, {
-            timeoutMs: 120000,
+            timeoutMs: PASTE_AND_DROP_TIMEOUT_SECONDS * MS_PER_SECOND,
         });
         return {
             inserted: result === true,
@@ -2642,7 +2656,7 @@ function handleDropEvent(event) {
                             selectionRange,
                         });
                     }, {
-                        timeoutMs: 120000,
+                        timeoutMs: PASTE_AND_DROP_TIMEOUT_SECONDS * MS_PER_SECOND,
                     });
                 }
                 return await embedDroppedImageFiles(droppedFiles, selectionRange);
@@ -2654,7 +2668,7 @@ function handleDropEvent(event) {
                     ErrorHandler.showErrorBanner(
                         'Dropped image files did not start because another command is still running.',
                         'error',
-                        10000,
+                        COMMAND_BUSY_BANNER_SECONDS * MS_PER_SECOND,
                         true,
                     );
                 })
@@ -2668,7 +2682,7 @@ function handleDropEvent(event) {
                     ErrorHandler.showErrorBanner(
                         'Failed to handle dropped image files.',
                         'error',
-                        6000,
+                        FAILURE_BANNER_SECONDS * MS_PER_SECOND,
                         true,
                     );
                 });
@@ -2693,7 +2707,7 @@ function handleDropEvent(event) {
                 selectionRange: targetSelectionRange,
             });
         }, {
-            timeoutMs: 120000,
+            timeoutMs: PASTE_AND_DROP_TIMEOUT_SECONDS * MS_PER_SECOND,
         });
     })()
         .then((result) => {
@@ -2704,7 +2718,7 @@ function handleDropEvent(event) {
                 ErrorHandler.showErrorBanner(
                     'File drop did not start because another command is still running.',
                     'error',
-                    10000,
+                    COMMAND_BUSY_BANNER_SECONDS * MS_PER_SECOND,
                     true,
                 );
                 return;
@@ -2727,7 +2741,7 @@ function handleDropEvent(event) {
                 ErrorHandler.showErrorBanner(
                     'Failed to handle dropped image files.',
                     'error',
-                    6000,
+                    FAILURE_BANNER_SECONDS * MS_PER_SECOND,
                     true,
                 );
                 return;
@@ -2735,7 +2749,7 @@ function handleDropEvent(event) {
             ErrorHandler.showErrorBanner(
                 `File drop failed: ${message}`,
                 'error',
-                10000,
+                FAILURE_WITH_DETAIL_BANNER_SECONDS * MS_PER_SECOND,
                 true,
             );
         });
@@ -2812,7 +2826,7 @@ async function pasteExternalContentIntoNewTopNote(pasteEventSnapshot, plainText,
             autoTaggedPasswordPaste,
         };
     }, {
-        timeoutMs: 120000,
+        timeoutMs: PASTE_AND_DROP_TIMEOUT_SECONDS * MS_PER_SECOND,
     });
 }
 
@@ -2847,7 +2861,7 @@ export async function pasteCopiedNoteIntoNewTopNote() {
         await actionPasteNoteSibling();
         return true;
     }, {
-        timeoutMs: 120000,
+        timeoutMs: PASTE_AND_DROP_TIMEOUT_SECONDS * MS_PER_SECOND,
     });
 }
 
@@ -2930,7 +2944,7 @@ function handlePasteEvent(event) {
                     ErrorHandler.showErrorBanner(
                         'Pasted image file did not start because another command is still running.',
                         'error',
-                        10000,
+                        COMMAND_BUSY_BANNER_SECONDS * MS_PER_SECOND,
                         true,
                     );
                     return;
@@ -2949,7 +2963,7 @@ function handlePasteEvent(event) {
                 ErrorHandler.showErrorBanner(
                     'Failed to handle pasted image file.',
                     'error',
-                    6000,
+                    FAILURE_BANNER_SECONDS * MS_PER_SECOND,
                     true,
                 );
             });
@@ -2967,7 +2981,7 @@ function handlePasteEvent(event) {
         ErrorHandler.showErrorBanner(
             'Clipboard contains a file reference/icon preview, not image bytes. Open the image and copy the pixels, then paste again.',
             'error',
-            7000,
+            FILE_REFERENCE_PASTE_BANNER_SECONDS * MS_PER_SECOND,
             true,
         );
         return;
@@ -3030,7 +3044,7 @@ function handlePasteEvent(event) {
                     ErrorHandler.showErrorBanner(
                         'Copied note paste did not start because another command is still running.',
                         'error',
-                        10000,
+                        COMMAND_BUSY_BANNER_SECONDS * MS_PER_SECOND,
                         true,
                     );
                 })
@@ -3043,7 +3057,7 @@ function handlePasteEvent(event) {
                     ErrorHandler.showErrorBanner(
                         'Failed to paste copied note into a new top note.',
                         'error',
-                        6000,
+                        FAILURE_BANNER_SECONDS * MS_PER_SECOND,
                         true,
                     );
                 });
@@ -3078,7 +3092,7 @@ function handlePasteEvent(event) {
                     ErrorHandler.showErrorBanner(
                         'Failed to sanitize pasted HTML.',
                         'error',
-                        6000,
+                        FAILURE_BANNER_SECONDS * MS_PER_SECOND,
                         true,
                     );
                 });
@@ -3093,7 +3107,7 @@ function handlePasteEvent(event) {
                         ErrorHandler.showErrorBanner(
                             'Paste did not start because another command is still running.',
                             'error',
-                            10000,
+                            COMMAND_BUSY_BANNER_SECONDS * MS_PER_SECOND,
                             true,
                         );
                         return;
@@ -3112,7 +3126,7 @@ function handlePasteEvent(event) {
                     ErrorHandler.showErrorBanner(
                         'Failed to paste into a new top note.',
                         'error',
-                        6000,
+                        FAILURE_BANNER_SECONDS * MS_PER_SECOND,
                         true,
                     );
                 });
@@ -3242,7 +3256,7 @@ function handleTabDrop(event) {
     const sourceTabId = moduleState.draggedTabId;
     const hoveredItem = getTabContextItem(event.target);
     const hoveredTabId = hoveredItem ? getTabIdFromContextItem(hoveredItem) : null;
-    moduleState.ignoreClickAfterTabDragUntil = performance.now() + 500;
+    moduleState.ignoreClickAfterTabDragUntil = performance.now() + TAB_DRAG_CLICK_SUPPRESSION_MS;
     finishTabDrag();
 
     if (hoveredTabId === null || hoveredTabId === sourceTabId) {
@@ -3255,7 +3269,7 @@ function handleTabDrop(event) {
 
 function handleTabDragEnd() {
     if (moduleState.draggedTabId !== null) {
-        moduleState.ignoreClickAfterTabDragUntil = performance.now() + 500;
+        moduleState.ignoreClickAfterTabDragUntil = performance.now() + TAB_DRAG_CLICK_SUPPRESSION_MS;
     }
     finishTabDrag();
 }
@@ -3316,10 +3330,10 @@ export function updateSearchContextsList() {
         // Truncate long search queries for display
         if (
             referenceNavigationLabel === ''
-            && displayQuery.length > 12
+            && displayQuery.length > TAB_LIST_QUERY_MAX_LENGTH
             && displayQuery !== '(empty)'
         ) {
-            displayQuery = displayQuery.substring(0, 12) + '...';
+            displayQuery = displayQuery.substring(0, TAB_LIST_QUERY_MAX_LENGTH) + '...';
         }
         
         const isActive = tabId === activeTabId;
@@ -3548,7 +3562,7 @@ async function duplicateTabContext(sourceTabId, animateNoteChanges, shouldSwitch
 	if (payload.tabOrder.length >= CONFIG.TABS.MAX_TABS) {
 		ErrorHandler.showInfoBanner(
 			`Tab limit reached (${CONFIG.TABS.MAX_TABS}). Close a tab before adding another.`,
-			6000,
+			TAB_LIMIT_BANNER_SECONDS * MS_PER_SECOND,
 		);
 		return;
 	}
@@ -3646,7 +3660,7 @@ export async function createBlankSearchContextFromHover() {
     if (payload.tabOrder.length >= CONFIG.TABS.MAX_TABS) {
         ErrorHandler.showInfoBanner(
             `Tab limit reached (${CONFIG.TABS.MAX_TABS}). Close a tab before adding another.`,
-            6000,
+            TAB_LIMIT_BANNER_SECONDS * MS_PER_SECOND,
         );
         return null;
     }
@@ -3711,7 +3725,7 @@ export async function openBacklinksInNewTab(sourceNoteId) {
     const payload = await NotesAPI.fetchBacklinks(sourceNoteId, null);
     const query = buildBacklinksQuery(payload, sourceNoteId);
     if (query === '') {
-        ErrorHandler.showInfoBanner('No notes reference this source anymore.', 3000);
+        ErrorHandler.showInfoBanner('No notes reference this source anymore.', NO_BACKLINKS_BANNER_SECONDS * MS_PER_SECOND);
         return;
     }
     await openReferenceQueryInNewTabWithContext(query, 'reference.backlinks_open_tab', false, 'backlinks');

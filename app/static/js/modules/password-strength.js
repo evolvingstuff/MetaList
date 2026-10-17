@@ -10,6 +10,8 @@ const SCORE_LABELS = [
     'Strong',
     'Very strong',
 ];
+// zxcvbn scores run from 0 through this, one label each.
+const MAX_ZXCVBN_SCORE = SCORE_LABELS.length - 1;
 
 const moduleState = ApplicationState.createFields('password-strength', {
     zxcvbnLoadPromise: null,
@@ -17,8 +19,8 @@ const moduleState = ApplicationState.createFields('password-strength', {
 
 
 export function describePasswordScore(score) {
-    if (!Number.isInteger(score) || score < 0 || score > 4) {
-        throw new Error('zxcvbn score must be an integer from 0 through 4');
+    if (!Number.isInteger(score) || score < 0 || score > MAX_ZXCVBN_SCORE) {
+        throw new Error(`zxcvbn score must be an integer from 0 through ${MAX_ZXCVBN_SCORE}`);
     }
     return {
         label: SCORE_LABELS[score],

@@ -46,6 +46,9 @@ FILE_PREVIEW_MIME_TYPE = "image/svg+xml"
 # Only files MetaList edits itself may be replaced in place; other attachments stay immutable.
 _EDITABLE_THUMBNAIL_KINDS = {"excalidraw"}
 _XML_DECLARATION_END = "?>"
+# A new file ID is drawn at most this many times before giving up on finding
+# one that no note or file already uses.
+_UNIQUE_FILE_ID_ATTEMPTS = 100
 
 
 class FileRevisionConflict(Exception):
@@ -667,7 +670,7 @@ def decrypt_all_files_for_plaintext(*, encryption_service: object) -> int:
 
 
 def _generate_unique_file_id() -> str:
-    for _ in range(100):
+    for _ in range(_UNIQUE_FILE_ID_ATTEMPTS):
         candidate = str(uuid.uuid4())
         if note_store.has_note(candidate):
             continue

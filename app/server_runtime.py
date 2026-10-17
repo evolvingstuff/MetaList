@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.utils.tcp_ports import PORT_RANGE_TEXT, is_tcp_port
 import argparse
 from collections.abc import Mapping, MutableMapping, Sequence
 from dataclasses import dataclass
@@ -45,6 +46,15 @@ _DEFAULT_MANAGED_RUNTIME_DIRECTORY_NAME = "runtime"
 _DEFAULT_NAMESPACE = "default"
 _DEFAULT_HTTP_PORT = 8000
 _DEFAULT_HTTPS_PORT = 8443
+# Ports are 16-bit, so valid ones run from 1 to one below this.
+# Connecting a UDP socket here sends nothing; it only makes the OS pick the outgoing address.
+_LAN_PROBE_HOST = "8.8.8.8"
+_LAN_PROBE_PORT = 80
+_TLS_RSA_PUBLIC_EXPONENT = 65537
+_TLS_RSA_KEY_SIZE_BITS = 2048
+_TLS_CERT_VALID_DAYS = 365
+_TLS_CERT_FILE_MODE = 0o644
+_TLS_KEY_FILE_MODE = 0o600
 _DEFAULT_TEST_DATABASE_URL = "sqlite:///./test.db"
 _DEFAULT_TEST_DATABASE_PATH = Path("./test.db")
 _NAMESPACE_ENV_NAME = "METALIST_NAMESPACE"
@@ -95,8 +105,8 @@ def _parse_port_argument(raw_value: str) -> int:
     if not value.isdigit():
         raise argparse.ArgumentTypeError(f"port must be numeric, got: {raw_value!r}")
     parsed = int(value)
-    if not 0 < parsed < 65536:
-        raise argparse.ArgumentTypeError(f"port must be between 1 and 65535, got: {parsed}")
+    if not is_tcp_port(parsed):
+        raise argparse.ArgumentTypeError(f"port must be {PORT_RANGE_TEXT}, got: {parsed}")
     return parsed
 
 
@@ -173,8 +183,8 @@ def _validate_optional_port(*, name: str, value: int | None) -> int | None:
         return None
     if not isinstance(value, int):
         raise TypeError(f"{name} must be an int or None, got {type(value)}")
-    if not 0 < value < 65536:
-        raise ValueError(f"{name} must be between 1 and 65535, got: {value}")
+    if not is_tcp_port(value):
+        raise ValueError(f"{name} must be {PORT_RANGE_TEXT}, got: {value}")
     return value
 
 
@@ -790,8 +800,8 @@ def _read_int(*, environ: Mapping[str, str], name: str, fallback: int) -> int:
     if not value.isdigit():
         raise RuntimeError(f"{name} must be numeric, got: {value!r}")
     parsed = int(value)
-    if not 0 < parsed < 65536:
-        raise RuntimeError(f"{name} must be between 1 and 65535, got: {parsed}")
+    if not is_tcp_port(parsed):
+        raise RuntimeError(f"{name} must be {PORT_RANGE_TEXT}, got: {parsed}")
     return parsed
 
 
@@ -802,8 +812,8 @@ def _read_optional_int(*, environ: Mapping[str, str], name: str) -> int | None:
     if not raw_value.isdigit():
         raise RuntimeError(f"{name} must be numeric, got: {raw_value!r}")
     parsed = int(raw_value)
-    if not 0 < parsed < 65536:
-        raise RuntimeError(f"{name} must be between 1 and 65535, got: {parsed}")
+    if not is_tcp_port(parsed):
+        raise RuntimeError(f"{name} must be {PORT_RANGE_TEXT}, got: {parsed}")
     return parsed
 
 
@@ -864,7 +874,7 @@ def _resolve_tls_hostname() -> str:
 def _probe_lan_ip() -> str:
     """The address the OS would send internet traffic from (a UDP socket is connected, nothing is sent)."""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe_socket:
-        probe_socket.connect(("8.8.8.8", 80))
+        probe_socket.connect((_LAN_PROBE_HOST, _LAN_PROBE_PORT))
         return probe_socket.getsockname()[0]
 
 
@@ -946,7 +956,7 @@ def ensure_default_tls_pair(*, environ: Mapping[str, str]) -> tuple[str, str] | 
     if lan_ip is not None and lan_ip != "127.0.0.1":
         san_entries.append(x509.IPAddress(ipaddress.ip_address(lan_ip)))
 
-    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    private_key = rsa.generate_private_key(public_exponent=_TLS_RSA_PUBLIC_EXPONENT, key_size=_TLS_RSA_KEY_SIZE_BITS)
     subject = issuer = x509.Name(
         [x509.NameAttribute(NameOID.COMMON_NAME, common_name)]
     )
@@ -958,7 +968,7 @@ def ensure_default_tls_pair(*, environ: Mapping[str, str]) -> tuple[str, str] | 
         .public_key(private_key.public_key())
         .serial_number(x509.random_serial_number())
         .not_valid_before(now - timedelta(minutes=1))
-        .not_valid_after(now + timedelta(days=365))
+        .not_valid_after(now + timedelta(days=_TLS_CERT_VALID_DAYS))
         .add_extension(x509.SubjectAlternativeName(san_entries), critical=False)
         .sign(private_key=private_key, algorithm=hashes.SHA256())
     )
@@ -971,8 +981,8 @@ def ensure_default_tls_pair(*, environ: Mapping[str, str]) -> tuple[str, str] | 
             encryption_algorithm=serialization.NoEncryption(),
         )
     )
-    os.chmod(_DEFAULT_CERT_PATH, 0o644)
-    os.chmod(_DEFAULT_KEY_PATH, 0o600)
+    os.chmod(_DEFAULT_CERT_PATH, _TLS_CERT_FILE_MODE)
+    os.chmod(_DEFAULT_KEY_PATH, _TLS_KEY_FILE_MODE)
     print(
         "Generated default TLS certificate: "
         f"cert={_DEFAULT_CERT_PATH.expanduser()} "

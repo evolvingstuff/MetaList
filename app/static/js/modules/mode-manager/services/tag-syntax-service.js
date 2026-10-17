@@ -69,12 +69,16 @@ function isSupportedMetaTag(term) {
         && /[1-9]/.test(folded.slice('@size='.length));
 }
 
+// Printable ASCII runs from the space (0x20) to the tilde (0x7e).
+const FIRST_PRINTABLE_ASCII_CODE = ' '.charCodeAt(0);
+const LAST_PRINTABLE_ASCII_CODE = '~'.charCodeAt(0);
+
 function isAsciiPrintable(char) {
     if (typeof char !== 'string' || char.length === 0) {
         return false;
     }
     const code = char.charCodeAt(0);
-    return code >= 0x20 && code <= 0x7e;
+    return code >= FIRST_PRINTABLE_ASCII_CODE && code <= LAST_PRINTABLE_ASCII_CODE;
 }
 
 function isWhitespace(char) {

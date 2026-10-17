@@ -19,7 +19,15 @@ const FEN_PIECES = new Set(['k', 'q', 'r', 'b', 'n', 'p']);
 const FEN_SIDE_TO_MOVE_FIELD = 1;
 const FEN_CASTLING_FIELD = 2;
 const FEN_EN_PASSANT_FIELD = 3;
+const FEN_HALFMOVE_CLOCK_FIELD = 4;
+const FEN_FULLMOVE_FIELD = 5;
+const FEN_FIELD_COUNT = FEN_FULLMOVE_FIELD + 1;
+// The board is square: as many ranks as files, and as many squares in a rank.
+const FEN_BOARD_SIZE = 'abcdefgh'.length;
 const JSON_UNICODE_ESCAPE_PREFIX = '\\u';
+// \u and four hex digits, such as é.
+const JSON_UNICODE_ESCAPE_HEX_DIGITS = 4;
+const JSON_UNICODE_ESCAPE_LENGTH = JSON_UNICODE_ESCAPE_PREFIX.length + JSON_UNICODE_ESCAPE_HEX_DIGITS;
 // A backslash and one character, such as \n.
 const JSON_SHORT_ESCAPE_LENGTH = 2;
 const CSV_ESCAPED_QUOTE = '""';
@@ -114,8 +122,8 @@ function scanJsonString(scanner) {
         if (char === '\\') {
             const escape = scanner.text[scanner.index + 1];
             if (escape === 'u') {
-                if (!/^[0-9a-fA-F]{4}$/.test(scanner.text.slice(scanner.index + JSON_UNICODE_ESCAPE_PREFIX.length, scanner.index + 6))) return false;
-                scanner.index += 6;
+                if (!/^[0-9a-fA-F]{4}$/.test(scanner.text.slice(scanner.index + JSON_UNICODE_ESCAPE_PREFIX.length, scanner.index + JSON_UNICODE_ESCAPE_LENGTH))) return false;
+                scanner.index += JSON_UNICODE_ESCAPE_LENGTH;
                 continue;
             }
             if (!'"\\/bfnrt'.includes(escape)) return false;
@@ -158,11 +166,11 @@ function isFenPosition(text) {
         return false;
     }
     const fields = text.split(/\s+/);
-    if (fields.length > 6) {
+    if (fields.length > FEN_FIELD_COUNT) {
         return false;
     }
     const ranks = fields[0].split('/');
-    if (ranks.length !== 8) {
+    if (ranks.length !== FEN_BOARD_SIZE) {
         return false;
     }
     for (const rank of ranks) {
@@ -176,14 +184,15 @@ function isFenPosition(text) {
                 return false;
             }
         }
-        if (squares !== 8) {
+        if (squares !== FEN_BOARD_SIZE) {
             return false;
         }
     }
     if (fields.length > FEN_SIDE_TO_MOVE_FIELD && !['w', 'b'].includes(fields[FEN_SIDE_TO_MOVE_FIELD])) return false;
     if (fields.length > FEN_CASTLING_FIELD && !/^(?:-|K?Q?k?q?)$/.test(fields[FEN_CASTLING_FIELD])) return false;
     if (fields.length > FEN_EN_PASSANT_FIELD && !/^(?:-|[a-h][36])$/.test(fields[FEN_EN_PASSANT_FIELD])) return false;
-    return fields.slice(4).every((field) => /^\d+$/.test(field));
+    // The halfmove clock and fullmove number are counts.
+    return fields.slice(FEN_HALFMOVE_CLOCK_FIELD).every((field) => /^\d+$/.test(field));
 }
 
 function isUnifiedDiff(text) {

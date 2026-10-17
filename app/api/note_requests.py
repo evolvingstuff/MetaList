@@ -3,10 +3,17 @@
 from app.utils.byte_sizes import KIB, MIB
 from typing import Annotated, Literal
 from app.services.resource_limits import SHELL_SECONDS
+from app.services.search_history_storage import MAX_TAG_ACTIVITY_RETENTION_DAYS
 from typing_extensions import TypedDict
 from pydantic import AfterValidator, ConfigDict, Field, with_config
 
-Identifier = Annotated[str, Field(min_length=1, max_length=256)]
+MAX_IDENTIFIER_LENGTH = 256
+MAX_TAG_ACTIVITY_WINDOWS = 20
+# The AI proposes at most this many tags for one note.
+MAX_PROPOSED_TAGS_PER_NOTE = 12
+MAX_TAG_PROPOSAL_NOTES = 20_000
+
+Identifier = Annotated[str, Field(min_length=1, max_length=MAX_IDENTIFIER_LENGTH)]
 Text = Annotated[str, Field(max_length=MIB)]
 # The longest note content (HTML) one request may carry, in characters: 16 Mi (2**24),
 # so a single request cannot make the server hold an unbounded note.
@@ -25,7 +32,11 @@ def _unique_windows(value):
     return value
 
 
-WindowDays = Annotated[list[Annotated[int, Field(ge=1, le=365)]], Field(max_length=20), AfterValidator(_unique_windows)]
+WindowDays = Annotated[
+    list[Annotated[int, Field(ge=1, le=MAX_TAG_ACTIVITY_RETENTION_DAYS)]],
+    Field(max_length=MAX_TAG_ACTIVITY_WINDOWS),
+    AfterValidator(_unique_windows),
+]
 
 @with_config(ConfigDict(strict=True))
 class SortKey(TypedDict):
@@ -210,8 +221,8 @@ class AcceptTagProposalRequest(TypedDict):
 @with_config(ConfigDict(strict=True))
 class AddTagProposalsRequest(TypedDict):
     # note id -> the AI's tags for it: the edited note and maybe notes below it.
-    proposals: Annotated[dict[Identifier, Annotated[list[Identifier], Field(min_length=1, max_length=12)]],
-                         Field(min_length=1, max_length=20_000)]
+    proposals: Annotated[dict[Identifier, Annotated[list[Identifier], Field(min_length=1, max_length=MAX_PROPOSED_TAGS_PER_NOTE)]],
+                         Field(min_length=1, max_length=MAX_TAG_PROPOSAL_NOTES)]
     clientId: Identifier
     undoContext: UndoContext
     viewport: Viewport

@@ -27,6 +27,8 @@ from app.services.agent.prompt_settings import AgentPromptSet
 from app.services.agent.skill_settings import AgentSkill
 from app.services.agent.staged_summary import SummaryBatchResult
 
+_SHA256_HEX_DIGEST_LENGTH = len(hashlib.sha256().hexdigest())
+
 
 @dataclass(frozen=True, slots=True)
 class KeptSummaryBatches:
@@ -41,7 +43,7 @@ class KeptSummaryBatches:
         if not self.results:
             raise ValueError("A kept summary needs at least one finished batch")
         for key, result in self.results.items():
-            if not isinstance(key, str) or len(key) != 64:
+            if not isinstance(key, str) or len(key) != _SHA256_HEX_DIGEST_LENGTH:
                 raise ValueError("Kept summary batch keys are SHA-256 hex digests")
             if not isinstance(result, SummaryBatchResult):
                 raise TypeError("Kept summary batches must be SummaryBatchResult")

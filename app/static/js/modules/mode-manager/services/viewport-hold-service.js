@@ -11,12 +11,15 @@
 // input or scroll, once the layout has been still for a moment, or after a
 // maximum time.
 
+import { half } from '../../half.js';
 import { ApplicationState } from '../../application-state.js';
-import { getViewportTopInset } from './scroll-restoration-service.js';
+import { getViewportTopInset } from './viewport-reference.js';
 import { DELIBERATE_SCROLL_EVENT } from './animated-scroll-service.js';
 
 // How much of a kept-visible note must remain below the search controls.
 const MIN_VISIBLE_PX = 24;
+// The reading caret is probed this far into the note's text at most.
+const READING_PROBE_MAX_INSET_PX = 40;
 const QUIET_MS = 700;
 const MAX_HOLD_MS = 4000;
 // Characters of context recorded on each side of an anchored text position.
@@ -28,7 +31,6 @@ const MIN_MATCH_CHARS = 8;
 const FORMULA_DELIMITER_CHARS = 2;
 // With no caret in view, the anchor is read a third of the way down the visible area.
 const READING_LINE_DIVISOR = 3;
-const HALF_DIVISOR = 2;
 
 const moduleState = ApplicationState.createFields('viewport-hold-service', {
     session: null,
@@ -377,7 +379,7 @@ export function captureNoteAnchor(noteElement) {
     const readingLineY = inset + (viewportBottom - inset) / READING_LINE_DIVISOR;
     const contentRect = content.getBoundingClientRect();
     if (contentRect.top <= readingLineY && contentRect.bottom >= readingLineY) {
-        const position = caretPositionAt(contentRect.left + Math.min(40, contentRect.width / HALF_DIVISOR), readingLineY);
+        const position = caretPositionAt(contentRect.left + Math.min(READING_PROBE_MAX_INSET_PX, half(contentRect.width)), readingLineY);
         if (position !== null && content.contains(position.node)) {
             const reading = textAnchorAt(position.node, position.offset);
             if (reading !== null) {

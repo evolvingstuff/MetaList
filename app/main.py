@@ -84,6 +84,7 @@ import sys
 import types
 import uuid
 from app.utils.sent_fields import sent_or_none
+from app.utils.time_units import MS_PER_SECOND
 from starlette.staticfiles import StaticFiles as StarletteStaticFiles
 from fastapi.middleware.gzip import GZipMiddleware
 import os
@@ -96,6 +97,13 @@ from app.services.input_errors import InputRejected, NamespaceInputRejected
 # Loguru's standard-logging intercept: the caller sits at least this many
 # frames above the handler, plus one per logging-module frame.
 _INTERCEPT_BASE_DEPTH = 2
+# Responses smaller than this go out uncompressed.
+_GZIP_MINIMUM_RESPONSE_BYTES = 1000
+# Hex digits of a random UUID kept as the short id that ties a request's log lines together.
+_REQUEST_ID_HEX_LENGTH = 8
+_CSP_NONCE_RANDOM_BYTES = 24
+# URL-safe base64 of the random bytes, without padding.
+_CSP_NONCE_TEXT_LENGTH = 32
 
 logger.remove()
 logger.add(
@@ -366,7 +374,7 @@ class NoCacheStaticFiles(StarletteStaticFiles):
         return response
 
 # Add GZip compression
-app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(GZipMiddleware, minimum_size=_GZIP_MINIMUM_RESPONSE_BYTES)
 
 # Add authentication middleware
 app.add_middleware(AuthMiddleware)
@@ -432,7 +440,7 @@ async def redirect_remote_http_to_https(request: Request, call_next):
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    request_id = uuid.uuid4().hex[:8]
+    request_id = uuid.uuid4().hex[:_REQUEST_ID_HEX_LENGTH]
     request.state.diagnostic_request_id = request_id
 
     path = request.url.path
@@ -464,7 +472,7 @@ async def log_requests(request: Request, call_next):
     with request_tracker:
         response = await call_next(request)
 
-    duration_ms = (time.perf_counter() - start) * 1000
+    duration_ms = (time.perf_counter() - start) * MS_PER_SECOND
     size = _header_for_log(response.headers, "content-length")
     handler_name = _handler_name(request)
     if not (is_noisy_poll or is_noisy_lock):
@@ -485,8 +493,8 @@ app.add_middleware(RequestBoundaryMiddleware, allowed_hosts=allowed_request_host
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
-    nonce = secrets.token_urlsafe(24)
-    if len(nonce) != 32:
+    nonce = secrets.token_urlsafe(_CSP_NONCE_RANDOM_BYTES)
+    if len(nonce) != _CSP_NONCE_TEXT_LENGTH:
         raise RuntimeError("Generated CSP nonce has unexpected length")
     request.state.csp_nonce = nonce
     response = await call_next(request)

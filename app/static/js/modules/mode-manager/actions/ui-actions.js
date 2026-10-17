@@ -16,8 +16,13 @@ import { hasRootsBelowLoadedWindow, resetInfiniteScrollState } from '../services
 import {
     captureEditingFocus, captureViewportRoot, holdViewportRoot, placeCaretAtClickAnchor, restoreEditingFocus,
 } from '../services/viewport-hold-service.js';
+import { MS_PER_SECOND } from '../../time-units.js';
 
 const PERF_LOG_MS_DECIMALS = 2;
+// waitForViewRequestIdle fails loudly once a notes.view request has blocked this long.
+const VIEW_REQUEST_IDLE_TIMEOUT_SECONDS = 5;
+const VIEW_REQUEST_IDLE_TIMEOUT_MS = VIEW_REQUEST_IDLE_TIMEOUT_SECONDS * MS_PER_SECOND;
+const VIEW_REQUEST_IDLE_POLL_MS = 25;
 
 const moduleState = ApplicationState.createFields('ui-actions', {
     viewRequestInFlight: false,
@@ -68,11 +73,11 @@ export async function waitForViewRequestIdle() {
     const waitStartedAt = performance.now();
     while (moduleState.viewRequestInFlight) {
         const waitedMs = performance.now() - waitStartedAt;
-        if (waitedMs > 5000) {
-            throw new Error('notes.view blocked >5s waiting for in-flight request');
+        if (waitedMs > VIEW_REQUEST_IDLE_TIMEOUT_MS) {
+            throw new Error(`notes.view blocked >${VIEW_REQUEST_IDLE_TIMEOUT_SECONDS}s waiting for in-flight request`);
         }
         await new Promise((resolve) => {
-            window.setTimeout(resolve, 25);
+            window.setTimeout(resolve, VIEW_REQUEST_IDLE_POLL_MS);
         });
     }
 }

@@ -44,6 +44,8 @@ EXPORT_TITLE_INPUT_TOKENS = 3000
 # Of one note, so a long first note does not take it all.
 _MAX_NOTE_CHARACTERS = 2000
 MAX_TITLE_CHARACTERS = 80
+# The longest answer the schema accepts; a longer-than-MAX_TITLE_CHARACTERS answer is cut.
+_MAX_ANSWER_TITLE_CHARACTERS = 400
 # Titles already suggested that one request may name.
 MAX_PREVIOUS_TITLES = 10
 
@@ -67,7 +69,7 @@ _INSTRUCTIONS = (
 class ExportTitleAnswer(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    title: str = Field(..., max_length=400)
+    title: str = Field(..., max_length=_MAX_ANSWER_TITLE_CHARACTERS)
 
 
 @dataclass(frozen=True, slots=True)

@@ -29,6 +29,13 @@ from app.services.tag_term_matching import split_tag_term_segments_preserving_ca
 from app.services.tag_term_matching import tag_term_matches_prefix
 
 _UNMATCHED_SEGMENT_PENALTY = 10
+_PHRASE_MATCH_BONUS = 1000
+_PARTIAL_PHRASE_MATCH_BONUS = 750
+_MATCHED_SEGMENT_BONUS = 100
+# A match at the start of the text earns this much; each later position earns one less, down to none.
+_EARLY_POSITION_BONUS = 100
+# Every term named in the note's own text starts from this score.
+_NOTE_TEXT_MATCH_BASE_SCORE = 20000
 _MIN_DIRECT_LITERAL_TERM_LENGTH = 2
 # A term of at least this many segments, one of them a number, needs only one matched segment.
 _MIN_NUMBERED_TERM_SEGMENT_COUNT = 3
@@ -298,12 +305,12 @@ def _score_content_match(match: TagContentMatch) -> int:
 
     score = 0
     if match.phrase_match:
-        score += 1000
+        score += _PHRASE_MATCH_BONUS
     if match.raw_partial_phrase_match:
-        score += 750
-    score += match.matched_segment_count * 100
+        score += _PARTIAL_PHRASE_MATCH_BONUS
+    score += match.matched_segment_count * _MATCHED_SEGMENT_BONUS
     score -= unmatched_segment_count * _UNMATCHED_SEGMENT_PENALTY
-    score += max(0, 100 - min(match.first_position, 100))
+    score += max(0, _EARLY_POSITION_BONUS - min(match.first_position, _EARLY_POSITION_BONUS))
     score += match.normalized_length
     return score
 
@@ -698,7 +705,7 @@ def _rank_terms_by_local_context(
         ontology=ontology,
     )
     for term, match in current_note_content_matches.items():
-        local_scores[term] += 20000 + _score_content_match(match)
+        local_scores[term] += _NOTE_TEXT_MATCH_BASE_SCORE + _score_content_match(match)
 
     # Only this note's own text counts. Tags used, or words written, on its
     # children, siblings or ancestors get no boost: a tag on two of three

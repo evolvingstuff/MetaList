@@ -8,6 +8,10 @@ import uuid
 SEARCH_HISTORY_PAYLOAD_VERSION = 2
 MAX_TAG_ACTIVITY_RETENTION_DAYS = 365
 _AAD_PREFIX = "MetaList|tag_activity_history|payload|v2|"
+# Storage ids are random (version 4) UUIDs.
+_STORAGE_ID_UUID_VERSION = 4
+# The namespace data encryption key is an AES-256 key.
+_DEK_BYTES = 32
 
 
 def new_search_history_storage_id() -> str:
@@ -20,7 +24,7 @@ def assert_search_history_storage_id(storage_id: str) -> None:
     if not isinstance(storage_id, str) or storage_id == "":
         raise TypeError("tag activity storage_id must be a non-empty string")
     parsed = uuid.UUID(storage_id)
-    if parsed.version != 4 or str(parsed) != storage_id:
+    if parsed.version != _STORAGE_ID_UUID_VERSION or str(parsed) != storage_id:
         raise ValueError("tag activity storage_id must be a canonical UUIDv4")
 
 
@@ -148,6 +152,6 @@ def coerce_search_history_encryption_service(encryption_service: object):
     if encryption_service is None:
         return None
     dek = encryption_service.dek
-    if not isinstance(dek, bytes) or len(dek) != 32:
+    if not isinstance(dek, bytes) or len(dek) != _DEK_BYTES:
         return None
     return encryption_service

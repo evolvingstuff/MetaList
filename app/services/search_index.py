@@ -17,6 +17,7 @@ from app.services.search_text import (
     list_link_title_urls,
     text_term_matches,
 )
+from app.utils.time_units import MS_PER_SECOND
 
 
 _QUOTE_CHARS = {"'", '"'}
@@ -301,7 +302,7 @@ class SearchIndex:
             if processed != last_reported:
                 progress_update(processed)
 
-        elapsed_ms = (time.perf_counter() - t0) * 1000
+        elapsed_ms = (time.perf_counter() - t0) * MS_PER_SECOND
         logger.bind(
             metrics={
                 "elapsed_ms": elapsed_ms,
@@ -349,7 +350,7 @@ class SearchIndex:
             self._revision += 1
             self._result_cache.clear()
 
-        elapsed_ms = (time.perf_counter() - t0) * 1000
+        elapsed_ms = (time.perf_counter() - t0) * MS_PER_SECOND
         logger.bind(
             metrics={"elapsed_ms": elapsed_ms, "note_id": note_id, "revision": self._revision}
         ).info("search.index.upsert.finish")
@@ -418,7 +419,7 @@ class SearchIndex:
                 self._revision += 1
                 self._result_cache.clear()
 
-        elapsed_ms = (time.perf_counter() - t0) * 1000
+        elapsed_ms = (time.perf_counter() - t0) * MS_PER_SECOND
         logger.bind(
             metrics={
                 "elapsed_ms": elapsed_ms,
@@ -472,7 +473,7 @@ class SearchIndex:
             self._revision += 1
             self._result_cache.clear()
 
-        elapsed_ms = (time.perf_counter() - t0) * 1000
+        elapsed_ms = (time.perf_counter() - t0) * MS_PER_SECOND
         logger.bind(
             metrics={"elapsed_ms": elapsed_ms, "count": len(note_ids), "revision": self._revision}
         ).info("search.index.remove_many.finish")
@@ -846,7 +847,7 @@ class SearchIndex:
             if search in self._result_cache:
                 cached_revision, cached_results = self._result_cache[search]
                 if cached_revision == self._revision:
-                    total_ms = (time.perf_counter() - t0) * 1000
+                    total_ms = (time.perf_counter() - t0) * MS_PER_SECOND
                     logger.bind(
                         metrics={
                             "cache_hit": True,
@@ -859,7 +860,7 @@ class SearchIndex:
 
         parsed = parse_search_query(search)
 
-        parse_ms = (time.perf_counter() - t0) * 1000
+        parse_ms = (time.perf_counter() - t0) * MS_PER_SECOND
 
         has_terms = any(
             clause.required_tags
@@ -883,8 +884,8 @@ class SearchIndex:
                 candidate_ids.update(self._candidate_note_ids_locked(clause))
             candidate_count = len(candidate_ids)
             if not candidate_ids:
-                candidate_ms = (time.perf_counter() - t1) * 1000
-                total_ms = (time.perf_counter() - t0) * 1000
+                candidate_ms = (time.perf_counter() - t1) * MS_PER_SECOND
+                total_ms = (time.perf_counter() - t0) * MS_PER_SECOND
                 logger.bind(
                     metrics={
                         "cache_hit": False,
@@ -919,9 +920,9 @@ class SearchIndex:
                     continue
                 matched_note_ids.add(self._id_to_uuid[note_int_id])
 
-            candidate_ms = (t2 - t1) * 1000
-            verify_ms = (time.perf_counter() - t2) * 1000
-            total_ms = (time.perf_counter() - t0) * 1000
+            candidate_ms = (t2 - t1) * MS_PER_SECOND
+            verify_ms = (time.perf_counter() - t2) * MS_PER_SECOND
+            total_ms = (time.perf_counter() - t0) * MS_PER_SECOND
 
             frozen = frozenset(matched_note_ids)
             self._result_cache[search] = (self._revision, frozen)

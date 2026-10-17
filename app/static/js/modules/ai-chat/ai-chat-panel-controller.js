@@ -1,4 +1,5 @@
 import { twoDigits } from '../local-date-text.js';
+import { MS_PER_MINUTE, MS_PER_SECOND, SECONDS_PER_MINUTE } from '../time-units.js';
 import { executeAgentMenuRequest } from './agent-menu-actions.js';
 import { ApplicationState, stateValuesEqual } from '../application-state.js';
 import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js';
@@ -57,6 +58,13 @@ import {
 // The panel's default width is a third of the window (--ai-chat-width in main.css).
 const DEFAULT_PANEL_WIDTH_DIVISOR = 3;
 const THINKING_DOT_COUNT = 3;
+// The persisted panel-width and composer-height ranges (checked again by the server).
+const AI_CHAT_MINIMUM_WIDTH = 280;
+const AI_CHAT_MAXIMUM_WIDTH = 5000;
+const AI_CHAT_COMPOSER_MINIMUM_HEIGHT = 74;
+const AI_CHAT_COMPOSER_MAXIMUM_HEIGHT = 220;
+const RESIZER_KEYBOARD_STEP_PX = 24;
+const REFERENCES_PREVIEW_MAXIMUM_HEIGHT_PX = 48;
 
 
 function requireElement(id, constructor) {
@@ -795,7 +803,11 @@ class AiChatPanelController {
         if (height === heightBeforeInteraction) {
             return;
         }
-        if (!Number.isInteger(height) || height < 74 || height > 220) {
+        if (
+            !Number.isInteger(height)
+            || height < AI_CHAT_COMPOSER_MINIMUM_HEIGHT
+            || height > AI_CHAT_COMPOSER_MAXIMUM_HEIGHT
+        ) {
             throw new Error('Rendered AI chat composer height is outside the persisted range');
         }
         void this._saveComposerHeight(height);
@@ -809,11 +821,11 @@ class AiChatPanelController {
         const currentWidth = this._elements.panel.getBoundingClientRect().width;
         let requestedWidth = currentWidth;
         if (event.key === 'ArrowLeft') {
-            requestedWidth += 24;
+            requestedWidth += RESIZER_KEYBOARD_STEP_PX;
         } else if (event.key === 'ArrowRight') {
-            requestedWidth -= 24;
+            requestedWidth -= RESIZER_KEYBOARD_STEP_PX;
         } else if (event.key === 'Home') {
-            requestedWidth = 280;
+            requestedWidth = AI_CHAT_MINIMUM_WIDTH;
         } else {
             requestedWidth = calculateAiChatMaximumWidth(window.innerWidth);
         }
@@ -842,7 +854,7 @@ class AiChatPanelController {
             throw new Error('_setResizerAria requires positive finite width');
         }
         this._elements.resizer.setAttribute('aria-valuenow', String(width));
-        this._elements.resizer.setAttribute('aria-valuemin', '280');
+        this._elements.resizer.setAttribute('aria-valuemin', String(AI_CHAT_MINIMUM_WIDTH));
         this._elements.resizer.setAttribute(
             'aria-valuemax',
             String(calculateAiChatMaximumWidth(window.innerWidth)),
@@ -871,7 +883,7 @@ class AiChatPanelController {
 
     async _persistPanelWidth() {
         const width = Math.round(this._elements.panel.getBoundingClientRect().width);
-        if (!Number.isInteger(width) || width < 280 || width > 5000) {
+        if (!Number.isInteger(width) || width < AI_CHAT_MINIMUM_WIDTH || width > AI_CHAT_MAXIMUM_WIDTH) {
             throw new Error('Rendered AI chat width is outside the persisted range');
         }
         await this._savePanelWidth(width);
@@ -1437,7 +1449,7 @@ class AiChatPanelController {
         this._thinkingStartedAtMs = Date.now();
         this._thinkingTimerId = window.setInterval(() => {
             this._syncThinkingElapsed();
-        }, 1000);
+        }, MS_PER_SECOND);
     }
 
     _stopThinkingFeedback() {
@@ -1452,7 +1464,7 @@ class AiChatPanelController {
         if (this._thinkingStartedAtMs === 0) {
             return '';
         }
-        const elapsedSeconds = Math.floor((Date.now() - this._thinkingStartedAtMs) / 1000);
+        const elapsedSeconds = Math.floor((Date.now() - this._thinkingStartedAtMs) / MS_PER_SECOND);
         return elapsedSeconds < 1 ? '' : `${elapsedSeconds}s`;
     }
 
@@ -1481,15 +1493,15 @@ class AiChatPanelController {
         if (!Number.isFinite(durationMs) || durationMs < 0) {
             throw new Error('Activity duration must be non-negative and finite');
         }
-        if (durationMs < 1_000) {
+        if (durationMs < MS_PER_SECOND) {
             return `${Math.round(durationMs)}ms`;
         }
-        if (durationMs < 60_000) {
-            return `${(durationMs / 1_000).toFixed(1)}s`;
+        if (durationMs < MS_PER_MINUTE) {
+            return `${(durationMs / MS_PER_SECOND).toFixed(1)}s`;
         }
-        const totalSeconds = Math.floor(durationMs / 1_000);
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
+        const totalSeconds = Math.floor(durationMs / MS_PER_SECOND);
+        const minutes = Math.floor(totalSeconds / SECONDS_PER_MINUTE);
+        const seconds = totalSeconds % SECONDS_PER_MINUTE;
         return `${minutes}m ${twoDigits(seconds)}s`;
     }
 
@@ -1762,7 +1774,7 @@ class AiChatPanelController {
             + this._elements.messages.scrollTop
         );
         const referencePreviewHeight = Math.min(
-            48,
+            REFERENCES_PREVIEW_MAXIMUM_HEIGHT_PX,
             Math.ceil(referencesBounds.height),
         );
         this._elements.messages.scrollTop = Math.max(

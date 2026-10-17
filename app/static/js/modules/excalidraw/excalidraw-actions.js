@@ -8,10 +8,13 @@ import { actionDeselectNote } from '../mode-manager/actions/selection-actions.js
 import { CommandGate } from '../mode-manager/services/command-gate-service.js';
 import { attachPickedFileToCurrentNote } from '../mode-manager/services/file-reference-service.js';
 import { blockRootNoteCreation } from '../mode-manager/services/root-note-creation-service.js';
+import { MS_PER_SECOND } from '../time-units.js';
 import { openExcalidrawEditor } from './excalidraw-editor-service.js';
 import { EXCALIDRAW_FILENAME, EXCALIDRAW_MIME_TYPE, buildEmptySceneJson } from './excalidraw-scene.js';
 
 const OPEN_TIMEOUT_MS = 60000;
+const BUSY_BANNER_SECONDS = 8;
+const FAILURE_BANNER_SECONDS = 10;
 
 // After Done, leave edit mode on the note that holds the diagram so its rendering is visible.
 function showDiagramInHostNote(closed) {
@@ -23,12 +26,12 @@ function showDiagramInHostNote(closed) {
 }
 
 function reportBusy(action) {
-    ErrorHandler.showErrorBanner(`${action} did not start because another command is still running.`, 'error', 8000, true);
+    ErrorHandler.showErrorBanner(`${action} did not start because another command is still running.`, 'error', BUSY_BANNER_SECONDS * MS_PER_SECOND, true);
 }
 
 function reportFailure(action, error) {
     const message = error instanceof UserInputRejected ? error.message : `${action} failed: ${error.message}`;
-    ErrorHandler.showErrorBanner(message, 'error', 10000, true);
+    ErrorHandler.showErrorBanner(message, 'error', FAILURE_BANNER_SECONDS * MS_PER_SECOND, true);
 }
 
 export async function openDiagramEditor(fileId, hostNoteId) {

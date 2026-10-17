@@ -9,6 +9,8 @@ from starlette.responses import JSONResponse
 
 from app.upload_limits import MAX_ATTACHMENT_BYTES, MAX_UPLOAD_REQUEST_BYTES, UPLOAD_CHUNK_BYTES
 
+# Attachment uploads and downloads in flight at once; more are answered 429.
+MAX_CONCURRENT_ATTACHMENT_TRANSFERS = 4
 
 async def read_attachment(file: UploadFile) -> bytes:
     content = bytearray()
@@ -39,7 +41,7 @@ def _is_upload_request(scope) -> bool:
 class UploadLimitMiddleware:
     def __init__(self, app):
         self.app = app
-        self._slots = BoundedSemaphore(4)
+        self._slots = BoundedSemaphore(MAX_CONCURRENT_ATTACHMENT_TRANSFERS)
 
     async def __call__(self, scope, receive, send):
         if scope['type'] != 'http':

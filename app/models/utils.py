@@ -29,6 +29,9 @@ from app.models.database import SafeSession
 from app.utils.text_utils import strip_html
 from app.security.note_html import sanitize_note_html
 
+# Copied HTML indents each nesting level with a spacer cell this wide.
+_CLIPBOARD_INDENT_PX_PER_LEVEL = 32
+
 
 def copy_note_in_memory(db: SafeSession, note_id: str) -> Dict[str, Any]:
     """
@@ -354,7 +357,7 @@ def note_data_to_html(note_data: Dict[str, Any]) -> str:
 
             # Create indentation using table with spacer cell
             if depth > 0:
-                spacer_width = depth * 32  # 32px per level
+                spacer_width = depth * _CLIPBOARD_INDENT_PX_PER_LEVEL
                 html_parts.append('<table style="width: 100%; border-collapse: collapse; margin: 2px 0;"><tr>')
                 html_parts.append(f'<td style="width: {spacer_width}px;"></td>')
                 html_parts.append('<td>')

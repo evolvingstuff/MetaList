@@ -36,6 +36,10 @@ from app.services.ontology_rules_store import get_ontology
 from app.services.search_index import SearchRecord, extract_tags_for_search, search_index
 from app.utils.text_utils import strip_html, strip_html_keeping_link_urls
 
+# Hydration reports its progress after every this many notes.
+_HYDRATION_PROGRESS_INTERVAL_NOTES = 1000
+# Startup timing logs one line per this many hydrated notes.
+_STARTUP_TIMING_LOG_INTERVAL_NOTES = 1000
 
 def _search_text(content_html: str, visible_text: str) -> str:
     """The text search sees: the visible text plus the URLs that link labels hide
@@ -536,7 +540,7 @@ class NoteStore:
             if effective_with_ontology != base_terms:
                 updates[note_id] = effective_with_ontology
             processed_candidates += 1
-            if hydration_state.is_running() and processed_candidates % 1000 == 0:
+            if hydration_state.is_running() and processed_candidates % _HYDRATION_PROGRESS_INTERVAL_NOTES == 0:
                 hydration_state.update(processed_candidates)
 
         if timing_enabled:
@@ -601,15 +605,15 @@ class NoteStore:
             )
 
             processed += 1
-            if timing_enabled and processed % 1000 == 0:
+            if timing_enabled and processed % _STARTUP_TIMING_LOG_INTERVAL_NOTES == 0:
                 now = time.perf_counter()
                 batch_elapsed = now - last_checkpoint
                 total_elapsed = now - loop_start
                 print(
-                    f"[startup] note_store hydrated {processed} notes | last 1000 in {batch_elapsed:.2f}s | total {total_elapsed:.2f}s"
+                    f"[startup] note_store hydrated {processed} notes | last {_STARTUP_TIMING_LOG_INTERVAL_NOTES} in {batch_elapsed:.2f}s | total {total_elapsed:.2f}s"
                 )
                 last_checkpoint = now
-            if hydration_state.is_running() and processed % 1000 == 0:
+            if hydration_state.is_running() and processed % _HYDRATION_PROGRESS_INTERVAL_NOTES == 0:
                 hydration_state.update(processed)
 
         if hydration_state.is_running():
@@ -649,7 +653,7 @@ class NoteStore:
                     tag_terms=tag_only_terms,
                 )
             )
-            if hydration_state.is_running() and len(search_records) % 1000 == 0:
+            if hydration_state.is_running() and len(search_records) % _HYDRATION_PROGRESS_INTERVAL_NOTES == 0:
                 hydration_state.update(len(search_records))
         if timing_enabled:
             print(
@@ -675,7 +679,7 @@ class NoteStore:
             search_records,
             raw_tag_terms_by_id=effective_tag_terms_by_id,
             progress_update=_update_search_index_progress,
-            progress_interval=1000,
+            progress_interval=_HYDRATION_PROGRESS_INTERVAL_NOTES,
         )
         if timing_enabled:
             print(

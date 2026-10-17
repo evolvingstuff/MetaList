@@ -19,6 +19,8 @@ _NONCE_BYTES = 12
 _TAG_BYTES = 16
 _DEK_BYTES = 32
 _LOG_KEY_INFO = b"MetaList authenticated diagnostic log key v1"
+# Owner read and write only.
+_LOG_FILE_MODE = 0o600
 
 
 def _validate_dek(dek: bytes) -> None:
@@ -83,9 +85,9 @@ class EncryptedLogSink:
         file_descriptor = os.open(
             path,
             os.O_WRONLY | os.O_CREAT | os.O_APPEND,
-            0o600,
+            _LOG_FILE_MODE,
         )
-        os.chmod(path, 0o600)
+        os.chmod(path, _LOG_FILE_MODE)
         self._path = path
         self._dek = dek
         self._file = os.fdopen(file_descriptor, "ab", buffering=0)

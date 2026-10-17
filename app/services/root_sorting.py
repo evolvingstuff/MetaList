@@ -26,6 +26,9 @@ SORT_MODES = frozenset(
     }
 )
 TIMESTAMP_SORT_MODES = frozenset({SORT_MODE_CREATED, SORT_MODE_UPDATED})
+_ALPHABETICAL_KEY_MEMO_ENTRIES = 32768
+# The missing-parents error names at most this many of them.
+_MISSING_PARENTS_SHOWN = 5
 
 
 def normalize_sort_mode(sort_mode: object) -> str:
@@ -92,7 +95,7 @@ class _RootMetrics:
             self.own[note_id] = self._own_values(note_id, record)
         missing_parents = set(self.children) - set(records) - {None}
         if missing_parents:
-            raise RuntimeError(f'Root sorting parents are missing: {sorted(missing_parents)[:5]}')
+            raise RuntimeError(f'Root sorting parents are missing: {sorted(missing_parents)[:_MISSING_PARENTS_SHOWN]}')
         reached = 0
         for root_id in self.children[None]:
             self.roots[root_id], size = self._aggregate(root_id)
@@ -211,7 +214,7 @@ def _get_root_subtree_updated_timestamp(root_id: str):
     return value
 
 
-@sensitive_lru_cache(maxsize=32768, max_bytes=SENSITIVE_MEMO_BYTES)
+@sensitive_lru_cache(maxsize=_ALPHABETICAL_KEY_MEMO_ENTRIES, max_bytes=SENSITIVE_MEMO_BYTES)
 def _alphabetical_key(content: str):
     text = strip_html(content).strip()
     return text.casefold(), text, len(text)

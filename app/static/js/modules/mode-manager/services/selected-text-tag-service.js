@@ -21,6 +21,9 @@ const TAG_CONTAINS_DISALLOWED = new Set([
     '`',
 ]);
 const TOKEN_START_DISALLOWED = new Set(['-', '+', '/']);
+// A default tag keeps only printable ASCII: space (0x20) through tilde (0x7e).
+const FIRST_PRINTABLE_ASCII_CODE_POINT = ' '.codePointAt(0);
+const LAST_PRINTABLE_ASCII_CODE_POINT = '~'.codePointAt(0);
 
 function buildDefaultTagCandidate(normalizedSelectedText) {
     const spacesJoined = normalizedSelectedText.replace(/\s+/g, '-');
@@ -30,7 +33,7 @@ function buildDefaultTagCandidate(normalizedSelectedText) {
         if (!Number.isInteger(codePoint)) {
             throw new Error('Selected-text tag character missing code point');
         }
-        if (codePoint < 0x20 || codePoint > 0x7e) {
+        if (codePoint < FIRST_PRINTABLE_ASCII_CODE_POINT || codePoint > LAST_PRINTABLE_ASCII_CODE_POINT) {
             continue;
         }
         if (TAG_CONTAINS_DISALLOWED.has(char)) {

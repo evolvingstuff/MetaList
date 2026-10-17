@@ -13,11 +13,16 @@ from app.config import (
     KDF_TIME_COST,
 )
 
+AES_256_KEY_BYTES = 32
+GCM_NONCE_BYTES = 12
+GCM_TAG_BYTES = 16
+SALT_BYTES = 32
+# Base64 text comes in groups of this many characters; a short last group needs "=" padding.
+_BASE64_GROUP_CHARS = 4
+
 
 class EncryptionService:
     """Service for encrypting and decrypting note content using AES-256-GCM with DEK architecture."""
-    
-    _GCM_TAG_LENGTH = 16
 
     def __init__(self):
         self.master_key: Optional[bytes] = None  # Derived from password, used to encrypt DEK
@@ -80,7 +85,7 @@ class EncryptionService:
             time_cost=time_cost,
             memory_cost=memory_cost_kib,
             parallelism=parallelism,
-            hash_len=32,
+            hash_len=AES_256_KEY_BYTES,
             type=Type.ID,
             version=ARGON2_VERSION,
         )
@@ -91,7 +96,7 @@ class EncryptionService:
         Returns:
             32-byte random key for AES-256
         """
-        return os.urandom(32)
+        return os.urandom(AES_256_KEY_BYTES)
     
     def encrypt_dek(self, dek: bytes, master_key: bytes) -> Tuple[bytes, bytes, bytes]:
         """Encrypt the DEK with the master key.
@@ -104,7 +109,7 @@ class EncryptionService:
             Tuple of (encrypted_dek, nonce, tag)
         """
         # Generate random nonce
-        nonce = os.urandom(12)
+        nonce = os.urandom(GCM_NONCE_BYTES)
         
         # Create cipher
         cipher = Cipher(
@@ -198,7 +203,7 @@ class EncryptionService:
             raise ValueError("No DEK set - ensure password has been provided")
             
         # Generate random nonce (96 bits for GCM)
-        nonce = os.urandom(12)
+        nonce = os.urandom(GCM_NONCE_BYTES)
         
         # Create cipher using DEK
         cipher = Cipher(
@@ -228,7 +233,7 @@ class EncryptionService:
         if not isinstance(plaintext, bytes):
             raise TypeError(f"plaintext must be bytes, got {type(plaintext)}")
 
-        nonce = os.urandom(12)
+        nonce = os.urandom(GCM_NONCE_BYTES)
         cipher = Cipher(
             algorithms.AES(self.dek),
             modes.GCM(nonce),
@@ -251,7 +256,7 @@ class EncryptionService:
         if not isinstance(associated_data, bytes) or associated_data == b"":
             raise ValueError("associated_data must be non-empty bytes")
 
-        nonce = os.urandom(12)
+        nonce = os.urandom(GCM_NONCE_BYTES)
         cipher = Cipher(
             algorithms.AES(self.dek),
             modes.GCM(nonce),
@@ -278,12 +283,12 @@ class EncryptionService:
             Exception: If decryption fails (wrong password or corrupted data)
         """
         aead = self._require_dek_aead()
-        if len(tag) != self._GCM_TAG_LENGTH:
-            raise ValueError(f"GCM tag must be {self._GCM_TAG_LENGTH} bytes, got {len(tag)}")
+        if len(tag) != GCM_TAG_BYTES:
+            raise ValueError(f"GCM tag must be {GCM_TAG_BYTES} bytes, got {len(tag)}")
 
         # Normalize padding for base64 strings
         normalized = ciphertext_base64.strip()
-        missing_padding = (-len(normalized)) % 4
+        missing_padding = (-len(normalized)) % _BASE64_GROUP_CHARS
         if missing_padding:
             normalized += "=" * missing_padding
 
@@ -322,7 +327,7 @@ class EncryptionService:
             raise ValueError("associated_data must be non-empty bytes")
 
         normalized = ciphertext_base64.strip()
-        missing_padding = (-len(normalized)) % 4
+        missing_padding = (-len(normalized)) % _BASE64_GROUP_CHARS
         if missing_padding:
             normalized += "=" * missing_padding
         ciphertext = base64.b64decode(normalized)
@@ -342,7 +347,7 @@ class EncryptionService:
         Returns:
             32 bytes of random data
         """
-        return os.urandom(32)
+        return os.urandom(SALT_BYTES)
     
     def encrypt_for_storage(self, plaintext: str) -> tuple[str, bytes, bytes]:
         """Encrypt plaintext for storage in separate database fields.

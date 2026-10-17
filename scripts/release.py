@@ -33,6 +33,13 @@ SUPPORTED_PYTHONS = ("3.10", "3.14")
 POLL_SECONDS = 15
 WORKFLOW_TIMEOUT_SECONDS = 3 * 60 * 60
 PYPI_TIMEOUT_SECONDS = 5 * 60
+HTTP_REQUEST_TIMEOUT_SECONDS = 30
+ARTIFACT_DOWNLOAD_TIMEOUT_SECONDS = 60
+# Jobs in the publish workflow: build and publish; per system, JavaScript and sanity plus
+# Python and Package-and-update per Python version; smoke and soak per browser leg.
+PUBLISH_WORKFLOW_JOB_COUNT = 25
+SHORT_COMMIT_LENGTH = 12
+FAILURE_LOG_TAIL_LINES = 60
 
 
 class ReleaseError(RuntimeError):
@@ -125,7 +132,7 @@ def expected_jobs(*, publish_conclusion: str) -> dict[str, str]:
     for label in browser_labels:
         jobs[f"Browser smoke ({label})"] = "success"
         jobs[f"Browser soak ({label})"] = "success"
-    assert len(jobs) == 25
+    assert len(jobs) == PUBLISH_WORKFLOW_JOB_COUNT
     return jobs
 
 
@@ -244,7 +251,7 @@ class GitHubClient:
             params=parameters,
             auth=self._authentication,
             headers=self._headers,
-            timeout=30,
+            timeout=HTTP_REQUEST_TIMEOUT_SECONDS,
         )
         response.raise_for_status()
         return response
@@ -289,12 +296,12 @@ class GitHubClient:
             auth=self._authentication,
             headers=self._headers,
             allow_redirects=False,
-            timeout=30,
+            timeout=HTTP_REQUEST_TIMEOUT_SECONDS,
         )
         response.raise_for_status()
         if response.status_code != HTTPStatus.FOUND:
             raise ReleaseError(f"GitHub artifact request returned HTTP {response.status_code}, expected 302")
-        download = requests.get(response.headers["Location"], timeout=60)
+        download = requests.get(response.headers["Location"], timeout=ARTIFACT_DOWNLOAD_TIMEOUT_SECONDS)
         download.raise_for_status()
         return download.content
 
@@ -447,7 +454,7 @@ def wait_for_workflow(
 
 def ensure_remote_tag(root: Path, *, tag: str, commit: str, already_remote: bool, console: Console) -> None:
     if already_remote:
-        console.print(f"[cyan]Resuming existing remote tag {tag} at {commit[:12]}[/cyan]")
+        console.print(f"[cyan]Resuming existing remote tag {tag} at {commit[:SHORT_COMMIT_LENGTH]}[/cyan]")
         return
     if not local_tag_target(root, tag):
         run_command(
@@ -456,7 +463,7 @@ def ensure_remote_tag(root: Path, *, tag: str, commit: str, already_remote: bool
             stdin="",
         )
     assert local_tag_target(root, tag) == commit
-    console.print(f"[cyan]Pushing {tag} at {commit[:12]}…[/cyan]")
+    console.print(f"[cyan]Pushing {tag} at {commit[:SHORT_COMMIT_LENGTH]}…[/cyan]")
     run_command(["git", "push", "origin", f"refs/tags/{tag}"], directory=root, stdin="")
     if remote_tag_target(root, tag) != commit:
         raise ReleaseError(f"Remote {tag} did not resolve to {commit} after push")
@@ -470,7 +477,7 @@ def wait_for_pypi(*, version: str, console: Console) -> dict[str, object]:
     ) as progress:
         progress.add_task(f"Waiting for metalist {version} on PyPI", total=None)
         while time.monotonic() < deadline:
-            response = requests.get(url, timeout=30)
+            response = requests.get(url, timeout=HTTP_REQUEST_TIMEOUT_SECONDS)
             if response.status_code == HTTPStatus.OK:
                 payload = response.json()
                 assert isinstance(payload, dict)
@@ -495,7 +502,7 @@ def pip_index_lists(filename: str) -> bool:
     response = requests.get(
         "https://pypi.org/simple/metalist/",
         headers={"Accept": PIP_SIMPLE_INDEX_ACCEPT},
-        timeout=30,
+        timeout=HTTP_REQUEST_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
     content_type = response.headers["Content-Type"]
@@ -535,7 +542,7 @@ def command_to_log(command: list[str], *, directory: Path, log_path: Path) -> No
         )
     if completed.returncode != 0:
         lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
-        tail = "\n".join(lines[-60:])
+        tail = "\n".join(lines[-FAILURE_LOG_TAIL_LINES:])
         raise ReleaseError(f"Installed-package verification failed. Log: {log_path}\n{tail}")
 
 

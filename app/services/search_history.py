@@ -27,9 +27,12 @@ from app.services.search_history_storage import (
 )
 from app.services.search_index import extract_tags_for_search, search_index
 from app.services.search_query import parse_search_query
+from app.utils.time_units import DAYS_PER_WEEK
 
 
-DEFAULT_TAG_ACTIVITY_WINDOWS = (1, 7, 30)
+# Tag activity is counted for the last day, the last week and the last month ("in the last 30 days").
+_MONTH_ACTIVITY_WINDOW_DAYS = 30
+DEFAULT_TAG_ACTIVITY_WINDOWS = (1, DAYS_PER_WEEK, _MONTH_ACTIVITY_WINDOW_DAYS)
 SUPPORTED_NOTE_INTERACTION_TYPES = frozenset(
     {"edit", "expand", "command", "fullscreen", "move", "indent", "outdent"}
 )

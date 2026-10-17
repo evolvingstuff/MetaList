@@ -10,6 +10,7 @@ from copy import deepcopy
 from functools import wraps
 from uuid import uuid4
 
+from app.utils.time_units import MS_PER_SECOND
 
 _SINK: ContextVar[tuple] = ContextVar("agent_history_sink", default=())
 _CALL: ContextVar[tuple] = ContextVar("agent_history_call", default=())
@@ -34,7 +35,7 @@ def record_provider_event(kind: str, detail: dict) -> None:
         session_key=session_key, run_id=run_id,
         event_type=kind, label=kind.replace("_", " ").title(),
         detail={"call_id": call_id, **detail},
-        duration_ms=(time.perf_counter() - started_at) * 1000,
+        duration_ms=(time.perf_counter() - started_at) * MS_PER_SECOND,
     )
 
 

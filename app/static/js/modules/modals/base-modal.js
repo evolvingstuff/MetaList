@@ -11,6 +11,9 @@ import { ApplicationState } from '../application-state.js';
 
 import { ModeContextInstance as ModeContext } from '../mode-manager/mode-context.js';
 
+// A newly shown modal's first field is focused this much later.
+const FIRST_FIELD_FOCUS_DELAY_MS = 100;
+
 export class BaseModal {
     constructor(modalName, modalElementId) {
         if (!modalName) {
@@ -184,7 +187,7 @@ export class BaseModal {
         // Focus first focusable element
         const firstFocusable = modalElement.querySelector('input, button, textarea, select');
         if (firstFocusable) {
-            setTimeout(() => firstFocusable.focus(), 100);
+            setTimeout(() => firstFocusable.focus(), FIRST_FIELD_FOCUS_DELAY_MS);
         }
     }
     

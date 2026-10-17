@@ -12,6 +12,14 @@ const TAG_LIMIT = 20;
 const DIALOG_SUGGESTION_LIMIT = 8;
 const DIALOG_SUGGESTION_DEBOUNCE_MS = 50;
 const DIALOG_DELETE_TAG_RESULT = Object.freeze({ action: 'delete-tag' });
+const SEARCH_INPUT_FOCUS_DELAY_MS = 50;
+const DIALOG_FOCUS_DELAY_MS = 30;
+// The dialog sits this fraction of the window height from the top, within these bounds.
+const DIALOG_TOP_OFFSET_VIEWPORT_FRACTION = 0.12;
+const DIALOG_MIN_TOP_OFFSET_PX = 32;
+const DIALOG_MAX_TOP_OFFSET_PX = 140;
+// Window height kept clear below the dialog, beyond its top offset.
+const DIALOG_BOTTOM_CLEARANCE_PX = 64;
 // A backslash and the character it escapes.
 const ESCAPE_SEQUENCE_LENGTH = 2;
 // An opening and a closing quote.
@@ -596,7 +604,7 @@ export class OntologyModal extends BaseModal {
             } else {
                 this._shouldFocusSearchInput = true;
             }
-        }, 50);
+        }, SEARCH_INPUT_FOCUS_DELAY_MS);
     }
 
     hideModalElement() {
@@ -1160,10 +1168,13 @@ export class OntologyModal extends BaseModal {
         }
 
         const elements = this._getDialogElements();
-        const topOffset = Math.max(32, Math.min(140, Math.round(window.innerHeight * 0.12)));
+        const topOffset = Math.max(
+            DIALOG_MIN_TOP_OFFSET_PX,
+            Math.min(DIALOG_MAX_TOP_OFFSET_PX, Math.round(window.innerHeight * DIALOG_TOP_OFFSET_VIEWPORT_FRACTION)),
+        );
         elements.overlay.style.paddingTop = `${topOffset}px`;
         elements.overlay.style.paddingBottom = '32px';
-        elements.dialog.style.maxHeight = `calc(100vh - ${topOffset + 64}px)`;
+        elements.dialog.style.maxHeight = `calc(100vh - ${topOffset + DIALOG_BOTTOM_CLEARANCE_PX}px)`;
         elements.overlay.classList.add('is-visible');
         elements.overlay.setAttribute('aria-hidden', 'false');
 
@@ -1225,7 +1236,7 @@ export class OntologyModal extends BaseModal {
             } else {
                 elements.submitButton.focus();
             }
-        }, 30);
+        }, DIALOG_FOCUS_DELAY_MS);
     }
 
     _attachDialogListeners(elements) {

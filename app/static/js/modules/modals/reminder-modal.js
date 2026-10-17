@@ -4,6 +4,15 @@ import { ApplicationState, stateValuesEqual } from '../application-state.js';
 import { ReminderStore } from '../reminder-store.js';
 import { ReminderSurface } from '../reminder-surface-service.js';
 
+import { half } from '../half.js';
+import {
+    DAYS_PER_WEEK,
+    HOURS_PER_DAY,
+    MINUTES_PER_HOUR,
+    MS_PER_DAY,
+    MS_PER_MINUTE,
+} from '../time-units.js';
+
 import { BaseModal } from './base-modal.js';
 
 // What the pre-reminder fields show for a reminder without one.
@@ -12,12 +21,37 @@ const PRE_REMINDER_FORM_DEFAULTS = Object.freeze({ amount: '1', unit: 'days' });
 const REMINDER_RENDER_ICON = '🔔';
 
 const DATE_INPUT_LENGTH = 'YYYY-MM-DD'.length;
+// Where the year, month and day sit in a YYYY-MM-DD date.
+const DATE_YEAR_END = 'YYYY'.length;
+const DATE_MONTH_START = 'YYYY-'.length;
+const DATE_MONTH_END = 'YYYY-MM'.length;
+const DATE_DAY_START = 'YYYY-MM-'.length;
+const TIME_INPUT_LENGTH = 'HH:mm'.length;
+// Where the HH:mm time sits in a YYYY-MM-DDTHH:mm... datetime.
+const DATETIME_TIME_START = 'YYYY-MM-DDT'.length;
+const DATETIME_TIME_END = 'YYYY-MM-DDTHH:mm'.length;
 // Hours and minutes of an HH:mm time.
 const TIME_PIECE_COUNT = 2;
+const LAST_HOUR_OF_DAY = HOURS_PER_DAY - 1;
+const LAST_MINUTE_OF_HOUR = MINUTES_PER_HOUR - 1;
+// AM and PM each cover half a day on a 12-hour clock.
+const HOURS_PER_HALF_DAY = half(HOURS_PER_DAY);
+// Relative labels count in hours below this, then in days.
+const RELATIVE_LABEL_MAX_HOURS = 48;
 const DECIMAL_BASE = 10;
+// The last two digits of a day, for the "th" of 11th, 12th and 13th.
+const LAST_TWO_DIGITS_MODULUS = DECIMAL_BASE * DECIMAL_BASE;
+const FIRST_TEEN_ORDINAL = 11;
+const LAST_TEEN_ORDINAL = 13;
 // Last digits that take "nd" (2nd, 22nd) and "rd" (3rd, 23rd).
 const ND_LAST_DIGIT = 2;
 const RD_LAST_DIGIT = 3;
+const MAX_DAY_OF_MONTH = 31;
+// Every month has at least this many days; later days fall back to the month's last day.
+const DAYS_IN_SHORTEST_MONTH = 28;
+const MONTHS_PER_YEAR = 12;
+// Sunday's place in a Monday-first week (Date.getDay() counts from Sunday = 0).
+const MONDAY_FIRST_SUNDAY_INDEX = DAYS_PER_WEEK - 1;
 
 function escapeHtml(value) {
     if (typeof value !== 'string') {
@@ -83,9 +117,9 @@ function toInputTime(value) {
         return '09:00';
     }
     if (value.includes('T')) {
-        return value.slice(11, 16);
+        return value.slice(DATETIME_TIME_START, DATETIME_TIME_END);
     }
-    return value.slice(0, 5);
+    return value.slice(0, TIME_INPUT_LENGTH);
 }
 
 function displayTime(value) {
@@ -99,11 +133,11 @@ function displayTime(value) {
     if (!Number.isInteger(hour) || !Number.isInteger(minute)) {
         throw new Error('displayTime requires numeric time');
     }
-    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+    if (hour < 0 || hour > LAST_HOUR_OF_DAY || minute < 0 || minute > LAST_MINUTE_OF_HOUR) {
         throw new Error('displayTime time out of range');
     }
-    const period = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+    const period = hour >= HOURS_PER_HALF_DAY ? 'PM' : 'AM';
+    const displayHour = hour % HOURS_PER_HALF_DAY === 0 ? HOURS_PER_HALF_DAY : hour % HOURS_PER_HALF_DAY;
     return `${displayHour}:${twoDigits(minute)} ${period}`;
 }
 
@@ -111,9 +145,9 @@ function parseLocalDateInput(value) {
     if (typeof value !== 'string' || value.length !== DATE_INPUT_LENGTH) {
         throw new Error('parseLocalDateInput requires YYYY-MM-DD');
     }
-    const year = parseDecimalInteger(value.slice(0, 4));
-    const month = parseDecimalInteger(value.slice(5, 7));
-    const day = parseDecimalInteger(value.slice(8, DATE_INPUT_LENGTH));
+    const year = parseDecimalInteger(value.slice(0, DATE_YEAR_END));
+    const month = parseDecimalInteger(value.slice(DATE_MONTH_START, DATE_MONTH_END));
+    const day = parseDecimalInteger(value.slice(DATE_DAY_START, DATE_INPUT_LENGTH));
     return new Date(year, month - 1, day);
 }
 
@@ -123,7 +157,7 @@ function wholeDayDelta(fromDate, toDate) {
     }
     const fromDay = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
     const toDay = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
-    return Math.round((toDay.getTime() - fromDay.getTime()) / 86400000);
+    return Math.round((toDay.getTime() - fromDay.getTime()) / MS_PER_DAY);
 }
 
 function relativeDayLabel(value) {
@@ -151,19 +185,19 @@ function relativeDateTimeLabel(value) {
     if (Number.isNaN(target.getTime())) {
         throw new Error('relativeDateTimeLabel requires valid datetime');
     }
-    const deltaMinutes = Math.round((target.getTime() - Date.now()) / 60000);
+    const deltaMinutes = Math.round((target.getTime() - Date.now()) / MS_PER_MINUTE);
     if (Math.abs(deltaMinutes) < 1) {
         return 'now';
     }
     const absoluteMinutes = Math.abs(deltaMinutes);
-    if (absoluteMinutes < 60) {
+    if (absoluteMinutes < MINUTES_PER_HOUR) {
         return deltaMinutes > 0 ? `in ${absoluteMinutes} minutes` : `${absoluteMinutes} minutes ago`;
     }
-    const absoluteHours = Math.round(absoluteMinutes / 60);
-    if (absoluteHours < 48) {
+    const absoluteHours = Math.round(absoluteMinutes / MINUTES_PER_HOUR);
+    if (absoluteHours < RELATIVE_LABEL_MAX_HOURS) {
         return deltaMinutes > 0 ? `in ${absoluteHours} hours` : `${absoluteHours} hours ago`;
     }
-    const absoluteDays = Math.round(absoluteHours / 24);
+    const absoluteDays = Math.round(absoluteHours / HOURS_PER_DAY);
     return deltaMinutes > 0 ? `in ${absoluteDays} days` : `${absoluteDays} days ago`;
 }
 
@@ -302,7 +336,7 @@ function dueStatusForValue(value) {
         if (Number.isNaN(target.getTime())) {
             throw new Error('dueStatusForValue requires valid datetime');
         }
-        const deltaMinutes = Math.round((target.getTime() - Date.now()) / 60000);
+        const deltaMinutes = Math.round((target.getTime() - Date.now()) / MS_PER_MINUTE);
         if (deltaMinutes < 0) {
             return 'overdue';
         }
@@ -401,11 +435,11 @@ function recurrenceLabel(rule) {
 }
 
 function ordinalDay(day) {
-    if (!Number.isInteger(day) || day < 1 || day > 31) {
+    if (!Number.isInteger(day) || day < 1 || day > MAX_DAY_OF_MONTH) {
         throw new Error('ordinalDay requires day 1-31');
     }
-    const remainder100 = day % 100;
-    if (remainder100 >= 11 && remainder100 <= 13) {
+    const remainder100 = day % LAST_TWO_DIGITS_MODULUS;
+    if (remainder100 >= FIRST_TEEN_ORDINAL && remainder100 <= LAST_TEEN_ORDINAL) {
         return `${day}th`;
     }
     const remainder10 = day % DECIMAL_BASE;
@@ -423,7 +457,7 @@ function ordinalDay(day) {
 
 function monthlyDayLabel(day) {
     const label = ordinalDay(day);
-    if (day > 28) {
+    if (day > DAYS_IN_SHORTEST_MONTH) {
         return `${label} or last day`;
     }
     return label;
@@ -444,7 +478,7 @@ function weekdayListLabel(weekdays) {
 }
 
 function monthDayLabel(month, day) {
-    if (!Number.isInteger(month) || month < 1 || month > 12) {
+    if (!Number.isInteger(month) || month < 1 || month > MONTHS_PER_YEAR) {
         throw new Error('monthDayLabel requires month 1-12');
     }
     const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -463,7 +497,7 @@ function defaultFormState() {
         time: formatTimeInput(now),
         frequency: 'daily',
         interval: '1',
-        weekdays: [now.getDay() === 0 ? 6 : now.getDay() - 1],
+        weekdays: [now.getDay() === 0 ? MONDAY_FIRST_SUNDAY_INDEX : now.getDay() - 1],
         end_type: 'never',
         end_value: '',
         pre_reminder_enabled: false,
@@ -556,11 +590,11 @@ function buildPayloadFromForm(form) {
             payload.recurrence_rule.weekdays = form.weekdays.slice();
         }
         if (form.frequency === 'monthly') {
-            payload.recurrence_rule.day_of_month = parseDecimalInteger(form.date.slice(8, DATE_INPUT_LENGTH));
+            payload.recurrence_rule.day_of_month = parseDecimalInteger(form.date.slice(DATE_DAY_START, DATE_INPUT_LENGTH));
         }
         if (form.frequency === 'yearly') {
-            payload.recurrence_rule.month = parseDecimalInteger(form.date.slice(5, 7));
-            payload.recurrence_rule.day = parseDecimalInteger(form.date.slice(8, DATE_INPUT_LENGTH));
+            payload.recurrence_rule.month = parseDecimalInteger(form.date.slice(DATE_MONTH_START, DATE_MONTH_END));
+            payload.recurrence_rule.day = parseDecimalInteger(form.date.slice(DATE_DAY_START, DATE_INPUT_LENGTH));
         }
         if (timeMode === 'date_time') {
             payload.recurrence_rule.time_of_day = form.time;
@@ -605,7 +639,7 @@ function reminderFormWarning(form) {
         && typeof form.date === 'string'
         && form.date.length === DATE_INPUT_LENGTH
         && typeof form.time === 'string'
-        && form.time.length === 5
+        && form.time.length === TIME_INPUT_LENGTH
         && localDateTimeIso(form.date, form.time) < new Date().toISOString()
     ) {
         if (form.persistence_mode === 'drop_if_missed') {
@@ -618,9 +652,9 @@ function reminderFormWarning(form) {
         && form.frequency === 'monthly'
         && typeof form.date === 'string'
         && form.date.length === DATE_INPUT_LENGTH
-        && parseDecimalInteger(form.date.slice(8, DATE_INPUT_LENGTH)) > 28
+        && parseDecimalInteger(form.date.slice(DATE_DAY_START, DATE_INPUT_LENGTH)) > DAYS_IN_SHORTEST_MONTH
     ) {
-        return `Months without the ${ordinalDay(parseDecimalInteger(form.date.slice(8, DATE_INPUT_LENGTH)))} use that month's last day.`;
+        return `Months without the ${ordinalDay(parseDecimalInteger(form.date.slice(DATE_DAY_START, DATE_INPUT_LENGTH)))} use that month's last day.`;
     }
     return '';
 }

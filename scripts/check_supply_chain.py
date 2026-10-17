@@ -15,6 +15,7 @@ from urllib.request import Request, urlopen
 ROOT = Path(__file__).resolve().parents[1]
 EXPORT_OPTIONS = ['--frozen', '--offline', '--no-emit-project', '--no-header', '--no-annotate']
 VENDOR_REPORT_JSON_INDENT = 2
+OSV_QUERY_TIMEOUT_SECONDS = 45
 
 
 def check_exports(root: Path) -> None:
@@ -114,7 +115,7 @@ def audit_vendor_versions(libraries: list[dict]) -> list[dict]:
         query = {'package': {'name': library['name'], 'ecosystem': 'npm'}, 'version': library['version']}
         request = Request('https://api.osv.dev/v1/query', data=json.dumps(query).encode(),
                           headers={'Content-Type': 'application/json'})
-        with urlopen(request, timeout=45) as response:
+        with urlopen(request, timeout=OSV_QUERY_TIMEOUT_SECONDS) as response:
             report = json.load(response)
         if not isinstance(report, dict):
             raise RuntimeError('OSV response must be an object')

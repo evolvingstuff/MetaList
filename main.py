@@ -85,6 +85,8 @@ _KILL_GRACE_SECONDS = 5.0
 # A port of a process stopped just before (a namespace restart) is released by
 # the OS a moment later: how long the HTTPS proxy waits for it before failing.
 _PORT_RELEASE_WAIT_SECONDS = 10.0
+_HIGHEST_PORT = 65535
+_AUDIT_WARNING_BORDER_WIDTH = 96
 _EXPLICIT_NAMESPACE_LAUNCH_ENV_NAMES = (
     "METALIST_NAMESPACE",
     "METALIST_PORT",
@@ -170,7 +172,7 @@ def _run_startup_encryption_audit(
 
     rendered_report = report.render_text()
 
-    warning_border = "!" * 96
+    warning_border = "!" * _AUDIT_WARNING_BORDER_WIDTH
     if report.startup_allowed:
         print(warning_border, file=sys.stderr, flush=True)
         print(
@@ -283,7 +285,7 @@ def _read_prompted_port(*, namespace: str, service: str, suggested_port: object)
     if not value.isdigit():
         raise RuntimeError(f"{namespace} {service} port must be numeric, got: {value!r}")
     port = int(value)
-    if not 0 < port < 65536:
+    if not 0 < port <= _HIGHEST_PORT:
         raise RuntimeError(f"{namespace} {service} port must be between 1 and 65535, got: {port}")
     return port
 
@@ -505,7 +507,7 @@ def _stop_process(*, pid: int) -> None:
 def _find_listening_pids_for_port(*, port: int) -> list[int]:
     if not isinstance(port, int):
         raise TypeError(f"port must be an int, got {type(port)}")
-    if port <= 0 or port > 65535:
+    if port <= 0 or port > _HIGHEST_PORT:
         raise ValueError(f"port must be between 1 and 65535, got: {port}")
     if sys.platform == "win32":
         return find_windows_listening_pids_for_port(port=port)

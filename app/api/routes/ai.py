@@ -67,7 +67,7 @@ from app.services.agent.summary_batch_store import summary_batch_store
 from app.services.agent.tagging import TAGGING_POLICY_KEY
 from app.usecases.bulk_tag_proposals import apply_bulk_proposals, prepare_proposal_changes
 from app.services.bulk_operation import bulk_operation_guard
-from app.services.tab_state import tab_state_store
+from app.services.tab_state import MAX_TAB_ID_LENGTH, tab_state_store
 from app.services.tokens import token_service
 from app.services.agent.inference import InferenceProviderError
 from app.services.agent.note_tag_suggestions import build_note_tag_request
@@ -86,6 +86,13 @@ from app.services.preference_values import preference_or_default
 
 
 router = APIRouter(prefix="/ai", tags=["ai"])
+
+_MAX_PRIVACY_PREVIEW_NOTE_IDS = 20_000
+_MAX_CHAT_MESSAGE_CHARS = 32_000
+_MAX_SELECTED_NOTE_ID_LENGTH = 128
+_MAX_EXPORTED_NOTE_ID_LENGTH = 256
+_MAX_CLIENT_ID_LENGTH = 128
+_MAX_TAG_FILTER_LENGTH = 256
 
 agent_context_builder = AgentContextBuilder()
 
@@ -142,7 +149,7 @@ class CloudPrivacyPreviewRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     provider: Literal["openai"]
-    note_ids: list[str] = Field(..., max_length=20_000)
+    note_ids: list[str] = Field(..., max_length=_MAX_PRIVACY_PREVIEW_NOTE_IDS)
 
     @field_validator("note_ids")
     @classmethod
@@ -166,9 +173,9 @@ class AiChatRequest(BaseModel):
     model: str
     thinking_level: Literal["off", "low", "medium", "high"]
     show_diagnostics: bool
-    message: str = Field(..., max_length=32_000)
+    message: str = Field(..., max_length=_MAX_CHAT_MESSAGE_CHARS)
     scope: AgentScopeDescriptor
-    selected_note_id: str = Field(..., max_length=128, pattern=r"^(?:\S+)?$")
+    selected_note_id: str = Field(..., max_length=_MAX_SELECTED_NOTE_ID_LENGTH, pattern=r"^(?:\S+)?$")
 
     @field_validator("model")
     @classmethod
@@ -214,7 +221,7 @@ class NoteTagSuggestionRequest(BaseModel):
     include_children: bool
     # The view the note is in ('' for no search).
     search: str = Field(..., max_length=MIB)
-    tab_id: str = Field(..., min_length=1, max_length=256)
+    tab_id: str = Field(..., min_length=1, max_length=MAX_TAB_ID_LENGTH)
     is_untagged_view: bool
 
     @model_validator(mode="after")
@@ -230,11 +237,11 @@ class ExportTitleScope(BaseModel):
     provider: AiProvider
     # The view exported or printed, or the one its note is in ('' for no search).
     search: str = Field(..., max_length=MIB)
-    tab_id: str = Field(..., min_length=1, max_length=256)
+    tab_id: str = Field(..., min_length=1, max_length=MAX_TAB_ID_LENGTH)
     is_untagged_view: bool
     # A note with its children ("note"), or the view as it is shown ("view", note_id '').
     exported: Literal["note", "view"]
-    note_id: str = Field(..., max_length=256)
+    note_id: str = Field(..., max_length=_MAX_EXPORTED_NOTE_ID_LENGTH)
 
     @model_validator(mode="after")
     def validate_exported_note(self) -> Self:
@@ -311,7 +318,7 @@ class AiDebugSnapshotResponse(BaseModel):
 
 
 class AiCopyMessageRequest(BaseModel):
-    client_id: str = Field(..., min_length=1, max_length=128)
+    client_id: str = Field(..., min_length=1, max_length=_MAX_CLIENT_ID_LENGTH)
 
     @field_validator("client_id")
     @classmethod
@@ -1019,7 +1026,7 @@ class BulkManageRequest(BaseModel):
     action: Literal["accept", "remove"]
     scope: AgentScopeDescriptor
     target: Literal["current", "namespace"]
-    tag_filter: str = Field(..., max_length=256)
+    tag_filter: str = Field(..., max_length=_MAX_TAG_FILTER_LENGTH)
 
 
 @router.post("/proposals/manage")

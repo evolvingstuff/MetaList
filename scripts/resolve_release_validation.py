@@ -24,6 +24,10 @@ BROWSER_LABELS = (
     "Windows Chrome and Firefox",
     "Windows Edge HTTPS",
 )
+# Counted by hand as a cross-check of expected_main_jobs(): build and publish; per system a
+# JavaScript job plus a Python and a package job per Python; per browser label a smoke and a soak.
+EXPECTED_MAIN_JOB_COUNT = 25
+GITHUB_API_TIMEOUT_SECONDS = 30
 
 
 class ReleaseValidationError(RuntimeError):
@@ -40,7 +44,7 @@ def expected_main_jobs() -> dict[str, str]:
     for label in BROWSER_LABELS:
         jobs[f"Browser smoke ({label})"] = "success"
         jobs[f"Browser soak ({label})"] = "success"
-    assert len(jobs) == 25
+    assert len(jobs) == EXPECTED_MAIN_JOB_COUNT
     return jobs
 
 
@@ -147,7 +151,7 @@ def github_json(*, repository: str, token: str, path: str, parameters: dict[str,
             "X-GitHub-Api-Version": "2022-11-28",
         },
     )
-    with urllib.request.urlopen(request, timeout=30) as response:
+    with urllib.request.urlopen(request, timeout=GITHUB_API_TIMEOUT_SECONDS) as response:
         payload = json.load(response)
     if not isinstance(payload, dict):
         raise ReleaseValidationError(f"GitHub returned a non-object response for {path}")

@@ -10,6 +10,7 @@ import zipfile
 
 # The script name and DIST_DIRECTORY.
 _EXPECTED_ARGUMENT_COUNT = 2
+_WHEEL_IMPORT_CHECK_TIMEOUT_SECONDS = 30
 
 
 def check_vendor_inventory(names: set[str], expected: set[str]) -> None:
@@ -71,7 +72,7 @@ def check_distribution(distribution_directory: Path) -> None:
                 "assert all(value.strip() for value in ("
                 "AGENT_SYSTEM_PROMPT, AGENT_LOOP_INSTRUCTIONS, FINAL_RESPONSE_REQUEST_PROMPT))"
             ), str(wheels[0].resolve())],
-            cwd=temporary_directory, check=True, timeout=30,
+            cwd=temporary_directory, check=True, timeout=_WHEEL_IMPORT_CHECK_TIMEOUT_SECONDS,
         )
     print(f"Verified {len(paths)} runtime files in both distributions and imported packaged agent resources.")
 

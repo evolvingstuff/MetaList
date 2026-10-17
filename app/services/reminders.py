@@ -22,6 +22,7 @@ from app.security.encryption import (
     get_encryption_service_with_token,
     is_encryption_required,
 )
+from app.utils.time_units import DAYS_PER_WEEK
 
 
 REMINDER_STATUS_ACTIVE = "active"
@@ -40,6 +41,12 @@ ATTACHMENT_UNATTACHED = "unattached"
 ATTACHMENT_TYPES = frozenset({ATTACHMENT_ATTACHED, ATTACHMENT_UNATTACHED})
 # HH:MM has an hour part and a minute part.
 _TIME_OF_DAY_PARTS = 2
+_MONTHS_PER_YEAR = 12
+_MAX_DAY_OF_MONTH = 31
+# Weekdays as date.weekday() numbers them: Monday is 0, Sunday is 6.
+_LAST_WEEKDAY = DAYS_PER_WEEK - 1
+# The most days the weekly recurrence search steps through before giving up.
+_WEEKLY_SEARCH_GUARD_DAYS = 3710
 
 SCHEDULE_ONE_TIME = "one_time"
 SCHEDULE_RECURRING = "recurring"
@@ -228,8 +235,8 @@ def _add_months(value: date, months: int) -> date:
     if not isinstance(months, int) or months <= 0:
         raise InputRejected("months must be a positive integer")
     month_index = value.month - 1 + months
-    year = value.year + month_index // 12
-    month = month_index % 12 + 1
+    year = value.year + month_index // _MONTHS_PER_YEAR
+    month = month_index % _MONTHS_PER_YEAR + 1
     day = min(value.day, calendar.monthrange(year, month)[1])
     return date(year, month, day)
 
@@ -294,8 +301,8 @@ def _normalize_recurrence_rule(raw_rule: object, *, time_mode: str) -> dict[str,
                     field_name="recurrence_rule.weekdays[]",
                     min_value=0,
                 )
-                if weekday > 6:
-                    raise InputRejected("recurrence_rule.weekdays[] must be between 0 and 6")
+                if weekday > _LAST_WEEKDAY:
+                    raise InputRejected(f"recurrence_rule.weekdays[] must be between 0 and {_LAST_WEEKDAY}")
                 if weekday not in weekdays:
                     weekdays.append(weekday)
             weekdays.sort()
@@ -306,8 +313,8 @@ def _normalize_recurrence_rule(raw_rule: object, *, time_mode: str) -> dict[str,
             field_name="recurrence_rule.day_of_month",
             min_value=1,
         )
-        if day_of_month > 31:
-            raise InputRejected("recurrence_rule.day_of_month must be between 1 and 31")
+        if day_of_month > _MAX_DAY_OF_MONTH:
+            raise InputRejected(f"recurrence_rule.day_of_month must be between 1 and {_MAX_DAY_OF_MONTH}")
         normalized["day_of_month"] = day_of_month
     if frequency == "yearly":
         if "month" in raw_rule:
@@ -316,13 +323,13 @@ def _normalize_recurrence_rule(raw_rule: object, *, time_mode: str) -> dict[str,
                 field_name="recurrence_rule.month",
                 min_value=1,
             )
-            if month > 12:
-                raise InputRejected("recurrence_rule.month must be between 1 and 12")
+            if month > _MONTHS_PER_YEAR:
+                raise InputRejected(f"recurrence_rule.month must be between 1 and {_MONTHS_PER_YEAR}")
             normalized["month"] = month
         if "day" in raw_rule:
             day = _require_int(_required_mapping_value(raw_rule, "day"), field_name="recurrence_rule.day", min_value=1)
-            if day > 31:
-                raise InputRejected("recurrence_rule.day must be between 1 and 31")
+            if day > _MAX_DAY_OF_MONTH:
+                raise InputRejected(f"recurrence_rule.day must be between 1 and {_MAX_DAY_OF_MONTH}")
             normalized["day"] = day
     if time_mode == TIME_MODE_DATE_TIME:
         if "time_of_day" in raw_rule and _required_mapping_value(raw_rule, "time_of_day") is not None:
@@ -395,8 +402,8 @@ def _next_recurrence_date(
         if not weekdays:
             weekdays = [anchor_date.weekday()]
         candidate = date.fromordinal(after_date.toordinal() + 1)
-        for _ in range(0, 3710):
-            weeks_since_anchor = (candidate - anchor_date).days // 7
+        for _ in range(0, _WEEKLY_SEARCH_GUARD_DAYS):
+            weeks_since_anchor = (candidate - anchor_date).days // DAYS_PER_WEEK
             if weeks_since_anchor >= 0 and weeks_since_anchor % interval == 0 and candidate.weekday() in weekdays:
                 if not _end_allows_date(rule, candidate, occurrence_count):
                     return None

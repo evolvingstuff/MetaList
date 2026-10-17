@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.utils.tcp_ports import PORT_RANGE_TEXT, is_tcp_port
 from http import HTTPStatus
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -1243,8 +1244,8 @@ def _build_requested_profile(
 def _validate_required_port(*, name: str, value: int) -> int:
     if not isinstance(value, int):
         raise TypeError(f"{name} must be an int, got {type(value)}")
-    if not 0 < value < 65536:
-        raise NamespaceInputRejected(f"{name} must be between 1 and 65535, got: {value}")
+    if not is_tcp_port(value):
+        raise NamespaceInputRejected(f"{name} must be {PORT_RANGE_TEXT}, got: {value}")
     return value
 
 
@@ -1462,8 +1463,8 @@ def _stop_process(*, pid: int) -> None:
 def _find_listening_pids_for_port(*, port: int) -> list[int]:
     if not isinstance(port, int):
         raise TypeError(f"port must be an int, got {type(port)}")
-    if port <= 0 or port > 65535:
-        raise ValueError(f"port must be between 1 and 65535, got: {port}")
+    if not is_tcp_port(port):
+        raise ValueError(f"port must be {PORT_RANGE_TEXT}, got: {port}")
     if sys.platform == "win32":
         return find_windows_listening_pids_for_port(port=port)
 

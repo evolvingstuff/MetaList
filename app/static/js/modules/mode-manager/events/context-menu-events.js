@@ -1,3 +1,4 @@
+import { MS_PER_SECOND } from '../../time-units.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import { ApplicationState } from '../../application-state.js';
 import { DOMUtils } from '../../dom-utils.js';
@@ -90,6 +91,7 @@ import { addDiagramToNote, openDiagramEditor } from '../../excalidraw/excalidraw
 import { unlessDiagramEditorOpen } from '../../excalidraw/excalidraw-editor-state.js';
 
 const ontologyModal = new OntologyModal();
+const AI_TAG_FAILURE_BANNER_SECONDS = 8;
 // Entered tags are described when right-clicked; a later right-click wins over a slower lookup.
 const tagDetailsState = ApplicationState.createFields('tag-details-menu', { requestSerial: 0 });
 // The edited note's menu waits for the Suggest Tags with AI check; only the latest right-click opens.
@@ -829,7 +831,7 @@ async function suggestTagsWithAi(noteId, includeChildren) {
             throw error;
         }
         showAiTagStatus(noteId, '', '');
-        ErrorHandler.showInfoBanner(`The AI couldn't suggest tags: ${error.message}`, 8000);
+        ErrorHandler.showInfoBanner(`The AI couldn't suggest tags: ${error.message}`, AI_TAG_FAILURE_BANNER_SECONDS * MS_PER_SECOND);
     }
     if (tags === null) {
         return;

@@ -24,6 +24,8 @@ else:
 
 _lock = RLock()
 _active: set[Path] = set()
+# The recovery snapshot directory is readable and writable by its owner only.
+_SNAPSHOT_DIRECTORY_MODE = 0o700
 
 
 def _targets(database_path: Path) -> tuple[Path, Path]:
@@ -185,7 +187,7 @@ class LiveDatabaseRecovery:
     def _write_snapshot(self) -> None:
         _recover_locked(self.database_path)
         directory = _directory(self.database_path)
-        directory.mkdir(mode=0o700)
+        directory.mkdir(mode=_SNAPSHOT_DIRECTORY_MODE)
         entries = []
         for index, target in enumerate(_targets(self.database_path)):
             existed = target.exists()

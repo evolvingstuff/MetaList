@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { ApplicationState } from '../../app/static/js/modules/application-state.js';
+import { half } from '../../app/static/js/modules/half.js';
 import { resolveVerticalSiblingDropDestination, updateMoveDragGestureState } from '../../app/static/js/modules/mode-manager/services/note-drag-service.js';
 import { selectTagOnDoubleClick } from '../../app/static/js/modules/mode-manager/services/tag-input-selection-service.js';
 import { unlessDiagramEditorOpen } from '../../app/static/js/modules/excalidraw/excalidraw-editor-state.js';
@@ -62,6 +63,7 @@ function harness() {
         Node: Object,
         Element: Object,
         Logger: { logNoop() {}, logInit() {} },
+        half,
         recordCollapse: () => actions.push('collapse'),
         unlessDiagramEditorOpen, resolveDiagramTarget: () => null, openDiagramEditor: () => {},
     };

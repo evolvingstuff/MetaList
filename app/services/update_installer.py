@@ -9,6 +9,7 @@ from pathlib import Path
 import platform
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tarfile
@@ -20,6 +21,10 @@ import zipfile
 # Official immutable uv 0.12.17 release archives. These values match the
 # upstream sha256.sum asset for the same release.
 INSTALLER_VERSION = "0.12.17"
+_INSTALLER_VERSION_CHECK_TIMEOUT_SECONDS = 30
+_INSTALLER_DOWNLOAD_TIMEOUT_SECONDS = 120
+_ARCHIVE_FILE_MODE = stat.S_IRUSR | stat.S_IWUSR
+_EXECUTABLE_FILE_MODE = stat.S_IRWXU
 INSTALLER_ARCHIVE_SHA256 = {
     "aarch64-apple-darwin": "85f00cbdc6dd3e97eba4c31b4d014375a9fdfe8f570023b84e5102fc3456896b",
     "aarch64-pc-windows-msvc": "3e1aa6849d77f0e00dc865e4afab5c5b32de053e21fe35bf5ad5cec3734ec976",
@@ -44,7 +49,7 @@ INSTALLER_ARCHIVE_SHA256 = {
 def _installer_version(executable: str, environ: Mapping[str, str]) -> tuple[int, int, int]:
     completed = subprocess.run(
         [executable, "--version"], env=dict(environ), capture_output=True,
-        text=True, check=True, timeout=30,
+        text=True, check=True, timeout=_INSTALLER_VERSION_CHECK_TIMEOUT_SECONDS,
     )
     match = re.fullmatch(
         r"uv (\d+)\.(\d+)\.(\d+)(?: \([^\r\n]+\))?",
@@ -142,7 +147,7 @@ def _archive_name(*, target: str, platform_name: str) -> str:
 
 def _download_installer_archive(asset_name: str) -> bytes:
     url = f"https://github.com/astral-sh/uv/releases/download/{INSTALLER_VERSION}/{asset_name}"
-    with urlopen(url, timeout=120) as response:
+    with urlopen(url, timeout=_INSTALLER_DOWNLOAD_TIMEOUT_SECONDS) as response:
         return response.read()
 
 
@@ -195,7 +200,7 @@ def _load_verified_archive(
         raise RuntimeError(
             "Downloaded update installer failed checksum verification; MetaList was not stopped"
         )
-    _publish_bytes(destination=archive_path, body=archive_body, mode=0o600)
+    _publish_bytes(destination=archive_path, body=archive_body, mode=_ARCHIVE_FILE_MODE)
     return archive_body
 
 
@@ -226,9 +231,9 @@ def _managed_installer(*, platform_name: str, environ: Mapping[str, str]) -> str
                 "Cached update installer failed checksum verification; MetaList was not stopped"
             )
     else:
-        _publish_bytes(destination=executable, body=expected_binary, mode=0o700)
+        _publish_bytes(destination=executable, body=expected_binary, mode=_EXECUTABLE_FILE_MODE)
     if platform_name != "win32":
-        os.chmod(executable, 0o700)
+        os.chmod(executable, _EXECUTABLE_FILE_MODE)
     return str(executable)
 
 

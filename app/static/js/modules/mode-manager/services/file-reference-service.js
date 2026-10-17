@@ -6,6 +6,11 @@ import { requireCreatedNoteId } from './root-note-creation-service.js';
 import { actionSaveNote } from '../actions/content-actions.js';
 import { actionSelectNote, actionSwitchNotes } from '../actions/selection-actions.js';
 
+// After the window regains focus from the file picker, how often and how many
+// times to look for the chosen file before treating the picker as cancelled.
+const FILE_PICKER_FOCUS_POLL_INTERVAL_MS = 50;
+const FILE_PICKER_FOCUS_POLL_MAX_ATTEMPTS = 20;
+
 function getFilePickerInput() {
     const input = document.getElementById('file-reference-input');
     if (!(input instanceof HTMLInputElement)) {
@@ -368,7 +373,7 @@ function pickSingleFile() {
             if (!Number.isInteger(attemptCount) || attemptCount <= 0) {
                 throw new Error('pollForSelectionAfterFocus requires positive attemptCount');
             }
-            if (attemptCount >= 20) {
+            if (attemptCount >= FILE_PICKER_FOCUS_POLL_MAX_ATTEMPTS) {
                 if (input.value === '') {
                     finish(null);
                     return;
@@ -378,18 +383,18 @@ function pickSingleFile() {
             if (input.value !== '') {
                 focusPollTimeoutId = window.setTimeout(() => {
                     pollForSelectionAfterFocus(attemptCount + 1);
-                }, 50);
+                }, FILE_PICKER_FOCUS_POLL_INTERVAL_MS);
                 return;
             }
             focusPollTimeoutId = window.setTimeout(() => {
                 pollForSelectionAfterFocus(attemptCount + 1);
-            }, 50);
+            }, FILE_PICKER_FOCUS_POLL_INTERVAL_MS);
         };
 
         const handleFocus = () => {
             focusPollTimeoutId = window.setTimeout(() => {
                 pollForSelectionAfterFocus(1);
-            }, 50);
+            }, FILE_PICKER_FOCUS_POLL_INTERVAL_MS);
         };
 
         input.value = '';

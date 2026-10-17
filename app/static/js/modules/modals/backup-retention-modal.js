@@ -2,6 +2,8 @@ import { parseDecimalInteger } from '../decimal-integer.js';
 import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
 
+const KEEP_COUNT_FOCUS_DELAY_MS = 50;
+
 
 function _assertPositiveInteger(value, fieldName) {
     if (!Number.isInteger(value) || value <= 0) {
@@ -159,7 +161,7 @@ export class BackupRetentionModal extends BaseModal {
 
         const keepCountInput = document.getElementById('backup-retention-keep-count');
         if (keepCountInput instanceof HTMLInputElement) {
-            setTimeout(() => keepCountInput.focus(), 50);
+            setTimeout(() => keepCountInput.focus(), KEEP_COUNT_FOCUS_DELAY_MS);
         }
     }
 

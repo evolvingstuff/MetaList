@@ -37,6 +37,8 @@ MAX_WEB_BATCH_TEXT_CHARACTERS = 480_000
 MAX_WEB_PDF_PAGES = 100
 MAX_WEB_PAGE_OUTGOING_LINKS = 256
 _OUTGOING_LINK_FIELD_COUNT = 2  # (title, URL)
+MAX_WEB_LINK_LABEL_CHARACTERS = 300
+MAX_WEB_PAGE_TITLE_CHARACTERS = 300
 WEB_FETCH_TIMEOUT_SECONDS = 10.0
 _WEB_USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -199,7 +201,7 @@ class _ReadableHtmlParser(HTMLParser):
                 normalized_link, label_parts = self._active_links.pop()
                 if normalized_link != "" and self._suppressed_depth == 0:
                     self._text_parts.append(f" ({normalized_link})")
-                    label = _clean_single_line("".join(label_parts), maximum=300)
+                    label = _clean_single_line("".join(label_parts), maximum=MAX_WEB_LINK_LABEL_CHARACTERS)
                     if (
                         label != ""
                         and normalized_link not in self._outgoing_link_urls
@@ -231,7 +233,7 @@ class _ReadableHtmlParser(HTMLParser):
         candidate = self._metadata_title
         if candidate == "":
             candidate = "".join(self._title_parts)
-        return _clean_single_line(candidate, maximum=300)
+        return _clean_single_line(candidate, maximum=MAX_WEB_PAGE_TITLE_CHARACTERS)
 
     @property
     def readable_text(self) -> str:
@@ -510,7 +512,7 @@ def _read_pdf(content: bytes) -> tuple[str, str, bool, str]:
         return "", "", False, "encrypted_pdf"
     title = ""
     if reader.metadata is not None and isinstance(reader.metadata.title, str):
-        title = _clean_single_line(reader.metadata.title, maximum=300)
+        title = _clean_single_line(reader.metadata.title, maximum=MAX_WEB_PAGE_TITLE_CHARACTERS)
     page_text: list[str] = []
     truncated_pages = len(reader.pages) > MAX_WEB_PDF_PAGES
     for page in reader.pages[:MAX_WEB_PDF_PAGES]:

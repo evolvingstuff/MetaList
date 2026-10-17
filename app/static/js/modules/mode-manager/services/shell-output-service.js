@@ -1,3 +1,5 @@
+import { MS_PER_SECOND } from '../../time-units.js';
+
 export const SHELL_SELECTOR = '.meta-shell';
 export const SHELL_OUTPUT_SELECTOR = '.meta-shell-output';
 export const SHELL_CLOSE_SELECTOR = '.meta-shell-output-close';
@@ -124,7 +126,7 @@ function formatShellDuration(durationMs) {
     if (durationMs === 0) {
         return '0s';
     }
-    const durationSeconds = durationMs / 1000;
+    const durationSeconds = durationMs / MS_PER_SECOND;
     if (durationSeconds < TENTHS_SHOWN_BELOW_SECONDS) {
         return `${durationSeconds.toFixed(1)}s`;
     }

@@ -13,9 +13,12 @@ from typing import Iterator, Optional
 from app.config import DATABASE_URL, SQL_TRACE_ENABLED
 from app.db.live_recovery import recover_pending_change
 from app.db.schema import initialize_schema
+from app.utils.time_units import MS_PER_SECOND
 from loguru import logger
 
 _MEMORY_URI = "file:metalist_memory?mode=memory&cache=shared"
+_MODE_BANNER_RULE_WIDTH = 50
+_ROLLBACK_STACK_FRAME_LIMIT = 50
 
 
 def _resolve_db_path(url: str) -> Path:
@@ -39,7 +42,7 @@ def _configure_sql_logging(conn: sqlite3.Connection) -> None:
             "sqlite.query",
             extra={
                 "sql": statement,
-                "duration_ms": _time * 1000,
+                "duration_ms": _time * MS_PER_SECOND,
             },
         )
 
@@ -121,10 +124,10 @@ class SafeSession:
         cls._bootstrapped_databases.add(('memory', id(anchor)))
         _configure_sql_logging(anchor)
         cls._memory_anchor = anchor
-        print("\n" + "=" * 50)
+        print("\n" + "=" * _MODE_BANNER_RULE_WIDTH)
         print("TEST MODE: IN-MEMORY DATABASE")
         print("All data is temporary")
-        print("=" * 50 + "\n")
+        print("=" * _MODE_BANNER_RULE_WIDTH + "\n")
         return {"status": "ok", "message": "Using in-memory database"}
 
     @classmethod
@@ -149,9 +152,9 @@ class SafeSession:
         cls._bootstrapped_databases.add((str(cls._db_path), stat.st_dev, stat.st_ino))
         _configure_sql_logging(conn)
         conn.close()
-        print("\n" + "=" * 50)
+        print("\n" + "=" * _MODE_BANNER_RULE_WIDTH)
         print("PRODUCTION MODE: FILE DATABASE")
-        print("=" * 50 + "\n")
+        print("=" * _MODE_BANNER_RULE_WIDTH + "\n")
         return {"status": "ok", "message": "Using file database"}
 
     @classmethod
@@ -189,7 +192,7 @@ class SafeSession:
 
     def rollback(self) -> None:
         self._connection.rollback()
-        stack = "".join(traceback.format_stack(limit=50))
+        stack = "".join(traceback.format_stack(limit=_ROLLBACK_STACK_FRAME_LIMIT))
         exc_type, _, _ = sys.exc_info()
         if exc_type is None:
             logger.error(

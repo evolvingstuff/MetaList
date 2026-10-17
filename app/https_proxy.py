@@ -141,26 +141,26 @@ def make_proxy_handler(*, backend_host: str, backend_port: int, forward_headers)
             lengths = self.headers.get_all('Content-Length', [])
             transfers = self.headers.get_all('Transfer-Encoding', [])
             if len(self.headers.get_all('Host', [])) != 1 or len(lengths) > 1 or (lengths and transfers):
-                self.send_error(400, 'Ambiguous request framing')
+                self.send_error(HTTPStatus.BAD_REQUEST, 'Ambiguous request framing')
                 return
             if transfers:
-                self.send_error(501, 'Chunked request bodies are not supported; send Content-Length')
+                self.send_error(HTTPStatus.NOT_IMPLEMENTED, 'Chunked request bodies are not supported; send Content-Length')
                 return
             remaining = 0
             if lengths:
                 if not lengths[0].isascii() or not lengths[0].isdigit():
-                    self.send_error(400, 'Invalid Content-Length')
+                    self.send_error(HTTPStatus.BAD_REQUEST, 'Invalid Content-Length')
                     return
                 remaining = int(lengths[0])
             if self.path.split('?', 1)[0].endswith('/files/upload') and remaining > MAX_UPLOAD_REQUEST_BYTES:
-                self.send_error(413, 'Upload exceeds the configured size limit')
+                self.send_error(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, 'Upload exceeds the configured size limit')
                 return
             if not self.path.startswith('/') or self.path.startswith('//'):
-                self.send_error(400, 'Expected an origin-form request target')
+                self.send_error(HTTPStatus.BAD_REQUEST, 'Expected an origin-form request target')
                 return
             connection_tokens = {part.strip().casefold() for value in self.headers.get_all('Connection', []) for part in value.split(',')}
             if connection_tokens & {'host', 'content-length'}:
-                self.send_error(400, 'Invalid Connection header')
+                self.send_error(HTTPStatus.BAD_REQUEST, 'Invalid Connection header')
                 return
             headers = forward_headers(incoming_headers=self.headers.items(), client_ip=self.client_address[0])
             headers = {key: value for key, value in headers.items() if key.casefold() not in connection_tokens | HOP_HEADERS}
@@ -178,7 +178,7 @@ def make_proxy_handler(*, backend_host: str, backend_port: int, forward_headers)
                     'HTTPS proxy upstream transport failed method=%s backend=%s:%s error=%s',
                     self.command, backend_host, backend_port, type(error).__name__,
                 )
-                self.send_error(502, 'Upstream transport failed')
+                self.send_error(HTTPStatus.BAD_GATEWAY, 'Upstream transport failed')
                 return
             # lint: allow-PY001 rationale="a transport failure before the first response byte gets a sanitized gateway error"
             try:
@@ -188,7 +188,7 @@ def make_proxy_handler(*, backend_host: str, backend_port: int, forward_headers)
                 # A partial request/response cannot be reused for another request.
                 self.close_connection = True
                 self._log_response_transport_failure(error)
-                self.send_error(502, 'Upstream transport failed')
+                self.send_error(HTTPStatus.BAD_GATEWAY, 'Upstream transport failed')
                 connection.close()
                 return
             # lint: allow-PY001 rationale="terminate a disconnected or failed external HTTP transport once the response has started"

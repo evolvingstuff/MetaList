@@ -13,11 +13,13 @@ const CONTROLLER_PATH = resolve(
 test('createBackup configures a longer CommandGate watchdog timeout', () => {
     const source = readFileSync(CONTROLLER_PATH, 'utf8');
     const match = source.match(
-        /async createBackup\(\) \{[\s\S]*?CommandGate\.run\('commandPalette\.createBackup', async \(\) => \{[\s\S]*?\},\s*\{\s*timeoutMs:\s*(\d+),\s*\}\s*\)/,
+        /async createBackup\(\) \{[\s\S]*?CommandGate\.run\('commandPalette\.createBackup', async \(\) => \{[\s\S]*?\},\s*\{\s*timeoutMs:\s*LONG_COMMAND_TIMEOUT_SECONDS \* MS_PER_SECOND,\s*\}\s*\)/,
     );
 
     assert.ok(match, 'createBackup should pass explicit timeoutMs to CommandGate.run');
-    assert.equal(Number(match[1]), 120000);
+    const seconds = source.match(/^const LONG_COMMAND_TIMEOUT_SECONDS = (\d+);$/m);
+    assert.ok(seconds, 'the long command timeout is a named number of seconds');
+    assert.equal(Number(seconds[1]), 120);
 
     const waitIndex = source.indexOf('await waitForCommandAvailability({', source.indexOf('async createBackup()'));
     const runIndex = source.indexOf("CommandGate.run('commandPalette.createBackup'", source.indexOf('async createBackup()'));

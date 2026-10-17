@@ -1,15 +1,24 @@
 // HTTP status codes by name, as Python's http.HTTPStatus names them, so code
 // never compares a response against a bare number.
 
+const OK = 200;
+const NO_CONTENT = 204;
+const BAD_REQUEST = 400;
+const UNAUTHORIZED = 401;
+const NOT_FOUND = 404;
+const CONFLICT = 409;
+const GONE = 410;
+const INTERNAL_SERVER_ERROR = 500;
+
 export const HTTP_STATUS = Object.freeze({
-    OK: 200,
-    NO_CONTENT: 204,
-    BAD_REQUEST: 400,
-    UNAUTHORIZED: 401,
-    NOT_FOUND: 404,
-    CONFLICT: 409,
-    GONE: 410,
-    INTERNAL_SERVER_ERROR: 500,
+    OK,
+    NO_CONTENT,
+    BAD_REQUEST,
+    UNAUTHORIZED,
+    NOT_FOUND,
+    CONFLICT,
+    GONE,
+    INTERNAL_SERVER_ERROR,
 });
 
 // Every HTTP status is below this (the 5xx class is the last).

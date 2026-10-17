@@ -4,6 +4,9 @@ const TAB_HOVER_ZONE_SELECTOR = '#tab-hover-zone';
 const CONTROLS_SELECTOR = '.controls';
 const HOVER_CLASS = 'search-contexts-list--hover';
 const POINTER_DISMISS_BUFFER_PX = 28;
+// The popover keeps this distance from the window edges.
+const POPOVER_VIEWPORT_MARGIN_PX = 8;
+const POPOVER_GAP_BELOW_HOVER_ZONE_PX = 6;
 
 const moduleState = ApplicationState.createFields('search-contexts-overlay-service', {
     isHoverOverlayVisible: false,
@@ -65,8 +68,8 @@ function clampPopoverLeft(left, width) {
     if (!Number.isFinite(viewportWidth) || viewportWidth <= 0) {
         throw new Error('window.innerWidth must be a positive number');
     }
-    const minLeft = 8;
-    const maxLeft = Math.max(minLeft, viewportWidth - width - 8);
+    const minLeft = POPOVER_VIEWPORT_MARGIN_PX;
+    const maxLeft = Math.max(minLeft, viewportWidth - width - POPOVER_VIEWPORT_MARGIN_PX);
     return Math.min(Math.max(left, minLeft), maxLeft);
 }
 
@@ -118,7 +121,10 @@ export function updateSearchContextsOverlayPlacement() {
     }
 
     const popoverLeft = clampPopoverLeft(Math.round(controlsRect.left), Math.round(listRect.width));
-    const popoverTop = Math.max(8, Math.round(hoverRect.bottom + 6));
+    const popoverTop = Math.max(
+        POPOVER_VIEWPORT_MARGIN_PX,
+        Math.round(hoverRect.bottom + POPOVER_GAP_BELOW_HOVER_ZONE_PX),
+    );
     searchContextsList.style.left = `${popoverLeft}px`;
     searchContextsList.style.top = `${popoverTop}px`;
     searchContextsList.style.right = 'auto';

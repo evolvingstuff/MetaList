@@ -13,6 +13,10 @@ import { buildSessionHeaders } from '../session-auth.js';
 import { CONFIG } from '../config.js';
 import { ModeContextInstance as ModeContext } from '../mode-manager/mode-context.js';
 import { actionRefreshAndMaybeSelect } from '../mode-manager/actions/ui-actions.js';
+import { MS_PER_SECOND } from '../time-units.js';
+
+// The batch list counts as scrolled to the newest batch within this distance of its end.
+const FOLLOW_NEWEST_BATCH_SLACK_PX = 24;
 
 const baseUrl = CONFIG.API.AI.CHAT.replace(/\/chat$/u, '/proposals');
 const moduleState = ApplicationState.createFields('bulk-proposal-ui', {
@@ -83,7 +87,7 @@ function openProgress(abortController, chatHost, initialEvent) {
     const clock = createBulkElapsedClock(() => performance.now());
     const timer = setInterval(() => {
         dialog.querySelector('[data-elapsed]').textContent = `Processing time: ${clock.seconds()}s`;
-    }, 1000);
+    }, MS_PER_SECOND);
     if (isModal) dialog.showModal();
     let release;
     const waiting = new Promise((resolve) => { release = resolve; });
@@ -132,7 +136,7 @@ export function handleBulkEvent(event, abortController, chatHost) {
             let wasFollowingNewest = true;
             if (!stack.hidden) {
                 wasFollowingNewest = (
-                    stack.scrollHeight - stack.scrollTop - stack.clientHeight < 24
+                    stack.scrollHeight - stack.scrollTop - stack.clientHeight < FOLLOW_NEWEST_BATCH_SLACK_PX
                 );
             }
             renderSummaryBatchPreview(stack, event.summary_batch_preview);
