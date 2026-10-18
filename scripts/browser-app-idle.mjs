@@ -32,13 +32,19 @@ export async function waitForPageSettled(page) {
         const rect = element.getBoundingClientRect();
         return rect.bottom > 0 && rect.top < window.innerHeight;
       };
-      const observe = () => ({
-        layout: [window.scrollY, document.documentElement.scrollHeight,
-          ...[...document.querySelectorAll('.note[data-note-id]')].map(note => Math.round(note.getBoundingClientRect().top))].join(','),
-        isBusy: mode.isLoading || CommandGate.isBusy()
-          || document.querySelector('[data-mermaid-state="rendering"]') !== null
-          || [...document.images].some(image => inView(image) && !image.complete),
-      });
+      const observe = () => {
+        const busyReasons = [
+          mode.isLoading,
+          CommandGate.isBusy(),
+          document.querySelector('[data-mermaid-state="rendering"]') !== null,
+          [...document.images].some(image => inView(image) && !image.complete),
+        ];
+        return {
+          layout: [window.scrollY, document.documentElement.scrollHeight,
+            ...[...document.querySelectorAll('.note[data-note-id]')].map(note => Math.round(note.getBoundingClientRect().top))].join(','),
+          isBusy: busyReasons.includes(true),
+        };
+      };
       const startedAt = performance.now();
       let last = observe();
       let stillSince = startedAt;
