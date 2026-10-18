@@ -36,9 +36,10 @@ Each bundle was compared with an npm archive whose registry integrity digest was
 |---|---|---|
 | dompurify | 3.4.16 | `2c90a9b46d6463f26038a29b686e82bc91de01fdac9d5229e7cfe3b360134ea2` |
 | mermaid | 11.16.1 | `18327bef70d96fb505fe7287d9f6a7362ebf07ff6576ddfaffb1a06f3e1a2954` |
-| markdown-it | 14.3.2 | `e32488403e2e565ac12a9669bfdf2b1b876eb0a5c84f8e0699884b562d18eb52` |
 | zxcvbn | 4.4.2 | `f42c651f40506acb6b662490f338dd47a5951d3312039c4ab8fe5090484f351a` |
 | @excalidraw/excalidraw (built bundle) | 0.18.1 | `98d0fb0b56f3a2b061d643d8040918e09e0ba72ad4208c5d25ff2e43e15b3946` |
+
+markdown-it was removed on 2026-10-17: no page loaded it, and the browser renderer that used it had no caller (`docs/security/html-sinks.md`).
 
 Excalidraw ships only as ES modules for bundlers, so unlike the other rows it is not a file copied from the npm archive. `scripts/vendor/excalidraw/` builds it deterministically with esbuild from an exact `package-lock.json` (React and React DOM included), patches out its CDN font fallback and WebAssembly font subsetting so the unchanged Content Security Policy holds, and records every compiled npm package in `bundle-packages.json`. `check_supply_chain.py check` verifies that list against the lockfile and the manifest's `bundle` entry, and `audit` queries OSV for each bundled package version. See `scripts/vendor/excalidraw/README.md` for rebuilding and for the fonts and features left out.
 

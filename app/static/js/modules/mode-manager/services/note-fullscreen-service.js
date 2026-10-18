@@ -2,7 +2,7 @@ import { ApplicationState } from '../../application-state.js';
 import { NotesAPI } from '../../api-client.js';
 import { hydrateImageFilePreviews } from './file-image-preview-service.js';
 import { hydrateExcalidrawPreviews } from '../../excalidraw/excalidraw-preview-service.js';
-import { ensureAnchorsOpenInNewTabs } from './markdown-render-service.js';
+import { ensureAnchorsOpenInNewTabs } from './link-target-service.js';
 import { queueMermaidDiagramRendering } from './mermaid-render-service.js';
 import { hydrateRemoteImageProxies } from './remote-image-proxy-service.js';
 import { recordNoteInteractionIfNew } from './search-interaction-service.js';

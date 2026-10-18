@@ -31,9 +31,9 @@ another site.
 | Our own constants interpolated raw | 17 | safe: only MetaList's own literals and constant tables reach them |
 | Server-validated values interpolated raw | 6 | safe today because the server limits the characters or the type (see Fragile) |
 | Server HTML | 8 | note views, full screen, floating windows, image resize, print, AI chat |
-| Sanitized in the browser | 4 | paste insertion, Mermaid (DOMPurify via `securityLevel: 'strict'`), markdown-it with `html: false`, DOMPurify on save |
+| Sanitized in the browser | 4 | paste insertion, Mermaid (DOMPurify via `securityLevel: 'strict'`), markdown-it with `html: false` (since removed), DOMPurify on save |
 | Unescaped user text | **1** | the tab list (below; fixed) |
-| Parse-only, or no production caller | 4 | inert `DOMParser` parsing in the paste sanitizer; `markdown-render-service.js`'s raw `innerHTML` helper |
+| Parse-only, or no production caller | 4 | inert `DOMParser` parsing in the paste sanitizer; `markdown-render-service.js`'s raw `innerHTML` helper (since removed) |
 
 Every escaper at these sites escapes `& < > " '`, so every escaped value is safe
 in attributes as well as text.
@@ -53,18 +53,26 @@ browser suite checks that such a search shows as text.
 
 ## Fragile: safe today, because of something other than escaping
 
-- **Raw values the server keeps safe:** the login page's namespace list
-  (`auth.js`), the backup restore dialog's restored filename and namespace
-  (`backup-restore-modal.js`), and the backup retention dialog's filename
-  (`backup-retention-modal.js`). Safe because namespaces must match
-  `^[a-z0-9]+(?:-[a-z0-9]+)*$`. The restore and import routes do not check that
-  the posted `backup_filename` matches `backup_namespace`; only the browser keeps
-  them consistent.
-- **Raw error text:** the password dialog shows `state.error` unescaped
-  (`password-modal.js`). Every message that reaches it today is a constant or a
-  status number, but a server `detail` that ever echoed input would be markup.
-  The random password dialog (`error`, `copyStatus`) and the dictation settings
-  dialog (`state.error`) are the same shape with only constant writers.
+Escaped since the inventory (defense in depth; every value these sites receive
+today was already safe):
+
+- the login page's namespace list (`auth.js`), the backup restore dialog's
+  restored filename and namespace (`backup-restore-modal.js`), and the backup
+  settings dialog's retention count: safe before only because the server limits
+  namespaces to `^[a-z0-9]+(?:-[a-z0-9]+)*$` and the count is an integer;
+- the password dialog's error (`password-modal.js`), and the random password and
+  dictation settings dialogs' errors and copy status: every writer was a constant
+  or a status number.
+
+The print preview's frame is now sandboxed (`allow-same-origin allow-modals`, no
+`allow-scripts`): nothing in the printed document can run, while MetaList can
+still print it (Chrome prints a sandboxed frame only with `allow-modals`). The
+export and print browser suite checks the attribute.
+
+Still as found:
+
+- **Backup restore and import** do not check that the posted `backup_filename`
+  matches `backup_namespace`; only the browser keeps them consistent.
 - **Constant tables not frozen:** `VISUAL_CUE_SECTIONS` (visual cues dialog) is
   exported and could be changed by another module.
 - **Server HTML is trusted as is.** Note HTML is cleaned by nh3
@@ -72,9 +80,6 @@ browser suite checks that such a search shows as text.
   later transforms (embeds, formatting, image proxy) are not cleaned again, and
   the AI chat's markdown (`app/services/markdown_rendering.py`) escapes while it
   builds HTML with no final sanitize pass.
-- **Print preview** loads the export HTML into an iframe with no `sandbox`; a
-  `srcdoc` frame has MetaList's origin, so a gap in the server renderer would act
-  as MetaList.
 - **Paste insertion** (`html-paste-sanitizer-service.js`) inserts sanitized
   clipboard HTML into the live page with `createContextualFragment`; its
   sanitizer is a blocklist, so a tag or attribute missing from it lives until the
@@ -95,6 +100,9 @@ property-contracts catalog will name.
 
 ## Found along the way
 
-- The backup retention dialog has no way to open: its only opener,
-  `_maybeDeleteOldestBackupsAfterCreate` in the command palette, has no caller.
-- `markdown-render-service.js` is used only by its unit test.
+- The backup retention dialog had no way to open: its only caller was removed
+  on 2026-04-19, when folder backups with a keep count replaced it. The dialog,
+  its command palette helpers and the unused `/api2/auth/backup/delete-oldest`
+  route are removed. Folder backups prune by the keep count
+  (`tests/unit/test_backups_route.py` checks that only the oldest beyond it go).
+- `markdown-render-service.js` rendered markdown with a vendored markdown-it that no page loaded; its render functions had no caller. They and markdown-it are removed; the link helper the note views use moved to `link-target-service.js`.

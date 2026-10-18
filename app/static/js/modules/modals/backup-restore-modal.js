@@ -235,7 +235,7 @@ export class BackupRestoreModal extends BaseModal {
                     modalElement.innerHTML = `
                         <div class="modal-content backup-restore-modal-content">
                             <h3>Restore Complete</h3>
-                            <p>Backup restored successfully: <span class="backup-filename">${restoredFilename}</span></p>
+                            <p>Backup restored successfully: <span class="backup-filename">${escapeHtml(restoredFilename)}</span></p>
                             <p>Reconnecting to restarted server. You will be redirected automatically.</p>
                         </div>
                     `;
@@ -244,7 +244,7 @@ export class BackupRestoreModal extends BaseModal {
                 modalElement.innerHTML = `
                     <div class="modal-content backup-restore-modal-content">
                         <h3>Restore Complete</h3>
-                        <p>Backup restored successfully: <span class="backup-filename">${restoredFilename}</span></p>
+                        <p>Backup restored successfully: <span class="backup-filename">${escapeHtml(restoredFilename)}</span></p>
                         <p>Close this modal to reload the app.</p>
                     </div>
                 `;
@@ -254,8 +254,8 @@ export class BackupRestoreModal extends BaseModal {
             modalElement.innerHTML = `
                 <div class="modal-content backup-restore-modal-content">
                     <h3>Restore Complete</h3>
-                    <p>Backup restored successfully: <span class="backup-filename">${restoredFilename}</span></p>
-                    <p>Restored into namespace <strong>${restoredTargetNamespace}</strong>.</p>
+                    <p>Backup restored successfully: <span class="backup-filename">${escapeHtml(restoredFilename)}</span></p>
+                    <p>Restored into namespace <strong>${escapeHtml(restoredTargetNamespace)}</strong>.</p>
                     <p>${openNamespaceSuggested ? 'Use the namespace switcher to open it.' : 'You can continue using it now.'}</p>
                 </div>
             `;

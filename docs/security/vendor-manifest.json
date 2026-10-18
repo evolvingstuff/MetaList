@@ -22,17 +22,6 @@
     "upstream": "https://www.npmjs.com/package/mermaid/v/11.16.1"
   },
   {
-    "name": "markdown-it",
-    "version": "14.3.2",
-    "path": "app/static/js/vendor/markdown-it-14.3.2.min.js",
-    "license": "app/static/js/vendor/markdown-it-14.3.2.LICENSE.txt",
-    "sha256": "e32488403e2e565ac12a9669bfdf2b1b876eb0a5c84f8e0699884b562d18eb52",
-    "tarball": "https://registry.npmjs.org/markdown-it/-/markdown-it-14.3.2.tgz",
-    "integrity": "sha512-sHHjZ5fJKlgrG4qns2YwVcdNep35h5fERrfkD2YNsb9UFk0UIHarbiTaHKVMlPuWAoiilyK8Fv/jAm11slsY7Q==",
-    "member": "package/dist/markdown-it.min.js",
-    "upstream": "https://www.npmjs.com/package/markdown-it/v/14.3.2"
-  },
-  {
     "name": "zxcvbn",
     "version": "4.4.2",
     "path": "app/static/js/vendor/zxcvbn-4.4.2.js",

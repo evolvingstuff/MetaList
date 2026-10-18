@@ -9,7 +9,7 @@ import {
     hydrateRemoteImageProxies,
     prepareRemoteImageElementsForEditing,
 } from './remote-image-proxy-service.js';
-import { ensureAnchorsOpenInNewTabs } from './markdown-render-service.js';
+import { ensureAnchorsOpenInNewTabs } from './link-target-service.js';
 import { queueMermaidDiagramRendering } from './mermaid-render-service.js';
 import {
     animateNoteCollapseChanges,

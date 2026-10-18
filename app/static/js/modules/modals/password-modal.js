@@ -18,6 +18,7 @@ import {
 import { readPasswordOperationResponse } from '../password-operation-response.js';
 import { buildSessionHeaders } from '../session-auth.js';
 import { Auth } from '../auth.js';
+import { escapeHtml } from '../html-escape.js';
 
 const PASSWORD_MODAL_CONFIG = {
     create: {
@@ -508,7 +509,7 @@ class PasswordOperationModal extends BaseModal {
         return `
             <div class="modal-content">
                 <h3>Error</h3>
-                <p class="error-message">${error}</p>
+                <p class="error-message">${escapeHtml(error)}</p>
             </div>
         `;
     }

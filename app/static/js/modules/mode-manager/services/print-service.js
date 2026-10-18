@@ -38,6 +38,10 @@ function loadPrintFrame(htmlText) {
         frame.className = 'print-frame';
         frame.setAttribute('aria-hidden', 'true');
         frame.tabIndex = NOT_IN_TAB_ORDER;
+        // Nothing in the printed document can run (no allow-scripts). It keeps MetaList's
+        // origin so this page can print it, and Chrome prints a sandboxed frame only with
+        // allow-modals.
+        frame.setAttribute('sandbox', 'allow-same-origin allow-modals');
         frame.srcdoc = htmlText;
         frame.addEventListener('load', () => {
             if (frame.contentWindow === null) {

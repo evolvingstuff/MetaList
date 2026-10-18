@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sqlite3
 from pathlib import Path
 
@@ -1017,3 +1018,55 @@ def test_restore_import_accepts_correct_password_for_existing_protected_target(
         "https_port": 8445,
         "mcp_port": 8767,
     }
+
+
+def _write_folder_backup(folder: Path, filename: str, *, modified_at: float) -> Path:
+    path = folder / filename
+    path.write_bytes(b"backup")
+    os.utime(path, (modified_at, modified_at))
+    return path
+
+
+def test_run_backup_keeps_the_newest_backups_and_deletes_only_the_oldest_beyond_the_keep_count(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The folder backup deletes, per namespace, the oldest backups beyond the keep
+    count, and nothing else: newer backups, other namespaces' backups and unrelated
+    files stay."""
+    folder = tmp_path / "Downloads"
+    folder.mkdir()
+    database = tmp_path / "default.metalist.db"
+    database.touch()
+    older_default = [
+        _write_folder_backup(folder, f"default-2026041{day}-090000-000000.metalist-backup.tar.gz", modified_at=1_000 + day)
+        for day in range(5)
+    ]
+    other_namespace = [
+        _write_folder_backup(folder, f"work-2026041{day}-090000-000000.metalist-backup.tar.gz", modified_at=1_000 + day)
+        for day in range(2)
+    ]
+    unrelated = _write_folder_backup(folder, "notes.txt", modified_at=1_000)
+    created_name = "default-20260419-090000-000000.metalist-backup.tar.gz"
+
+    def create_newest(database_path: Path, backup_directory: Path) -> BackupFileInfo:
+        assert database_path == database and backup_directory == folder
+        _write_folder_backup(folder, created_name, modified_at=2_000)
+        return BackupFileInfo(filename=created_name, created_at="2026-04-19T09:00:00+00:00", size_bytes=6)
+
+    monkeypatch.setattr(backups_route, "update_backup_settings", lambda **settings: settings)
+    monkeypatch.setattr(backups_route, "resolve_namespaced_database_path", lambda *, namespace: database)
+    monkeypatch.setattr(backups_route, "create_timestamped_backup_for_paths", create_newest)
+
+    response = backups_route.run_backup(
+        payload=backups_route.BackupSettingsUpdateRequest(
+            folder_path=str(folder), selected_namespaces=["default"], retention_count=3,
+        ),
+        token="token",
+    )
+
+    kept_default = sorted(path.name for path in folder.glob("default-*"))
+    assert kept_default == sorted([created_name, older_default[3].name, older_default[4].name])
+    assert all(path.exists() for path in other_namespace), "another namespace's backups are not counted or deleted"
+    assert unrelated.exists(), "files that are not backups are never deleted"
+    assert (response.results[0].deleted_count, response.results[0].remaining_count) == (3, 3)

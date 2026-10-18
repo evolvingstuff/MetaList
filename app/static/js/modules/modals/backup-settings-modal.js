@@ -193,7 +193,7 @@ export class BackupSettingsModal extends BaseModal {
 
                 <div class="form-group">
                     <label for="backup-settings-retention-count">Backups to retain per namespace</label>
-                    <input type="number" id="backup-settings-retention-count" min="1" step="1" value="${retentionCountText}" ${loading || saving ? 'disabled' : ''}>
+                    <input type="number" id="backup-settings-retention-count" min="1" step="1" value="${escapeHtml(retentionCountText)}" ${loading || saving ? 'disabled' : ''}>
                 </div>
 
                 <div class="form-actions">

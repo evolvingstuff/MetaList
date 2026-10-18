@@ -8,8 +8,6 @@ const API_AUTH_BASE = `${API_BASE}/auth`;
 const API_FILES_BASE = `${API_BASE}/files`;
 const API_REMINDERS_BASE = `${API_BASE}/reminders`;
 const API_AI_BASE = `${API_BASE}/ai`;
-const BACKUP_RETENTION_SUGGESTED_KEEP_COUNT = 3;
-const BACKUP_RETENTION_PROMPT_THRESHOLD = 25;
 const SYNC_POLL_INTERVAL_SECONDS = 5;
 const LOADING_SPINNER_DELAY_SECONDS = 1;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -105,8 +103,6 @@ export const CONFIG = {
             COMMAND_PALETTE_USAGE: `${API_AUTH_BASE}/client-state/command-palette-usage`,
             BACKUP: {
                 CREATE: `${API_AUTH_BASE}/backup/create`,
-                LIST: `${API_AUTH_BASE}/backup/list`,
-                DELETE_OLDEST: `${API_AUTH_BASE}/backup/delete-oldest`,
                 RESTORE: `${API_AUTH_BASE}/backup/restore`,
             },
             NAMESPACES: {
@@ -240,10 +236,5 @@ export const CONFIG = {
 
     REFERENCE_NAVIGATION: {
         CLOSE_REF_TAB_ON_BACK: true,
-    },
-
-    BACKUP: {
-        RETENTION_PROMPT_THRESHOLD: BACKUP_RETENTION_PROMPT_THRESHOLD,
-        RETENTION_SUGGESTED_KEEP_COUNT: BACKUP_RETENTION_SUGGESTED_KEEP_COUNT,
     },
 };

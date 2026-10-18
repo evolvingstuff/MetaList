@@ -846,7 +846,6 @@ def _restore_legacy_backup_to_paths(backup_path: Path, database_path: Path) -> N
             _copy_database(files_stage, _resolve_related_file_database_path(database_path))
 
 
-
 def resolve_live_database_path() -> Path:
     if SafeSession._use_memory:  # type: ignore[attr-defined]
         raise RuntimeError("Backups are unavailable when using the in-memory database")
@@ -1015,12 +1014,6 @@ def create_timestamped_backup() -> BackupFileInfo:
     return create_timestamped_backup_for_paths(database_path, backup_directory)
 
 
-def list_backups() -> list[BackupFileInfo]:
-    database_path = resolve_live_database_path()
-    backup_directory = resolve_backup_directory_for_database(database_path)
-    return list_backups_in_directory(backup_directory, database_path=database_path)
-
-
 def delete_oldest_backups_in_directory(
     backup_directory: Path,
     count: int,
@@ -1087,16 +1080,6 @@ def delete_oldest_backups_in_directory(
             deleted_backups.append(backup)
 
         return deleted_backups
-
-
-def delete_oldest_backups(count: int) -> list[BackupFileInfo]:
-    database_path = resolve_live_database_path()
-    backup_directory = resolve_backup_directory_for_database(database_path)
-    return delete_oldest_backups_in_directory(
-        backup_directory,
-        count,
-        database_path=database_path,
-    )
 
 
 def resolve_backup_path_by_filename(filename: str) -> Path:
