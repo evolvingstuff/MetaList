@@ -2,6 +2,21 @@
 
 ----
 
+## After a backup restore, a background save can land on the lock page instead of the login screen (open, found 2026-10-18)
+
+Seen twice in the browser smoke (`core`, the encrypted-backup step), once under load and
+once not; passes when rerun. The restore restarts the server. A background tab-state save
+(the routine scroll-position save) that reaches the new server process gets 401; the
+browser treats it as an expired session ("Forcing logout") and navigates to `/locked`,
+while the restore flow expects the login panel. The check then waits 30 s for
+`#login-panel[data-revealed="true"]`. Order of events in the disposable logs:
+`restore` 200, `tab-state` connection refused during the restart, `tab-state` 401 right
+after it, `Forcing logout`, navigate `/locked`. Next step: a failing test that sends a
+tab-state save right after a restore's restart, then decide which screen the restore
+should land on and make the background save not override it.
+
+----
+
 ## Pressing + on a proposal made it vanish instead of becoming a tag (fixed 2026-10-14)
 
 Reported while trying Suggest Tags with AI: pressing `+` on a proposal removed it

@@ -24,9 +24,10 @@ class AgentTraceStore:
     def reset(self) -> None:
         with self._lock:
             self._exact_detail_hidden_sessions.clear()
-            self._latest_runs.clear()
-            self._histories.clear()
-            self._discarded_run_ids.clear()
+            # Late events for the dropped runs are discarded, as after clear_session.
+            for session_key in tuple(self._histories):
+                self._forget_runs_locked(session_key)
+            assert self._latest_runs == {} and self._histories == {}
 
     def clear_session(self, *, session_key: str) -> None:
         self._validate_session_key(session_key)
@@ -200,12 +201,15 @@ class AgentTraceStore:
         return pairs
 
     def _find_run(self, session_key: str, run_id: str):
-        # A cleared session may still receive the cancellation of an old call.
-        if session_key not in self._histories or run_id in self._discarded_run_ids:
+        # A cleared or reset session may still receive the cancellation of an old call.
+        if run_id in self._discarded_run_ids:
             return None
-        for run in self._histories[session_key]:
-            if run["run_id"] == run_id:
-                return run
+        # Any other run must be one start_run began: an invented id is a bug, in a
+        # session with history or without.
+        if session_key in self._histories:
+            for run in self._histories[session_key]:
+                if run["run_id"] == run_id:
+                    return run
         raise RuntimeError("Agent trace run id does not match a recorded run")
 
     def _finish_run(self, *, session_key: str, run_id: str, status: str, error: str) -> None:

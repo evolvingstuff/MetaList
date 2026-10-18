@@ -151,3 +151,26 @@ def test_clear_during_inference_does_not_resurrect_old_history():
     assert snapshot["run"]["run_id"] == new_id
     assert snapshot["run"]["status"] == "running"
     assert traces.export_history(session_key="a") == []
+
+
+@pytest.mark.parametrize("has_history", [False, True])
+def test_an_event_for_a_run_the_store_never_started_is_refused(has_history):
+    """Reported 2026-10-18: Suggest title recorded its attempts under a run id it made up.
+    A session with chat history refused it (a server error); one without dropped the
+    events silently, which is how every test missed it. Both now refuse."""
+    traces = AgentTraceStore()
+    if has_history:
+        traces.start_run(session_key="a", model="gpt-5.6-luna", user_message="Earlier")
+    with pytest.raises(RuntimeError, match="does not match a recorded run"):
+        traces.append_event(session_key="a", run_id="invented", event_type="EXPORT_TITLE_INFERENCE",
+                            label="Export title", detail={}, duration_ms=1.0)
+    with pytest.raises(RuntimeError, match="does not match a recorded run"):
+        traces.complete_run(session_key="a", run_id="invented")
+
+
+def test_a_late_event_after_a_reset_is_discarded_like_one_after_a_clear():
+    traces = AgentTraceStore()
+    old_id = traces.start_run(session_key="a", model="gpt-5.6-luna", user_message="Old")
+    traces.reset()
+    traces.fail_run(session_key="a", run_id=old_id, error="Late cancellation")
+    assert traces.snapshot(session_key="a")["has_trace"] is False
