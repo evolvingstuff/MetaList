@@ -41,3 +41,20 @@ Near-misses are the valuable part: a group where one site has an extra or missin
 False positives: low for exact normalized matches at the size threshold; conditions that are coincidentally identical but mean different things are rare once identifiers must match. A deliberate repetition (a guard re-checked after an await) can be suppressed with a reason.
 Related: RULE D (duplicate function bodies) is the same drift problem for behavior; this is the same for decisions. GUARD001 infers that a call is usually guarded; this rule finds the guard itself duplicated.
 ```
+
+## For later: a state-ownership rule family (proposed 2026-10-17)
+
+Not a single rule but a configurable family, in the style of the property-contracts catalog: the project declares its state design, and ShockHarness holds the code to it. The design itself (one owner or many) is the project's choice; the tool does not prescribe it.
+
+```text
+STATE OWNERSHIP (JavaScript, Python), configured per project
+Motivation: MetaList keeps client state in one owner (ApplicationState / ModeContext: getters and setters, an exception on an invalid value or on a write that leaves a value unchanged). That discipline caught subtle bugs and wasted work, and MetaList enforces part of it itself (the startup sanity rule for owned state). The server keeps its client-tracking state (tab state, warm views, sync, undo, ...) in about 20 module-level stores with their own locking habits; a STATE001 audit of 45 of their globals found 4 races. The client is single-threaded, so one owner works; the server runs a thread pool plus the event loop, so one owner would need one lock and serialize unrelated requests: there, one owner per store, each with its own lock.
+Configuration: the owner classes or base classes (e.g. ApplicationState in JS, a StateStore base in Python), and the threading model per language or path ("single-threaded: owners" or "threaded: one owner per store, each with a lock attribute").
+Checks:
+1. State lives only in declared owners: module-level mutable state outside an owner is a finding (STATE001 with an allowlist, so what remains is real).
+2. Writes go through the owner: assigning an owner instance's fields from outside the owner's own methods is a finding.
+3. Threaded model only: every write to an owner's fields is inside `with self.<lock>:` (the write side), and every read that a decision depends on is too (RULE B is the read side).
+4. Owners inherit from the declared base that performs the runtime checks; the redundant-write check itself is runtime-only (whether a value is unchanged is not known statically).
+False positives: low once owners are declared; bootstrap writes at import time or construction can be exempted by role (module initialization, __init__).
+MetaList use case: TODO.md, "Server State: Owned Stores And Redundant-Write Detection".
+```
