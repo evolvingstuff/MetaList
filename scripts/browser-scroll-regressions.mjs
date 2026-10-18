@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 
 import {runThenCleanUp} from './suite-outcome.mjs';
+import {waitForPageSettled} from './browser-app-idle.mjs';
 
 // Leaving edit mode keeps your place: the text you were working on (the caret,
 // when it is on screen) or reading (the line about a third down the screen)
@@ -8,7 +9,6 @@ import {runThenCleanUp} from './suite-outcome.mjs';
 // jump. A collapsed note that collapses again stays in view. Clicking another
 // note while editing keeps the clicked text under the pointer.
 
-const SETTLE_MS = 1500;
 const TOLERANCE_PX = 2;
 
 function paragraphs(label, count) {
@@ -160,7 +160,7 @@ async function exitWithEscape(page, prefix) {
     const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
     return !mode.isEditing && !mode.isLoading;
   });
-  await pause(SETTLE_MS);
+  await waitForPageSettled(page);
   return page.evaluate(() => ({samples: window.__scrollSamples, overlays: window.__bodyOverlays}));
 }
 
@@ -270,7 +270,7 @@ async function editAndExit(page, noteId, clickSelector) {
     const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
     return !mode.isEditing && !mode.isLoading;
   });
-  await pause(SETTLE_MS);
+  await waitForPageSettled(page);
 }
 
 async function lateContentCase(page) {
@@ -400,7 +400,7 @@ async function clickLineToEdit(page, noteId, prefix) {
   }, {noteId, prefix});
   await page.mouse.click(point.x, point.y);
   await waitForEditing(page, noteId);
-  await pause(SETTLE_MS);
+  await waitForPageSettled(page);
   return point;
 }
 
@@ -500,7 +500,7 @@ async function enterEditCases(page, ids, longId) {
     await pause(300);
     await page.mouse.click(point.x, point.y);
     await waitForEditing(page, markdownId);
-    await pause(SETTLE_MS);
+    await waitForPageSettled(page);
     const result = await page.evaluate(label => {
       const selection = window.getSelection();
       let node = selection.getRangeAt(0).startContainer;
@@ -514,7 +514,7 @@ async function enterEditCases(page, ids, longId) {
       diagramFailures.push(`"${label}": caret line "${result.lineText.trim().slice(0, 40)}" at y=${Math.round(result.lineTop)}, click y=${Math.round(point.y)}`);
     }
     await page.keyboard.press('Escape');
-    await pause(SETTLE_MS);
+    await waitForPageSettled(page);
   }
   assert.deepEqual(diagramFailures, [], `clicking a diagram box should put its source line, with the caret, under the pointer:\n${diagramFailures.join('\n')}`);
 
@@ -532,13 +532,13 @@ async function enterEditCases(page, ids, longId) {
   }, markdownId);
   await page.mouse.click(diagram.x, diagram.y);
   await waitForEditing(page, markdownId);
-  await pause(SETTLE_MS);
+  await waitForPageSettled(page);
   const fenceTop = await lineY(page, markdownId, '```mermaid');
   assert.ok(Math.abs(fenceTop - diagram.top) <= 4,
     `clicking empty diagram space: its source should start where the diagram did: y=${Math.round(diagram.top)} -> ${Math.round(fenceTop)}`);
   assert.ok((await caretLineText(page)).includes('```mermaid'), 'clicking empty diagram space: the caret is at the start of its source');
   await page.keyboard.press('Escape');
-  await pause(SETTLE_MS);
+  await waitForPageSettled(page);
 }
 
 // --- Formatted notes: click a rendered spot, then leave again ---------------
@@ -604,7 +604,7 @@ async function formattedClickCase(page, ids, spec) {
   const point = {x: box.left + Math.min(12, box.width / 2), y: box.top + box.height / 2};
   await page.mouse.click(point.x, point.y);
   await waitForEditing(page, noteId);
-  await pause(SETTLE_MS);
+  await waitForPageSettled(page);
   const caret = await page.evaluate(() => {
     const selection = window.getSelection();
     let node = selection.getRangeAt(0).startContainer;
@@ -678,7 +678,7 @@ async function dragNoteTo(page, source, to) {
   });
   await page.mouse.up();
   await page.waitForNetworkIdle({idleTime: 300});
-  await pause(SETTLE_MS);
+  await waitForPageSettled(page);
   return {scrolls: await page.evaluate(() => window.__dragScrolls), lineTop};
 }
 
@@ -833,13 +833,13 @@ async function newNoteAtTopCase(page, ids) {
   });
   const newId = await page.evaluate(async () => (await import('/static/js/modules/mode-manager/mode-context.js')).ModeContextInstance.currentNoteId);
   ids.push(newId);
-  await pause(SETTLE_MS);
+  await waitForPageSettled(page);
   const {noteTop, headerBottom} = await layout(page, newId);
   const scrollY = await page.evaluate(() => window.scrollY);
   assert.ok(noteTop >= headerBottom - 1,
     `the new note should be visible below the search controls (y=${Math.round(headerBottom)}), got y=${Math.round(noteTop)} at scrollY=${Math.round(scrollY)}`);
   await page.keyboard.press('Escape');
-  await pause(SETTLE_MS);
+  await waitForPageSettled(page);
 }
 
 export async function checkExitEditScroll(page) {
@@ -967,7 +967,7 @@ export async function checkExitEditScroll(page) {
     const clickedBefore = await paragraphY(page, 'Below 1 paragraph 1:');
     await clickParagraph(page, 'Below 1 paragraph 1:');
     await waitForEditing(page, ids[11]);
-    await pause(SETTLE_MS);
+    await waitForPageSettled(page);
     assertStayed('clicking another note while editing', clickedBefore, await paragraphY(page, 'Below 1 paragraph 1:'), null);
     await page.keyboard.press('Escape');
     await pause(500);

@@ -51,6 +51,7 @@ import {checkBackupReminder} from './browser-backup-reminder-regressions.mjs';
 import {checkReminderSurfaceWhileEditing} from './browser-reminder-surface-regressions.mjs';
 import {checkFloatingControlsWhileEditing} from './browser-floating-control-regressions.mjs';
 import {checkDeleteWarning} from './browser-delete-warning-regressions.mjs';
+import {FOCUSED_SUITES} from './browser-suite-names.mjs';
 
 const directory = await mkdtemp(join(tmpdir(), 'metalist-browser-'));
 // Free ports for HTTP and HTTPS: the user's own MetaList keeps its usual ports (HTTPS 8443).
@@ -118,7 +119,7 @@ try {
   browser.on('targetdestroyed', target => lifecycle(`target destroyed ${target.type()} ${target.url()}`));
   browser.on('targetcreated', target => lifecycle(`target created ${target.type()} ${target.url()}`));
   const updateFixture = await prepareUpdateFixture(page);
-  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'move-to-bottom', 'list-edges', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews', 'image-menu', 'tag-suggestion-menu', 'paste-formats', 'ai-note-tags', 'robot-proposals', 'export-print', 'url-cleaning', 'reference-paste', 'click-caret', 'editable-embeds', 'delete-warning', 'collapse-outlines', 'backup-reminder', 'reminder-surface', 'floating-controls', 'tab-switching', 'ai-chat-refusal', 'search-suggestions', 'tag-bar-suggestions', 'input-target', 'ontology-search', 'diagram-clicks', 'picture-drag'].includes(process.env.BROWSER_TEST_SUITE)) {
+  if (FOCUSED_SUITES.includes(process.env.BROWSER_TEST_SUITE)) {
     // The focused suite does not run checkAppUpdates, which normally releases
     // this intentionally held request. Avoid an unrelated update notice too.
     updateFixture.outage = true;
@@ -281,26 +282,32 @@ try {
     assert.deepEqual(errors, []);
     console.log(`PASS Suggest Tags with AI regressions in ${await browser.version()}`);
   } else {
-  assert(process.env.BROWSER_TEST_SUITE === undefined, 'Unknown BROWSER_TEST_SUITE');
+  assert(process.env.BROWSER_TEST_SUITE === undefined || process.env.BROWSER_TEST_SUITE === 'core',
+    'Unknown BROWSER_TEST_SUITE');
+  // `core` leaves out the focused suites the full smoke runs inline; the parallel
+  // runner runs each of them on its own.
+  const runsSuitesInline = process.env.BROWSER_TEST_SUITE === undefined;
   await checkAppUpdates(page, updateFixture);
   await checkOpenAiSettings(page);
-  await checkAiHistoryExport(page);
-  await checkWritingAssistantCorrections(page);
-  await checkExitEditScroll(page);
-  await checkMoveToBottom(page);
-  await checkListEdges(page);
-  await checkTagSuggestionMenu(page);
-  await checkPasteFormats(page);
-  await checkAiNoteTagSuggestions(page);
-  await checkRobotProposals(page);
-  await checkExportAndPrint(browser, page);
-  await checkUrlCleaning(page);
-  await checkReferencePaste(page);
-  await checkClickCaret(page);
-  await checkEditableEmbeds(page);
-  await checkCollapseOutlines(page);
-  await checkDeleteWarning(page);
-  await checkSortedTabs(page);
+  if (runsSuitesInline) {
+    await checkAiHistoryExport(page);
+    await checkWritingAssistantCorrections(page);
+    await checkExitEditScroll(page);
+    await checkMoveToBottom(page);
+    await checkListEdges(page);
+    await checkTagSuggestionMenu(page);
+    await checkPasteFormats(page);
+    await checkAiNoteTagSuggestions(page);
+    await checkRobotProposals(page);
+    await checkExportAndPrint(browser, page);
+    await checkUrlCleaning(page);
+    await checkReferencePaste(page);
+    await checkClickCaret(page);
+    await checkEditableEmbeds(page);
+    await checkCollapseOutlines(page);
+    await checkDeleteWarning(page);
+    await checkSortedTabs(page);
+  }
   await page.waitForNetworkIdle({idleTime:500});
   // Exercise initial document mouse movement, including stationary axes and
   // duplicate browser observations that must not become duplicate state writes.
@@ -511,12 +518,14 @@ try {
   await checkEditingShortcutSequences(page);
   await checkTagDoubleClickSelection(page);
   await checkBackgroundSortMenu(page);
-  // After the sort menu check: its searches persist in search history.
-  await checkSearchInputRejected(page);
-  await checkDictationPaste(page);
-  await checkFileDropPreviews(page);
+  if (runsSuitesInline) {
+    // After the sort menu check: its searches persist in search history.
+    await checkSearchInputRejected(page);
+    await checkDictationPaste(page);
+    await checkFileDropPreviews(page);
+  }
   await checkFloatingNotes(page);
-  await checkAiSelectedNote(page);
+  if (runsSuitesInline) await checkAiSelectedNote(page);
   assert.deepEqual(errors, []);
 
   await page.evaluate(async () => {
