@@ -7,21 +7,10 @@ import { BaseModal } from './base-modal.js';
 import { CONFIG } from '../config.js';
 import { buildSessionHeaders } from '../session-auth.js';
 import { MS_PER_SECOND } from '../time-units.js';
+import { escapeHtml } from '../html-escape.js';
 
 const UPDATE_POLL_INTERVAL_SECONDS = 2;
 
-
-function escapeHtml(value) {
-    if (typeof value !== 'string') {
-        return '';
-    }
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-}
 
 
 function yesNo(value) {

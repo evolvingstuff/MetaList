@@ -10,6 +10,8 @@ const NETWORK_IDLE_MS = 300;
 // Each tab is switched to and from this many times.
 const ROUND_TRIPS = 4;
 const TAB_QUERIES = ['scratchpad', 'todo'];
+// A quoted text search that looks like markup, short enough to show in full in the tab list.
+const MARKUP_QUERY = '"<b>x</b>"';
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
@@ -113,6 +115,14 @@ export async function checkTabSwitching(page) {
       await clickTab(page, secondTabId);
       expectTab(await viewState(page), secondTabId, TAB_QUERIES[1], `round ${round}, back to the second tab`);
     }
+    // A search's text is shown in the tab list as text, never as markup.
+    await searchFor(page, MARKUP_QUERY);
+    const zone = await (await page.$('#tab-hover-zone')).boundingBox();
+    await page.mouse.move(zone.x + zone.width / 2, zone.y + zone.height / 2);
+    const label = `#search-contexts-list .tab-context-item[data-tab-id="${secondTabId}"] .tab-context-query`;
+    await page.waitForSelector(label, {visible: true});
+    assert.deepEqual(await page.$eval(label, node => ({text: node.textContent, elements: node.childElementCount})),
+      {text: MARKUP_QUERY, elements: 0}, 'the tab list shows the search text as text');
   }, async () => {
     await page.evaluate(async ids => {
       const {NotesAPI} = await import('/static/js/modules/api-client.js');

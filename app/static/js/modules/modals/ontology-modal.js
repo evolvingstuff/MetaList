@@ -7,6 +7,7 @@ import { contextMenuIconMarkup } from '../context-menu/context-menu-service.js';
 import { CommandGate } from '../mode-manager/services/command-gate-service.js';
 import { buildSessionHeaders } from '../session-auth.js';
 import { handleDictationPasteEvent } from '../mode-manager/services/dictation-paste-service.js';
+import { escapeHtml } from '../html-escape.js';
 
 const ONTOLOGY_BASE = '/api2/ontology';
 const TAG_LIMIT = 20;
@@ -25,18 +26,6 @@ const DIALOG_BOTTOM_CLEARANCE_PX = 64;
 const ESCAPE_SEQUENCE_LENGTH = 2;
 // An opening and a closing quote.
 const QUOTED_TOKEN_MIN_LENGTH = 2;
-
-function escapeHtml(value) {
-    if (typeof value !== 'string') {
-        throw new Error('escapeHtml requires a string');
-    }
-    return value
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
 
 function escapeQuotedPhrase(phrase) {
     if (typeof phrase !== 'string') {

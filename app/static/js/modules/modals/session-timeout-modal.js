@@ -5,23 +5,12 @@ import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js'
 import { BaseModal } from './base-modal.js';
 import { CONFIG } from '../config.js';
 import { buildSessionHeaders } from '../session-auth.js';
+import { escapeHtml } from '../html-escape.js';
 
 
 const MIN_IDLE_TIMEOUT_MINUTES = 1;
 const MAX_IDLE_TIMEOUT_MINUTES = 1440;
 
-
-function escapeHtml(value) {
-    if (typeof value !== 'string') {
-        return '';
-    }
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-}
 
 
 function parseResponseError(responseBody, statusCode) {

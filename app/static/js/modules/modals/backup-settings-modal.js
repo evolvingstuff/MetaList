@@ -4,6 +4,7 @@ import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js'
 import { BaseModal } from './base-modal.js';
 import { CONFIG } from '../config.js';
 import { buildSessionHeaders } from '../session-auth.js';
+import { escapeHtml } from '../html-escape.js';
 
 
 function parseResponseError(responseBody, statusCode) {
@@ -18,18 +19,6 @@ function parseResponseError(responseBody, statusCode) {
     return `Request failed (${statusCode})`;
 }
 
-
-function escapeHtml(value) {
-    if (typeof value !== 'string') {
-        return '';
-    }
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-}
 
 
 export class BackupSettingsModal extends BaseModal {

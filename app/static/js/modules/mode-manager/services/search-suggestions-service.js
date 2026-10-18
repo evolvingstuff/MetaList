@@ -11,6 +11,7 @@ import {
 import {
     buildSearchSuggestionPresentation,
 } from './search-suggestion-window-labels-service.js';
+import { escapeHtml } from '../../html-escape.js';
 
 const SUGGESTION_DEBOUNCE_MS = 50;
 const HOVER_DISMISS_BOTTOM_BUFFER_PX = 25;
@@ -33,18 +34,6 @@ function getSearchSuggestionsContainer() {
         throw new Error('search-suggestions element missing from DOM');
     }
     return container;
-}
-
-function escapeHtml(value) {
-    if (typeof value !== 'string') {
-        throw new Error('escapeHtml requires a string');
-    }
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
 }
 
 function parseSuggestionContext(rawValue, cursorIndex) {

@@ -1,6 +1,7 @@
 import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
 import { NotesAPI } from '../api-client.js';
+import { escapeHtml } from '../html-escape.js';
 
 // Progress of "Retry failed link titles" (docs/ui/command-palette.md). The retry
 // runs on the server; closing this dialog leaves it running, and opening the
@@ -20,18 +21,6 @@ const REASON_LABELS = {
     dns_error: 'site not found',
     network_error: 'network error',
 };
-
-function escapeHtml(value) {
-    if (typeof value !== 'string') {
-        throw new Error('escapeHtml requires string');
-    }
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-}
 
 function requireCount(value, name) {
     if (!Number.isInteger(value) || value < 0) {

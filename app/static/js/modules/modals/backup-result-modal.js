@@ -1,19 +1,8 @@
 import { KIB, MIB, GIB } from '../byte-sizes.js';
 import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
+import { escapeHtml } from '../html-escape.js';
 
-
-function _escapeHtml(value) {
-    if (typeof value !== 'string') {
-        return '';
-    }
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-}
 
 
 function _assertString(value, fieldName) {
@@ -197,13 +186,13 @@ export class BackupResultModal extends BaseModal {
             const keptCount = result.success ? String(result.remaining_count) : '-';
             return `
                 <tr>
-                    <td class="backup-result-destination">${_escapeHtml(result.namespace)}</td>
+                    <td class="backup-result-destination">${escapeHtml(result.namespace)}</td>
                     <td>${_statusMarkup(result.success)}</td>
-                    <td><span class="backup-filename">${_escapeHtml(createdFilename)}</span></td>
+                    <td><span class="backup-filename">${escapeHtml(createdFilename)}</span></td>
                     <td class="backup-result-table-size">${backupSize}</td>
                     <td class="backup-result-table-count">${deletedCount}</td>
                     <td class="backup-result-table-count">${keptCount}</td>
-                    <td class="backup-result-notes">${_escapeHtml(detailsText)}</td>
+                    <td class="backup-result-notes">${escapeHtml(detailsText)}</td>
                 </tr>
             `;
         }).join('');

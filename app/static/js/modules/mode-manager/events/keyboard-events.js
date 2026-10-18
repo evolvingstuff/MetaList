@@ -1,5 +1,6 @@
 import { KIB, MIB } from '../../byte-sizes.js';
 import { MS_PER_SECOND } from '../../time-units.js';
+import { escapeHtml } from '../../html-escape.js';
 import { ApplicationState } from '../../application-state.js';
 import { rethrowUnexpectedError } from '../../expected-errors.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
@@ -3313,15 +3314,16 @@ export function updateSearchContextsList() {
         const deleteClass = canDelete ? '' : 'is-disabled';
 
         const actions = `
-            <span class="tab-context-action duplicate-context ${addClass}" data-source-tab-id="${tabId}" aria-disabled="${atLimit}">+</span>
-            <span class="tab-context-action tab-context-action--danger delete-context ${deleteClass}" data-delete-tab-id="${tabId}" aria-disabled="${!canDelete}">-</span>
+            <span class="tab-context-action duplicate-context ${addClass}" data-source-tab-id="${escapeHtml(tabId)}" aria-disabled="${atLimit}">+</span>
+            <span class="tab-context-action tab-context-action--danger delete-context ${deleteClass}" data-delete-tab-id="${escapeHtml(tabId)}" aria-disabled="${!canDelete}">-</span>
         `;
 
         const activeClass = isActive ? 'is-active' : '';
         contextsList.push(
-            `<div data-tab-id="${tabId}" class="tab-context-item ${activeClass}" draggable="true">`
+            `<div data-tab-id="${escapeHtml(tabId)}" class="tab-context-item ${activeClass}" draggable="true">`
             + `<span class="tab-context-index">${i + 1}:</span>`
-            + `<span class="tab-context-query">${displayQuery}</span>`
+            // The search is the user's text: shown as text, never as markup.
+            + `<span class="tab-context-query">${escapeHtml(displayQuery)}</span>`
             + `<span class="tab-context-actions">${actions}</span>`
             + `</div>`
         );

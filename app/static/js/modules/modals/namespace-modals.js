@@ -18,6 +18,7 @@ import { buildSessionHeaders } from '../session-auth.js';
 import { renderNamespaceLoadingTab } from './namespace-loading-page.js';
 import { selectNamespacePortsEditorProfile } from './namespace-ports-profile.js';
 import { buildNamespaceRenamePayload } from './namespace-rename-validation.js';
+import { escapeHtml } from '../html-escape.js';
 
 
 const STATUS_BANNER_SECONDS = 5;
@@ -47,18 +48,6 @@ function stringifyPort(portValue) {
     return String(portValue);
 }
 
-
-function escapeHtml(value) {
-    if (typeof value !== 'string') {
-        throw new Error('escapeHtml requires string');
-    }
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-}
 
 
 function assertCatalogShape(catalog) {

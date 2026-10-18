@@ -1,19 +1,8 @@
 import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
 import { ModeContextInstance as ModeContext } from '../mode-manager/mode-context.js';
+import { escapeHtml } from '../html-escape.js';
 
-
-function escapeHtml(value) {
-    if (typeof value !== 'string') {
-        throw new Error('escapeHtml requires string');
-    }
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-}
 
 
 export class AlphabetizeRootNotesModal extends BaseModal {

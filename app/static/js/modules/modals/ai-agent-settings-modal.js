@@ -19,19 +19,8 @@ import {
 } from '../ai-chat/cloud-privacy-policy.js';
 import { validateAgentWebAccessMode } from '../ai-chat/agent-web-settings.js';
 import { handleDictationPasteEvent } from '../mode-manager/services/dictation-paste-service.js';
+import { escapeHtml } from '../html-escape.js';
 
-
-function escapeHtml(value) {
-    if (typeof value !== 'string') {
-        throw new Error('escapeHtml requires string');
-    }
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-}
 
 
 function renderInstalledModelOptions(state) {

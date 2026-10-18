@@ -9,6 +9,7 @@ import { CONFIG } from '../config.js';
 import { ModeContextInstance as ModeContext } from '../mode-manager/mode-context.js';
 import { buildSessionHeaders } from '../session-auth.js';
 import { settleResult } from '../async-result.js';
+import { escapeHtml } from '../html-escape.js';
 
 
 const RESTORE_TRANSITION_SUPPRESS_MS = 30_000;
@@ -41,18 +42,6 @@ function backupSourceLabel(source) {
     return 'Local';
 }
 
-
-function escapeHtml(value) {
-    if (typeof value !== 'string') {
-        throw new Error('escapeHtml requires string');
-    }
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-}
 
 
 function stringifyPort(portValue) {
