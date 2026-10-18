@@ -13,9 +13,11 @@ the boundary from the user's privacy policy; `CloudPrivacyEvaluator.hidden_note_
 and `.exclusion_reason` decide, a whole note at a time:
 
 - `@password` and `@username` notes are always hidden;
-- blacklist tags are matched against the note's effective tags (explicit and
-  inherited; proposed tags are not included);
-- blacklist and whitelist phrases are matched against `strip_html(content)`;
+- blacklist tags are matched against the note's effective tags: explicit,
+  proposed and inherited, with what the tag rules infer from them;
+- whitelist tags are matched against accepted tags only (gap 6), so a proposal
+  can hide a note but never reveal one;
+- blacklist and whitelist phrases are matched against the text the AI is sent (gap 1);
 - a hidden note hides its whole subtree.
 
 The boundary is resolved once per Send (or per Suggest Tags or export-title
@@ -79,19 +81,59 @@ in shown notes), `remote_image_proxy` (remote images in shown notes).
    rejected: it misses deletions and rewordings, so it would add complexity and
    false confidence without a guarantee. The user presses Clear Chat when the AI
    saw something it should not have; the AI's privacy help says so.
-5. **The search query and view label are sent unchecked.** With `#health`
-   blacklisted and a `#health` search, every matching note is hidden, but the
-   provider still receives the query. Decided: a blacklisted tag's name is never
-   sent, in the query or the label; it is replaced with a neutral placeholder so
-   the AI still knows the search had a term there.
-6. **A blacklisted tag only proposed is sent.** Proposed tags are sent with the
-   note but are not among the effective tags the evaluator checks.
-7. **Tag existence can be probed.** In bulk tagging with the "existing" policy, a
-   tag that exists only on private notes is accepted silently while a nonexistent
-   one is reported back to the model: a one-bit leak.
-8. **Export titles accept earlier titles from the browser unchecked**
-   (`previous_titles`), so a title made from notes that have since become private
-   is sent again on "another title".
+5. **The search query and view label were sent unchecked (fixed).** With `#health`
+   blacklisted and a `#health` search, every matching note was hidden, but the
+   provider still received the query. Now the AI is shown a search term only if it
+   can see at least one note the term picks out: for a term, a note its OR clause
+   finds; for an excluded term (`-x`), a note the exclusion removes (the clause with
+   `x` required instead). Other terms become `[private]` (withheld excluded terms
+   are shown once as `-[private]`). The rule does not depend on why the notes are
+   private, so it covers blacklisted tags, synonyms, implications, text and
+   combination rules, and phrases alike. A term that finds nothing is withheld the
+   same way, so the AI cannot tell "no matches" from "only private matches".
+   `cloud_privacy.disclosable_search_query` computes this at freeze, running one
+   search per clause and one per excluded term, each checked with
+   `CloudPrivacyEvaluator.has_visible_note` (stops at the first visible note), into
+   `ScopedSearchSnapshot.disclosable_search_query` and `.disclosable_label`. Every
+   AI-facing view context uses those, while the server's own searches use the
+   descriptor's query as typed (`tests/unit/test_private_search_terms.py`,
+   `test_the_ai_is_not_sent_a_search_term_whose_notes_it_cannot_see`).
+6. **A proposed tag could make a note visible (fixed; first described wrongly).**
+   The map first said proposed tags escape the check. They do not: the evaluator
+   reads each note's tags from the search index, which counts proposals (and what
+   they imply) the same as accepted tags, so a proposed blacklisted tag already hid
+   the note. The real gap was the reverse: proposals counted toward the whitelist
+   too, so the AI could propose a whitelisted tag on a note and make it visible to
+   itself. Now the whitelist counts only accepted tags (the note's own, those its
+   parents and embeds give it, and what the tag rules infer from those and the
+   text: `NoteStore.accepted_effective_tag_terms`), while the blacklist and the
+   credential tags still count proposals. A proposed private tag keeps the note
+   hidden until the user rejects it
+   (`test_a_proposed_tag_can_make_a_note_private_but_never_visible`).
+7. **Tagging feedback depended on notes the AI cannot see (fixed).** Checking the
+   AI's tags against the whole namespace leaked three ways: in "existing tags only"
+   mode a tag found only on private notes was accepted while an invented one was
+   rejected; the accepted tag took the private tag's capitalization, which the run
+   reports back; and a private note's ID was answered "outside the current scope"
+   while an unknown one was "nonexistent". Now the check (`tagging.validate_proposals`,
+   bulk tagging and Suggest Tags alike) uses only what the AI may see: the tags on
+   visible notes (`cloud_privacy.visible_tag_counts`, judged by the boundary from
+   Send) and the note IDs the request sent. A tag outside them is answered like an
+   invented one (in a new-tags pass it is simply new, with the AI's spelling), and
+   any ID outside the request is "nonexistent". Ancestors are sent without IDs, so
+   this costs the AI nothing it could know
+   (`test_a_private_note_id_is_answered_like_an_invented_one`,
+   `test_a_tag_only_private_notes_carry_is_answered_like_an_invented_one`).
+8. **Export titles accept earlier titles from the browser: checked, not a gap.**
+   "Another title" sends the titles already shown in this opening of the dialog,
+   so the AI does not repeat one. A title made from a note that became private
+   before the next click would be sent again, but nothing can make a note private
+   in between: signing in ends every other session (`tokens.py`, one active
+   session) and each session belongs to one browser tab; the export dialog is
+   modal, so no edit or settings change happens behind it; and a bulk tagging run
+   makes everything outside the chat panel inert and holds the command gate for
+   its whole length (`bulk-proposal-ui.js`), so Export cannot open while one runs.
+   The titles are dropped when the dialog closes.
 9. **Outside the cloud contract, considered and left as is:** MetaList fetches page
    titles and remote images for links and images in every shown note, private ones
    included. No note content goes out, the AI sees none of it, and the linked site
@@ -115,7 +157,7 @@ note asked for by full id (reported as unknown).
   `.infer_structured`, argument `messages` (the pilot needs keyword addressing or
   their positions).
 - Sanctioned sources that are not note text, declared explicitly: the user's
-  message, the search query and label (gap 5 decides this), provider output, web
+  message, the snapshot's disclosable search query and label, provider output, web
   evidence, static prompts and skills.
 - `extract_agent_note_text` must not be declared `preserves` until gap 1 is fixed:
   it adds text the evaluator never saw, and declaring it would hide the gap.

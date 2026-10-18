@@ -11,6 +11,8 @@ from app.services.agent.tagging import (
     make_batch, partition_trees,
     shuffle_trees_for_batches, validate_proposals,
 )
+from app.services.agent.cloud_privacy import CloudPrivacyBoundary
+from app.services.agent.cloud_privacy import visible_tag_counts
 from app.services.agent.inference import InferenceProviderError
 from app.services.agent.inference import StructuredInferenceError
 # The context room kept for the model's answer when checking that a batch fits is the
@@ -25,7 +27,6 @@ from app.services.client_state_service import load_client_preferences, save_clie
 from app.services.content_formatting import extract_note_text_for_agent
 from app.services.search_index import extract_ordered_tags_for_search
 from app.services.search_index import search_index
-from app.services.tag_case import build_preferred_tag_case_map
 from app.services.note_store import store
 from app.services.sync import get_current_sync_uuid
 from app.services.tokens import token_service
@@ -127,15 +128,15 @@ async def infer_with_progress(inference, run, messages, response_model, on_progr
 
 
 # The model's batch answer, parsed and checked; ValueError says what is wrong with it.
-def _validated_batch_proposals(content, batch, scope_note_ids, namespace_note_ids, policy, namespace_vocabulary):
+def _validated_batch_proposals(content, batch, scope_note_ids, policy, visible_vocabulary):
     return validate_proposals(
-        TagBatchResult.model_validate_json(content), batch, scope_note_ids, namespace_note_ids, policy, namespace_vocabulary,
+        TagBatchResult.model_validate_json(content), batch, scope_note_ids, policy, visible_vocabulary,
     )
 
 
 async def infer_validated_batch(
-    inference, run, messages, batch, scope_note_ids, namespace_note_ids, policy,
-    context_tokens, namespace_vocabulary,
+    inference, run, messages, batch, scope_note_ids, policy,
+    context_tokens, visible_vocabulary,
 ):
     attempt_messages = messages
     validation_failures = []
@@ -149,7 +150,7 @@ async def infer_validated_batch(
         # lint: allow-PY001 rationale="one bounded correction for invalid external model proposals"
         try:
             return _validated_batch_proposals(
-                response.content, batch, scope_note_ids, namespace_note_ids, policy, namespace_vocabulary,
+                response.content, batch, scope_note_ids, policy, visible_vocabulary,
             )
         # lint: allow-PY001 rationale="external model errors are corrected once, never silently accepted"
         except ValueError as exc:
@@ -193,9 +194,13 @@ def _tag_scope_label(*, root_count, batch_count, budget_ratio, chooses_focus):
 
 
 class TaggingRun:
-    def __init__(self, *, token, snapshot, preferences, sync_uuid, batch_tokens):
+    def __init__(self, *, token, snapshot, privacy_boundary, preferences, sync_uuid, batch_tokens):
+        if not isinstance(privacy_boundary, CloudPrivacyBoundary):
+            raise TypeError("privacy_boundary must be CloudPrivacyBoundary")
         self.token = token
         self.snapshot = snapshot
+        # The boundary resolved at Send, which also froze the snapshot.
+        self.privacy_boundary = privacy_boundary
         self.preferences = dict(preferences)
         self.sync_uuid = sync_uuid
         self.batch_tokens = batch_tokens
@@ -346,11 +351,9 @@ class TaggingRun:
         if focus == "new":
             validation_policy = "new_only"
         proposals = {}
-        namespace_vocabulary = build_preferred_tag_case_map(
-            search_index.list_explicit_tag_frequencies()
-        )
+        # Judged by the privacy rules at Send, like the notes.
+        visible_vocabulary, _counts = visible_tag_counts(self.privacy_boundary)
         scope_note_ids = frozenset(self.snapshot.tree_nodes_by_id)
-        namespace_note_ids = frozenset(store.list_note_ids())
         total_batch_tokens = sum(batch.tokens for batch in batches)
         context = await inference.inspect_context_window(base_url=run.base_url, model=run.selected_model)
         tag_skill = run.skills.for_action("tag_proposals")
@@ -377,10 +380,9 @@ class TaggingRun:
                 messages,
                 batch,
                 scope_note_ids,
-                namespace_note_ids,
                 validation_policy,
                 context.loaded_tokens,
-                namespace_vocabulary,
+                visible_vocabulary,
             )
             return index, validated
 
@@ -397,7 +399,7 @@ class TaggingRun:
             for tags in first_result.values():
                 for tag in tags:
                     key = tag.casefold()
-                    if key not in namespace_vocabulary and key not in prior_batch_new_tags:
+                    if key not in visible_vocabulary and key not in prior_batch_new_tags:
                         prior_batch_new_tags[key] = tag
             completed_tokens += batches[0].tokens
             yield {"type": "bulk_progress", "committing": False,

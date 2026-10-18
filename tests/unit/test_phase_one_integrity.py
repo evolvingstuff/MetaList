@@ -189,7 +189,7 @@ def test_commit_failure_restores_search_content_sync_and_undo(live_database, mon
 @pytest.mark.parametrize('change', ['policy', 'password_tag', 'deleted_note'])
 def test_privacy_change_excludes_prior_answer_even_with_empty_followup_scope(live_database, change):
     apply_insert_note('fixture', None, None, None, '', content='PRIVATE_CANARY', tags='', proposed_tags='')
-    evaluator = CloudPrivacyEvaluator(notes=store, effective_tags_provider=lambda note_id: store.get_note(note_id).tag_terms)
+    evaluator = CloudPrivacyEvaluator(notes=store, effective_tags_provider=lambda note_id: store.get_note(note_id).tag_terms, accepted_tags_provider=lambda note_id: store.get_note(note_id).tag_terms)
     boundary = resolve_cloud_privacy_boundary(preferences={}, provider='openai')
     chat = AiChatSessionStore()
     first_key = evaluator.history_disclosure_key(boundary=boundary)

@@ -21,12 +21,12 @@ tagging does.
 from __future__ import annotations
 
 import asyncio
-from collections import Counter
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 from app.services.agent.cloud_privacy import CloudPrivacyBoundary
 from app.services.agent.cloud_privacy import cloud_privacy_evaluator
+from app.services.agent.cloud_privacy import visible_tag_counts
 from app.services.agent.inference import InferenceAdapter
 from app.services.agent.skill_settings import AgentSkill
 from app.services.agent.tagging import TagBatch
@@ -39,8 +39,6 @@ from app.services.content_formatting import extract_note_text_for_agent
 from app.services.note_store import store as note_store
 from app.services.search_index import extract_ordered_tags_for_search
 from app.services.search_index import search_index
-from app.services.tag_case import build_preferred_tag_case_map
-from app.services.tag_ontology import is_valid_tag_token
 from app.services.tag_suggestions import suggest_tags_for_note
 
 
@@ -87,7 +85,8 @@ class NoteTagRequest:
     vocabulary: tuple[tuple[str, int], ...]
     rules: str
     tag_skill: AgentSkill
-    namespace_vocabulary: dict[str, str]
+    # The tags on notes the AI may see (cloud_privacy.visible_tag_counts).
+    visible_vocabulary: dict[str, str]
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,30 +100,9 @@ class _OneNoteRun:
     run_id: str
 
 
-def _visible_tag_counts(boundary: CloudPrivacyBoundary) -> tuple[dict[str, str], Counter[str]]:
-    """Display case and note count of each tag on notes the AI may see, by casefold."""
-    note_ids = tuple(note_store.list_note_ids())
-    hidden = cloud_privacy_evaluator.hidden_note_ids(note_ids=note_ids, boundary=boundary)
-    exact_counts: Counter[str] = Counter()
-    for note_id in note_ids:
-        if note_id in hidden:
-            continue
-        for term in note_store.get_note(note_id).tag_terms:
-            if is_valid_tag_token(term) and not term.startswith("@"):
-                exact_counts[term] += 1
-    display = build_preferred_tag_case_map(dict(exact_counts))
-    counts: Counter[str] = Counter()
-    for term, count in exact_counts.items():
-        counts[term.casefold()] += count
-    blacklisted = {tag.casefold() for tag in boundary.policy.blacklist_tags}
-    assert not (counts.keys() & blacklisted) or not boundary.apply_cloud_policy, \
-        "A note carrying a blacklisted tag is hidden, so its tags are never counted"
-    return display, counts
-
-
 def ranked_vocabulary(*, note_id: str, boundary: CloudPrivacyBoundary) -> tuple[tuple[str, int], ...]:
     """(tag, notes carrying it) the AI may see: the tag bar's ranking for the note, then by use."""
-    display, counts = _visible_tag_counts(boundary)
+    display, counts = visible_tag_counts(boundary)
     record = note_store.get_note(note_id)
     own_tags = [term for term in extract_ordered_tags_for_search(record.tags) if not term.startswith("@")]
     own_keys = {term.casefold() for term in own_tags}
@@ -230,7 +208,7 @@ def build_note_tag_request(
         note_id=note_id, note_ids=note_ids, batches=batches,
         ancestors_by_batch=tuple(context for _trees, context in groups),
         vocabulary=vocabulary, rules=rules, tag_skill=tag_skill,
-        namespace_vocabulary=build_preferred_tag_case_map(search_index.list_explicit_tag_frequencies()),
+        visible_vocabulary=visible_tag_counts(boundary)[0],
     )
 
 
@@ -252,12 +230,12 @@ def request_messages(request: NoteTagRequest, index: int, prior_batch_new_tags: 
     return messages
 
 
-def keep_new_tags_up_to_limit(*, tags: tuple[str, ...], namespace_vocabulary: dict[str, str]) -> tuple[str, ...]:
-    """The AI's tags for one note in its order, with at most MAX_NEW_TAGS tags no note has yet."""
+def keep_new_tags_up_to_limit(*, tags: tuple[str, ...], visible_vocabulary: dict[str, str]) -> tuple[str, ...]:
+    """The AI's tags for one note in its order, with at most MAX_NEW_TAGS tags no note the AI may see has yet."""
     kept = []
     new_count = 0
     for tag in tags:
-        if tag.casefold() not in namespace_vocabulary:
+        if tag.casefold() not in visible_vocabulary:
             if new_count == MAX_NEW_TAGS:
                 continue
             new_count += 1
@@ -278,20 +256,19 @@ async def suggest_note_tags(
         web_settings=web_settings, session_key=session_key, run_id=run_id,
     )
     context = await inference.inspect_context_window(base_url=base_url, model=model)
-    namespace_note_ids = frozenset(note_store.list_note_ids())
     total = len(request.batches)
 
     async def infer_batch(index: int, prior_batch_new_tags: tuple[str, ...]) -> dict[str, tuple[str, ...]]:
         return await infer_validated_batch(
             inference, run, request_messages(request, index, prior_batch_new_tags), request.batches[index],
-            request.note_ids, namespace_note_ids, "new", context.loaded_tokens, request.namespace_vocabulary,
+            request.note_ids, "new", context.loaded_tokens, request.visible_vocabulary,
         )
 
     yield {"type": "progress", "completed": 0, "total": total}
     results = [await infer_batch(0, ())]
     yield {"type": "progress", "completed": 1, "total": total}
     first_new_tags = tuple(dict.fromkeys(
-        tag for tags in results[0].values() for tag in tags if tag.casefold() not in request.namespace_vocabulary
+        tag for tags in results[0].values() for tag in tags if tag.casefold() not in request.visible_vocabulary
     ))
     semaphore = asyncio.Semaphore(_PARALLEL_BATCHES)
 
@@ -314,7 +291,7 @@ async def suggest_note_tags(
     for validated in results:
         for proposed_note_id, tags in validated.items():
             assert proposed_note_id in request.note_ids and proposed_note_id not in proposals
-            kept = keep_new_tags_up_to_limit(tags=tags, namespace_vocabulary=request.namespace_vocabulary)
+            kept = keep_new_tags_up_to_limit(tags=tags, visible_vocabulary=request.visible_vocabulary)
             if kept:
                 proposals[proposed_note_id] = list(kept)
     yield {"type": "proposals", "proposals": proposals}

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+from collections import Counter
 import json
 from contextlib import contextmanager
 from types import SimpleNamespace
 
 import pytest
 
+from app.services.agent.cloud_privacy import CloudPrivacyBoundary, EMPTY_CLOUD_PRIVACY_POLICY
 from app.services.agent.tagging import (
     TAGGING_FOCUS_KEY, TAGGING_POLICY_KEY, TagBatchResult,
     make_batch, partition_trees, shuffle_trees_for_batches,
@@ -23,17 +25,22 @@ from app.services.agent.inference import StructuredInferenceError
 from app.services.agent.skill_settings import DEFAULT_AGENT_SKILLS
 
 
+_BOUNDARY = CloudPrivacyBoundary(provider="openai", apply_cloud_policy=True, policy=EMPTY_CLOUD_PRIVACY_POLICY)
+
+
 @pytest.fixture(autouse=True)
 def namespace_contains_test_scope(monkeypatch):
     note_ids = tuple({"a", "b", "d", *(str(index) for index in range(2000))})
     monkeypatch.setattr(runs.store, "list_note_ids", lambda: note_ids)
     monkeypatch.setattr(runs, "shuffle_trees_for_batches", lambda trees: trees)
+    # No tag outside the scope is visible to the AI.
+    monkeypatch.setattr(runs, "visible_tag_counts", lambda boundary: ({}, Counter()))
 
 
 def validate(result, batch, policy):
     known = {tag.casefold(): tag for tag in batch.vocabulary}
     return validate_proposals(
-        result, batch, batch.note_ids, batch.note_ids, policy, known,
+        result, batch, batch.note_ids, policy, known,
     )
 
 
@@ -104,21 +111,21 @@ def test_duplicate_tags_cannot_dilute_error_rate():
         validate(result, batch, "existing")
 
 
-def test_unseen_namespace_tag_is_valid_and_canonicalized_without_disclosing_catalog():
+def test_a_visible_tag_left_out_of_the_vocabulary_is_valid_and_canonicalized():
     batch = make_batch((tree("a", "Cooking", ()),))
     result = TagBatchResult(proposals=[{"note_id": "a", "tags": ["few-shot-learning"]}])
-    namespace = {"cooking": "Cooking", "few-shot-learning": "Few-Shot-Learning"}
+    visible = {"cooking": "Cooking", "few-shot-learning": "Few-Shot-Learning"}
     assert batch.vocabulary == ("Cooking",)
     assert validate_proposals(
-        result, batch, batch.note_ids, batch.note_ids, "existing", namespace,
+        result, batch, batch.note_ids, "existing", visible,
     ) == {
         "a": ("Few-Shot-Learning",),
     }
     assert validate_proposals(
-        result, batch, batch.note_ids, batch.note_ids, "new_only", namespace,
+        result, batch, batch.note_ids, "new_only", visible,
     ) == {}
     assert validate_proposals(
-        result, batch, batch.note_ids, batch.note_ids, "new", namespace,
+        result, batch, batch.note_ids, "new", visible,
     ) == {
         "a": ("Few-Shot-Learning",),
     }
@@ -147,28 +154,37 @@ def test_invalid_note_id_entries_have_ten_percent_tolerance(total, allowed, inva
     assert "hidden" not in validated
 
 
-def test_out_of_batch_out_of_scope_and_nonexistent_ids_are_distinguished():
+def test_a_private_note_id_is_answered_like_an_invented_one():
+    """The model learns only what it was shown: another batch's note is named as
+    such, while a private note's ID and an invented one get the same answer."""
     batch = make_batch((tree("a", "Cooking", ()),))
     known = {"cooking": "Cooking"}
     cross_batch = TagBatchResult(proposals=[{"note_id": "b", "tags": ["Cooking"]}])
     with pytest.raises(ValueError, match="different batch within the permitted scope"):
-        validate_proposals(
-            cross_batch, batch, frozenset({"a", "b"}),
-            frozenset({"a", "b", "hidden"}), "existing", known,
-        )
-    outside = TagBatchResult(proposals=[{"note_id": "hidden", "tags": ["Cooking"]}])
-    with pytest.raises(ValueError, match="Existing note ID is outside the current permitted scope"):
-        validate_proposals(
-            outside, batch, frozenset({"a", "b"}),
-            frozenset({"a", "b", "hidden"}), "existing", known,
-        )
-    nonexistent = TagBatchResult(proposals=[{"note_id": "invented", "tags": ["Cooking"]}])
-    with pytest.raises(ValueError, match="Nonexistent note ID"):
-        validate_proposals(
-            nonexistent, batch, frozenset({"a", "b"}),
-            frozenset({"a", "b", "hidden"}), "existing", known,
-        )
+        validate_proposals(cross_batch, batch, frozenset({"a", "b"}), "existing", known)
+    messages = []
+    for note_id in ("private-note", "invented"):
+        with pytest.raises(ValueError) as raised:
+            validate_proposals(TagBatchResult(proposals=[{"note_id": note_id, "tags": ["Cooking"]}]),
+                               batch, frozenset({"a", "b"}), "existing", known)
+        messages.append(str(raised.value).replace(note_id, "<id>"))
+    assert messages[0] == messages[1]
+    assert "Nonexistent note ID" in messages[0]
 
+
+def test_a_tag_only_private_notes_carry_is_answered_like_an_invented_one():
+    batch = make_batch((tree("a", "Cooking", ()),))
+    visible = {"cooking": "Cooking"}
+    answers = []
+    for tag in ("diary", "invented"):
+        with pytest.raises(ValueError) as raised:
+            validate_proposals(TagBatchResult(proposals=[{"note_id": "a", "tags": [tag]}]),
+                               batch, batch.note_ids, "existing", visible)
+        answers.append(str(raised.value).replace(tag, "<tag>"))
+    assert answers[0] == answers[1]
+    # In a new-tags pass it is simply new, with the AI's own spelling.
+    assert validate_proposals(TagBatchResult(proposals=[{"note_id": "a", "tags": ["Diary"]}]),
+                              batch, batch.note_ids, "new_only", visible) == {"a": ("Diary",)}
 
 
 @pytest.mark.parametrize("repairs", [True, False])
@@ -184,7 +200,7 @@ def test_invalid_model_vocabulary_gets_bounded_correction_attempts(monkeypatch, 
     monkeypatch.setattr(runs, "infer_with_progress", infer)
     async def consume():
         return await runs.infer_validated_batch(None, None, [{"role": "user", "content": "evidence"}],
-                                               batch, batch.note_ids, batch.note_ids,
+                                               batch, batch.note_ids,
                                                "existing", 100000, {"cooking": "Cooking"})
     if repairs:
         assert asyncio.run(consume()) == {"a": ("Cooking",)}
@@ -197,7 +213,7 @@ def test_invalid_model_vocabulary_gets_bounded_correction_attempts(monkeypatch, 
     assert "accepted_vocabulary" in calls[1][-1]["content"]
 
 
-def test_new_only_namespace_collision_outside_disclosed_vocabulary_is_silently_dropped():
+def test_new_only_collision_with_a_visible_tag_outside_the_vocabulary_is_silently_dropped():
     batch = make_batch((tree("a", "Cooking", ()),))
     result = TagBatchResult(proposals=[
         {"note_id": "a", "tags": ["undisclosed-existing", "genuinely-new"]},
@@ -206,7 +222,6 @@ def test_new_only_namespace_collision_outside_disclosed_vocabulary_is_silently_d
     assert validate_proposals(
         result,
         batch,
-        batch.note_ids,
         batch.note_ids,
         "new_only",
         {"cooking": "Cooking", "undisclosed-existing": "undisclosed-existing"},
@@ -293,7 +308,7 @@ def test_whole_pass_publication_and_failure_atomicity(monkeypatch, outcome):
         return SimpleNamespace(loaded_tokens=1_000_000)
 
     async def consume():
-        operation = runs.TaggingRun(token="token", snapshot=snapshot,
+        operation = runs.TaggingRun(token="token", privacy_boundary=_BOUNDARY, snapshot=snapshot,
             preferences={TAGGING_POLICY_KEY: "new"}, sync_uuid="sync", batch_tokens=run.retrieval_settings.max_page_approximate_tokens)
         async for event in operation.stream_generation(inference=SimpleNamespace(inspect_context_window=inspect_context_window), run=run):
             if event["type"] == "bulk_question":
@@ -383,6 +398,7 @@ def test_generation_completion_lists_tags_with_clickable_note_references(monkeyp
     monkeypatch.setattr(runs, "apply_bulk_proposals", lambda **kwargs: None)
     operation = runs.TaggingRun(
         token="token",
+        privacy_boundary=_BOUNDARY,
         snapshot=SimpleNamespace(),
         preferences={},
         sync_uuid="sync",
@@ -426,6 +442,7 @@ def test_programmatic_proposal_changes_do_not_emit_cancelable_progress(monkeypat
     monkeypatch.setattr(runs, "apply_bulk_proposals", lambda **kwargs: applied.append(kwargs))
     operation = runs.TaggingRun(
         token="token",
+        privacy_boundary=_BOUNDARY,
         snapshot=SimpleNamespace(),
         preferences={},
         sync_uuid="sync",
@@ -509,7 +526,7 @@ def test_first_use_category_permission_reports_batch_size(monkeypatch, choice, p
     run = SimpleNamespace(base_url="http://local", selected_model="test", skills=DEFAULT_AGENT_SKILLS, current_user_request="Suggest tags",
         retrieval_settings=SimpleNamespace(max_page_approximate_tokens=make_batch((roots[0],)).tokens))
     async def consume():
-        operation = runs.TaggingRun(token="token", snapshot=snapshot, preferences={}, sync_uuid="sync", batch_tokens=run.retrieval_settings.max_page_approximate_tokens)
+        operation = runs.TaggingRun(token="token", privacy_boundary=_BOUNDARY, snapshot=snapshot, preferences={}, sync_uuid="sync", batch_tokens=run.retrieval_settings.max_page_approximate_tokens)
         with runs.bulk_operation_guard.acquire("session"):
             async for event in operation.generate(inference=SimpleNamespace(inspect_context_window=inspect), run=run, focus="unspecified"):
                 if event["type"] == "bulk_question":
@@ -584,6 +601,7 @@ def test_tagging_seeds_first_batch_then_runs_four_batches_concurrently(monkeypat
     async def consume():
         operation = runs.TaggingRun(
             token="token",
+            privacy_boundary=_BOUNDARY,
             snapshot=snapshot,
             preferences={TAGGING_POLICY_KEY: "existing"},
             sync_uuid="sync",
@@ -635,6 +653,7 @@ def test_agent_generation_always_lets_the_user_choose_the_focus(monkeypatch):
     monkeypatch.setattr(runs.TaggingRun, "generate", generate)
     operation = runs.TaggingRun(
         token="token",
+        privacy_boundary=_BOUNDARY,
         snapshot=SimpleNamespace(session_key="focus-regression"),
         preferences={},
         sync_uuid="sync",
@@ -675,7 +694,7 @@ def test_generation_focus_is_per_pass_and_respects_saved_policy(monkeypatch, pol
     run = SimpleNamespace(base_url="http://local", selected_model="test", skills=DEFAULT_AGENT_SKILLS, current_user_request="Suggest tags",
         retrieval_settings=SimpleNamespace(max_page_approximate_tokens=make_batch(roots).tokens))
     async def consume():
-        operation = runs.TaggingRun(token="token", snapshot=snapshot,
+        operation = runs.TaggingRun(token="token", privacy_boundary=_BOUNDARY, snapshot=snapshot,
             preferences={TAGGING_POLICY_KEY: policy}, sync_uuid="sync", batch_tokens=run.retrieval_settings.max_page_approximate_tokens)
         with runs.bulk_operation_guard.acquire("session"):
             async for event in operation.generate(inference=SimpleNamespace(inspect_context_window=inspect), run=run, focus=focus):
@@ -726,7 +745,7 @@ def test_broad_focus_choice_can_enable_new_tags_without_a_second_question(monkey
             max_page_approximate_tokens=make_batch(roots).tokens))
 
     async def consume():
-        operation = runs.TaggingRun(token="token", snapshot=snapshot,
+        operation = runs.TaggingRun(token="token", privacy_boundary=_BOUNDARY, snapshot=snapshot,
             preferences={TAGGING_POLICY_KEY: "existing"}, sync_uuid="sync",
             batch_tokens=run.retrieval_settings.max_page_approximate_tokens)
         with runs.bulk_operation_guard.acquire("session"):
@@ -767,7 +786,7 @@ def test_broad_focus_question_defaults_to_the_previous_exact_choice(monkeypatch)
             max_page_approximate_tokens=make_batch(roots).tokens))
 
     async def consume():
-        operation = runs.TaggingRun(token="token", snapshot=snapshot,
+        operation = runs.TaggingRun(token="token", privacy_boundary=_BOUNDARY, snapshot=snapshot,
             preferences={TAGGING_POLICY_KEY: "new", TAGGING_FOCUS_KEY: "both"},
             sync_uuid="sync", batch_tokens=run.retrieval_settings.max_page_approximate_tokens)
         with runs.bulk_operation_guard.acquire("session"):
@@ -837,7 +856,7 @@ def test_over_budget_tagging_offers_all_roots_or_the_leading_prefix(monkeypatch,
     texts = []
 
     async def consume():
-        operation = runs.TaggingRun(token="token", snapshot=snapshot,
+        operation = runs.TaggingRun(token="token", privacy_boundary=_BOUNDARY, snapshot=snapshot,
             preferences={TAGGING_POLICY_KEY: "new"}, sync_uuid="sync", batch_tokens=budget)
         with runs.bulk_operation_guard.acquire("session"):
             async for event in operation.generate(
@@ -910,7 +929,7 @@ def test_tag_batches_send_the_packaged_tag_skill(monkeypatch):
 
     async def consume():
         # A tagging prompt saved when prompts were editable must never reach the model.
-        operation = runs.TaggingRun(token="token", snapshot=snapshot,
+        operation = runs.TaggingRun(token="token", privacy_boundary=_BOUNDARY, snapshot=snapshot,
             preferences={TAGGING_POLICY_KEY: "new", "pref.ai.prompt.tagging": "Stale prompt"},
             sync_uuid="sync", batch_tokens=1_000_000)
         with runs.bulk_operation_guard.acquire("session"):
@@ -965,7 +984,7 @@ def test_combined_tag_card_can_choose_focus_and_the_leading_prefix(monkeypatch):
     questions = []
 
     async def consume():
-        operation = runs.TaggingRun(token="token", snapshot=snapshot, preferences={},
+        operation = runs.TaggingRun(token="token", privacy_boundary=_BOUNDARY, snapshot=snapshot, preferences={},
             sync_uuid="sync", batch_tokens=budget)
         with runs.bulk_operation_guard.acquire("session"):
             async for event in operation.generate(
@@ -1028,7 +1047,7 @@ def test_agent_tag_review_shows_the_exact_change_and_applies_only_after_yes(monk
     )
     applied = []
     monkeypatch.setattr(runs, "apply_bulk_proposals", lambda **kwargs: applied.append(kwargs))
-    operation = runs.TaggingRun(token="token", snapshot=SimpleNamespace(session_key="review-session", descriptor=None),
+    operation = runs.TaggingRun(token="token", privacy_boundary=_BOUNDARY, snapshot=SimpleNamespace(session_key="review-session", descriptor=None),
                                 preferences={}, sync_uuid="sync", batch_tokens=1000)
 
     async def collect_events():
@@ -1054,7 +1073,7 @@ def test_agent_tag_review_shows_the_exact_change_and_applies_only_after_yes(monk
 def test_agent_tag_review_with_nothing_to_change_asks_nothing(monkeypatch):
     monkeypatch.setattr(runs.TaggingRun, "validate_current", lambda self: None)
     monkeypatch.setattr(runs, "prepare_proposal_changes", lambda *args: ({}, 0, {}))
-    operation = runs.TaggingRun(token="token", snapshot=SimpleNamespace(session_key="review-empty", descriptor=None),
+    operation = runs.TaggingRun(token="token", privacy_boundary=_BOUNDARY, snapshot=SimpleNamespace(session_key="review-empty", descriptor=None),
                                 preferences={}, sync_uuid="sync", batch_tokens=1000)
 
     async def collect_events():

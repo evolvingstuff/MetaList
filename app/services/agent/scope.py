@@ -15,6 +15,7 @@ from typing_extensions import Self
 from app.services.agent.cloud_privacy import CloudPrivacyBoundary
 from app.services.agent.cloud_privacy import CloudPrivacyEvaluator
 from app.services.agent.cloud_privacy import cloud_privacy_evaluator
+from app.services.agent.cloud_privacy import disclosable_search_query
 from app.services.content_formatting import extract_note_text_for_agent
 from app.services.note_store import NoteRecord
 from app.services.note_store import NoteStore
@@ -285,11 +286,22 @@ class ScopedSearchSnapshot:
     # Bulk tagging sends these, never the live notes: the privacy rules judged the
     # notes at Send, and an edit afterwards must not reach the AI unjudged.
     note_records_at_send: Mapping[str, NoteRecord]
+    # The view's search as the AI is shown it: a term only when the AI can see a note
+    # it picks out, judged at Send (cloud_privacy.disclosable_search_query). The
+    # descriptor keeps the search as typed, for the server's own searches.
+    disclosable_search_query: str
     # How long freezing took, shown on the chat's first activity line.
     preparation_ms: float
     # Note text extracted on first read during the run (NoteText).
     text_extraction: TextExtractionMeter
     selected_note: SelectedNoteContext
+
+    @property
+    def disclosable_label(self) -> str:
+        """The view's label as the AI is shown it (a search view's label is its search)."""
+        if self.descriptor.scope_kind == "search":
+            return self.disclosable_search_query
+        return self.descriptor.label
 
     @property
     def note_count(self) -> int:
@@ -413,10 +425,19 @@ class ScopedSearchSnapshotFactory:
             notes_by_id=MappingProxyType(frozen_notes),
             tree_nodes_by_id=MappingProxyType(tree_nodes),
             note_records_at_send=MappingProxyType({note_id: self._notes.get_note(note_id) for note_id in tree_nodes}),
+            disclosable_search_query=disclosable_search_query(
+                descriptor.search_query,
+                finds_visible_note=lambda search: self._finds_visible_note(
+                    search=search, sort_mode=descriptor.sort_mode, boundary=privacy_boundary),
+            ),
             preparation_ms=(time.perf_counter() - started_at) * MS_PER_SECOND,
             text_extraction=text_extraction,
             selected_note=selected_note,
         )
+
+    def _finds_visible_note(self, *, search: str, sort_mode: str, boundary: CloudPrivacyBoundary) -> bool:
+        resolved = self._view_scope_resolver(search=search, sort_mode=sort_mode, is_untagged_view=False)
+        return self._privacy_evaluator.has_visible_note(note_ids=tuple(resolved.matched_note_ids), boundary=boundary)
 
     def _freeze_selected_note(
         self, note_id: str, visible_scope: ResolvedViewScope, boundary: CloudPrivacyBoundary,

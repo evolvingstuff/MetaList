@@ -92,6 +92,7 @@ def _draft_reason(note_id: str, *, tags: str, content: str, boundary: CloudPriva
     return cloud_privacy_evaluator.draft_exclusion_reason(
         note_id=note_id,
         draft_effective_tags=store.draft_effective_tag_terms(note_id=note_id, tags=tags, plaintext=strip_html(content)),
+        draft_accepted_tags=store.draft_accepted_effective_tag_terms(note_id=note_id, tags=tags, plaintext=strip_html(content)),
         draft_content_html=content, boundary=boundary,
     )
 
@@ -300,7 +301,8 @@ def test_an_answer_about_another_note_is_sent_back_for_correction(live_database)
 
     assert _suggest(request, inference) == ("kyoto",)
     assert len(inference.requests) == 2
-    assert "outside the current permitted scope" in inference.requests[1][-1]["content"]
+    # Ancestors are sent without IDs, so to the AI any other ID is unknown.
+    assert "Nonexistent note ID" in inference.requests[1][-1]["content"]
 
 
 # Adding the proposals: undoable, and only what the note does not have yet.
@@ -593,3 +595,26 @@ def test_suggesting_tags_after_a_chat_answer_records_its_own_trace_run(live_data
         assert (run["status"], run["error"]) == ("error", "OpenAI API request failed: connection reset")
     finally:
         agent_trace_store.clear_trace(session_key="session")
+
+
+def test_a_proposed_tag_can_make_a_note_private_but_never_visible(live_database) -> None:
+    """A proposal counts toward the blacklist (until it is rejected) but never toward
+    the whitelist, so the AI cannot propose its way into a note."""
+    apply_insert_note("proposed-public", None, None, None, "", content="<div>A</div>", tags="", proposed_tags="public")
+    apply_insert_note("accepted-public", None, "proposed-public", None, "", content="<div>B</div>",
+                      tags="public", proposed_tags="")
+    apply_insert_note("child", "proposed-public", None, None, "", content="<div>C</div>", tags="", proposed_tags="")
+    apply_insert_note("proposed-private", None, "accepted-public", None, "", content="<div>D</div>",
+                      tags="", proposed_tags="health")
+    whitelist = _boundary(blacklist_tags=(), whitelist_tags=("public",))
+    blacklist = _boundary(blacklist_tags=("health",), whitelist_tags=())
+
+    def reason(note_id: str, boundary: CloudPrivacyBoundary) -> str:
+        return cloud_privacy_evaluator.exclusion_reason(note_id=note_id, boundary=boundary)
+
+    assert reason("accepted-public", whitelist) == ""
+    assert reason("proposed-public", whitelist) == "not_whitelisted"
+    assert reason("child", whitelist) == "not_whitelisted"
+    assert _draft_reason("proposed-public", tags="", content="<div>A</div>", boundary=whitelist) == "not_whitelisted"
+    assert reason("proposed-private", blacklist) == "blacklisted"
+    assert _draft_reason("proposed-private", tags="", content="<div>D</div>", boundary=blacklist) == "blacklisted"

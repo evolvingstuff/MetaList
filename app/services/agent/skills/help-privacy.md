@@ -5,6 +5,9 @@ one entry per line, configure whitelist tags/phrases and blacklist tags/phrases.
 The policy is namespace-scoped. Whitelist entries use OR, blacklist entries use
 OR, and a blacklist match wins. Effective tag matching includes inheritance and
 ontology relationships; text phrases are case-insensitive literal phrases.
+Proposed tags count for the blacklist but never for the whitelist: a proposed
+private tag keeps its note hidden until the proposal is rejected, and a proposed
+whitelisted tag does not make a note visible until it is accepted.
 A hidden ancestor hides its descendants. Password-tagged notes always hide the
 entire subtree from the AI. Filtering happens before note content, counts,
 evidence, citations, debug, or provider requests. Hovering the chat column
@@ -14,6 +17,10 @@ It is not deletion.
 A general product-help question does not need to send saved-note contents.
 Phrases are matched against exactly the text the AI would be sent, including a
 link's address hidden behind its label and cached titles of linked pages.
+The AI is shown a term of the view's search only if it can see at least one note
+that term finds (for an excluded term, one note it leaves out); any other term
+appears as "[private]". So a search for a private topic never reaches the AI, and
+"[private]" can also mean the term finds no notes at all.
 Changing the privacy settings stops any AI request still running before it
 sends more.
 Earlier answers in a chat are sent back to the AI with each new message. Making a
