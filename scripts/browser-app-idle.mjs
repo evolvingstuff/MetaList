@@ -7,3 +7,52 @@ export async function waitForAppIdle(page) {
     return !mode.isLoading && !CommandGate.isBusy();
   });
 }
+
+// The page has stopped moving: MetaList is idle, the network is quiet, no Mermaid
+// diagram is rendering, no image in view is loading, and the scroll position, page
+// height and every note's top have stayed the same for STILL_FOR_MS. That is longer
+// than the slowest timer MetaList moves anything with (a note animation's 320 ms
+// fallback; the follow-up scroll waits 180 ms, CSS transitions at most 200 ms), so a
+// late jump still lands before this returns and a check after it still sees it. It
+// replaces fixed settle pauses, which waited the worst case every time.
+const STILL_FOR_MS = 500;
+// A page still moving after this long fails the check instead of hanging it.
+const SETTLE_DEADLINE_MS = 10000;
+const SETTLE_NETWORK_IDLE_MS = 300;
+
+export async function waitForPageSettled(page) {
+  await waitForAppIdle(page);
+  await page.waitForNetworkIdle({idleTime: SETTLE_NETWORK_IDLE_MS});
+  await page.evaluate(({stillForMs, deadlineMs}) => new Promise((resolve, reject) => {
+    const inView = element => {
+      const rect = element.getBoundingClientRect();
+      return rect.bottom > 0 && rect.top < window.innerHeight;
+    };
+    const observe = () => ({
+      layout: [window.scrollY, document.documentElement.scrollHeight,
+        ...[...document.querySelectorAll('.note[data-note-id]')].map(note => Math.round(note.getBoundingClientRect().top))].join(','),
+      isBusy: document.querySelector('[data-mermaid-state="rendering"]') !== null
+        || [...document.images].some(image => inView(image) && !image.complete),
+    });
+    const startedAt = performance.now();
+    let last = observe();
+    let stillSince = startedAt;
+    const check = () => {
+      const now = performance.now();
+      const current = observe();
+      if (current.layout !== last.layout || current.isBusy) {
+        last = current;
+        stillSince = now;
+      } else if (now - stillSince >= stillForMs) {
+        resolve();
+        return;
+      }
+      if (now - startedAt > deadlineMs) {
+        reject(new Error(`The page was still moving or rendering after ${deadlineMs} ms`));
+        return;
+      }
+      requestAnimationFrame(check);
+    };
+    requestAnimationFrame(check);
+  }), {stillForMs: STILL_FOR_MS, deadlineMs: SETTLE_DEADLINE_MS});
+}
