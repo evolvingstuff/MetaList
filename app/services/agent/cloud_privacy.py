@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 import json
 import hashlib
@@ -10,8 +11,11 @@ from typing import Callable
 from app.services.note_store import NoteStore
 from app.services.note_store import store as note_store
 from app.services.search_index import search_index
+from app.services.tag_case import build_preferred_tag_case_map
+from app.services.search_query import ParsedSearchQuery, SearchClause
+from app.services.search_query import format_search_query, format_search_term, parse_search_query
 from app.services.tag_ontology import is_valid_tag_token
-from app.utils.text_utils import strip_html
+from app.services.content_formatting import extract_note_text_for_agent
 
 
 CLOUD_PRIVACY_POLICY_PREFERENCE_KEY = "pref.ai.cloud_privacy_policy"
@@ -79,6 +83,91 @@ def resolve_cloud_privacy_boundary(
         apply_cloud_policy=is_cloud_inference_provider(provider),
         policy=policy,
     )
+
+
+def visible_tag_counts(boundary: CloudPrivacyBoundary) -> tuple[dict[str, str], Counter[str]]:
+    """Display case and note count of each tag on notes the AI may see, by casefold."""
+    note_ids = tuple(note_store.list_note_ids())
+    hidden = cloud_privacy_evaluator.hidden_note_ids(note_ids=note_ids, boundary=boundary)
+    exact_counts: Counter[str] = Counter()
+    for note_id in note_ids:
+        if note_id in hidden:
+            continue
+        for term in note_store.get_note(note_id).tag_terms:
+            if is_valid_tag_token(term) and not term.startswith("@"):
+                exact_counts[term] += 1
+    display = build_preferred_tag_case_map(dict(exact_counts))
+    counts: Counter[str] = Counter()
+    for term, count in exact_counts.items():
+        counts[term.casefold()] += count
+    blacklisted = {tag.casefold() for tag in boundary.policy.blacklist_tags}
+    assert not (counts.keys() & blacklisted) or not boundary.apply_cloud_policy, \
+        "A note carrying a blacklisted tag is hidden, so its tags are never counted"
+    return display, counts
+
+
+# What the AI is shown in place of a search term it may not see.
+PRIVATE_SEARCH_TERM = "[private]"
+
+
+def disclosable_search_query(query: str, *, finds_visible_note: Callable[[str], bool]) -> str:
+    """The search as the AI may be shown it. The AI sees a search term only if it can
+    see at least one note the term picks out: for a term, a note its part of the
+    search (its OR clause) finds; for an excluded term (-x), a note the exclusion
+    removes, which is a note the clause finds with x required instead. Other terms
+    become PRIVATE_SEARCH_TERM. One rule covers every way a note becomes private
+    (tags, synonyms, implications, text rules, phrases), and a search that finds
+    nothing is withheld like one that finds only private notes, so the AI cannot tell
+    the two apart. `finds_visible_note(search)` says whether that search finds a
+    note the AI may see. A search with nothing withheld is returned as typed."""
+    if query.strip() == "":
+        return query
+    shown_clauses = [_disclosable_clause_terms(clause, finds_visible_note)
+                     for clause in parse_search_query(query).clauses]
+    if not any(clause_withheld for _, clause_withheld in shown_clauses):
+        return query
+    return " OR ".join(" ".join(shown_terms) for shown_terms, _ in shown_clauses)
+
+
+def _disclosable_clause_terms(
+    clause: SearchClause, finds_visible_note: Callable[[str], bool],
+) -> tuple[list[str], bool]:
+    """The clause's terms as the AI may be shown them, and whether any was withheld."""
+    required_terms = [format_search_term(tag, is_phrase=False, is_excluded=False) for tag in sorted(clause.required_tags)]
+    required_terms += [format_search_term(phrase, is_phrase=True, is_excluded=False) for phrase in clause.required_text]
+    shown: list[str] = []
+    withheld = False
+    # Every required term picks out the same notes: the ones the clause finds.
+    if required_terms:
+        if finds_visible_note(_clause_search(clause)):
+            shown += required_terms
+        else:
+            shown.append(PRIVATE_SEARCH_TERM)
+            withheld = True
+    excluded_withheld = False
+    for tag in sorted(clause.forbidden_tags):
+        removed = SearchClause(required_tags=clause.required_tags | {tag},
+                               forbidden_tags=clause.forbidden_tags - {tag},
+                               required_text=clause.required_text, forbidden_text=clause.forbidden_text)
+        if finds_visible_note(_clause_search(removed)):
+            shown.append(format_search_term(tag, is_phrase=False, is_excluded=True))
+        else:
+            excluded_withheld = True
+    for index, phrase in enumerate(clause.forbidden_text):
+        removed = SearchClause(required_tags=clause.required_tags, forbidden_tags=clause.forbidden_tags,
+                               required_text=clause.required_text + (phrase,),
+                               forbidden_text=clause.forbidden_text[:index] + clause.forbidden_text[index + 1:])
+        if finds_visible_note(_clause_search(removed)):
+            shown.append(format_search_term(phrase, is_phrase=True, is_excluded=True))
+        else:
+            excluded_withheld = True
+    if excluded_withheld:
+        shown.append(f"-{PRIVATE_SEARCH_TERM}")
+    return shown, withheld or excluded_withheld
+
+
+def _clause_search(clause: SearchClause) -> str:
+    return format_search_query(ParsedSearchQuery(clauses=(clause,)))
 
 
 def validate_cloud_privacy_policy_preference(value: str) -> str:
@@ -180,9 +269,14 @@ class CloudPrivacyEvaluator:
         *,
         notes: NoteStore,
         effective_tags_provider: Callable[[str], frozenset[str]],
+        accepted_tags_provider: Callable[[str], frozenset[str]],
     ) -> None:
         self._notes = notes
+        # Every tag search gives the note, proposals included: the blacklist and
+        # credentials. A proposed private tag hides the note until it is rejected.
         self._effective_tags_provider = effective_tags_provider
+        # The same without proposals: the whitelist, so the AI cannot propose its way in.
+        self._accepted_tags_provider = accepted_tags_provider
 
     def history_disclosure_key(self, *, boundary: CloudPrivacyBoundary) -> str:
         note_ids = tuple(self._notes.list_note_ids())
@@ -214,6 +308,30 @@ class CloudPrivacyEvaluator:
             ):
                 hidden.add(note_id)
         return frozenset(hidden)
+
+    def has_visible_note(
+        self,
+        *,
+        note_ids: tuple[str, ...],
+        boundary: CloudPrivacyBoundary,
+    ) -> bool:
+        """Whether any of the notes may be shown to the AI; stops at the first one."""
+        if not isinstance(note_ids, tuple):
+            raise TypeError("note_ids must be a tuple")
+        if not isinstance(boundary, CloudPrivacyBoundary):
+            raise TypeError("boundary must be CloudPrivacyBoundary")
+        direct_hidden_cache: dict[str, bool] = {}
+        hierarchy_hidden_cache: dict[str, bool] = {}
+        match_plan = self._match_plan(boundary)
+        return any(
+            not self._is_hidden_by_hierarchy(
+                note_id=note_id,
+                match_plan=match_plan,
+                direct_hidden_cache=direct_hidden_cache,
+                hierarchy_hidden_cache=hierarchy_hidden_cache,
+            )
+            for note_id in note_ids
+        )
 
     def _is_hidden_by_hierarchy(
         self,
@@ -271,17 +389,20 @@ class CloudPrivacyEvaluator:
         return _strongest_reason(reasons)
 
     def draft_exclusion_reason(
-        self, *, note_id: str, draft_effective_tags: frozenset[str], draft_content_html: str,
-        boundary: CloudPrivacyBoundary,
+        self, *, note_id: str, draft_effective_tags: frozenset[str], draft_accepted_tags: frozenset[str],
+        draft_content_html: str, boundary: CloudPrivacyBoundary,
     ) -> str:
         """exclusion_reason for a note being edited, judged on its unsaved tags and text."""
         if not isinstance(draft_effective_tags, frozenset):
             raise TypeError("draft_effective_tags must be a frozenset")
+        if not isinstance(draft_accepted_tags, frozenset):
+            raise TypeError("draft_accepted_tags must be a frozenset")
         if not isinstance(draft_content_html, str):
             raise TypeError("draft_content_html must be a string")
         match_plan = self._match_plan(boundary)
         reasons = {self._exclusion_reason_for(
-            effective_tags=draft_effective_tags, content_html=draft_content_html, match_plan=match_plan,
+            effective_tags=draft_effective_tags, accepted_tags=lambda: draft_accepted_tags,
+            content_html=draft_content_html, match_plan=match_plan,
         )}
         reasons |= self._ancestor_exclusion_reasons(note_id=note_id, match_plan=match_plan)
         return _strongest_reason(reasons)
@@ -300,13 +421,15 @@ class CloudPrivacyEvaluator:
     def _direct_exclusion_reason(self, *, note_id: str, match_plan: _CloudPrivacyMatchPlan) -> str:
         return self._exclusion_reason_for(
             effective_tags=self._effective_tags_provider(note_id),
+            accepted_tags=lambda: self._accepted_tags_provider(note_id),
             content_html=self._notes.get_note(note_id).content,
             match_plan=match_plan,
         )
 
     @staticmethod
     def _exclusion_reason_for(
-        *, effective_tags: frozenset[str], content_html: str, match_plan: _CloudPrivacyMatchPlan,
+        *, effective_tags: frozenset[str], accepted_tags: Callable[[], frozenset[str]], content_html: str,
+        match_plan: _CloudPrivacyMatchPlan,
     ) -> str:
         effective_tags_casefold = {tag.casefold() for tag in effective_tags}
         # Credentials are private by default, whatever the policy says.
@@ -323,14 +446,18 @@ class CloudPrivacyEvaluator:
         )
         plaintext_casefold = ""
         if needs_plaintext:
-            plaintext_casefold = strip_html(content_html).strip().casefold()
+            # Phrases are matched against exactly the text the AI is sent: the visible
+            # text plus link addresses a label hides and cached titles of linked pages.
+            # The tags argument only decides credential redaction, handled above.
+            sent_text, _ = extract_note_text_for_agent(content_html=content_html, tags="")
+            plaintext_casefold = sent_text.casefold()
         if any(
             phrase in plaintext_casefold for phrase in match_plan.blacklist_phrases
         ):
             return "blacklisted"
         if not match_plan.has_whitelist:
             return ""
-        if effective_tags_casefold & match_plan.whitelist_tags:
+        if match_plan.whitelist_tags and {tag.casefold() for tag in accepted_tags()} & match_plan.whitelist_tags:
             return ""
         if any(
             phrase in plaintext_casefold for phrase in match_plan.whitelist_phrases
@@ -372,4 +499,5 @@ def _strongest_reason(reasons: set[str]) -> str:
 cloud_privacy_evaluator = CloudPrivacyEvaluator(
     notes=note_store,
     effective_tags_provider=search_index.list_effective_tag_terms_for_note,
+    accepted_tags_provider=note_store.accepted_effective_tag_terms,
 )

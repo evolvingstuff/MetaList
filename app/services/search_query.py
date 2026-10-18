@@ -153,6 +153,32 @@ def parse_search_query(normalized_text: str) -> ParsedSearchQuery:
     return ParsedSearchQuery(clauses=tuple(clauses))
 
 
+def format_search_query(parsed: ParsedSearchQuery) -> str:
+    """A search that parses back to `parsed`: each clause's required tags, then its
+    excluded tags (-tag), then its quoted phrases, then its excluded phrases, with
+    OR between clauses. Tags are sorted (a clause keeps them as a set)."""
+    clauses_text = []
+    for clause in parsed.clauses:
+        terms = [format_search_term(tag, is_phrase=False, is_excluded=False) for tag in sorted(clause.required_tags)]
+        terms += [format_search_term(tag, is_phrase=False, is_excluded=True) for tag in sorted(clause.forbidden_tags)]
+        terms += [format_search_term(phrase, is_phrase=True, is_excluded=False) for phrase in clause.required_text]
+        terms += [format_search_term(phrase, is_phrase=True, is_excluded=True) for phrase in clause.forbidden_text]
+        clauses_text.append(" ".join(terms))
+    return " OR ".join(clauses_text)
+
+
+def format_search_term(term: str, *, is_phrase: bool, is_excluded: bool) -> str:
+    """One search term as typed: a tag as is, a phrase in double quotes with the
+    backslash escapes the parser reads, and a leading - when it is excluded."""
+    text = term
+    if is_phrase:
+        escaped = term.replace("\\", "\\\\").replace('"', '\\"')
+        text = f'"{escaped}"'
+    if is_excluded:
+        return f"-{text}"
+    return text
+
+
 _WHITESPACE_RE = re.compile(r"\s+")
 # A backslash and the character it escapes.
 _ESCAPE_SEQUENCE_LENGTH = 2

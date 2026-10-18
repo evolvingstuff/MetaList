@@ -55,7 +55,8 @@ def test_bulk_parent_proposal_reaches_unseen_sibling_without_disclosing_it(monke
         proposed_tags_by_id={"a": "", "b": "", "c": ""})
     monkeypatch.setattr(tagging_run_module, "store", store)
     snapshot = SimpleNamespace(ordered_root_ids=("a",), tree_nodes_by_id={
-        "a": SimpleNamespace(child_ids=("b",)), "b": SimpleNamespace(child_ids=())})
+        "a": SimpleNamespace(child_ids=("b",)), "b": SimpleNamespace(child_ids=())},
+        note_records_at_send={note_id: store.get_note(note_id) for note_id in ("a", "b")})
     evidence = tagging_trees(snapshot)
     assert evidence[0]["content_text"] == "Parent knowledge"
     assert [child["note_id"] for child in evidence[0]["children"]] == ["b"]
@@ -237,3 +238,21 @@ def test_proposed_tags_are_searchable_and_inherited_but_meta_proposals_are_not(
     )
     assert index.query_note_ids("robot-root") == set()
     assert index.query_note_ids("human-child robot-child") == {"child"}
+
+
+def test_bulk_tagging_sends_the_notes_as_they_were_at_send(monkeypatch):
+    """The privacy rules judged the notes at Send; a note edited afterwards (a
+    private phrase added, a move under a private parent) is sent as it was."""
+    rows = [{"id": "a", "parent_id": None, "prev_id": None, "next_id": None, "is_collapsed": 0, "created_at": None, "updated_at": None}]
+    at_send, _ = _load_store(monkeypatch, rows=rows, content_by_id={"a": "As it was at Send"},
+        tags_by_id={"a": ""}, proposed_tags_by_id={"a": ""})
+    edited, _ = _load_store(monkeypatch, rows=rows, content_by_id={"a": "Edited after Send: acme-merger"},
+        tags_by_id={"a": "journal"}, proposed_tags_by_id={"a": ""})
+    monkeypatch.setattr(tagging_run_module, "store", edited)
+    snapshot = SimpleNamespace(ordered_root_ids=("a",), tree_nodes_by_id={"a": SimpleNamespace(child_ids=())},
+        note_records_at_send={"a": at_send.get_note("a")})
+
+    evidence = tagging_trees(snapshot)
+
+    assert evidence[0]["content_text"] == "As it was at Send"
+    assert evidence[0]["tags"] == []

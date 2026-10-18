@@ -123,13 +123,16 @@ def validate_proposals(
     result: TagBatchResult,
     batch: TagBatch,
     scope_note_ids: frozenset[str],
-    namespace_note_ids: frozenset[str],
     policy: str,
-    namespace_vocabulary: dict[str, str],
+    visible_vocabulary: dict[str, str],
 ) -> dict[str, tuple[str, ...]]:
+    """The batch's valid proposals. What the model is told about an invalid one
+    depends only on what it was shown: `scope_note_ids` are the notes the request
+    sends it, and `visible_vocabulary` the tags on notes it may see
+    (cloud_privacy.visible_tag_counts), so a private note's ID or a tag found only
+    on private notes is answered exactly like an invented one."""
     assert policy in {"existing", "new", "new_only"}
     assert batch.note_ids <= scope_note_ids
-    assert scope_note_ids <= namespace_note_ids
     vocabulary = {tag.casefold(): tag for tag in batch.vocabulary}
     proposals = {}
     seen_notes = set()
@@ -142,11 +145,6 @@ def validate_proposals(
             if proposal.note_id in scope_note_ids:
                 invalid_entries.append(
                     f"Note ID belongs to a different batch within the permitted scope: "
-                    f"{proposal.note_id!r}"
-                )
-            elif proposal.note_id in namespace_note_ids:
-                invalid_entries.append(
-                    f"Existing note ID is outside the current permitted scope: "
                     f"{proposal.note_id!r}"
                 )
             else:
@@ -165,22 +163,22 @@ def validate_proposals(
         for key, tag in unique_tags.items():
             if (
                 policy == "new_only"
-                and key in namespace_vocabulary
+                and key in visible_vocabulary
                 and key not in vocabulary
             ):
-                # The namespace catalog was deliberately not disclosed. A collision
-                # outside accepted_vocabulary is unknowable to the model, so omit it
-                # without charging it against the repair threshold.
+                # The visible tags outside accepted_vocabulary were not sent. A
+                # collision with one is unknowable to the model, so omit it without
+                # charging it against the repair threshold.
                 continue
-            reason = invalid_tag_reason(tag, namespace_vocabulary, policy)
+            reason = invalid_tag_reason(tag, visible_vocabulary, policy)
             if reason:
                 invalid_tags.append(reason)
                 continue
             tags[key] = tag
             if key in vocabulary:
                 tags[key] = vocabulary[key]
-            elif key in namespace_vocabulary:
-                tags[key] = namespace_vocabulary[key]
+            elif key in visible_vocabulary:
+                tags[key] = visible_vocabulary[key]
         if tags:
             proposals[proposal.note_id] = tuple(tags.values())
     errors = []
@@ -203,14 +201,14 @@ def validate_proposals(
 
 def invalid_tag_reason(
     tag: str,
-    namespace_vocabulary: dict[str, str],
+    visible_vocabulary: dict[str, str],
     policy: str,
 ) -> str:
     if not is_valid_tag_token(tag) or tag.startswith("@"):
         return f"Invalid classification tag: {tag!r}"
     key = tag.casefold()
-    if policy == "existing" and key not in namespace_vocabulary:
+    if policy == "existing" and key not in visible_vocabulary:
         return f"Tag does not exist in the namespace: {tag!r}"
-    if policy == "new_only" and key in namespace_vocabulary:
+    if policy == "new_only" and key in visible_vocabulary:
         return f"Model proposed an existing tag during a new-tags-only pass: {tag!r}"
     return ""

@@ -123,6 +123,8 @@ def build_snapshot(case: AgentCase, *, session_key: str) -> ScopedSearchSnapshot
     return ScopedSearchSnapshot(run_id=f"eval-{session_key}", session_key=session_key, descriptor=descriptor,
         created_at=_FIXTURE_TIME, ordered_root_ids=tuple(roots), ordered_note_ids=tuple(ordered),
         notes_by_id=MappingProxyType(notes), tree_nodes_by_id=MappingProxyType(nodes),
+        note_records_at_send=MappingProxyType({}),
+        disclosable_search_query=descriptor.search_query,
         selected_note=selected_note_context(case.selected_note),
         preparation_ms=0.0, text_extraction=TextExtractionMeter.start(),)
 

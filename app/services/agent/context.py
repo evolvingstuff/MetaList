@@ -182,9 +182,9 @@ class AgentContextBuilder:
             system_messages.append({"role": "system", "content": format_active_skill(skills.for_action("web_browsing"))})
         descriptor = snapshot.descriptor
         view_context = {
-            "view_label": descriptor.label,
+            "view_label": snapshot.disclosable_label,
             "view_kind": descriptor.scope_kind,
-            "search_query": descriptor.search_query,
+            "search_query": snapshot.disclosable_search_query,
             "note_count": snapshot.note_count,
             "tree_count": snapshot.result_tree_count,
             # The model sees short note aliases (n1, n2…), never full note ids.
@@ -281,8 +281,8 @@ class AgentContextBuilder:
             "instruction": prompts.render_final_response_request(basis=basis),
             "frozen_scope": {
                 "kind": state.snapshot.descriptor.scope_kind,
-                "label": state.snapshot.descriptor.label,
-                "search_query": state.snapshot.descriptor.search_query,
+                "label": state.snapshot.disclosable_label,
+                "search_query": state.snapshot.disclosable_search_query,
                 "note_count": state.snapshot.note_count,
                 "result_tree_count": state.snapshot.result_tree_count,
             },
@@ -410,8 +410,8 @@ class AgentContextBuilder:
             "current_user_request": summary_request,
             "frozen_scope": {
                 "kind": snapshot.descriptor.scope_kind,
-                "label": snapshot.descriptor.label,
-                "search_query": snapshot.descriptor.search_query,
+                "label": snapshot.disclosable_label,
+                "search_query": snapshot.disclosable_search_query,
                 "note_count": snapshot.note_count,
                 "result_tree_count": snapshot.result_tree_count,
             },

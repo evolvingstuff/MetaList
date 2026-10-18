@@ -362,9 +362,9 @@ def _view_overview(context: ToolContext) -> ToolResult:
         listed.append(entry)
         used_tokens += entry_tokens
     payload = {
-        "view_label": snapshot.descriptor.label,
+        "view_label": snapshot.disclosable_label,
         "view_kind": snapshot.descriptor.scope_kind,
-        "search_query": snapshot.descriptor.search_query,
+        "search_query": snapshot.disclosable_search_query,
         "note_count": snapshot.note_count,
         "tree_count": snapshot.result_tree_count,
         "selected_note": snapshot.selected_note.as_payload(),

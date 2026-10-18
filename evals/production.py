@@ -63,6 +63,8 @@ def fixture_snapshot(context) -> ScopedSearchSnapshot:
         created_at="2026-01-01T00:00:00+00:00", ordered_root_ids=root_ids,
         ordered_note_ids=tuple(f"fixture-note-{index}" for index in range(scope.matching_note_count)),
         notes_by_id=MappingProxyType({}), tree_nodes_by_id=MappingProxyType({}),
+        note_records_at_send=MappingProxyType({}),
+        disclosable_search_query=descriptor.search_query,
         selected_note=selected_note_context(context.selected_note),
         preparation_ms=0.0, text_extraction=TextExtractionMeter.start(),)
 

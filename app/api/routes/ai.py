@@ -461,8 +461,11 @@ def note_tag_suggestion_availability(
     draft_effective_tags = note_store.draft_effective_tag_terms(
         note_id=note_id, tags=payload.tags, plaintext=strip_html(payload.content_html),
     )
+    draft_accepted_tags = note_store.draft_accepted_effective_tag_terms(
+        note_id=note_id, tags=payload.tags, plaintext=strip_html(payload.content_html),
+    )
     reason = cloud_privacy_evaluator.draft_exclusion_reason(
-        note_id=note_id, draft_effective_tags=draft_effective_tags,
+        note_id=note_id, draft_effective_tags=draft_effective_tags, draft_accepted_tags=draft_accepted_tags,
         draft_content_html=payload.content_html, boundary=boundary,
     )
     return NoteTagSuggestionAvailabilityResponse(is_available=reason == "")
@@ -904,7 +907,8 @@ def stream_ai_chat(
         authoritative_active_search_query=active_search_query,
         authoritative_active_sort_mode=active_sort_mode,
     )
-    tagging_run = TaggingRun(token=token, snapshot=frozen_scope, preferences=preferences, sync_uuid=get_current_sync_uuid(),
+    tagging_run = TaggingRun(token=token, snapshot=frozen_scope, privacy_boundary=privacy_boundary,
+        preferences=preferences, sync_uuid=get_current_sync_uuid(),
         batch_tokens=resolve_tagging_batch_tokens(preferences, payload.provider))
     disclosure_changed = ai_chat_store.synchronize_disclosure_boundary(
         session_key=session_key,

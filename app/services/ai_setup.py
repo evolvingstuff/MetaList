@@ -16,6 +16,7 @@ from app.services.agent.openai_cost_tracking import openai_cost_tracker
 from app.services.agent.openai_inference import OPENAI_API_BASE_URL
 from app.services.agent.openai_inference import OpenAIInferenceAdapter
 from app.services.openai_credentials import openai_credential_store
+from app.services.agent.privacy_guard import PrivacyGuardedInference, cloud_privacy_revision
 
 
 AiProvider = Literal["openai"]
@@ -79,6 +80,10 @@ def connect_to_ai(*, provider: AiProvider, token: str, session_key: str) -> AiCo
             label="OpenAI",
             ready_label="OpenAI API ready · 1,050,000-token context",
             base_url=OPENAI_API_BASE_URL,
-            inference=OpenAIInferenceAdapter(api_key=api_key, cost_tracker=openai_cost_tracker),
+            # Stops sending once the cloud privacy settings change during the request.
+            inference=PrivacyGuardedInference(
+                inner=OpenAIInferenceAdapter(api_key=api_key, cost_tracker=openai_cost_tracker),
+                privacy_revision_at_start=cloud_privacy_revision.current(),
+            ),
         )
     raise AssertionError(f"Unregistered AI provider: {provider}")

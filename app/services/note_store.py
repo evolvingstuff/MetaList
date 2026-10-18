@@ -1173,6 +1173,24 @@ class NoteStore:
         )
         return ontology.infer_effective_tags(base_tags=base_tags, plaintext=plaintext)
 
+    def draft_accepted_effective_tag_terms(self, *, note_id: str, tags: str, plaintext: str) -> FrozenSet[str]:
+        """draft_effective_tag_terms without any proposal: its own `tags`, the accepted
+        tags its parents and embeds give it, and what the tag rules infer from those and
+        the text. The cloud privacy whitelist counts only these, so a proposed tag can
+        never make a note visible to the AI."""
+        if not isinstance(tags, str):
+            raise TypeError("tags must be a string")
+        if not isinstance(plaintext, str):
+            raise TypeError("plaintext must be a string")
+        base_tags = extract_tags_for_search(tags) | self.get_inherited_non_meta_tag_terms(note_id)
+        return get_ontology().infer_effective_tags(base_tags=base_tags, plaintext=plaintext)
+
+    def accepted_effective_tag_terms(self, note_id: str) -> FrozenSet[str]:
+        """The saved note's draft_accepted_effective_tag_terms."""
+        record = self.get_note(note_id)
+        return self.draft_accepted_effective_tag_terms(
+            note_id=note_id, tags=record.tags, plaintext=strip_html(record.content))
+
     def has_note(self, note_id: str) -> bool:
         with self._lock:
             return note_id in self._note_map

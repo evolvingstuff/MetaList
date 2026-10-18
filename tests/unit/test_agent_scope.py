@@ -19,6 +19,7 @@ from app.services.agent.cloud_privacy import EMPTY_CLOUD_PRIVACY_POLICY
 from app.services.agent.scope import AgentScopeDescriptor
 from app.services.agent.scope import ScopedSearchSnapshotFactory
 from app.services.note_store import NoteRecord
+from app.services.content_formatting import extract_note_text_for_agent
 from app.services.link_titles import link_title_store
 from app.services.search_index import SearchIndex, SearchRecord
 from app.services.snapshot import ResolvedViewScope
@@ -184,6 +185,7 @@ def _factory(notes: _FakeNotes, resolver) -> ScopedSearchSnapshotFactory:
         privacy_evaluator=CloudPrivacyEvaluator(
             notes=notes,
             effective_tags_provider=lambda note_id: notes.records[note_id].tag_terms,
+            accepted_tags_provider=lambda note_id: notes.records[note_id].tag_terms,
         ),
     )
 
@@ -547,6 +549,7 @@ def test_frozen_cloud_scope_filters_notes_before_counts_and_tree_payload() -> No
         privacy_evaluator=CloudPrivacyEvaluator(
             notes=notes,
             effective_tags_provider=lambda note_id: notes.records[note_id].tag_terms,
+            accepted_tags_provider=lambda note_id: notes.records[note_id].tag_terms,
         ),
     )
     descriptor = _descriptor().model_copy(
@@ -612,6 +615,7 @@ def test_cloud_privacy_whitelist_uses_or_semantics_and_blacklist_wins() -> None:
     evaluator = CloudPrivacyEvaluator(
         notes=notes,
         effective_tags_provider=lambda note_id: notes.records[note_id].tag_terms,
+        accepted_tags_provider=lambda note_id: notes.records[note_id].tag_terms,
     )
     policy = CloudPrivacyPolicy(
         whitelist_tags=("project-foo", "useful-tag"),
@@ -632,6 +636,7 @@ def test_cloud_privacy_hidden_ancestor_hides_whitelisted_descendant() -> None:
     evaluator = CloudPrivacyEvaluator(
         notes=notes,
         effective_tags_provider=lambda note_id: notes.records[note_id].tag_terms,
+        accepted_tags_provider=lambda note_id: notes.records[note_id].tag_terms,
     )
     policy = CloudPrivacyPolicy(
         whitelist_tags=("useful-tag",),
@@ -659,6 +664,7 @@ def test_cloud_privacy_uses_effective_inherited_and_ontology_tags() -> None:
     evaluator = CloudPrivacyEvaluator(
         notes=notes,
         effective_tags_provider=lambda note_id: effective_tags[note_id],
+        accepted_tags_provider=lambda note_id: effective_tags[note_id],
     )
     policy = CloudPrivacyPolicy(
         whitelist_tags=(),
@@ -712,3 +718,64 @@ def test_a_step_says_how_much_note_text_it_extracted() -> None:
     assert describe(before=(0, 0.0), after=(1, 40.0)) == " · text extracted for 1 note in 40 ms"
     assert describe(before=(0, 0.0), after=(1_613, 38.4)) == " · text extracted for 1,613 notes in 38 ms"
     assert describe(before=(5, 100.0), after=(45_485, 3_900.0)) == " · text extracted for 45,480 notes in 3.8 s"
+
+
+@pytest.mark.parametrize("content, cached_title", [
+    # The phrase is only in a link's address, which the label hides; the AI is sent the address.
+    ('<p>See the <a href="https://files.example/acme-merger/plan">data room</a></p>', None),
+    # The phrase is only in the cached title of a linked page; the AI is sent the title.
+    ("<p>See https://files.example/room</p>", "Acme-merger data room"),
+])
+def test_cloud_privacy_judges_the_text_the_ai_is_sent(monkeypatch, content, cached_title) -> None:
+    """A blacklisted phrase anywhere in what would be sent hides the note, not
+    only in the note's visible text."""
+    monkeypatch.setattr(link_title_store, "get_ok_title", lambda url: cached_title)
+    notes = _FakeNotes()
+    notes.records["gray"] = replace(notes.records["gray"], content=content)
+    sent_text, _ = extract_note_text_for_agent(content_html=content, tags=notes.records["gray"].tags)
+    assert "acme-merger" in sent_text.casefold(), "the phrase is in what the AI would be sent"
+    evaluator = CloudPrivacyEvaluator(
+        notes=notes,
+        effective_tags_provider=lambda note_id: notes.records[note_id].tag_terms,
+        accepted_tags_provider=lambda note_id: notes.records[note_id].tag_terms,
+    )
+    policy = CloudPrivacyPolicy(
+        whitelist_tags=(), whitelist_phrases=(), blacklist_tags=(), blacklist_phrases=("acme-merger",),
+    )
+
+    hidden = evaluator.hidden_note_ids(note_ids=("gray",), boundary=_cloud_privacy_boundary(policy))
+
+    assert hidden == frozenset({"gray"})
+
+
+def test_the_ai_is_not_sent_a_search_term_whose_notes_it_cannot_see() -> None:
+    """`diary` finds only a private note, so the AI is shown the search without it;
+    the server still searches as typed."""
+    notes = _FakeNotes()
+    query = "travel OR diary"
+    matched_by_search = {query: {"match", "secret"}, "travel": {"match"}, "diary": {"secret"}}
+    searched = []
+    def resolve(*, search, **kwargs):
+        searched.append(search)
+        matched = frozenset(matched_by_search[search])
+        return ResolvedViewScope(filter_active=True, allowed_note_ids=matched | {"root"},
+            matched_note_ids=matched, ordered_root_ids=("root",), total_root_count=1)
+    snapshot = _factory(notes, resolve).freeze(
+        descriptor=_descriptor().model_copy(update={"search_query": query, "label": query}),
+        authoritative_search_query=query, authoritative_sort_mode="normal",
+        authoritative_active_search_query=query, authoritative_active_sort_mode="normal",
+        run_id="private-search-run", session_key="session-1",
+        privacy_boundary=_cloud_privacy_boundary(EMPTY_CLOUD_PRIVACY_POLICY), selected_note_id="",
+    )
+    agent = AgentContextBuilder().build_agent_messages(earlier_actions=[],
+        canonical_messages=[{"role": "user", "content": "What is in this view?"}],
+        skills=DEFAULT_AGENT_SKILLS, web_settings=DEFAULT_AGENT_WEB_SETTINGS, snapshot=snapshot,
+        available_urls=(), note_aliases=NoteAliases.from_snapshot(snapshot))
+
+    assert searched[0] == query
+    assert snapshot.ordered_note_ids == ("match",)
+    assert snapshot.disclosable_search_query == "travel OR [private]"
+    assert snapshot.disclosable_label == "travel OR [private]"
+    sent = "\n".join(str(message["content"]) for message in agent)
+    assert "diary" not in sent
+    assert "travel OR [private]" in sent
