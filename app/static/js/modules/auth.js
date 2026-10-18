@@ -20,6 +20,7 @@ import {
 } from './login-namespace-picker.js';
 import { formatElapsedDuration } from './elapsed-time.js';
 import { MS_PER_SECOND } from './time-units.js';
+import { escapeHtml } from './html-escape.js';
 
 // Matches the 350 ms slide in main.css (.login-view-leaving).
 const LOGIN_SLIDE_MS = 350;
@@ -198,7 +199,7 @@ export const Auth = {
             if (typeof namespace !== 'string' || namespace.length === 0) {
                 throw new Error('Auth._renderLoginNamespacePicker requires non-empty namespace strings');
             }
-            return `<option value="${namespace}">${namespace}</option>`;
+            return `<option value="${escapeHtml(namespace)}">${escapeHtml(namespace)}</option>`;
         }).join('');
 
         if (!catalog.namespaces.includes(catalog.currentNamespace)) {

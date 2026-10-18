@@ -13,6 +13,7 @@ import {
     loadPasswordStrengthEstimator,
 } from '../password-strength.js';
 import { rememberGeneratedPasswordCopy } from '../mode-manager/services/password-clipboard-service.js';
+import { escapeHtml } from '../html-escape.js';
 
 const COPY_HINT_DEFAULT = 'Copy to clipboard. Pasting into an empty note will add @password automatically.';
 const MAX_PASSWORD_LENGTH = 72;
@@ -164,7 +165,7 @@ export class RandomPasswordModal extends BaseModal {
                             Copy
                         </button>
                     </div>
-                    <small id="password-result-copy-hint" class="form-help">${copyStatus}</small>
+                    <small id="password-result-copy-hint" class="form-help">${escapeHtml(copyStatus)}</small>
                 </div>
 
                 <div class="password-strength" id="password-strength" data-score="pending">
@@ -192,7 +193,7 @@ export class RandomPasswordModal extends BaseModal {
                     <button type="button" class="primary-btn" id="password-regenerate-btn">Regenerate</button>
                 </div>
 
-                <p id="password-generator-error" class="error-message">${error}</p>
+                <p id="password-generator-error" class="error-message">${escapeHtml(error)}</p>
             </div>
         `;
 

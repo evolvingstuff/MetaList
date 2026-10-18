@@ -11,6 +11,7 @@ import {
 import { ApplicationState } from './application-state.js';
 import { ReminderStore } from './reminder-store.js';
 import { loadClientState, persistClientPreferences } from './client-state-api.js';
+import { escapeHtml } from './html-escape.js';
 
 const NON_IDLE_THROTTLE_MS = 30_000;
 const ELAPSED_UPDATE_MS = 1_000;
@@ -774,13 +775,13 @@ class ReminderSurfaceService {
                 <button type="button" class="reminder-surface-title" data-reminder-surface-open-registry="true" title="Open in Reminders">
                     <span class="reminder-surface-icon" aria-hidden="true">${REMINDER_RENDER_ICON}</span>
 
-                    <span class="reminder-surface-title-text">${this._escape(title)}</span>
+                    <span class="reminder-surface-title-text">${escapeHtml(title)}</span>
                 </button>
-                ${details ? `<span class="reminder-surface-details">${this._escape(details)}</span>` : ''}
+                ${details ? `<span class="reminder-surface-details">${escapeHtml(details)}</span>` : ''}
                 <hr class="reminder-surface-rule">
             </div>
             <div class="reminder-surface-footer">
-                <span class="reminder-surface-status" data-reminder-surface-text>${this._escape(surfaceText)}</span>
+                <span class="reminder-surface-status" data-reminder-surface-text>${escapeHtml(surfaceText)}</span>
                 <button type="button" data-reminder-surface-action="acknowledge" title="Clear this due or missed notice">Got it</button>
             </div>
         `;
@@ -1284,17 +1285,6 @@ class ReminderSurfaceService {
         if (this._elapsedTimers.size > 0) this._elapsedTimers.clear();
     }
 
-    _escape(value) {
-        if (typeof value !== 'string') {
-            return '';
-        }
-        return value
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-    }
 }
 
 export const ReminderSurface = new ReminderSurfaceService();

@@ -203,7 +203,6 @@ test('formerly blocking modals allow outside-click closing', () => {
     const modalFiles = [
         'backup-restore-modal.js',
         'backup-result-modal.js',
-        'backup-retention-modal.js',
         'backup-settings-modal.js',
         'delete-namespace-modal.js',
         'namespace-modals.js',

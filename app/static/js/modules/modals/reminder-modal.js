@@ -14,6 +14,7 @@ import {
 } from '../time-units.js';
 
 import { BaseModal } from './base-modal.js';
+import { escapeHtml } from '../html-escape.js';
 
 // What the pre-reminder fields show for a reminder without one.
 const PRE_REMINDER_FORM_DEFAULTS = Object.freeze({ amount: '1', unit: 'days' });
@@ -52,18 +53,6 @@ const DAYS_IN_SHORTEST_MONTH = 28;
 const MONTHS_PER_YEAR = 12;
 // Sunday's place in a Monday-first week (Date.getDay() counts from Sunday = 0).
 const MONDAY_FIRST_SUNDAY_INDEX = DAYS_PER_WEEK - 1;
-
-function escapeHtml(value) {
-    if (typeof value !== 'string') {
-        return '';
-    }
-    return value
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
 
 function normalizeReminderSearchText(value) {
     if (typeof value !== 'string') {

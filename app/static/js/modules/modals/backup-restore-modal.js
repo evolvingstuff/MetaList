@@ -9,6 +9,7 @@ import { CONFIG } from '../config.js';
 import { ModeContextInstance as ModeContext } from '../mode-manager/mode-context.js';
 import { buildSessionHeaders } from '../session-auth.js';
 import { settleResult } from '../async-result.js';
+import { escapeHtml } from '../html-escape.js';
 
 
 const RESTORE_TRANSITION_SUPPRESS_MS = 30_000;
@@ -41,18 +42,6 @@ function backupSourceLabel(source) {
     return 'Local';
 }
 
-
-function escapeHtml(value) {
-    if (typeof value !== 'string') {
-        throw new Error('escapeHtml requires string');
-    }
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-}
 
 
 function stringifyPort(portValue) {
@@ -246,7 +235,7 @@ export class BackupRestoreModal extends BaseModal {
                     modalElement.innerHTML = `
                         <div class="modal-content backup-restore-modal-content">
                             <h3>Restore Complete</h3>
-                            <p>Backup restored successfully: <span class="backup-filename">${restoredFilename}</span></p>
+                            <p>Backup restored successfully: <span class="backup-filename">${escapeHtml(restoredFilename)}</span></p>
                             <p>Reconnecting to restarted server. You will be redirected automatically.</p>
                         </div>
                     `;
@@ -255,7 +244,7 @@ export class BackupRestoreModal extends BaseModal {
                 modalElement.innerHTML = `
                     <div class="modal-content backup-restore-modal-content">
                         <h3>Restore Complete</h3>
-                        <p>Backup restored successfully: <span class="backup-filename">${restoredFilename}</span></p>
+                        <p>Backup restored successfully: <span class="backup-filename">${escapeHtml(restoredFilename)}</span></p>
                         <p>Close this modal to reload the app.</p>
                     </div>
                 `;
@@ -265,8 +254,8 @@ export class BackupRestoreModal extends BaseModal {
             modalElement.innerHTML = `
                 <div class="modal-content backup-restore-modal-content">
                     <h3>Restore Complete</h3>
-                    <p>Backup restored successfully: <span class="backup-filename">${restoredFilename}</span></p>
-                    <p>Restored into namespace <strong>${restoredTargetNamespace}</strong>.</p>
+                    <p>Backup restored successfully: <span class="backup-filename">${escapeHtml(restoredFilename)}</span></p>
+                    <p>Restored into namespace <strong>${escapeHtml(restoredTargetNamespace)}</strong>.</p>
                     <p>${openNamespaceSuggested ? 'Use the namespace switcher to open it.' : 'You can continue using it now.'}</p>
                 </div>
             `;

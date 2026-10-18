@@ -6,20 +6,9 @@ import { CONFIG } from '../config.js';
 import { buildSessionHeaders } from '../session-auth.js';
 import { isValidTagToken } from '../tag-token.js';
 import { handleDictationPasteEvent } from '../mode-manager/services/dictation-paste-service.js';
+import { escapeHtml } from '../html-escape.js';
 
 const SUGGESTION_LIMIT = 20;
-
-function escapeHtml(value) {
-    if (typeof value !== 'string') {
-        throw new Error('escapeHtml requires string');
-    }
-    return value
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
 
 export class PrioritizeModal extends BaseModal {
     constructor() {

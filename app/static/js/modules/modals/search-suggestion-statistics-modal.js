@@ -9,19 +9,8 @@ import {
     getSearchSuggestionWindowsValidationError,
     validateSearchSuggestionWindows,
 } from '../mode-manager/services/search-suggestion-windows-service.js';
+import { escapeHtml } from '../html-escape.js';
 
-
-function escapeHtml(value) {
-    if (typeof value !== 'string') {
-        throw new Error('escapeHtml requires string');
-    }
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-}
 
 
 function pluralize(count, singular, plural) {

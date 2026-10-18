@@ -334,6 +334,10 @@ async function printNoteCase(page, ids) {
   const printing = await optionsState(page);
   assert.equal(printing.dialogOpen, false);
   assert(printing.frame !== null, 'the document is printed from a frame');
+  // Nothing in the printed document can run: no allow-scripts. The page still reaches
+  // the frame (to print it) and Chrome only prints a sandboxed frame with allow-modals.
+  assert.equal(await page.evaluate(() => document.querySelector('iframe.print-frame').getAttribute('sandbox')),
+    'allow-same-origin allow-modals', 'the print frame is sandboxed');
   assert(printing.frame.includes('<h1 class="html-export-title">Spring in Kyoto</h1>'), 'the title heads the page');
   assert(printing.frame.includes('<title>Spring in Kyoto</title>'));
   assert(printing.frame.includes('data-theme="light"'), 'always light on paper');

@@ -26,8 +26,6 @@ from app.services.auth_service import migrate_restored_database_if_unlocked
 from app.services.backup_service import (
     BackupFileInfo,
     create_timestamped_backup,
-    delete_oldest_backups,
-    list_backups,
     restore_backup,
 )
 from app.services.content_cache import clear_cache, populate_cache_from_db
@@ -197,21 +195,8 @@ class BackupFileResponse(BaseModel):
     size_bytes: int
 
 
-class BackupListResponse(BaseModel):
-    backups: list[BackupFileResponse]
-
-
 class BackupCreateResponse(BaseModel):
     backup: BackupFileResponse
-    message: str
-
-
-class BackupDeleteOldestRequest(BaseModel):
-    count: int = Field(..., gt=0)
-
-
-class BackupDeleteOldestResponse(BaseModel):
-    deleted_backups: list[BackupFileResponse]
     message: str
 
 
@@ -631,29 +616,6 @@ def create_backup(token: Annotated[str, Depends(_require_auth)]):
     return BackupCreateResponse(
         backup=_serialize_backup_file(backup_file),
         message="Backup created successfully",
-    )
-
-
-@router.get("/backup/list", response_model=BackupListResponse)
-def list_available_backups(token: Annotated[str, Depends(_require_auth)]):
-    backup_files = list_backups()
-    return BackupListResponse(
-        backups=[_serialize_backup_file(backup_file) for backup_file in backup_files]
-    )
-
-
-@router.post("/backup/delete-oldest", response_model=BackupDeleteOldestResponse)
-@transactional_route
-def delete_oldest_backup_files(
-    payload: BackupDeleteOldestRequest,
-    token: Annotated[str, Depends(_require_auth)],
-):
-    deleted_backup_files = delete_oldest_backups(payload.count)
-    return BackupDeleteOldestResponse(
-        deleted_backups=[
-            _serialize_backup_file(backup_file) for backup_file in deleted_backup_files
-        ],
-        message=f"Deleted {len(deleted_backup_files)} backup(s)",
     )
 
 

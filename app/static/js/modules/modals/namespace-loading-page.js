@@ -1,20 +1,10 @@
+import { escapeHtml } from '../html-escape.js';
+
 // The new tab that opens another namespace shows the login screen's dark logo
 // screen while that namespace answers, with the logo exactly where the namespace's
 // own login screen puts it, so its arrival only fades the panel in under the logo
 // (docs/ui/login-screen.md, Switching namespace). The styles are the login screen's
 // own rules, copied from this page, so the two cannot drift apart.
-
-function escapeHtml(value) {
-    if (typeof value !== 'string') {
-        throw new Error('escapeHtml requires string');
-    }
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-}
 
 
 function isLoginScreenRule(rule) {

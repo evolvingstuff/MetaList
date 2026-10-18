@@ -10,19 +10,8 @@ import {
 import { settleResult } from '../async-result.js';
 import { rewriteNamespaceUrlPreservingCurrentHost } from '../login-namespace-picker.js';
 import { buildSessionHeaders } from '../session-auth.js';
+import { escapeHtml } from '../html-escape.js';
 
-
-function escapeHtml(value) {
-    if (typeof value !== 'string') {
-        throw new Error('escapeHtml requires string');
-    }
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-}
 
 
 function parseResponseError(responseBody, statusCode) {

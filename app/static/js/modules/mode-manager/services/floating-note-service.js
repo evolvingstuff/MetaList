@@ -6,7 +6,7 @@ import { createFloatingNoteElements, applyFloatingNoteRect, getFloatingNoteTitle
 import { constrainFloatingNoteRect, moveFloatingNoteRect } from './floating-note-layout.js';
 import { hydrateImageFilePreviews } from './file-image-preview-service.js';
 import { hydrateExcalidrawPreviews } from '../../excalidraw/excalidraw-preview-service.js';
-import { ensureAnchorsOpenInNewTabs } from './markdown-render-service.js';
+import { ensureAnchorsOpenInNewTabs } from './link-target-service.js';
 import { queueMermaidDiagramRendering } from './mermaid-render-service.js';
 import { hydrateRemoteImageProxies } from './remote-image-proxy-service.js';
 import { downloadFileReference } from './file-reference-service.js';

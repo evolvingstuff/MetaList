@@ -33,7 +33,6 @@ import {
     RemovePasswordModal,
 } from '../modals/password-modal.js';
 import { SessionTimeoutModal } from '../modals/session-timeout-modal.js';
-import { BackupRetentionModal } from '../modals/backup-retention-modal.js';
 import { BackupResultModal } from '../modals/backup-result-modal.js';
 import { BackupRestoreModal } from '../modals/backup-restore-modal.js';
 import { BackupSettingsModal } from '../modals/backup-settings-modal.js';
@@ -344,7 +343,6 @@ class CommandPaletteController {
 
         this._ontologyModal = null;
         this._backupSettingsModal = null;
-        this._backupRetentionModal = null;
         this._backupResultModal = null;
         this._backupRestoreModal = null;
         this._addPasswordModal = null;
@@ -1986,22 +1984,6 @@ class CommandPaletteController {
         sessionStorage.removeItem('metalist_client_id');
     }
 
-    _getBackupRetentionPromptThreshold() {
-        const threshold = CONFIG.BACKUP.RETENTION_PROMPT_THRESHOLD;
-        if (!Number.isInteger(threshold) || threshold <= 0) {
-            throw new Error('CONFIG.BACKUP.RETENTION_PROMPT_THRESHOLD must be a positive integer');
-        }
-        return threshold;
-    }
-
-    _getBackupRetentionSuggestedKeepCount() {
-        const suggestedKeepCount = CONFIG.BACKUP.RETENTION_SUGGESTED_KEEP_COUNT;
-        if (!Number.isInteger(suggestedKeepCount) || suggestedKeepCount <= 0) {
-            throw new Error('CONFIG.BACKUP.RETENTION_SUGGESTED_KEEP_COUNT must be a positive integer');
-        }
-        return suggestedKeepCount;
-    }
-
     async _prepareForModalOpen(commandName) {
         if (typeof commandName !== 'string' || commandName.length === 0) {
             throw new Error('_prepareForModalOpen requires commandName');
@@ -2037,32 +2019,6 @@ class CommandPaletteController {
         await this.openReminders({ search: detail.search });
     }
 
-    async _listBackupsForRetentionPrompt() {
-        const payload = await this._authRequest(CONFIG.API.AUTH.BACKUP.LIST, 'GET', null);
-        if (!payload || typeof payload !== 'object') {
-            throw new Error('Backup list response missing body');
-        }
-        if (!Array.isArray(payload.backups)) {
-            throw new Error('Backup list response missing backups array');
-        }
-        return payload.backups;
-    }
-
-    async _openBackupRetentionModal(retentionContext) {
-        if (!retentionContext || typeof retentionContext !== 'object') {
-            throw new Error('_openBackupRetentionModal requires retentionContext object');
-        }
-        if (this._backupRetentionModal === null) {
-            this._backupRetentionModal = new BackupRetentionModal();
-        }
-        const isReady = await this._prepareForModalOpen('commandPalette.backupRetention');
-        if (!isReady) {
-            return null;
-        }
-
-        return await this._backupRetentionModal.openForBackup(retentionContext);
-    }
-
     async _openBackupResultModal(resultContext) {
         if (!resultContext || typeof resultContext !== 'object') {
             throw new Error('_openBackupResultModal requires resultContext object');
@@ -2087,80 +2043,6 @@ class CommandPaletteController {
             return null;
         }
         return await this._backupSettingsModal.openForBackup();
-    }
-
-    async _maybeDeleteOldestBackupsAfterCreate(createdFilename) {
-        if (typeof createdFilename !== 'string' || createdFilename.length === 0) {
-            throw new Error('_maybeDeleteOldestBackupsAfterCreate requires createdFilename');
-        }
-
-        const backups = await this._listBackupsForRetentionPrompt();
-        const backupCount = backups.length;
-        const threshold = this._getBackupRetentionPromptThreshold();
-        if (backupCount < threshold) {
-            return {
-                deletedCount: 0,
-                remainingCount: backupCount,
-            };
-        }
-        const suggestedKeepCount = this._getBackupRetentionSuggestedKeepCount();
-
-        const modalResult = await this._openBackupRetentionModal({
-            createdFilename,
-            backupCount,
-            suggestedKeepCount,
-        });
-        if (modalResult === null) {
-            return {
-                deletedCount: 0,
-                remainingCount: backupCount,
-            };
-        }
-        if (!modalResult || typeof modalResult !== 'object') {
-            throw new Error('Retention modal result missing');
-        }
-
-        if (modalResult.action !== 'apply') {
-            return {
-                deletedCount: 0,
-                remainingCount: backupCount,
-            };
-        }
-        if (!Number.isInteger(modalResult.keepCount)) {
-            throw new Error('Retention modal result missing keepCount');
-        }
-
-        const keepCount = modalResult.keepCount;
-        if (keepCount < 1 || keepCount > backupCount) {
-            throw new Error(`keepCount out of range: ${keepCount}`);
-        }
-
-        const deleteCount = backupCount - keepCount;
-        if (deleteCount <= 0) {
-            return {
-                deletedCount: 0,
-                remainingCount: backupCount,
-            };
-        }
-
-        const payload = await this._authRequest(CONFIG.API.AUTH.BACKUP.DELETE_OLDEST, 'POST', {
-            count: deleteCount,
-        });
-        if (!payload || typeof payload !== 'object') {
-            throw new Error('Backup delete response missing body');
-        }
-        if (!Array.isArray(payload.deleted_backups)) {
-            throw new Error('Backup delete response missing deleted_backups array');
-        }
-        const deletedCount = payload.deleted_backups.length;
-        const remainingCount = backupCount - deletedCount;
-        if (remainingCount < 0) {
-            throw new Error(`remainingCount must be non-negative, got ${remainingCount}`);
-        }
-        return {
-            deletedCount,
-            remainingCount,
-        };
     }
 
     async createBackup() {

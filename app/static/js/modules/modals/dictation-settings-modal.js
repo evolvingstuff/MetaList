@@ -1,6 +1,7 @@
 import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
 import { isValidDictationTagPhrase } from '../mode-manager/services/dictation-note-paste.js';
+import { escapeHtml } from '../html-escape.js';
 
 // The phrases, in the order shown: the one that starts tags in a note, and the
 // two around a quoted phrase (docs/ui/dictation-paste.md).
@@ -59,7 +60,7 @@ export class DictationSettingsModal extends BaseModal {
         let disabled = '';
         if (state.saving === true) disabled = ' disabled';
         let errorHtml = '';
-        if (state.error !== '') errorHtml = `<p class="dictation-settings-error" role="alert">${state.error}</p>`;
+        if (state.error !== '') errorHtml = `<p class="dictation-settings-error" role="alert">${escapeHtml(state.error)}</p>`;
         const fields = FIELDS.map((field) => `
                 <label class="dictation-settings-field" for="${field.id}">${field.label}</label>
                 <input type="text" id="${field.id}" spellcheck="false" autocomplete="off"${disabled}>`).join('');

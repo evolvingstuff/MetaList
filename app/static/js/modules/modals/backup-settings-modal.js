@@ -4,6 +4,7 @@ import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js'
 import { BaseModal } from './base-modal.js';
 import { CONFIG } from '../config.js';
 import { buildSessionHeaders } from '../session-auth.js';
+import { escapeHtml } from '../html-escape.js';
 
 
 function parseResponseError(responseBody, statusCode) {
@@ -18,18 +19,6 @@ function parseResponseError(responseBody, statusCode) {
     return `Request failed (${statusCode})`;
 }
 
-
-function escapeHtml(value) {
-    if (typeof value !== 'string') {
-        return '';
-    }
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-}
 
 
 export class BackupSettingsModal extends BaseModal {
@@ -204,7 +193,7 @@ export class BackupSettingsModal extends BaseModal {
 
                 <div class="form-group">
                     <label for="backup-settings-retention-count">Backups to retain per namespace</label>
-                    <input type="number" id="backup-settings-retention-count" min="1" step="1" value="${retentionCountText}" ${loading || saving ? 'disabled' : ''}>
+                    <input type="number" id="backup-settings-retention-count" min="1" step="1" value="${escapeHtml(retentionCountText)}" ${loading || saving ? 'disabled' : ''}>
                 </div>
 
                 <div class="form-actions">
