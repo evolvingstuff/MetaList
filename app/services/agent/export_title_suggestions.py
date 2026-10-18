@@ -17,7 +17,6 @@ from dataclasses import dataclass
 import json
 import re
 from typing import Literal
-from uuid import uuid4
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
@@ -32,11 +31,13 @@ from app.services.agent.inference import InferenceProviderError
 from app.services.agent.inference import StructuredInferenceError
 from app.services.agent.token_estimation import estimate_input_tokens
 from app.services.agent.trace import agent_trace_store
+from app.services.agent.ai_send import send_structured
 from app.services.content_formatting import extract_note_text_for_agent
 from app.services.content_formatting import is_password_note
 from app.services.content_formatting import is_username_note
 from app.services.note_store import store as note_store
 from app.services.search_index import extract_ordered_tags_for_search
+from app.contracts import preserves, produces, requires
 
 
 # How much of it the AI reads, from the top: a title needs the gist.
@@ -131,10 +132,12 @@ def build_export_title_request(
             is_full = True
             continue
         notes.append(note)
-    return ExportTitleRequest(notes=tuple(notes), has_hidden_notes=has_hidden_notes)
+    # The notes are those the evaluator did not hide, so the AI may read them.
+    return produces(ExportTitleRequest(notes=tuple(notes), has_hidden_notes=has_hidden_notes), "cloud_disclosable")
 
 
 def export_title_messages(request: ExportTitleRequest, previous_titles: tuple[str, ...]) -> list[dict[str, str]]:
+    requires(request, "cloud_disclosable")
     assert request.notes, "There is nothing the AI may read to title"
     assert len(previous_titles) <= MAX_PREVIOUS_TITLES
     payload: dict[str, object] = {"notes": list(request.notes)}
@@ -146,7 +149,8 @@ def export_title_messages(request: ExportTitleRequest, previous_titles: tuple[st
             "titles_already_suggested, not a rewording of one."
         )})
     messages.append({"role": "user", "content": json.dumps(payload, ensure_ascii=False)})
-    return messages
+    # The request's notes, static instructions, and titles this dialog already showed.
+    return preserves(messages, request)
 
 
 def _one_line_title(answer: str) -> str:
@@ -163,14 +167,16 @@ def _ignore_progress(progress: object) -> None:
 
 async def suggest_export_title(
     *, request: ExportTitleRequest, previous_titles: tuple[str, ...], inference: InferenceAdapter,
-    base_url: str, model: str, thinking_level: str, web_mode: str, session_key: str,
+    base_url: str, model: str, thinking_level: str, web_mode: str, session_key: str, run_id: str,
 ) -> str:
-    """The AI's title for the export or print; InferenceProviderError when it gives none."""
+    """The AI's title for the export or print, its attempts recorded under the trace run
+    `run_id` (agent_trace_store.start_run); InferenceProviderError when it gives none."""
+    requires(request, "cloud_disclosable")
     messages = export_title_messages(request, previous_titles)
     # lint: allow-PY001 rationale="the model's replies were rejected on every attempt: say why, in plain words"
     try:
-        response = await inference.infer_structured(
-            base_url=base_url, model=model, thinking_level=thinking_level,
+        response = await send_structured(
+            inference, base_url=base_url, model=model, thinking_level=thinking_level,
             messages=messages, response_model=ExportTitleAnswer, on_progress=_ignore_progress,
         )
     # lint: allow-PY001 rationale="the model's replies were rejected on every attempt: say why, in plain words"
@@ -179,7 +185,6 @@ async def suggest_export_title(
             response_model=ExportTitleAnswer, attempts=exc.attempts,
             setup=FailureSetup(model=model, thinking_level=thinking_level, web_mode=web_mode),
         )) from exc
-    run_id = str(uuid4())
     for attempt in response.attempts:
         agent_trace_store.append_event(
             session_key=session_key, run_id=run_id, event_type="EXPORT_TITLE_INFERENCE",

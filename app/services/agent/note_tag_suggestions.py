@@ -40,6 +40,7 @@ from app.services.note_store import store as note_store
 from app.services.search_index import extract_ordered_tags_for_search
 from app.services.search_index import search_index
 from app.services.tag_suggestions import suggest_tags_for_note
+from app.contracts import preserves, produces, requires
 
 
 # How many of the tag bar's suggestions for the note, then of the most used tags, the AI sees.
@@ -204,16 +205,19 @@ def build_note_tag_request(
         for trees, context in groups
     )
     assert frozenset().union(*(batch.note_ids for batch in batches)) == note_ids
-    return NoteTagRequest(
+    # The note was checked visible, its children and the vocabulary are filtered by the
+    # evaluator, and the ancestors are visible by the hierarchy rule.
+    return produces(NoteTagRequest(
         note_id=note_id, note_ids=note_ids, batches=batches,
         ancestors_by_batch=tuple(context for _trees, context in groups),
         vocabulary=vocabulary, rules=rules, tag_skill=tag_skill,
         visible_vocabulary=visible_tag_counts(boundary)[0],
-    )
+    ), "cloud_disclosable")
 
 
 def request_messages(request: NoteTagRequest, index: int, prior_batch_new_tags: tuple[str, ...]) -> list[dict[str, str]]:
     """Batch `index`'s messages, built with the production tagging instructions."""
+    requires(request, "cloud_disclosable")
     user_payload = {
         "request": _REQUEST,
         "tagging_mode": "new",
@@ -227,7 +231,8 @@ def request_messages(request: NoteTagRequest, index: int, prior_batch_new_tags: 
         tag_skill=request.tag_skill, vocabulary_scope=_VOCABULARY_SCOPE, focus="both", user_payload=user_payload,
     )
     messages.insert(_RULES_MESSAGE_INDEX, {"role": "system", "content": request.rules})
-    return messages
+    # The request's notes and vocabulary, static rules, and the AI's own new tags from batch 1.
+    return preserves(messages, request)
 
 
 def keep_new_tags_up_to_limit(*, tags: tuple[str, ...], visible_vocabulary: dict[str, str]) -> tuple[str, ...]:
@@ -243,6 +248,30 @@ def keep_new_tags_up_to_limit(*, tags: tuple[str, ...], visible_vocabulary: dict
     return tuple(kept)
 
 
+# Module functions taking the request, not closures over it, so the property contract
+# check follows the request to every batch's messages.
+async def _infer_tag_batch(
+    inference: InferenceAdapter, run: _OneNoteRun, request: NoteTagRequest, index: int,
+    prior_batch_new_tags: tuple[str, ...], context_tokens: int,
+) -> dict[str, tuple[str, ...]]:
+    """Batch `index` of the request, answered and validated."""
+    requires(request, "cloud_disclosable")
+    return await infer_validated_batch(
+        inference, run, request_messages(request, index, prior_batch_new_tags), request.batches[index],
+        request.note_ids, "new", context_tokens, request.visible_vocabulary,
+    )
+
+
+async def _infer_tag_batch_in_turn(
+    semaphore: asyncio.Semaphore, inference: InferenceAdapter, run: _OneNoteRun, request: NoteTagRequest,
+    index: int, prior_batch_new_tags: tuple[str, ...], context_tokens: int,
+) -> dict[str, tuple[str, ...]]:
+    """_infer_tag_batch once the semaphore lets another batch run."""
+    requires(request, "cloud_disclosable")
+    async with semaphore:
+        return await _infer_tag_batch(inference, run, request, index, prior_batch_new_tags, context_tokens)
+
+
 async def suggest_note_tags(
     *, request: NoteTagRequest, inference: InferenceAdapter, base_url: str, model: str,
     thinking_level: str, web_settings: AgentWebSettings, session_key: str, run_id: str,
@@ -251,6 +280,7 @@ async def suggest_note_tags(
     (agent_trace_store.start_run). Yields {"type": "progress", "completed", "total"} as
     batches finish, then {"type": "proposals", "proposals": {note_id: [tags]}}.
     InferenceProviderError when it cannot answer usefully."""
+    requires(request, "cloud_disclosable")
     run = _OneNoteRun(
         base_url=base_url, selected_model=model, thinking_level=thinking_level,
         web_settings=web_settings, session_key=session_key, run_id=run_id,
@@ -258,25 +288,17 @@ async def suggest_note_tags(
     context = await inference.inspect_context_window(base_url=base_url, model=model)
     total = len(request.batches)
 
-    async def infer_batch(index: int, prior_batch_new_tags: tuple[str, ...]) -> dict[str, tuple[str, ...]]:
-        return await infer_validated_batch(
-            inference, run, request_messages(request, index, prior_batch_new_tags), request.batches[index],
-            request.note_ids, "new", context.loaded_tokens, request.visible_vocabulary,
-        )
-
     yield {"type": "progress", "completed": 0, "total": total}
-    results = [await infer_batch(0, ())]
+    results = [await _infer_tag_batch(inference, run, request, 0, (), context.loaded_tokens)]
     yield {"type": "progress", "completed": 1, "total": total}
     first_new_tags = tuple(dict.fromkeys(
         tag for tags in results[0].values() for tag in tags if tag.casefold() not in request.visible_vocabulary
     ))
     semaphore = asyncio.Semaphore(_PARALLEL_BATCHES)
-
-    async def infer_later(index: int) -> dict[str, tuple[str, ...]]:
-        async with semaphore:
-            return await infer_batch(index, first_new_tags)
-
-    tasks = [asyncio.create_task(infer_later(index)) for index in range(1, total)]
+    tasks = []
+    for index in range(1, total):
+        tasks.append(asyncio.create_task(_infer_tag_batch_in_turn(
+            semaphore, inference, run, request, index, first_new_tags, context.loaded_tokens)))
     try:
         for completed in asyncio.as_completed(tasks):
             results.append(await completed)

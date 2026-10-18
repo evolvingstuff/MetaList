@@ -28,6 +28,7 @@ from app.services.agent.export_title_suggestions import suggest_export_title
 from app.services.agent.strict_structured_outputs import strict_openai_schema
 from app.services.agent.structured_inference import _structured_max_output_tokens
 from app.services.agent.token_estimation import estimate_input_tokens
+from app.services.agent.trace import agent_trace_store
 from app.services.content_cache import clear_cache
 from app.services.file_registry import file_registry
 from app.services.input_errors import InputRejected
@@ -155,10 +156,15 @@ class _Rejected(_Answers):
 
 
 def _suggest(request, inference) -> str:
-    return asyncio.run(suggest_export_title(
-        request=request, previous_titles=(), inference=inference, base_url="https://api.example", model="gpt-5.6-luna",
-        thinking_level="low", web_mode="none", session_key="session",
-    ))
+    run_id = agent_trace_store.start_run(session_key="session", model="gpt-5.6-luna", user_message="Suggest a title")
+    # lint: allow-PY001 rationale="the session's trace is cleared whether the title came or the AI failed"
+    try:
+        return asyncio.run(suggest_export_title(
+            request=request, previous_titles=(), inference=inference, base_url="https://api.example",
+            model="gpt-5.6-luna", thinking_level="low", web_mode="none", session_key="session", run_id=run_id,
+        ))
+    finally:
+        agent_trace_store.clear_session(session_key="session")
 
 
 def test_the_answer_is_one_short_line(live_database) -> None:
@@ -234,6 +240,27 @@ def test_the_routes_say_whether_the_ai_can_ask_and_stream_its_title(live_databas
 
     monkeypatch.setattr(ai_setup_module, "OpenAIInferenceAdapter", lambda **kwargs: _Failing(""))
     assert _title_lines("trip") == [{"type": "failed", "message": "OpenAI API request failed: connection reset"}]
+
+
+def test_a_title_after_a_chat_in_the_session_is_traced_as_its_own_run(live_database, monkeypatch) -> None:
+    """Reported 2026-10-18: once the session had a chat answer in its trace, Suggest
+    title failed with a server error: it recorded its attempts under a run id it never
+    started, which the trace store refuses."""
+    _trip()
+    monkeypatch.setattr(ai_routes.token_service, "get_session_key", lambda token: "session")
+    monkeypatch.setattr(ai_routes, "load_client_preferences", lambda *, token: _policy("private"))
+    monkeypatch.setattr(ai_routes.tab_state_store, "get_sort_mode", lambda *, tab_id: "normal")
+    _set_ai_ready(monkeypatch, is_ready=True)
+    monkeypatch.setattr(ai_setup_module, "OpenAIInferenceAdapter", lambda **kwargs: _Answers("Kyoto in Spring"))
+    agent_trace_store.clear_session(session_key="session")
+    chat_run = agent_trace_store.start_run(session_key="session", model="gpt-5.6-luna", user_message="Hello")
+    agent_trace_store.complete_run(session_key="session", run_id=chat_run)
+
+    assert _title_lines("trip") == [{"type": "title", "title": "Kyoto in Spring"}]
+    title_run = agent_trace_store.snapshot(session_key="session")["run"]
+    agent_trace_store.clear_session(session_key="session")
+    assert title_run["run_id"] != chat_run and title_run["status"] == "complete"
+    assert [event["type"] for event in title_run["events"]] == ["EXPORT_TITLE_INFERENCE"]
 
 
 def test_a_print_names_its_note_or_none() -> None:

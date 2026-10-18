@@ -83,6 +83,7 @@ from app.services.ai_setup import describe_ai_setup
 from app.services.input_errors import InputRejected
 from app.utils.text_utils import strip_html
 from app.services.preference_values import preference_or_default
+from app.contracts import requires
 
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -521,6 +522,7 @@ async def _note_tag_suggestion_events(
     *, request: NoteTagRequest, connection: AiConnection, payload: NoteTagSuggestionRequest,
     web_settings: AgentWebSettings, session_key: str,
 ) -> AsyncIterator[str]:
+    requires(request, "cloud_disclosable")
     # Its own run in the session's trace (diagnostics, AI history), as a chat answer has.
     run_id = agent_trace_store.start_run(
         session_key=session_key, model=payload.model, user_message="Suggest Tags with AI",
@@ -605,18 +607,25 @@ async def _export_title_events(
     *, request: ExportTitleRequest, payload: ExportTitleSuggestionRequest, connection: AiConnection,
     web_mode: str, session_key: str,
 ) -> AsyncIterator[str]:
+    requires(request, "cloud_disclosable")
     previous_titles = tuple(payload.previous_titles)
+    # Its own run in the session's trace (diagnostics, AI history), as Suggest Tags has.
+    run_id = agent_trace_store.start_run(
+        session_key=session_key, model=payload.model, user_message="Suggest a title with AI",
+    )
     # lint: allow-PY001 rationale="the AI provider failed or answered without a title: the dialog shows why"
     try:
         title = await suggest_export_title(
             request=request, previous_titles=previous_titles, inference=connection.inference,
             base_url=connection.base_url, model=payload.model, thinking_level=payload.thinking_level,
-            web_mode=web_mode, session_key=session_key,
+            web_mode=web_mode, session_key=session_key, run_id=run_id,
         )
     # lint: allow-PY001 rationale="the AI provider failed or answered without a title: the dialog shows why"
     except InferenceProviderError as exc:
+        agent_trace_store.fail_run(session_key=session_key, run_id=run_id, error=str(exc))
         yield json.dumps({"type": "failed", "message": str(exc)}) + "\n"
         return
+    agent_trace_store.complete_run(session_key=session_key, run_id=run_id)
     yield json.dumps({"type": "title", "title": title}) + "\n"
 
 

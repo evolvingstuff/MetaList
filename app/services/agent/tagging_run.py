@@ -22,6 +22,7 @@ from app.services.agent.failure_explanations import FailureSetup, explain_struct
 from app.services.agent.context import format_active_skill
 from app.services.agent.token_estimation import estimate_message_tokens, estimate_input_tokens
 from app.services.agent.trace import agent_trace_store
+from app.services.agent.ai_send import send_structured
 from app.services.bulk_operation import bulk_operation_guard
 from app.services.client_state_service import load_client_preferences, save_client_preferences
 from app.services.content_formatting import extract_note_text_for_agent
@@ -33,6 +34,7 @@ from app.services.tokens import token_service
 from app.services.snapshot import resolve_view_scope_membership
 from app.usecases.bulk_tag_proposals import apply_bulk_proposals, prepare_proposal_changes
 from app.services.preference_values import preference_or_default
+from app.contracts import preserves, requires
 
 
 _TAGGING_CORRECTION_ATTEMPTS = 3
@@ -55,7 +57,8 @@ def tag_batch_messages(*, tag_skill, vocabulary_scope, focus, user_payload):
     assert isinstance(vocabulary_scope, str) and vocabulary_scope.endswith(".")
     assert focus in _FOCUS_INSTRUCTIONS
     assert isinstance(user_payload, dict)
-    return [
+    # What the payload carried: the instructions around it are static.
+    return preserves([
         {"role": "system", "content": format_active_skill(tag_skill)},
         {"role": "system", "content": (
             "Suggest directly ONLY on note IDs in result_trees. " + vocabulary_scope + " "
@@ -73,7 +76,7 @@ def tag_batch_messages(*, tag_skill, vocabulary_scope, focus, user_payload):
             "related accepted_vocabulary terms (dashes, underscores, CamelCase, etc.). "
             "Copy existing terms exactly. " + _FOCUS_INSTRUCTIONS[focus])},
         {"role": "user", "content": json.dumps(user_payload, ensure_ascii=False, separators=(",", ":"))},
-    ]
+    ], user_payload)
 
 
 def tagging_trees(snapshot):
@@ -106,10 +109,11 @@ def proposal_scope_ids(descriptor):
 
 
 async def infer_with_progress(inference, run, messages, response_model, on_progress):
+    requires(messages, "cloud_disclosable")
     # lint: allow-PY001 rationale="explain an external model's rejected structured replies in the chat, then fail"
     try:
-        response = await inference.infer_structured(
-            base_url=run.base_url, model=run.selected_model, thinking_level=run.thinking_level,
+        response = await send_structured(
+            inference, base_url=run.base_url, model=run.selected_model, thinking_level=run.thinking_level,
             messages=messages, response_model=response_model, on_progress=on_progress)
     # lint: allow-PY001 rationale="the model's replies were rejected on every attempt: say why, in plain words"
     except StructuredInferenceError as exc:
@@ -138,6 +142,7 @@ async def infer_validated_batch(
     inference, run, messages, batch, scope_note_ids, policy,
     context_tokens, visible_vocabulary,
 ):
+    requires(messages, "cloud_disclosable")
     attempt_messages = messages
     validation_failures = []
     for attempt in range(_TAGGING_CORRECTION_ATTEMPTS + 1):
@@ -161,7 +166,8 @@ async def infer_validated_batch(
                     f"{_TAGGING_CORRECTION_ATTEMPTS} correction attempts; "
                     f"nothing was applied: {exc}"
                 ) from exc
-            attempt_messages = [*messages, {"role": "system", "content": (
+            # The batch's messages and the validation errors of the AI's own answer.
+            attempt_messages = preserves([*messages, {"role": "system", "content": (
                 "Earlier attempts failed validation. Generate the complete batch again and correct every "
                 "failure listed below. Any tag named in a failure is forbidden in this response; do not "
                 "return it again.\n- " + "\n- ".join(validation_failures) +
@@ -169,7 +175,8 @@ async def infer_validated_batch(
                 "When existing tags only is required, copy tags exactly from accepted_vocabulary; "
                 "do not invent synonyms or variants. Omit notes with no useful permitted tags. "
                 "For new-only requests, exclude accepted_vocabulary terms and every existing tag identified "
-                "by validation, even if that tag was absent from accepted_vocabulary. Return only the required JSON.") }]
+                "by validation, even if that tag was absent from accepted_vocabulary. Return only the required JSON.") }],
+                messages)
     raise AssertionError("Bounded tagging correction must return or raise")
 
 

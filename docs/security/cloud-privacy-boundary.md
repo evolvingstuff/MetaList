@@ -147,6 +147,35 @@ scope with private notes (filtered at Send), export titles over private notes
 summary batches (keyed by content and cleared on a boundary change), a hidden
 note asked for by full id (reported as unknown).
 
+## Property contracts (ShockHarness)
+
+The boundary is declared as the property `cloud_disclosable` ("built only from what the
+cloud privacy rules let the AI see, at Send"), checked by ShockHarness on every run
+(`.shockharness.toml`, `[tool.shockharness.rules.property_contracts]`; the runtime file
+is `app/contracts.py`, identity-only unless a test enables it).
+
+- **One send path.** Every message sent to an AI goes through
+  `app/services/agent/ai_send.py` (`send_structured`, `send_text_stream`,
+  `send_tool_turn`), and each starts with `requires(messages, "cloud_disclosable")`.
+  `tests/unit/test_ai_send.py` fails when any other application module calls an
+  adapter's send methods, or when one of those `requires` lines changes, so no send is
+  left unchecked. (The adapters' own methods are called on injected objects, which the
+  analysis cannot resolve; `PrivacyGuardedInference` is an adapter and delegates.)
+- **Producers** (the catalog's list): `ScopedSearchSnapshotFactory.freeze`,
+  `note_tag_suggestions.build_note_tag_request` and
+  `export_title_suggestions.build_export_title_request`, the filtering steps above.
+- **Message builders** say `preserves(messages, source)`: a reviewable claim that the
+  messages hold only what the filtered source held, plus static instructions and the
+  AI's own output (`export_title_messages`, `request_messages`, `tag_batch_messages`,
+  the tagging correction turn).
+- **Verified end to end:** export and print title suggestion, and Suggest Tags with AI.
+- **Not followed yet** (four PROP001 review findings, left visible on purpose): chat
+  agent turns, chat summaries, chat final answers and bulk tagging. Their messages are
+  built by an injected builder object from a snapshot stored on objects, which
+  ShockHarness 0.10 does not follow; `docs/design/shockharness-0.10-contracts-feedback.md`
+  asks for it. Adding unchecked `preserves` claims there instead was rejected: it would
+  look verified without being so.
+
 ## Catalog for the pilot
 
 - Producer of `cloud_disclosable`: `ScopedSearchSnapshotFactory.freeze` (and
@@ -154,8 +183,8 @@ note asked for by full id (reported as unknown).
   `note_tag_suggestions` and `export_title_suggestions` for the others, relying on
   `CloudPrivacyEvaluator.hidden_note_ids` and `.exclusion_reason`.
 - Sinks: `InferenceAdapter.stream_tool_turn`, `.stream_text` and
-  `.infer_structured`, argument `messages` (the pilot needs keyword addressing or
-  their positions).
+  `.infer_structured`, argument `messages`; in practice the three `ai_send` functions
+  (above).
 - Sanctioned sources that are not note text, declared explicitly: the user's
   message, the snapshot's disclosable search query and label, provider output, web
   evidence, static prompts and skills.
