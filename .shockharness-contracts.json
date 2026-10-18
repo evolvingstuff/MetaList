@@ -1,0 +1,11 @@
+{
+  "agent": "contracts",
+  "schema_version": "1",
+  "skills": {
+    "python": {
+      "path": "app/contracts.py",
+      "sha256": "5ffba82bb59f1b5d91f2ebdf3a3245c8c9c3c02f704571422e0a9771e41b503b"
+    }
+  },
+  "tool_version": "0.10.0"
+}

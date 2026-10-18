@@ -607,3 +607,31 @@ reason = "Browser test suites spell out the positions, offsets and waits they ch
 [tool.shockharness.cache]
 enabled = true
 directory = ".shockharness-cache"
+
+# Property contracts (ShockHarness spec, docs/security/cloud-privacy-boundary.md): note
+# text reaches an AI provider only after the cloud privacy rules let the AI see it.
+[tool.shockharness.rules.property_contracts]
+enabled = true
+roles = ["production"]
+fail_on_unknown = false
+runtime_module = ["app/contracts.py"]
+allow_undeclared = false
+enforcement = "declared"
+complete_paths = []
+max_depth = 3
+runtime_mode_required = "check"
+registration_module = ""
+
+[[tool.shockharness.rules.property_contracts.properties]]
+name = "cloud_disclosable"
+description = "built only from what the cloud privacy rules let the AI see (CloudPrivacyEvaluator), at Send"
+producers = [
+  "app.services.agent.scope.ScopedSearchSnapshotFactory.freeze",
+  "app.services.agent.note_tag_suggestions.build_note_tag_request",
+  "app.services.agent.export_title_suggestions.build_export_title_request",
+]
+runtime = "static"
+
+# The sinks are the requires(messages, "cloud_disclosable") in app/services/agent/ai_send.py,
+# every send's only path (tests/unit/test_ai_send.py). Catalog sinks naming those project
+# functions cannot match their keyword arguments in 0.10.0, so each would be unknown.

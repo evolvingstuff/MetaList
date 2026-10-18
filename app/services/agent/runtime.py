@@ -59,6 +59,8 @@ from app.services.agent.web_evidence import citation_references_for_pages
 from app.services.agent.web_evidence import web_evidence_store
 from app.services.bulk_operation import bulk_operation_guard
 from app.services.agent.history import record_history
+from app.services.agent.ai_send import send_structured
+from app.services.agent.ai_send import send_text_stream
 from app.utils.time_units import MS_PER_SECOND
 
 
@@ -1140,7 +1142,8 @@ class AgentRuntime(AgentLoopMixin):
     ) -> InferenceResponse:
         # lint: allow-PY001 rationale="capture Instructor retry attempts before surfacing an external inference failure"
         try:
-            return await self._inference.infer_structured(
+            return await send_structured(
+                self._inference,
                 base_url=run.base_url,
                 model=model,
                 thinking_level=run.thinking_level,
@@ -1283,7 +1286,8 @@ class AgentRuntime(AgentLoopMixin):
             is_waiting_for_provider = True
             # lint: allow-PY001 rationale="retry a failed external model stream only before output"
             try:
-                async for event in self._inference.stream_text(  # shockharness: ignore[EXC003] reason="each pull from the provider's stream is the external operation; the body forwards the event"
+                async for event in send_text_stream(  # shockharness: ignore[EXC003] reason="each pull from the provider's stream is the external operation; the body forwards the event"
+                    self._inference,
                     base_url=run.base_url,
                     model=model,
                     thinking_level=run.thinking_level,

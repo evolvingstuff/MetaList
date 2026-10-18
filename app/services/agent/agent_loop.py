@@ -54,6 +54,7 @@ from app.services.agent.citation_tokens import ShortCitationTranslator
 from app.services.agent.note_aliases import NoteAliases
 from app.services.agent.execution_errors import AgentExecutionError
 from app.services.agent.action_log import describe_action
+from app.services.agent.ai_send import send_tool_turn
 from app.utils.time_units import MS_PER_SECOND
 
 
@@ -314,8 +315,8 @@ class AgentLoopMixin:
         is_waiting_for_provider = True
         started_at = time.perf_counter()
         is_first_delta = True
-        async for event in self._inference.stream_tool_turn(
-            base_url=run.base_url, model=run.selected_model, thinking_level=run.thinking_level,
+        async for event in send_tool_turn(
+            self._inference, base_url=run.base_url, model=run.selected_model, thinking_level=run.thinking_level,
             messages=messages, tools=tools, max_output_tokens=AGENT_TURN_MAX_OUTPUT_TOKENS,
             on_request=lambda wire_request: self._record_wire_request(
                 run=run, purpose=InferencePurpose.AGENT_TURN, attempt=1, max_attempts=1,
@@ -328,11 +329,15 @@ class AgentLoopMixin:
             if event["type"] == "provider_started":
                 continue
             if event["type"] == "content_delta":
-                text = event["text"]
+                delta = event["text"]
+                assert isinstance(delta, str), "a content delta carries text"
+                text = delta
                 if is_first_delta:
                     text = self._separator(state) + text
                     is_first_delta = False
-                turn["content"] += event["text"]
+                content_so_far = turn["content"]
+                assert isinstance(content_so_far, str), "a turn's content is text"
+                turn["content"] = content_so_far + delta
                 for content_event in state.model_text_events(text):
                     yield content_event
             elif event["type"] == "tool_call":
