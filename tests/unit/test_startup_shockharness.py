@@ -43,7 +43,7 @@ _STRICT = '[tool.shockharness]\nprofile = "strict"\ninclude = ["src/**/*.py"]\n'
 def test_without_the_tool_startup_says_how_to_install_it_and_goes_on(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(startup_shockharness.importlib.util, "find_spec", lambda name: None)
     assert shockharness_report_lines(tmp_path) == (f"not installed: {SHOCKHARNESS_INSTALL_HINT}", ())
-    assert "shockharness==0.11.0" in SHOCKHARNESS_INSTALL_HINT and "3.11" in SHOCKHARNESS_INSTALL_HINT
+    assert "shockharness==0.12.0" in SHOCKHARNESS_INSTALL_HINT and "3.11" in SHOCKHARNESS_INSTALL_HINT
 
 
 @_NEEDS_THE_ANALYZER
