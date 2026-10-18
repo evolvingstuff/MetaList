@@ -614,7 +614,7 @@ directory = ".shockharness-cache"
 enabled = true
 roles = ["production"]
 fail_on_unknown = false
-runtime_module = ["app/contracts.py"]
+runtime_module = ["app/contracts.py", "app/static/js/shockharness/contracts.js"]
 allow_undeclared = false
 enforcement = "declared"
 complete_paths = []
@@ -631,6 +631,59 @@ producers = [
   "app.services.agent.export_title_suggestions.build_export_title_request",
 ]
 runtime = "static"
+
+# Markup reaching the page (the HTML sink map: escapeHtml for text, the note sanitizer for
+# note HTML). Escaped text is safe inside markup; sanitized markup is safe to assign.
+[[tool.shockharness.rules.property_contracts.properties]]
+name = "escaped_html"
+description = "text with & < > \" ' escaped by escapeHtml: safe in element text and quoted attribute values"
+producers = ["app/static/js/modules/html-escape.js:escapeHtml"]
+runtime = "static"
+
+[[tool.shockharness.rules.property_contracts.properties]]
+name = "sanitized_html"
+description = "markup safe to assign to the page: the note sanitizer's output, or constant markup around safe parts"
+producers = [
+  "app/static/js/modules/note-html-sanitizer.js:sanitizeNoteHtmlForStorage",
+  # Mermaid's own SVG, rendered with securityLevel 'strict'.
+  "app/static/js/modules/mode-manager/services/mermaid-render-service.js:renderMermaidCodeElement",
+]
+runtime = "static"
+literal_satisfies = true
+
+[[tool.shockharness.rules.property_contracts.compositions]]
+language = "javascript"
+operation = "template_literal"
+inputs_require = ["escaped_html"]
+produces = "sanitized_html"
+reason = "constant markup around escaped text is safe markup"
+
+[[tool.shockharness.rules.property_contracts.compositions]]
+language = "javascript"
+operation = "template_literal"
+inputs_require = ["sanitized_html"]
+produces = "sanitized_html"
+reason = "constant markup around sanitized markup is safe markup"
+
+[[tool.shockharness.rules.property_contracts.compositions]]
+language = "javascript"
+operation = "concat"
+inputs_require = ["escaped_html"]
+produces = "sanitized_html"
+reason = "constant markup joined to escaped text is safe markup"
+
+[[tool.shockharness.rules.property_contracts.compositions]]
+language = "javascript"
+operation = "concat"
+inputs_require = ["sanitized_html"]
+produces = "sanitized_html"
+reason = "constant markup joined to sanitized markup is safe markup"
+
+[[tool.shockharness.rules.property_contracts.sinks]]
+language = "javascript"
+target = "innerHTML"
+requires = ["sanitized_html"]
+reason = "unsanitized markup reaching the page is the XSS path"
 
 # The sinks are the requires(messages, "cloud_disclosable") in app/services/agent/ai_send.py,
 # every send's only path (tests/unit/test_ai_send.py). Catalog sinks naming those project

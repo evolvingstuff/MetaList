@@ -28,6 +28,7 @@ from app.startup_sanity_config import is_installed_distribution_root
 
 _JS_EXTENSIONS = frozenset({".js", ".jsx"})
 _TS_EXTENSIONS = frozenset({".ts", ".tsx"})
+_TS_DECLARATION_SUFFIX = ".d.ts"
 _MAX_VIOLATIONS = 200
 _CODEFRAME_GUTTER = " | "
 _CODEFRAME_CONTEXT_LINES = 2
@@ -163,7 +164,12 @@ def discover_javascript_source_paths(project_root: Path) -> list[Path]:
 def discover_typescript_source_paths(project_root: Path) -> list[Path]:
     if not isinstance(project_root, Path):
         raise TypeError(f"project_root must be a Path, got {type(project_root)}")
-    return _discover_source_paths(project_root=project_root, extensions=_TS_EXTENSIONS)
+    # A declaration file (.d.ts, such as the one beside the ShockHarness contracts
+    # runtime) describes types and holds no code for this checker to check.
+    return [
+        path for path in _discover_source_paths(project_root=project_root, extensions=_TS_EXTENSIONS)
+        if not path.name.endswith(_TS_DECLARATION_SUFFIX)
+    ]
 
 
 def _path_rel(project_root: Path, path: Path) -> str:

@@ -6,7 +6,8 @@ import { showUpdateNotice } from '../app-update-service.js';
 import { BackupReminder } from '../backup-reminder-service.js';
 import { receiveSearchSuggestionPreferences } from '../mode-manager/services/search-suggestion-windows-service.js';
 import { ApplicationState, stateValuesEqual } from '../application-state.js';
-import { HttpRequestError } from '../expected-errors.js';
+import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js';
+import { showFatalError } from '../error-overlay.js';
 import {
     openProposalMenu,
     removeAllTagSuggestionsFromCurrentContext,
@@ -2339,6 +2340,16 @@ class CommandPaletteController {
 
     async notifyAppUpdate() {
         await showUpdateNotice(this._preferences, () => this.openVersionInfo());
+    }
+
+    // Startup shows the update notice once the release check answers, without waiting
+    // for it. The notice handles a check that found nothing itself, so a failure here is
+    // a bug: unexpected errors reach the global overlay, any other shows as fatal too.
+    startUpdateNotice() {
+        void this.notifyAppUpdate().catch((error) => {
+            rethrowUnexpectedError(error);
+            showFatalError('The update notice could not be shown', error.message);
+        });
     }
 
     async openVersionInfo() {

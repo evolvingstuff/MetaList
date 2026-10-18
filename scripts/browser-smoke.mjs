@@ -570,8 +570,7 @@ try {
   const vendorChecks = await page.evaluate(async () => {
     const dirty = '<img src="invalid" onerror="window.__auditXss=1"><script>window.__auditXss=1</script><p>safe</p>';
     const clean = window.DOMPurify.sanitize(dirty);
-    const fragment = document.createElement('div');
-    fragment.innerHTML = clean;
+    const fragment = new DOMParser().parseFromString(clean, 'text/html').body;
     const {loadMermaidApi, buildMermaidConfig} = await import('/static/js/modules/mode-manager/services/mermaid-render-service.js');
     const mermaid = await loadMermaidApi(document);
     mermaid.initialize(buildMermaidConfig('default'));
@@ -586,6 +585,28 @@ try {
   assert.equal(vendorChecks.purifier, '3.4.16');
   assert(vendorChecks.clean && vendorChecks.mermaid && !vendorChecks.executed);
   console.log('PASS actual vendored sanitization and Mermaid rendering');
+
+  // Sanitizing a note for storage parses it inertly: the page loads none of the images
+  // it names on the way to the sanitizer (a live element would start fetching them).
+  const probeImage = `${origin}/static/img/sanitizer-probe.png`;
+  const remoteImage = 'https://example.com/sanitizer-probe-remote.png';
+  const probeRequests = [];
+  const recordProbe = request => {
+    if ([probeImage, remoteImage].includes(request.url())) probeRequests.push(request.url());
+  };
+  page.on('request', recordProbe);
+  const storedProbe = await page.evaluate(async ({probeImage, remoteImage}) => {
+    const {sanitizeNoteHtmlForStorage} = await import('/static/js/modules/note-html-sanitizer.js');
+    // The remote-marked image takes the path that parses before sanitizing; the plain
+    // one is what a live parse would fetch (the restore leaves its source alone).
+    return sanitizeNoteHtmlForStorage(`<p>Probe</p><img src="/static/img/favicon.ico" `
+      + `data-remote-image-source-url="${remoteImage}"><img src="${probeImage}">`);
+  }, {probeImage, remoteImage});
+  await page.waitForNetworkIdle({idleTime: 300});
+  page.off('request', recordProbe);
+  assert.deepEqual(probeRequests, [], 'sanitizing a note for storage made the page load its images');
+  assert(storedProbe.includes(remoteImage), `the remote image keeps its original source: ${storedProbe}`);
+  console.log('PASS sanitizing a note for storage loads none of its images');
 
   const fileId = await page.evaluate(async () => {
     const {buildSessionHeaders} = await import('/static/js/modules/session-auth.js');

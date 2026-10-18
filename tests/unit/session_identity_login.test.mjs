@@ -42,7 +42,7 @@ test('login and workspace requests retain the authenticated tab identity when br
     });
     window.ModeManager = {init: async () => { headers.push(buildSessionHeaders(true)); }};
     t.mock.method(CommandPalette, 'init', async () => {});
-    t.mock.method(CommandPalette, 'notifyAppUpdate', () => {});
+    t.mock.method(CommandPalette, 'startUpdateNotice', () => {});
     t.mock.method(CommandPalette, 'startBackupReminder', async () => {});
     t.mock.method(AiChatPanel, 'init', async () => {});
     t.mock.method(Auth, 'revealMainApp', () => {});

@@ -40,6 +40,8 @@ def test_discover_typescript_source_paths_finds_typescript_files(tmp_path: Path)
     _write_file(tmp_path / "frontend" / "src" / "widget.ts", "export const ok = true;\n")
     _write_file(tmp_path / "frontend" / "src" / "widget.tsx", "export const el = <div />;\n")
     _write_file(tmp_path / "frontend" / "src" / "widget.test.ts", "export const skip = true;\n")
+    # A declaration file describes types and holds no code to check.
+    _write_file(tmp_path / "frontend" / "src" / "contracts.d.ts", "export declare function f(): void;\n")
 
     paths = discover_typescript_source_paths(tmp_path)
     rel_paths = [path.relative_to(tmp_path).as_posix() for path in paths]

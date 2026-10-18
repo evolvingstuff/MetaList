@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await ReminderSurface.start();
         await CommandPalette.startBackupReminder();
         document.body.dataset.appReady = 'true';
-        CommandPalette.notifyAppUpdate();
+        CommandPalette.startUpdateNotice();
     } else {
         console.log('+++ main.js: Skipping ModeManager init due to auth requirement');
     }

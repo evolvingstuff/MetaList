@@ -104,7 +104,10 @@ JS_TEST_SUFFIXES = (
 )
 
 JS_TEST_BASENAMES = frozenset({"cypress.config.js", "cypress.config.ts"})
-JS_EXCLUDED_RELATIVE_PREFIXES = ("app/static/js/vendor/",)
+# Third-party files checked by their own pins: vendor/ by docs/security/vendor-manifest.json,
+# shockharness/ (the property-contracts runtime) by .shockharness-contracts.json
+# (tests/unit/test_shockharness_contracts_runtime.py).
+JS_EXCLUDED_RELATIVE_PREFIXES = ("app/static/js/vendor/", "app/static/js/shockharness/")
 
 
 def is_installed_distribution_root(project_root: Path) -> bool:

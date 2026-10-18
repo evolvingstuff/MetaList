@@ -375,7 +375,7 @@ export class BackupRestoreModal extends BaseModal {
 
                 <div class="form-group">
                     <label for="backup-select">Available Backups</label>
-                    <select id="backup-select" size="${selectSize}" ${loading || restoring || confirming || backups.length === 0 ? 'disabled' : ''}>
+                    <select id="backup-select" size="${escapeHtml(String(selectSize))}" ${loading || restoring || confirming || backups.length === 0 ? 'disabled' : ''}>
                         ${optionsHtml}
                     </select>
                 </div>

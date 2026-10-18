@@ -19,6 +19,7 @@ import { renderNamespaceLoadingTab } from './namespace-loading-page.js';
 import { selectNamespacePortsEditorProfile } from './namespace-ports-profile.js';
 import { buildNamespaceRenamePayload } from './namespace-rename-validation.js';
 import { escapeHtml } from '../html-escape.js';
+import { requires } from '../../shockharness/contracts.js';
 
 
 const STATUS_BANNER_SECONDS = 5;
@@ -227,6 +228,7 @@ class NamespaceModalBase extends BaseModal {
     }
 
     _renderIntoModal(html) {
+        requires(html, 'sanitized_html');
         const modalElement = document.getElementById(this.modalElementId);
         if (!modalElement) {
             throw new Error(`Modal element missing: ${this.modalElementId}`);

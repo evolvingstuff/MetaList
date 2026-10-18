@@ -2,10 +2,18 @@
   "agent": "contracts",
   "schema_version": "1",
   "skills": {
+    "javascript": {
+      "path": "app/static/js/shockharness/contracts.js",
+      "sha256": "c0566a0bdfa0d3471f69a94f2e54856f6c502cbc82fcad74227f24ce61e54a5f"
+    },
+    "javascript-types": {
+      "path": "app/static/js/shockharness/contracts.d.ts",
+      "sha256": "c087f3a5f2c83b44e3cd159fda2c931f0b6622c9f7680874164b1b34352799e3"
+    },
     "python": {
       "path": "app/contracts.py",
       "sha256": "5ffba82bb59f1b5d91f2ebdf3a3245c8c9c3c02f704571422e0a9771e41b503b"
     }
   },
-  "tool_version": "0.10.0"
+  "tool_version": "0.13.0"
 }
