@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { runThenCleanUp } from './suite-outcome.mjs';
+import { waitForAppIdle } from './browser-app-idle.mjs';
 
 // The Reminders popup handles its own clicks (docs/ui/reminders.md): pressing
 // "Got it" while a note is being edited clears the reminder on the first press,
@@ -14,11 +15,7 @@ const OPEN_REMINDERS_SELECTOR = '#reminder-surface [data-reminder-surface-open-r
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await page.waitForFunction(async () => {
-    const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
-    const {CommandGate} = await import('/static/js/modules/mode-manager/services/command-gate-service.js');
-    return !mode.isLoading && !CommandGate.isBusy();
-  });
+  await waitForAppIdle(page);
   await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
 }
 

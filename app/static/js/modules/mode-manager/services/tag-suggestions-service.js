@@ -262,7 +262,7 @@ export function updateTagSuggestions(tagBarInput) {
         if (!noteId) {
             throw new Error('Tag bar note element missing data-note-id');
         }
-        if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
+        if (!ModeContext.isEditingNote(noteId)) {
             const { container } = getTagSuggestionsContainer(tagBarInput);
             hideSuggestions(container);
             return;

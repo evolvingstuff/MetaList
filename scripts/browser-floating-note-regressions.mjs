@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { waitForAppIdle } from './browser-app-idle.mjs';
 
 // The view has settled: no command running, the network idle, and the scroll
 // position unchanged for a few frames. Any scroll closes an open context menu,
@@ -7,11 +8,7 @@ const SETTLED_FRAMES = 5;
 const NETWORK_IDLE_MS = 300;
 
 async function settled(page) {
-  await page.waitForFunction(async () => {
-    const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
-    const {CommandGate} = await import('/static/js/modules/mode-manager/services/command-gate-service.js');
-    return !mode.isLoading && !CommandGate.isBusy();
-  });
+  await waitForAppIdle(page);
   await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
   await page.evaluate(frames => new Promise(resolve => {
     let last = window.scrollY;

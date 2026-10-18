@@ -1,14 +1,12 @@
 import assert from 'node:assert/strict';
+import { waitForAppIdle } from './browser-app-idle.mjs';
 
 // A dropped .txt, .md, .csv or .json file keeps its pill (labelled by extension) and
 // gets its text as the last child of the note holding the pill, rendered by
 // @markdown, @csv or @json (docs/ui/references.md, "Dropped text files").
 
 async function idle(page) {
-  await page.waitForFunction(async () => {
-    const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
-    return !mode.isLoading;
-  });
+  await waitForAppIdle(page);
   await page.waitForNetworkIdle({idleTime: 300});
 }
 

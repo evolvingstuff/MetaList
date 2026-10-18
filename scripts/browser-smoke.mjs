@@ -45,6 +45,8 @@ import {checkSearchSuggestions} from './browser-search-suggestion-regressions.mj
 import {checkTagBarSuggestions} from './browser-tag-bar-suggestion-regressions.mjs';
 import {checkInputTarget} from './browser-input-target-regressions.mjs';
 import {checkOntologySearch} from './browser-ontology-search-regressions.mjs';
+import {checkDiagramClicks} from './browser-diagram-click-regressions.mjs';
+import {checkPictureDrag} from './browser-picture-drag-regressions.mjs';
 import {checkBackupReminder} from './browser-backup-reminder-regressions.mjs';
 import {checkReminderSurfaceWhileEditing} from './browser-reminder-surface-regressions.mjs';
 import {checkFloatingControlsWhileEditing} from './browser-floating-control-regressions.mjs';
@@ -116,7 +118,7 @@ try {
   browser.on('targetdestroyed', target => lifecycle(`target destroyed ${target.type()} ${target.url()}`));
   browser.on('targetcreated', target => lifecycle(`target created ${target.type()} ${target.url()}`));
   const updateFixture = await prepareUpdateFixture(page);
-  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'move-to-bottom', 'list-edges', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews', 'image-menu', 'tag-suggestion-menu', 'paste-formats', 'ai-note-tags', 'robot-proposals', 'export-print', 'url-cleaning', 'reference-paste', 'click-caret', 'editable-embeds', 'delete-warning', 'collapse-outlines', 'backup-reminder', 'reminder-surface', 'floating-controls', 'tab-switching', 'ai-chat-refusal', 'search-suggestions', 'tag-bar-suggestions', 'input-target', 'ontology-search'].includes(process.env.BROWSER_TEST_SUITE)) {
+  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'move-to-bottom', 'list-edges', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews', 'image-menu', 'tag-suggestion-menu', 'paste-formats', 'ai-note-tags', 'robot-proposals', 'export-print', 'url-cleaning', 'reference-paste', 'click-caret', 'editable-embeds', 'delete-warning', 'collapse-outlines', 'backup-reminder', 'reminder-surface', 'floating-controls', 'tab-switching', 'ai-chat-refusal', 'search-suggestions', 'tag-bar-suggestions', 'input-target', 'ontology-search', 'diagram-clicks', 'picture-drag'].includes(process.env.BROWSER_TEST_SUITE)) {
     // The focused suite does not run checkAppUpdates, which normally releases
     // this intentionally held request. Avoid an unrelated update notice too.
     updateFixture.outage = true;
@@ -206,6 +208,14 @@ try {
     await checkDeleteWarning(page);
     assert.deepEqual(errors, []);
     console.log(`PASS delete warning regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'picture-drag') {
+    await checkPictureDrag(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS picture drag regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'diagram-clicks') {
+    await checkDiagramClicks(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS diagram click regressions in ${await browser.version()}`);
   } else if (process.env.BROWSER_TEST_SUITE === 'ontology-search') {
     await checkOntologySearch(page);
     assert.deepEqual(errors, []);

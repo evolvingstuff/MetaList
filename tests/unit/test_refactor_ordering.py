@@ -4,7 +4,7 @@ from app.models import note_crud, list_operations
 from app.services import store as adapter_module
 from app.security import encryption
 from app.usecases.delete_subtree import _snapshot_subtree, apply_delete_subtree, apply_restore_records
-from app.usecases.move import apply_move
+from app.usecases.move import CmdMove, apply_move
 
 import pytest
 
@@ -140,3 +140,26 @@ def test_undo_delete_restores_a_note_with_several_children(database_store):
     assert store.get_children('head') == ['middle', 'tail']
     store.load_from_db(session, prefetched_rows=None)
     assert store.get_children('head') == ['middle', 'tail']
+
+
+@pytest.mark.parametrize('position, sibling_id', [('AFTER', 'head'), ('BEFORE', 'tail')])
+def test_a_move_to_where_the_note_already_is_changes_nothing(database_store, position, sibling_id):
+    """Moving a note after the sibling it already follows, or before the one it
+    already precedes, is a move to its own place: nothing changes, and nothing
+    is recorded to undo."""
+    store, session = database_store
+    command = CmdMove(note_id='middle', sibling_id=sibling_id, position=position, new_parent_id=None,
+                      client_id='client', undo_context='context', viewport={})
+    assert command.execute() == {'status': 'noop'}
+    assert store.get_children(None) == ['head', 'middle', 'tail']
+    store.load_from_db(session, prefetched_rows=None)
+    assert store.get_children(None) == ['head', 'middle', 'tail']
+
+
+def test_a_note_cannot_be_moved_relative_to_itself(database_store):
+    store, session = database_store
+    command = CmdMove(note_id='middle', sibling_id='middle', position='AFTER', new_parent_id=None,
+                      client_id='client', undo_context='context', viewport={})
+    with pytest.raises(RuntimeError, match='relative to itself'):
+        command.execute()
+    assert store.get_children(None) == ['head', 'middle', 'tail']

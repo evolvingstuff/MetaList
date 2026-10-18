@@ -227,7 +227,7 @@ async function addDictatedTags(noteElement, tagText, contentInserted) {
 // note's own undo then removes the pasted text.
 export function undoDictatedNotePasteTags(event) {
     const link = moduleState.notePasteUndo;
-    if (link === null || !ModeContext.isEditing || ModeContext.currentNoteId !== link.noteId) {
+    if (link === null || !ModeContext.isEditingNote(link.noteId)) {
         return false;
     }
     moduleState.notePasteUndo = null;

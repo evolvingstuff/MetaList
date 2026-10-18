@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { waitForAppIdle } from './browser-app-idle.mjs';
 
 // Dictated text (for example from Superwhisper) pasted into the search bar or
 // the tag bar becomes the user's existing tags; one undo brings back exactly
@@ -9,10 +10,7 @@ const PASTE_SETTLE_MS = 400;
 const DICTATED = 'Neural network, neural network. Neural-Dash Network.';
 
 async function idle(page) {
-  await page.waitForFunction(async () => {
-    const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
-    return !mode.isLoading;
-  });
+  await waitForAppIdle(page);
   await page.waitForNetworkIdle({idleTime: 300});
 }
 

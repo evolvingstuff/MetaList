@@ -3,6 +3,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runThenCleanUp } from './suite-outcome.mjs';
+import { waitForAppIdle } from './browser-app-idle.mjs';
 
 // The backup reminder (docs/ui/controls.md, "Backup reminder"), one check per agreed
 // case. The card floats in the bottom-right notice stack: it takes no space, never
@@ -30,11 +31,7 @@ const FIXTURE_KEY = 'backup-reminder-test-times';
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await page.waitForFunction(async () => {
-    const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
-    const {CommandGate} = await import('/static/js/modules/mode-manager/services/command-gate-service.js');
-    return !mode.isLoading && !CommandGate.isBusy();
-  });
+  await waitForAppIdle(page);
   await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
 }
 

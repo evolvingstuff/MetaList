@@ -18,7 +18,7 @@ const FAILURE_BANNER_SECONDS = 10;
 
 // After Done, leave edit mode on the note that holds the diagram so its rendering is visible.
 function showDiagramInHostNote(closed) {
-    if (ModeContext.isEditing && ModeContext.currentNoteId === closed.hostNoteId) {
+    if (ModeContext.isEditingNote(closed.hostNoteId)) {
         void CommandGate.run('excalidraw.show_diagram', async () => {
             await actionDeselectNote();
         });

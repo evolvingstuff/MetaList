@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 
 import {runThenCleanUp} from './suite-outcome.mjs';
+import { waitForAppIdle } from './browser-app-idle.mjs';
 
 // Move to Bottom keeps the view still (docs/ui/interaction-principles.md): the
 // notes above stay put and the ones below close the gap; nothing scrolls. In a
@@ -21,11 +22,7 @@ function paragraphs(label, count) {
 }
 
 async function idle(page) {
-  await page.waitForFunction(async () => {
-    const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
-    const {CommandGate} = await import('/static/js/modules/mode-manager/services/command-gate-service.js');
-    return !mode.isLoading && !CommandGate.isBusy();
-  });
+  await waitForAppIdle(page);
   await page.waitForNetworkIdle({idleTime: 300});
 }
 

@@ -315,7 +315,7 @@ export async function addSelectedTextAsTag(noteId, selectedText) {
         throw new Error('addSelectedTextAsTag requires selectedText string');
     }
 
-    const isEditingTarget = ModeContext.isEditing && ModeContext.currentNoteId === noteId;
+    const isEditingTarget = ModeContext.isEditingNote(noteId);
     if (isEditingTarget) {
         await actionSaveNote(noteId);
     }
@@ -730,7 +730,7 @@ export async function moveNoteToBottom(noteId) {
     }
 
     // Not left editing a note that may now be out of sight.
-    if (ModeContext.isEditing && ModeContext.currentNoteId === noteId) {
+    if (ModeContext.isEditingNote(noteId)) {
         await actionSaveAndExitEditingWithoutRefreshing();
     }
 

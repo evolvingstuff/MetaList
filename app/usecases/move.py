@@ -61,6 +61,8 @@ class CmdMove(QueryCommand):
         position = self.position.upper()
         if position not in {'BEFORE', 'AFTER'}:
             raise RuntimeError("Move position must be BEFORE or AFTER")
+        if self.sibling_id == self.note_id:
+            raise RuntimeError(f"A note cannot be moved relative to itself | note_id={self.note_id}")
         sibling = store.get(self.sibling_id)
         destination_parent = sibling.parent_id
         if self.new_parent_id is not None:
@@ -70,6 +72,10 @@ class CmdMove(QueryCommand):
             prev_id, next_id = sibling.prev_id, sibling.id
         else:
             prev_id, next_id = sibling.id, sibling.next_id
+        # The note is already the sibling's neighbor on that side: it is where it would go.
+        if self.note_id in (prev_id, next_id):
+            assert store.get(self.note_id).parent_id == destination_parent
+            return {"status": "noop"}
 
         # Record move for undo
         old_parent, old_prev, old_next = _neighbors(self.note_id)

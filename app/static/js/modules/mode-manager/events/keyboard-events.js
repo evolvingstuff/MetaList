@@ -1962,7 +1962,7 @@ function planGuessedFormat(record, tag) {
 // with its selection, before the wrapped text goes in). Nothing happens when
 // the note changed since the paste. ⌘Z right after removes it with the paste.
 function applyGuessedFormat(pasted, tag) {
-    if (!ModeContext.isEditing || ModeContext.currentNoteId !== pasted.noteId) {
+    if (!ModeContext.isEditingNote(pasted.noteId)) {
         return;
     }
     const noteElement = DOMUtils.getNoteById(pasted.noteId);
@@ -2788,7 +2788,7 @@ async function pasteExternalContentIntoNewTopNote(pasteEventSnapshot, plainText,
         if (inserted || autoTaggedPasswordPaste) {
             await actionSaveNote(newNoteId);
         }
-        if (guessed !== null && ModeContext.isEditing && ModeContext.currentNoteId === newNoteId) {
+        if (guessed !== null && ModeContext.isEditingNote(newNoteId)) {
             offerGuessedFormat(guessed);
         }
         return {

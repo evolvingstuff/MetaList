@@ -63,7 +63,7 @@ export function pasteReferenceHereRange(noteElement, target, x, y) {
         throw new Error('pasteReferenceHereRange requires the note element');
     }
     const noteId = noteElement.dataset.noteId;
-    if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) return null;
+    if (!ModeContext.isEditingNote(noteId)) return null;
     const content = editedNoteContent(noteId);
     if (!(target instanceof Node) || !content.contains(target)) return null;
     const point = caretPositionAt(x, y);

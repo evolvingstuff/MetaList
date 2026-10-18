@@ -74,7 +74,7 @@ function handleBlur(event) {
             throw new Error('Tag bar note element missing data-note-id');
         }
 
-        if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
+        if (!ModeContext.isEditingNote(noteId)) {
             return;
         }
 

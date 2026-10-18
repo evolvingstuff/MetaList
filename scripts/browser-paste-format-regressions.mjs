@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 
 import {runThenCleanUp} from './suite-outcome.mjs';
+import { waitForAppIdle } from './browser-app-idle.mjs';
 
 // Paste format guesses (docs/ui/content-formatting.md, "Paste format guesses"):
 // CSV-like, Markdown-like and code-like pastes are pasted as plain text and a
@@ -20,11 +21,7 @@ const RUBY = 'def greet(name)\n  puts "Hi #{name}"\nend';
 const FENCED_PYTHON = '```python\ndef f(x):\n    return x\n```';
 
 async function idle(page) {
-  await page.waitForFunction(async () => {
-    const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
-    const {CommandGate} = await import('/static/js/modules/mode-manager/services/command-gate-service.js');
-    return !mode.isLoading && !CommandGate.isBusy();
-  });
+  await waitForAppIdle(page);
   await page.waitForNetworkIdle({idleTime: 300});
 }
 
