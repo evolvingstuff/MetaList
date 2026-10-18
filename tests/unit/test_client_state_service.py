@@ -21,6 +21,8 @@ from app.services.client_state_service import load_command_palette_usage
 from app.services.client_state_service import save_client_preferences
 from app.services.client_state_service import save_command_palette_usage
 from app.security.sensitive_cache import clear_sensitive_caches
+from app.services.agent.cloud_privacy import CLOUD_PRIVACY_POLICY_PREFERENCE_KEY, CloudPrivacyPolicy, serialize_cloud_privacy_policy
+from app.services.agent.privacy_guard import cloud_privacy_revision
 
 
 @pytest.fixture(autouse=True)
@@ -512,3 +514,18 @@ def test_settings_from_the_sound_effects_that_were_tried_and_not_kept_are_droppe
         "pref.theme": "dark",
     }
     assert _validate_client_preferences(saved) == {"pref.theme": "dark"}
+
+
+def test_saving_a_changed_cloud_privacy_policy_advances_its_revision(memory_settings_db) -> None:
+    """AI requests already running check the revision before each send (privacy_guard.py)."""
+    del memory_settings_db
+    journal_blacklisted = serialize_cloud_privacy_policy(CloudPrivacyPolicy(
+        whitelist_tags=(), whitelist_phrases=(), blacklist_tags=("journal",), blacklist_phrases=()))
+    save_client_preferences(preferences={"pref.theme": "dark"}, token="")
+    before = cloud_privacy_revision.current()
+    save_client_preferences(preferences={"pref.theme": "light"}, token="")
+    assert cloud_privacy_revision.current() == before, "other settings leave it alone"
+    save_client_preferences(preferences={"pref.theme": "light", CLOUD_PRIVACY_POLICY_PREFERENCE_KEY: journal_blacklisted}, token="")
+    assert cloud_privacy_revision.current() == before + 1, "a new privacy policy advances it"
+    save_client_preferences(preferences={"pref.theme": "dark", CLOUD_PRIVACY_POLICY_PREFERENCE_KEY: journal_blacklisted}, token="")
+    assert cloud_privacy_revision.current() == before + 1, "saving the same privacy policy again does not"

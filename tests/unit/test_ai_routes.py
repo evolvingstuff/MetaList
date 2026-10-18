@@ -19,6 +19,7 @@ from app.services.agent.trace import AgentTraceStore
 from app.services.agent.inference import InferenceProviderError
 from app.services.agent.web_evidence import WebEvidenceStore
 from app.services.openai_credentials import OpenAICredentialStatus
+from app.services.agent.privacy_guard import PrivacyGuardedInference
 
 
 def _all_notes_scope() -> ai_routes.AgentScopeDescriptor:
@@ -914,7 +915,8 @@ def test_stream_chat_uses_openai_provider_with_cloud_boundary(
     monkeypatch.setattr(ai_setup_module, "OpenAIInferenceAdapter", fake_openai_adapter)
 
     def fake_runtime_factory(*, inference):
-        assert inference is inference_sentinel
+        # The connection's adapter, wrapped so it stops sending if the privacy settings change.
+        assert isinstance(inference, PrivacyGuardedInference) and inference._inner is inference_sentinel
         return FakeRuntime()
 
     monkeypatch.setattr(ai_routes, "_agent_runtime", fake_runtime_factory)

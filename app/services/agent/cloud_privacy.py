@@ -11,7 +11,7 @@ from app.services.note_store import NoteStore
 from app.services.note_store import store as note_store
 from app.services.search_index import search_index
 from app.services.tag_ontology import is_valid_tag_token
-from app.utils.text_utils import strip_html
+from app.services.content_formatting import extract_note_text_for_agent
 
 
 CLOUD_PRIVACY_POLICY_PREFERENCE_KEY = "pref.ai.cloud_privacy_policy"
@@ -323,7 +323,11 @@ class CloudPrivacyEvaluator:
         )
         plaintext_casefold = ""
         if needs_plaintext:
-            plaintext_casefold = strip_html(content_html).strip().casefold()
+            # Phrases are matched against exactly the text the AI is sent: the visible
+            # text plus link addresses a label hides and cached titles of linked pages.
+            # The tags argument only decides credential redaction, handled above.
+            sent_text, _ = extract_note_text_for_agent(content_html=content_html, tags="")
+            plaintext_casefold = sent_text.casefold()
         if any(
             phrase in plaintext_casefold for phrase in match_plan.blacklist_phrases
         ):

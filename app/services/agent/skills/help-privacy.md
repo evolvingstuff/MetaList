@@ -12,6 +12,14 @@ previews excluded notes with gray backgrounds and blurred content, including
 all descendants of excluded notes. The preview ends when the pointer leaves chat.
 It is not deletion.
 A general product-help question does not need to send saved-note contents.
+Phrases are matched against exactly the text the AI would be sent, including a
+link's address hidden behind its label and cached titles of linked pages.
+Changing the privacy settings stops any AI request still running before it
+sends more.
+Earlier answers in a chat are sent back to the AI with each new message. Making a
+note private starts the chat's AI memory afresh; but if an answer already quoted
+something that should have stayed private and the note was edited rather than made
+private, tell the user to press Clear Chat, which removes that memory.
 
 OpenAI credentials persist encrypted when the namespace is password-protected.
 For a plaintext namespace they are held only in server session memory. Do not

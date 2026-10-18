@@ -23,6 +23,8 @@ from app.services.agent.prompt_settings import RETIRED_PROMPT_PREFERENCE_KEYS
 from app.services.agent.skill_settings import RETIRED_SKILL_PREFERENCE_KEYS
 from app.services.agent.cloud_privacy import CLOUD_PRIVACY_POLICY_PREFERENCE_KEY
 from app.services.agent.cloud_privacy import validate_cloud_privacy_policy_preference
+from app.services.agent.privacy_guard import cloud_privacy_revision
+from app.services.preference_values import preference_or_default
 from app.services.agent.retrieval_settings import OPENAI_MAX_PAGE_APPROXIMATE_TOKENS_PREFERENCE_KEY
 from app.services.agent.retrieval_settings import validate_openai_max_page_approximate_tokens_preference
 from app.services.agent.web_settings import WEB_ACCESS_MODE_PREFERENCE_KEY
@@ -420,6 +422,7 @@ def _read_client_preferences(*, token: str) -> dict[str, str]:
 
 def save_client_preferences(*, preferences: dict[str, object], token: str) -> dict[str, str]:
     normalized = _validate_client_preferences(preferences)
+    previous = load_client_preferences(token=token)
     serialized = _serialize_json_object(payload=normalized, label="preferences")
     stored_json, nonce, tag = _encode_json_for_storage(
         plaintext_json=serialized,
@@ -434,6 +437,11 @@ def save_client_preferences(*, preferences: dict[str, object], token: str) -> di
             client_preferences_encryption_tag=tag,
         )
     _preferences_in_memory.store(_preferences_memory_key(token), dict(normalized))
+    # AI requests already running were judged under the old policy: they stop
+    # before their next send (privacy_guard.py). A setting never saved is "".
+    previous_policy = preference_or_default(previous, CLOUD_PRIVACY_POLICY_PREFERENCE_KEY, default="")
+    if preference_or_default(normalized, CLOUD_PRIVACY_POLICY_PREFERENCE_KEY, default="") != previous_policy:
+        cloud_privacy_revision.advance()
     return normalized
 
 

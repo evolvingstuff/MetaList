@@ -108,6 +108,7 @@ def _snapshot(*, large_tail: bool) -> ScopedSearchSnapshot:
         ordered_note_ids=("root-a", "child-a", "root-b"),
         notes_by_id=MappingProxyType(notes),
         tree_nodes_by_id=MappingProxyType(nodes),
+        note_records_at_send=MappingProxyType({}),
         preparation_ms=0.0, text_extraction=TextExtractionMeter.start(),
         selected_note=NO_SELECTED_NOTE,
     )
@@ -396,6 +397,7 @@ def _summary_snapshot(root_count: int) -> ScopedSearchSnapshot:
         ordered_note_ids=roots,
         notes_by_id=MappingProxyType(notes),
         tree_nodes_by_id=MappingProxyType(nodes),
+        note_records_at_send=MappingProxyType({}),
         preparation_ms=0.0, text_extraction=TextExtractionMeter.start(),
         selected_note=NO_SELECTED_NOTE,
     )
@@ -913,6 +915,7 @@ def _structural_root_summary_snapshot(root_count: int) -> ScopedSearchSnapshot:
         ordered_note_ids=matches,
         notes_by_id=MappingProxyType(notes),
         tree_nodes_by_id=MappingProxyType(nodes),
+        note_records_at_send=MappingProxyType({}),
         preparation_ms=0.0, text_extraction=TextExtractionMeter.start(),
         selected_note=NO_SELECTED_NOTE,
     )

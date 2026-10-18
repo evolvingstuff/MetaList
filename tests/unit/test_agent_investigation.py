@@ -98,6 +98,7 @@ def _snapshot(*, oversized_first_root: bool) -> ScopedSearchSnapshot:
         ordered_note_ids=("a", "a-child", "b", "c"),
         notes_by_id=MappingProxyType(notes),
         tree_nodes_by_id=MappingProxyType(nodes),
+        note_records_at_send=MappingProxyType({}),
         preparation_ms=0.0, text_extraction=TextExtractionMeter.start(),
         selected_note=NO_SELECTED_NOTE,
     )

@@ -79,7 +79,8 @@ def tagging_trees(snapshot):
     """Include ancestor content, without adding any unseen sibling branch."""
     payloads = {}
     for note_id in snapshot.tree_nodes_by_id:
-        record = store.get_note(note_id)
+        # As of Send, as the privacy rules judged it (ScopedSearchSnapshot.note_records_at_send).
+        record = snapshot.note_records_at_send[note_id]
         content, redacted = extract_note_text_for_agent(content_html=record.content, tags=record.tags)
         assert not redacted, "Disclosure boundary must exclude protected ancestors"
         payloads[note_id] = {"note_id": note_id, "content_text": content,

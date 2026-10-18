@@ -281,6 +281,10 @@ class ScopedSearchSnapshot:
     ordered_note_ids: tuple[str, ...]
     notes_by_id: Mapping[str, FrozenScopedNote]
     tree_nodes_by_id: Mapping[str, FrozenScopedTreeNode]
+    # The record of every note in tree_nodes_by_id as of Send (records are immutable).
+    # Bulk tagging sends these, never the live notes: the privacy rules judged the
+    # notes at Send, and an edit afterwards must not reach the AI unjudged.
+    note_records_at_send: Mapping[str, NoteRecord]
     # How long freezing took, shown on the chat's first activity line.
     preparation_ms: float
     # Note text extracted on first read during the run (NoteText).
@@ -408,6 +412,7 @@ class ScopedSearchSnapshotFactory:
             ordered_note_ids=ordered_note_ids,
             notes_by_id=MappingProxyType(frozen_notes),
             tree_nodes_by_id=MappingProxyType(tree_nodes),
+            note_records_at_send=MappingProxyType({note_id: self._notes.get_note(note_id) for note_id in tree_nodes}),
             preparation_ms=(time.perf_counter() - started_at) * MS_PER_SECOND,
             text_extraction=text_extraction,
             selected_note=selected_note,
