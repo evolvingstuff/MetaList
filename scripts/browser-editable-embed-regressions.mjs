@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { waitForAppIdle } from './browser-app-idle.mjs';
 
 // Embeds (docs/ui/references.md): a note whose only content is a reference,
 // [[UUID]], shows its source in place. An embed is a window onto its source:
@@ -18,11 +19,7 @@ const EXCLUDED_TAG = 'zz-embed-hidden';
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await page.waitForFunction(async () => {
-    const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
-    const {CommandGate} = await import('/static/js/modules/mode-manager/services/command-gate-service.js');
-    return !mode.isLoading && !CommandGate.isBusy();
-  });
+  await waitForAppIdle(page);
   await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
 }
 

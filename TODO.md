@@ -58,3 +58,12 @@ Future fix (both versions, each program takes the one it understands):
 - Plain text: math as its LaTeX source (the rendered math carries `data-latex-source`, which `strip_latex_source_attributes` removes for copying), Mermaid as its source (already).
 - HTML: math and Mermaid as PNG images drawn in the browser at copy time. Checked in Chrome: MathML (via SVG `foreignObject`) and SVG both export to PNG without the canvas refusing. Safari is known to refuse MathML in `foreignObject`; check Firefox. Mermaid's own labels use `foreignObject` too.
 - Then check in real mail clients that pasted images survive (Gmail is picky about embedded images in pasted HTML).
+
+## Server State: Owned Stores And Redundant-Write Detection (low priority)
+
+Idea (2026-10-17): carry the client's ApplicationState discipline (owned state, validating setters, an exception on a write that leaves a value unchanged) over to the server's client-tracking state, which drives the view diffs.
+
+- Not a monolith: the server runs a thread pool plus the event loop, so one state object would need one lock and serialize unrelated requests. Instead, one class per store (tab state, warm views, sync, undo, ...), each owning its lock and exposing only methods, no bare module globals. The STATE001 audit (44 globals, 4 races) is the case for it.
+- Validating setters: fail on an invalid value when it is written, not when it is read.
+- Redundant writes: throw only for internally computed state (a warm view stored twice unchanged likely means a render or diff computed twice). Writes that come from requests can legitimately repeat a value (two tabs, a retry, an idempotent save); there the code compares explicitly, as the client does with `stateValuesEqual`, rather than turning a repeat into a 500.
+- First step, before building anything: during the browser suites, wrap warm views, tab state and sync in a recorder that counts writes leaving the value unchanged, with their call sites. Adopt the pattern for those stores only if that finds the kind of waste the client rule found.

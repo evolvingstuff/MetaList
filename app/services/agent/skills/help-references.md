@@ -113,7 +113,7 @@ Sources: docs/ui/references.md
 
 ## Excalidraw Diagrams
 - Add one with **Add Excalidraw Diagram** in the right-click menu of the note being edited, or `Add Excalidraw diagram` in the command palette. The diagram is attached as a `.excalidraw` file and referenced with `![[UUID]]`; the editor opens immediately.
-- In view mode a diagram shows as a picture for the current light or dark theme. Double-click it, or right-click it and choose **Edit Diagram**, to open the full-screen editor. A single click does not start editing its note.
+- In view mode a diagram shows as a picture for the current light or dark theme. Double-click it, or right-click it and choose **Edit Diagram**, to open the full-screen editor. A single click anywhere on it edits its note, a moment later (so a double-click can still open the editor), and dragging from it moves the note.
 - Right-click a diagram for **Make Bigger**, **Make Smaller**, **Reset Size**, **Zoom Diagram**, and **Save Diagram File**. Size uses the same `@size` tag as images.
 - In edit mode the note shows only the raw `![[UUID]]` token.
 - The editor autosaves 2 seconds after drawing stops. **Done** or `Cmd/Ctrl+Enter` saves and closes; `Escape` belongs to Excalidraw and does not close the editor. **Discard changes** (click twice) restores the diagram as it was when the editor opened.

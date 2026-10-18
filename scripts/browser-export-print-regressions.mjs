@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { waitForAppIdle } from './browser-app-idle.mjs';
 
 // Export and Print (docs/ui/controls.md): an exported file starts collapsed
 // and expanded as MetaList shows its notes, embeds too, and its arrows collapse
@@ -16,11 +17,7 @@ const SETTLE_MS = 400;
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await page.waitForFunction(async () => {
-    const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
-    const {CommandGate} = await import('/static/js/modules/mode-manager/services/command-gate-service.js');
-    return !mode.isLoading && !CommandGate.isBusy();
-  });
+  await waitForAppIdle(page);
   await page.waitForNetworkIdle({idleTime: 300});
 }
 

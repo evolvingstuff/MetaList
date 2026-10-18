@@ -73,7 +73,7 @@ function handleMouseDown(event) {
 }
 
 function checkStillEditing() {
-    if (!ModeContext.isEditing || ModeContext.currentNoteId !== moduleState.noteId) {
+    if (!ModeContext.isEditingNote(moduleState.noteId)) {
         closePasteFormatOffer();
     }
 }

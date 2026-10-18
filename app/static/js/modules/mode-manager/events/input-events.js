@@ -133,7 +133,7 @@ function handleInput(event) {
             throw new Error('Tag bar note element missing data-note-id attribute in input handler');
         }
 
-        if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
+        if (!ModeContext.isEditingNote(noteId)) {
             throw new Error(`Tag bar input fired while not editing note ${noteId}`);
         }
 
@@ -160,7 +160,7 @@ function handleInput(event) {
         }
 
         // A note is editable only while it is edited, so typing reaches no other note.
-        if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
+        if (!ModeContext.isEditingNote(noteId)) {
             throw new Error(`Note input fired while not editing note ${noteId}`);
         }
 

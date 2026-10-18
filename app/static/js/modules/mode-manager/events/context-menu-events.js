@@ -117,7 +117,7 @@ async function resizeImageFromContext(imageContext, action) {
 
     // Where the user is working in the edited note, so the resize leaves it there.
     let editingFocus = null;
-    if (ModeContext.isEditing && ModeContext.currentNoteId === hostNoteId) {
+    if (ModeContext.isEditingNote(hostNoteId)) {
         const editedNote = document.querySelector(`.note[data-note-id="${hostNoteId}"]`);
         if (!(editedNote instanceof HTMLElement)) {
             throw new Error(`Editing note element missing before image resize: ${hostNoteId}`);
@@ -145,7 +145,7 @@ async function resizeImageFromContext(imageContext, action) {
     if (!Array.isArray(response.editingImageSizes)) {
         throw new Error('Image resize response must include editingImageSizes');
     }
-    if (ModeContext.isEditing && ModeContext.currentNoteId === hostNoteId) {
+    if (ModeContext.isEditingNote(hostNoteId)) {
         const noteElement = document.querySelector(`.note[data-note-id="${hostNoteId}"]`);
         if (!(noteElement instanceof HTMLElement)) {
             throw new Error(`Editing note element missing after image resize: ${hostNoteId}`);
@@ -583,7 +583,7 @@ async function addStyleFromContextMenu(noteId, styleTag, selectedTextRange) {
     if (typeof styleTag !== 'string' || styleTag.length === 0) {
         throw new Error('addStyleFromContextMenu requires styleTag');
     }
-    if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
+    if (!ModeContext.isEditingNote(noteId)) {
         throw new Error('Add Style requires the target note to be actively edited');
     }
     if (selectedTextRange !== null && !(selectedTextRange instanceof Range)) {
@@ -785,7 +785,7 @@ async function canSuggestTagsWithAi(noteElement, noteId) {
 }
 
 function isEditingNote(noteId) {
-    return ModeContext.isEditing && ModeContext.currentNoteId === noteId;
+    return ModeContext.isEditingNote(noteId);
 }
 
 // The note may have left the page (scrolled far away) while the AI worked.
@@ -985,9 +985,9 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
         hasNoteClipboard,
         hasReferenceClipboard,
         canPasteReferenceHere: pasteHereRange !== null,
-        canAddStyle: ModeContext.isEditing && ModeContext.currentNoteId === noteId,
-        canRemoveFormatting: ModeContext.isEditing && ModeContext.currentNoteId === noteId,
-        canAddDiagram: ModeContext.isEditing && ModeContext.currentNoteId === noteId,
+        canAddStyle: ModeContext.isEditingNote(noteId),
+        canRemoveFormatting: ModeContext.isEditingNote(noteId),
+        canAddDiagram: ModeContext.isEditingNote(noteId),
         canEditDiagram: true,
         canAddNoteAtTop: !ModeContext.isEditing,
         canViewFullscreen: true,
@@ -1027,7 +1027,7 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
             },
             onRemoveFormatting: (targetNoteId) => {
                 void CommandGate.run('contextMenu.note.remove_formatting', async () => {
-                    if (!ModeContext.isEditing || ModeContext.currentNoteId !== targetNoteId) {
+                    if (!ModeContext.isEditingNote(targetNoteId)) {
                         throw new Error('Remove Formatting requires the target note to be actively edited');
                     }
                     await unformatCurrentNoteContent(selectedTextRange);

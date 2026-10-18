@@ -62,10 +62,16 @@ const moduleState = ApplicationState.createFields('mouse-events', {
     moveDragContext: null,
     ignoreClickAfterMoveDrag: null,
     ignoreClickAfterMouseDownAction: null,
+    // The timer of a single click on a rendered diagram, waiting out the double-click window.
+    pendingDiagramClickEdit: null,
 });
 
 
 const MOVE_DRAG_COMMIT_THRESHOLD_PX = 20;
+// A single click on a rendered diagram edits its note only once a second click,
+// which would make it a double-click (open the diagram editor), can no longer come.
+// Browsers do not expose the system's double-click speed; this covers most.
+const DIAGRAM_SINGLE_CLICK_EDIT_DELAY_MS = 400;
 const MOVE_DRAG_COMMIT_THRESHOLD_SQ = MOVE_DRAG_COMMIT_THRESHOLD_PX * MOVE_DRAG_COMMIT_THRESHOLD_PX;
 // The cursor icon shown for each drag direction.
 const DRAG_DIRECTION_ICONS = { up: 'up', down: 'down', right: 'indent', left: 'outdent' };
@@ -99,6 +105,7 @@ export function initMouseEvents() {
     listen('mousedown', handleCollapseToggleMouseDown, { capture: true });
     listen('mousedown', handleImmediateMouseDown, { capture: true });
     listen('mousedown', handleMoveDragMouseDown, { capture: true });
+    listen('dragstart', preventViewedPictureDrag, { capture: true });
     listen('mousemove', handleMoveDragMouseMove, { capture: true });
     listen('scroll', handleMoveDragScroll, { capture: true, passive: true });
     listen('mousemove', handleSearchSuggestionsPointerMove, { capture: true, passive: true });
@@ -127,9 +134,62 @@ function handleDiagramDoubleClick(event) {
     if (event.target.closest('.note-fullscreen-overlay, .floating-note-window')) {
         return;
     }
+    // The first click of this double-click is waiting to edit the note: it does not.
+    cancelPendingDiagramClickEdit();
     event.preventDefault();
     event.stopPropagation();
     void openDiagramEditor(diagram.fileId, diagram.hostNoteId);
+}
+
+// A single click on a rendered diagram edits its note, as a click on its text does,
+// once the double-click window has passed. Editing shows the note's source, where the
+// diagram is only its reference, so starting at once would take the diagram away from
+// the second click of a double-click. The clicked spot is captured now, before anything
+// changes, as for any click into a note.
+function scheduleDiagramClickEdit(event) {
+    cancelPendingDiagramClickEdit();
+    const noteContent = event.target.closest('.note-content');
+    if (!(noteContent instanceof HTMLElement)) {
+        throw new Error('Rendered diagram is outside note content');
+    }
+    const noteElement = noteContent.closest('.note');
+    if (!(noteElement instanceof HTMLElement)) {
+        throw new Error('Rendered diagram note content has no note');
+    }
+    const noteId = noteElement.dataset.noteId;
+    if (typeof noteId !== 'string' || noteId.length === 0) {
+        throw new Error('Rendered diagram note is missing data-note-id');
+    }
+    const enterEditOptions = {
+        initialCaretVisibility: 'visible',
+        clickAnchor: captureClickAnchor(noteElement, event.clientX, event.clientY),
+    };
+    moduleState.pendingDiagramClickEdit = window.setTimeout(() => {
+        moduleState.pendingDiagramClickEdit = null;
+        if (ModeContext.isEditingNote(noteId)) {
+            return;
+        }
+        if (ModeContext.isSearching) {
+            actionExitSearchMode();
+        }
+        if (ModeContext.currentNoteId) {
+            void CommandGate.run('mouse.diagram_switch_note', async () => {
+                await actionSwitchNotes(noteId, enterEditOptions);
+            });
+        } else {
+            void CommandGate.run('mouse.diagram_select_note', async () => {
+                await actionSelectNote(noteId, enterEditOptions);
+            });
+        }
+    }, DIAGRAM_SINGLE_CLICK_EDIT_DELAY_MS);
+}
+
+function cancelPendingDiagramClickEdit() {
+    if (moduleState.pendingDiagramClickEdit === null) {
+        return;
+    }
+    window.clearTimeout(moduleState.pendingDiagramClickEdit);
+    moduleState.pendingDiagramClickEdit = null;
 }
 
 function beginMouseGesture(event) {
@@ -341,7 +401,7 @@ function handleNoteShellMouseDown(event, noteElement) {
         initialCaretVisibility: 'visible',
         clickAnchor: captureClickAnchor(noteElement, event.clientX, event.clientY),
     };
-    if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
+    if (!ModeContext.isEditingNote(noteId)) {
         if (ModeContext.currentNoteId) {
             void CommandGate.run('mouse.switch_note', async () => {
                 await actionSwitchNotes(noteId, enterEditOptions);
@@ -437,7 +497,7 @@ function handleRobotPress(event, robot) {
                 });
             }
         }
-        if (ModeContext.isEditing && ModeContext.currentNoteId === editNoteId) {
+        if (ModeContext.isEditingNote(editNoteId)) {
             return;
         }
         const enterEditOptions = { initialCaretVisibility: 'hidden' };
@@ -665,6 +725,33 @@ function handleMoveDragMouseDown(event) {
         lastX: event.clientX,
         lastY: event.clientY,
     };
+}
+
+// A press-and-drag that starts on a picture in a note being viewed moves the note,
+// as one on its text does. The browser's own image drag would carry the picture away
+// instead and take the mouse moves the note drag needs; Copy Image and Save Image in
+// the picture's menu take a picture out. While the note is edited, and in full-screen
+// and floating views, pictures are left as they are.
+function preventViewedPictureDrag(event) {
+    if (!(event.target instanceof HTMLImageElement)) {
+        return;
+    }
+    const noteContent = event.target.closest('#notes-container .note-content');
+    if (noteContent === null) {
+        return;
+    }
+    const noteElement = noteContent.closest('.note');
+    if (!(noteElement instanceof HTMLElement)) {
+        throw new Error('Picture note content has no note');
+    }
+    const noteId = noteElement.dataset.noteId;
+    if (typeof noteId !== 'string' || noteId.length === 0) {
+        throw new Error('Picture note is missing data-note-id');
+    }
+    if (ModeContext.isEditingNote(noteId)) {
+        return;
+    }
+    event.preventDefault();
 }
 
 function handleMoveDragMouseMove(event) {
@@ -1109,7 +1196,7 @@ function handleSelectionDragMouseUp(event) {
     if (!context) return;
     moduleState.selectionDragContext = null;
 
-    if (!ModeContext.isEditing || ModeContext.currentNoteId !== context.noteId) {
+    if (!ModeContext.isEditingNote(context.noteId)) {
         return;
     }
 
@@ -1261,7 +1348,16 @@ function handleClick(event) {
         return;
     }
     if (resolveDiagramTarget(event.target) !== null) {
-        // A single click on a rendered diagram does nothing; a double-click opens the editor.
+        // Full-screen and floating note views are read-only.
+        if (event.target.closest('.note-fullscreen-overlay, .floating-note-window')) {
+            return;
+        }
+        // The second click of a double-click is handled by handleDiagramDoubleClick.
+        if (event.detail === 1) {
+            scheduleDiagramClickEdit(event);
+        } else {
+            cancelPendingDiagramClickEdit();
+        }
         return;
     }
 
@@ -1293,7 +1389,7 @@ function handleClick(event) {
         if (action !== 'accept' && action !== 'reject') {
             throw new Error('Tag proposal action must be accept or reject');
         }
-        if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
+        if (!ModeContext.isEditingNote(noteId)) {
             throw new Error('Tag proposal action requires the target note to be actively edited');
         }
         event.preventDefault();
@@ -1451,9 +1547,9 @@ function handleClick(event) {
         if (tagBarInput && event.detail === 1) {
             const noteElement = tagBarInput.closest('.note');
             const noteId = noteElement?.dataset?.noteId;
-            if (noteElement && noteId && ModeContext.isEditing && ModeContext.currentNoteId === noteId) {
+            if (noteElement && noteId && ModeContext.isEditingNote(noteId)) {
                 window.setTimeout(() => {
-                    if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
+                    if (!ModeContext.isEditingNote(noteId)) {
                         return;
                     }
                     if (document.activeElement !== tagBarInput) {
@@ -1619,7 +1715,7 @@ function handleClick(event) {
                 initialCaretVisibility: 'visible',
                 clickAnchor: captureClickAnchor(noteElement, event.clientX, event.clientY),
             };
-            if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
+            if (!ModeContext.isEditingNote(noteId)) {
                 // Don't calculate or save cursor position when entering edit mode
                 // The click position on rendered content (e.g., LaTeX) doesn't map meaningfully
                 // to cursor position in source text
@@ -1722,7 +1818,7 @@ function handleClick(event) {
             initialCaretVisibility: 'visible',
             clickAnchor: captureClickAnchor(noteElement, event.clientX, event.clientY),
         };
-        if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
+        if (!ModeContext.isEditingNote(noteId)) {
             if (ModeContext.currentNoteId) {
                 void CommandGate.run('mouse.switch_note', async () => {
                     await actionSwitchNotes(noteId, enterEditOptions);

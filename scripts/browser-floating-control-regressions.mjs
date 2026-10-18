@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { runThenCleanUp } from './suite-outcome.mjs';
+import { waitForAppIdle } from './browser-app-idle.mjs';
 
 // Floating controls pressed while a note is being edited (docs/ui/interaction-principles.md):
 // - the error banner's × closes it on the first press and leaves the note in edit mode,
@@ -17,11 +18,7 @@ const PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAAQklEQVR4nO3O
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await page.waitForFunction(async () => {
-    const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
-    const {CommandGate} = await import('/static/js/modules/mode-manager/services/command-gate-service.js');
-    return !mode.isLoading && !CommandGate.isBusy();
-  });
+  await waitForAppIdle(page);
   await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
 }
 

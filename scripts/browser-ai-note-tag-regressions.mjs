@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { waitForAppIdle } from './browser-app-idle.mjs';
 
 // Suggest Tags with AI (docs/ui/tag-bar.md, docs/ui/interaction-principles.md):
 // the edited note's right-click menu, and a right-click past the tags in its
@@ -22,11 +23,7 @@ const PRIVATE_TAG = 'zorb-private';
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await page.waitForFunction(async () => {
-    const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
-    const {CommandGate} = await import('/static/js/modules/mode-manager/services/command-gate-service.js');
-    return !mode.isLoading && !CommandGate.isBusy();
-  });
+  await waitForAppIdle(page);
   await page.waitForNetworkIdle({idleTime: 300});
 }
 

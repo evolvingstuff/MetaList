@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { runThenCleanUp } from './suite-outcome.mjs';
+import { waitForAppIdle } from './browser-app-idle.mjs';
 
 // The tag bar's suggestions act only on a list built for the text in the bar,
 // as the search box's do. While a new list is on its way, the list on screen
@@ -14,11 +15,7 @@ const TAGS = ['quxalpha', 'quxbeta', 'zebrafoo'];
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await page.waitForFunction(async () => {
-    const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
-    const {CommandGate} = await import('/static/js/modules/mode-manager/services/command-gate-service.js');
-    return !mode.isLoading && !CommandGate.isBusy();
-  });
+  await waitForAppIdle(page);
   await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
 }
 

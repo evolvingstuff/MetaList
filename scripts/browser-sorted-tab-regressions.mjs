@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { waitForAppIdle } from './browser-app-idle.mjs';
 
 // Sorted tabs: which new root notes may be added, the order staying frozen
 // while a note is edited, and the surrounding notes staying on screen when the
@@ -63,11 +64,7 @@ function modeState(page) {
 }
 
 async function waitIdle(page) {
-  await page.waitForFunction(async () => {
-    const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
-    const {CommandGate} = await import('/static/js/modules/mode-manager/services/command-gate-service.js');
-    return !mode.isLoading && !CommandGate.isBusy();
-  });
+  await waitForAppIdle(page);
   await page.waitForNetworkIdle({idleTime: 300});
 }
 

@@ -63,7 +63,7 @@ function contentWithoutImageSources(content) {
 }
 
 export async function refreshEditingImageSizes(noteId) {
-    if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) return;
+    if (!ModeContext.isEditingNote(noteId)) return;
     const content = editedContent(noteId);
     if (content.querySelector('img') === null) return;
     const noteElement = content.closest('.note');
@@ -74,7 +74,7 @@ export async function refreshEditingImageSizes(noteId) {
     );
     // A later edit asked again, or the edit ended: this answer is out of date.
     if (serial !== moduleState.requestSerial) return;
-    if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) return;
+    if (!ModeContext.isEditingNote(noteId)) return;
     applyEditingImageSizes(content, factors);
 }
 

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { waitForAppIdle } from './browser-app-idle.mjs';
 
 // The caret after a click (docs/ui/interaction-principles.md, "Click into a
 // note": the clicked spot stays under the pointer, caret there). One click
@@ -21,11 +22,7 @@ const COLLAPSED_NOTE_PARAGRAPHS = 12;
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await page.waitForFunction(async () => {
-    const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
-    const {CommandGate} = await import('/static/js/modules/mode-manager/services/command-gate-service.js');
-    return !mode.isLoading && !CommandGate.isBusy();
-  });
+  await waitForAppIdle(page);
   await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
 }
 

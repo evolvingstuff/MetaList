@@ -628,6 +628,14 @@ class ModeContext {
         return this;
     }
 
+    // Whether this note is the one being edited.
+    isEditingNote(noteId) {
+        if (typeof noteId !== 'string' || noteId === '') {
+            throw new Error('isEditingNote requires a note id');
+        }
+        return this.isEditing && this.currentNoteId === noteId;
+    }
+
     get isEditing() {
         return this._editing;
     }
