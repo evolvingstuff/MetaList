@@ -20,6 +20,11 @@ const CORE = 'core';
 // The longest runs (from timed runs, 2026-10-18) start first, so no worker is left
 // running one of them alone at the end. Only the order depends on this list: a suite
 // missing from it still runs, after these.
+// Suites that measure how fast MetaList answers (input-target types 50 ms after a
+// click, faster than a person but slower than the ~20 ms in which a note switch takes
+// no keys) run alone after the others: sharing the CPU with other runs makes the app
+// slower than those budgets, and loosening them would let a real slowdown pass.
+const RUN_ALONE = ['input-target'];
 const SLOWEST_FIRST = ['reference-paste', 'exit-edit-scroll', 'click-caret', 'ai-note-tags', CORE, 'sorted-tabs',
   'delete-warning', 'list-edges', 'editable-embeds'];
 // A run that takes longer than this is stuck: it is stopped and reported as failed.
@@ -92,12 +97,14 @@ async function runAll(suites, workers) {
 }
 
 const allSuites = [CORE, ...FOCUSED_SUITES];
-for (const suite of SLOWEST_FIRST) {
-  if (!allSuites.includes(suite)) throw new Error(`SLOWEST_FIRST names an unknown suite: ${suite}`);
+for (const suite of [...SLOWEST_FIRST, ...RUN_ALONE]) {
+  if (!allSuites.includes(suite)) throw new Error(`SLOWEST_FIRST or RUN_ALONE names an unknown suite: ${suite}`);
 }
-const suites = [...SLOWEST_FIRST, ...allSuites.filter(suite => !SLOWEST_FIRST.includes(suite))];
-console.log(`Running ${suites.length} browser runs in ${options.browser}, ${workerCount} at a time; logs in ${directory}`);
-const results = await runAll(suites, workerCount);
+const parallelSuites = [...SLOWEST_FIRST, ...allSuites.filter(suite => !SLOWEST_FIRST.includes(suite))]
+  .filter(suite => !RUN_ALONE.includes(suite));
+console.log(`Running ${allSuites.length} browser runs in ${options.browser}, ${workerCount} at a time `
+  + `and then ${RUN_ALONE.join(', ')} alone; logs in ${directory}`);
+const results = [...await runAll(parallelSuites, workerCount), ...await runAll(RUN_ALONE, 1)];
 
 const failed = results.filter(result => !result.passed);
 const summary = results

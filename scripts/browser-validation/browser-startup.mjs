@@ -486,7 +486,7 @@ try {
   for (let coldRun = 0; coldRun < coldRuns; coldRun += 1) {
     const context = await browser.createBrowserContext();
     try {
-      const outcomes = await Promise.allSettled(origins.map(origin => checkPage(context, origin, coldRun)));  // shockharness: ignore[ASYNC003] reason="the next line throws the first rejected outcome"
+      const outcomes = await Promise.allSettled(origins.map(origin => checkPage(context, origin, coldRun)));
       for (const outcome of outcomes) if (outcome.status === 'rejected') throw outcome.reason;
     } finally {
       await context.close();

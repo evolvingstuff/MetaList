@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
+import {waitForPageSettled} from './browser-app-idle.mjs';
 
 async function openSortMenu(page) {
+  // A menu click while a command runs is dropped (CommandGate), and the check before
+  // this one leaves a search that runs 300 ms after its typing stopped.
+  await waitForPageSettled(page);
   const {width} = page.viewport();
   await page.mouse.click(width - 2, 180, {button: 'right'});
   await page.waitForSelector('#context-menu.is-visible');

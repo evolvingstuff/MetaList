@@ -1733,9 +1733,9 @@ setuptools==83.0.0 \
 shellingham==1.5.4 \
     --hash=sha256:7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686 \
     --hash=sha256:8dbca0739d487e5bd35ab3ca4b36e11c4078f3a234bfce294b0a0291363404de
-shockharness==0.8.0 ; python_full_version >= '3.11' \
-    --hash=sha256:8eaf5e32530862f41b7d90c2b66d8d6d1a1099f6a5f00c9c7d18fa152f50b2f5 \
-    --hash=sha256:a11533b085b215ecd0fec4bd3b9ee809b286c97691080ea67e4212bd79f65994
+shockharness==0.10.0 ; python_full_version >= '3.11' \
+    --hash=sha256:56097b341775c3cd5b7a78e0a665b90e1aac4c4c86c609980e91183a09ac0988 \
+    --hash=sha256:962fd6465f1fb2e5e72934b0318293fddff60e0a8206be7d6e7cf2d04d09a252
 sniffio==1.3.1 \
     --hash=sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2 \
     --hash=sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc
