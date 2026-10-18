@@ -425,14 +425,17 @@ class ScopedSearchSnapshotFactory:
             notes_by_id=MappingProxyType(frozen_notes),
             tree_nodes_by_id=MappingProxyType(tree_nodes),
             note_records_at_send=MappingProxyType({note_id: self._notes.get_note(note_id) for note_id in tree_nodes}),
-            disclosable_search_query=disclosable_search_query(
-                descriptor.search_query,
-                finds_visible_note=lambda search: self._finds_visible_note(
-                    search=search, sort_mode=descriptor.sort_mode, boundary=privacy_boundary),
-            ),
+            disclosable_search_query=self._disclosable_search_query(descriptor, privacy_boundary),
             preparation_ms=(time.perf_counter() - started_at) * MS_PER_SECOND,
             text_extraction=text_extraction,
             selected_note=selected_note,
+        )
+
+    def _disclosable_search_query(self, descriptor: AgentScopeDescriptor, boundary: CloudPrivacyBoundary) -> str:
+        return disclosable_search_query(
+            descriptor.search_query,
+            finds_visible_note=lambda search: self._finds_visible_note(
+                search=search, sort_mode=descriptor.sort_mode, boundary=boundary),
         )
 
     def _finds_visible_note(self, *, search: str, sort_mode: str, boundary: CloudPrivacyBoundary) -> bool:
