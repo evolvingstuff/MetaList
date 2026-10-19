@@ -1,6 +1,7 @@
 import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
 import { ModeContextInstance as ModeContext } from '../mode-manager/mode-context.js';
+import { escapeHtml } from '../html-escape.js';
 
 // The most earlier suggestions the server accepts (MAX_PREVIOUS_TITLES in
 // app/services/agent/export_title_suggestions.py).
@@ -234,17 +235,17 @@ class ExportOptionsModal extends BaseModal {
         const passwordChoice = state.passwordCount === 0 && state.usernameCount === 0 ? '' : `
                 <fieldset class="export-password-choice">
                     <label class="export-password-toggle"><input type="checkbox" id="export-passwords-include"><span>${includeCredentialsLabel(state)}</span></label>
-                    <p class="export-password-warning">${purpose.includedWarning}</p>
+                    <p class="export-password-warning">${escapeHtml(purpose.includedWarning)}</p>
                 </fieldset>`;
         modalElement.innerHTML = `
             <div class="modal-content alphabetize-root-notes-modal-content">
                 <div class="prioritize-modal-header">
-                    <p class="prioritize-modal-eyebrow">${purpose.eyebrow}</p>
-                    <h3>${purpose.heading}</h3>
+                    <p class="prioritize-modal-eyebrow">${escapeHtml(purpose.eyebrow)}</p>
+                    <h3>${escapeHtml(purpose.heading)}</h3>
                 </div>${this._renderTitleField(state)}${passwordChoice}
                 <div class="form-actions alphabetize-root-notes-actions">
                     <button type="button" class="secondary-btn" id="export-options-cancel-btn">Cancel</button>
-                    <button type="button" class="primary-btn" id="export-options-submit-btn" data-modal-enter-action>${purpose.action}</button>
+                    <button type="button" class="primary-btn" id="export-options-submit-btn" data-modal-enter-action>${escapeHtml(purpose.action)}</button>
                 </div>
             </div>
         `;

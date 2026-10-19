@@ -3,6 +3,7 @@ from __future__ import annotations
 import html
 from typing import Set
 
+from app.security.rendered_html import sanitize_rendered_html
 from app.services.content_formatting import find_list_style
 from app.services.embedded_references import EmbedRenderContext
 from app.services.embedded_references import render_note_content_with_embeds
@@ -34,11 +35,11 @@ def build_note_fullscreen_markup(note_id: str) -> str:
         get_file=_get_file_record,
         static_collapse_arrows=False,
     )
-    return _render_fullscreen_note(
+    return sanitize_rendered_html(_render_fullscreen_note(
         note_id=note_id,
         render_context=render_context,
         visiting=set(),
-    )
+    ))
 
 
 def _render_fullscreen_note(

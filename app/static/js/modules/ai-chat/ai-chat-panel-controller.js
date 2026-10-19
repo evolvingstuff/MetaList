@@ -59,6 +59,7 @@ import {
     isThinkingLevelAvailableForModel,
     normalizeThinkingLevelForModel,
 } from './ai-thinking-level-service.js';
+import { serverRenderedHtml } from '../server-rendered-html.js';
 
 // The panel's default width is a third of the window (--ai-chat-width in main.css).
 const DEFAULT_PANEL_WIDTH_DIVISOR = 3;
@@ -1671,7 +1672,7 @@ class AiChatPanelController {
                     if (message.rendered_thinking === '') {
                         thinkingText.textContent = message.thinking;
                     } else {
-                        thinkingText.innerHTML = message.rendered_thinking;
+                        thinkingText.innerHTML = serverRenderedHtml(message.rendered_thinking);
                     }
                     thinking.appendChild(thinkingText);
                 }
@@ -1684,7 +1685,7 @@ class AiChatPanelController {
                 if (message.role === 'assistant' && message.rendered_content !== '') {
                     content.classList.add('meta-markdown');
                     content.setAttribute('data-markdown-rendered', 'true');
-                    content.innerHTML = message.rendered_content;
+                    content.innerHTML = serverRenderedHtml(message.rendered_content);
                 } else {
                     content.textContent = message.content;
                 }

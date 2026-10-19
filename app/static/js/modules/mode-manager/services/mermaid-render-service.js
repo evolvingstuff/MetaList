@@ -1,4 +1,5 @@
 import { ApplicationState } from '../../application-state.js';
+import { produces } from '../../../shockharness/contracts.js';
 // Fenced mermaid blocks under @markdown, and @mermaid notes (their own block).
 const MERMAID_CODE_SELECTOR = (
     '.meta-markdown .meta-mermaid-source > code.language-mermaid:not([data-mermaid-state]), '
@@ -236,7 +237,9 @@ export async function renderMermaidCodeElement(codeElement, mermaidApi) {
     diagram.setAttribute('role', 'img');
     diagram.setAttribute('aria-label', 'Mermaid diagram');
     diagram.setAttribute('data-mermaid-state', 'rendered');
-    diagram.innerHTML = renderResult.svg;
+    // Mermaid runs with securityLevel 'strict' (buildMermaidConfig), which sanitizes the
+    // labels it renders; the browser smoke checks a render is clean.
+    diagram.innerHTML = produces(renderResult.svg, 'sanitized_html');
     const key = sizeKey(source, sourceBlock);
     sourceBlock.replaceWith(diagram);
     const renderedHeight = Math.round(diagram.getBoundingClientRect().height);

@@ -685,7 +685,7 @@ export const Auth = {
                 startupPhase = 'starting the backup reminder';
                 await CommandPalette.startBackupReminder();
                 document.body.dataset.appReady = 'true';
-                CommandPalette.notifyAppUpdate();
+                CommandPalette.startUpdateNotice();
             } else {
                 startupPhase = 'reloading the workspace';
                 window.location.reload();

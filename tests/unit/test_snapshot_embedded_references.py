@@ -243,7 +243,7 @@ def test_standalone_reference_and_source_chrome(monkeypatch, content, standalone
     assert "note-backlinks-link" not in host
     if TARGET_ID in content:
         assert f'data-source-note-id="{TARGET_ID}"' in source
-        assert source.index("&#8598;") < source.index("Source")
+        assert source.index("\u2196") < source.index("Source")
 
 
 def test_backlink_arrow_updates_when_last_reference_is_removed(monkeypatch):

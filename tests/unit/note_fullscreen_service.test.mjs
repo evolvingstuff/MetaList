@@ -19,7 +19,7 @@ test('note full screen service provides explicit X and Escape exits', async () =
     assert.match(source, /event\.key !== 'Escape'/);
     assert.match(source, /closeButton\.addEventListener\('click'/);
     assert.match(source, /document\.addEventListener\('keydown', handleFullscreenKeydown/);
-    assert.match(source, /tree\.innerHTML = markup/);
+    assert.match(source, /tree\.innerHTML = serverRenderedHtml\(markup\)/);
 });
 
 test('note context menus ignore the rendered full screen subtree', async () => {

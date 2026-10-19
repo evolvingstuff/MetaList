@@ -9,8 +9,7 @@ from collections.abc import AsyncGenerator
 from app.security.http_error_diagnostics import describe_server_exception
 from app.services.ai_chat import AiChatActivityTimer, AiChatSessionStore
 from app.services.note_store import NoteStore
-from app.services.ai_chat_rendering import render_ai_chat_streaming_markdown_to_html, render_ai_chat_markdown_to_html, sanitize_ai_chat_markdown_citations, strip_provider_citation_markup
-from app.services.markdown_rendering import render_markdown_to_html
+from app.services.ai_chat_rendering import render_ai_chat_streaming_markdown_to_html, render_ai_chat_markdown_to_html, render_ai_chat_thinking_to_html, sanitize_ai_chat_markdown_citations, strip_provider_citation_markup
 from app.services.runtime_generation import register_current_task, unregister_task
 from app.services.agent.runtime import AgentExecutionError
 from app.services.agent.inference import InferenceProviderError
@@ -188,7 +187,7 @@ class ChatTurnStream:
         if event_type == 'thinking_delta':
             self.store.append_delta(session_key=self.session_key, turn_id=self.turn_id, delta_kind='thinking', text=event['text'])
             self.thinking += event['text']
-            return {**event, 'rendered_text': render_markdown_to_html(self.thinking)}
+            return {**event, 'rendered_text': render_ai_chat_thinking_to_html(self.thinking)}
         if event_type == 'content_delta':
             return self.content_delta(event)
         if event_type == 'done':

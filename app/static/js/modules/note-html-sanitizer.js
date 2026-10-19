@@ -6,6 +6,7 @@ import {
     sanitizeUrlAttributeValue,
 } from './mode-manager/services/html-paste-sanitizer-service.js';
 import { restoreRemoteImageElementsForStorage } from './mode-manager/services/remote-image-proxy-service.js';
+import { produces } from '../shockharness/contracts.js';
 
 
 const POLICY_URL = '/static/note-html-policy.json';
@@ -298,13 +299,14 @@ export function sanitizeNoteHtmlForStorage(content) {
     }
     let storageContent = content;
     if (content.includes('data-remote-image-source-url')) {
-        if (typeof document === 'undefined' || typeof document.createElement !== 'function') {
-            throw new Error('Document is required to restore remote image sources for storage');
+        if (typeof DOMParser !== 'function') {
+            throw new Error('DOMParser is required to restore remote image sources for storage');
         }
-        const container = document.createElement('div');
-        container.innerHTML = content;
-        restoreRemoteImageElementsForStorage(container);
-        storageContent = container.innerHTML;
+        // An inert document: nothing in the unsanitized content loads or runs while the
+        // remote images get their sources back (a live element would fetch its images).
+        const parsed = new DOMParser().parseFromString(content, 'text/html');
+        restoreRemoteImageElementsForStorage(parsed.body);
+        storageContent = parsed.body.innerHTML;
     }
-    return moduleState.sanitizeWithPolicy(storageContent);
+    return produces(moduleState.sanitizeWithPolicy(storageContent), 'sanitized_html');
 }

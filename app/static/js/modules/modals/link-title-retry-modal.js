@@ -274,7 +274,7 @@ export class LinkTitleRetryModal extends BaseModal {
                     <h3>Retry failed link titles</h3>
                 </div>
                 <p class="link-title-retry-status">${escapeHtml(view.statusLine)}</p>
-                <progress class="link-title-retry-progress" max="${view.progressMax}" value="${view.progressValue}"></progress>
+                <progress class="link-title-retry-progress" max="${escapeHtml(String(view.progressMax))}" value="${escapeHtml(String(view.progressValue))}"></progress>
                 <div class="link-title-retry-rows">${rows}</div>
                 ${note}
                 <div class="form-actions">${stopButton}</div>

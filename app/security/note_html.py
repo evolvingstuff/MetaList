@@ -316,6 +316,25 @@ def _sanitize_scalar_attribute(
     return value
 
 
+def sanitize_note_attribute(tag_name: str, attribute_name: str, value: str) -> str | None:
+    """The stored-note policy's check of one attribute value: the value to keep, or None
+    to drop it. The rendered-HTML pass (rendered_html.py) delegates to it."""
+    policy = load_note_html_policy()
+    if attribute_name == "style":
+        return _sanitize_style(raw_style=value, tag_name=tag_name, policy=policy)
+    if attribute_name == "src" and value.lstrip().casefold().startswith("data:"):
+        if tag_name != "img":
+            return None
+        if not _is_safe_data_image(value, max_bytes=policy["max_data_image_bytes"]):
+            return None
+    return _sanitize_scalar_attribute(
+        tag_name=tag_name,
+        attribute_name=attribute_name,
+        value=value,
+        policy=policy,
+    )
+
+
 @lru_cache(maxsize=1)
 def _build_cleaner() -> nh3.Cleaner:
     policy = load_note_html_policy()
@@ -323,28 +342,11 @@ def _build_cleaner() -> nh3.Cleaner:
         tag_name: set(attribute_names)
         for tag_name, attribute_names in policy["allowed_attributes"].items()
     }
-    max_data_image_bytes = policy["max_data_image_bytes"]
-
-    def sanitize_attribute(tag_name: str, attribute_name: str, value: str) -> str | None:
-        if attribute_name == "style":
-            return _sanitize_style(raw_style=value, tag_name=tag_name, policy=policy)
-        if attribute_name == "src" and value.lstrip().casefold().startswith("data:"):
-            if tag_name != "img":
-                return None
-            if not _is_safe_data_image(value, max_bytes=max_data_image_bytes):
-                return None
-        return _sanitize_scalar_attribute(
-            tag_name=tag_name,
-            attribute_name=attribute_name,
-            value=value,
-            policy=policy,
-        )
-
     return nh3.Cleaner(
         tags=set(policy["allowed_tags"]),
         clean_content_tags=set(policy["clean_content_tags"]),
         attributes=allowed_attributes,
-        attribute_filter=sanitize_attribute,
+        attribute_filter=sanitize_note_attribute,
         strip_comments=True,
         link_rel=None,
         url_schemes=set(policy["allowed_url_schemes"]),

@@ -35,6 +35,7 @@ from app.services.search_query import ParsedSearchQuery, SearchClause, parse_sea
 from app.services.sync import get_all_locks
 from app.services.view_state import ViewState
 from app.services.editing_image_sizes import editing_image_size_factors
+from app.security.rendered_html import sanitize_rendered_html
 from app.security.sensitive_cache import SensitiveMemo
 from app.utils.text_utils import strip_html
 from app.utils.time_units import MS_PER_SECOND
@@ -779,11 +780,11 @@ def _render_note_view_html(
     # Sized inline images keep their space while decoding, so text below them
     # does not move after the note renders.
     rendered_content = add_inline_image_dimensions(rendered_content)
-    return decorate_note_references(
+    return sanitize_rendered_html(decorate_note_references(
         note_id=rec.id, content_html=rec.content, tags=rec.tags,
         rendered_content=rendered_content, context=context,
         has_backlinks=has_backlinks,
-    )
+    ))
 
 
 def _cached_note_view_html(

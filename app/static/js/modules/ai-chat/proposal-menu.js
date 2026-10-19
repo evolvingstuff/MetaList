@@ -19,10 +19,10 @@ export async function removeAllTagSuggestionsFromCurrentContext() {
 export async function openProposalMenu(preferences, settingsOnly) {
     const dialog = document.createElement('dialog');
     dialog.className = 'bulk-proposal-dialog';
-    dialog.innerHTML = settingsOnly
+    const formHtml = settingsOnly
         ? '<h2>AI Tagging Vocabulary</h2><form><p>Which tags the AI chat may propose when it tags your notes.</p><label>Vocabulary <select name="policy"><option value="">Not chosen yet</option><option value="existing">Existing tags only</option><option value="new">Existing and new tags</option></select></label><button type="submit">Save</button><button type="button" data-close>Cancel</button><p role="alert"></p></form>'
         : '<h2>AI-Proposed Tags</h2><form><p>Tags the AI chat proposed for your notes. They are not your tags until you accept them; the robot count on a note shows how many it has.</p><label>Action <select name="action"><option value="accept">Accept the proposed tags</option><option value="remove">Reject the proposed tags</option></select></label><label>Scope <select name="target"><option value="current">Current context</option><option value="namespace">Entire namespace</option></select></label><label>Only this tag (leave blank for all proposed tags)<input name="tag" maxlength="256"></label><p>This bulk operation clears undo/redo after successful changes.</p><button type="submit">Apply</button><button type="button" data-close>Close</button><p role="alert"></p></form>';
-    dialog.innerHTML = `<div class="modal-content">${dialog.innerHTML}</div>`;
+    dialog.innerHTML = `<div class="modal-content">${formHtml}</div>`;
     dialog.setAttribute('aria-label', settingsOnly ? 'AI tagging vocabulary' : 'AI-proposed tags');
     const form = dialog.querySelector('form');
     const actions = document.createElement('div');

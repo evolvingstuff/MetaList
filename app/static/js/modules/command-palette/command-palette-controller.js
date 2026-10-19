@@ -6,7 +6,8 @@ import { showUpdateNotice } from '../app-update-service.js';
 import { BackupReminder } from '../backup-reminder-service.js';
 import { receiveSearchSuggestionPreferences } from '../mode-manager/services/search-suggestion-windows-service.js';
 import { ApplicationState, stateValuesEqual } from '../application-state.js';
-import { HttpRequestError } from '../expected-errors.js';
+import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js';
+import { showFatalError } from '../error-overlay.js';
 import {
     openProposalMenu,
     removeAllTagSuggestionsFromCurrentContext,
@@ -336,6 +337,8 @@ class CommandPaletteController {
         this._endpoints = [];
 
         this._isOpen = false;
+        // An activation is recording its use or running: further ones are ignored.
+        this._isActivating = false;
         this._previousFocus = null;
         this._previousSelection = null;
 
@@ -1195,7 +1198,21 @@ class CommandPaletteController {
         return matches;
     }
 
+    // One activation does one thing. Picking an item records the use (a server round
+    // trip) before running it, and a second activation in that time (Enter twice, a click
+    // then Enter) used to run it again, so a dialog opened twice ("already open").
     async _activateSelected() {
+        if (this._isActivating) {
+            return;
+        }
+        this._isActivating = true;
+        // Cleared however the activation ends, also by an expected failure shown as a banner.
+        await this._activateSelectedOnce().finally(() => {
+            this._isActivating = false;
+        });
+    }
+
+    async _activateSelectedOnce() {
         const matches = this._getVisibleMatches();
         if (matches.length === 0) {
             return;
@@ -2342,6 +2359,16 @@ class CommandPaletteController {
 
     async notifyAppUpdate() {
         await showUpdateNotice(this._preferences, () => this.openVersionInfo());
+    }
+
+    // Startup shows the update notice once the release check answers, without waiting
+    // for it. The notice handles a check that found nothing itself, so a failure here is
+    // a bug: unexpected errors reach the global overlay, any other shows as fatal too.
+    startUpdateNotice() {
+        void this.notifyAppUpdate().catch((error) => {
+            rethrowUnexpectedError(error);
+            showFatalError('The update notice could not be shown', error.message);
+        });
     }
 
     async openMemoryUsage() {

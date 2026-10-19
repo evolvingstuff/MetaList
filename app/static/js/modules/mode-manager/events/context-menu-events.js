@@ -89,6 +89,7 @@ import { hasRootsBelowLoadedWindow } from '../services/infinite-scroll-service.j
 import { isRootReorderLocked } from '../services/root-sort-service.js';
 import { addDiagramToNote, openDiagramEditor } from '../../excalidraw/excalidraw-actions.js';
 import { unlessDiagramEditorOpen } from '../../excalidraw/excalidraw-editor-state.js';
+import { serverRenderedHtml } from '../../server-rendered-html.js';
 
 const ontologyModal = new OntologyModal();
 const AI_TAG_FAILURE_BANNER_SECONDS = 8;
@@ -158,7 +159,7 @@ async function resizeImageFromContext(imageContext, action) {
         // braces added or removed shift a caret after them by their length.
         const textBefore = noteContent.textContent;
         if (noteContent.innerHTML !== response.content) {
-            noteContent.innerHTML = response.content;
+            noteContent.innerHTML = serverRenderedHtml(response.content);
         }
         // In the same frame as the new text, so an image never shows at full size between.
         applyEditingImageSizes(noteContent, response.editingImageSizes);

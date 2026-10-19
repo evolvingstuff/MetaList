@@ -2,3 +2,6 @@
 # docs/security/vendor-manifest.json. Never convert its line endings, so
 # checkouts on Windows (core.autocrlf=true) hold the same bytes as everywhere else.
 app/static/js/vendor/** -text
+# The ShockHarness contracts runtime copies, pinned by checksum in .shockharness-contracts.json.
+app/static/js/shockharness/** -text
+app/contracts.py -text

@@ -29,6 +29,7 @@ from app.services.ai_chat import ai_chat_store
 from app.services.ai_chat_rendering import find_note_citation_ids
 from app.services.ai_chat_rendering import find_web_citation_ids
 from app.services.ai_chat_rendering import render_ai_chat_markdown_to_html
+from app.services.ai_chat_rendering import render_ai_chat_thinking_to_html
 from app.services.agent.context import AgentContextBuilder
 from app.services.agent.cloud_privacy import cloud_privacy_evaluator
 from app.services.agent.cloud_privacy import resolve_cloud_privacy_boundary
@@ -52,7 +53,6 @@ from app.services.agent.token_estimation import estimate_input_tokens
 from app.services.agent.trace import agent_trace_store
 from app.services.agent.menu_actions import MenuResult, menu_action_store
 from app.services.client_state_service import load_client_preferences
-from app.services.markdown_rendering import render_markdown_to_html
 from app.services.note_store import store as note_store
 from app.services.openai_credentials import OpenAICredentialInputError
 from app.services.openai_credentials import openai_credential_store
@@ -725,8 +725,11 @@ def get_ai_session(
                     evidence_ids=find_web_citation_ids(message["content"]),
                 ),
             )
-        if message["role"] == "assistant" and message["thinking"] != "":
-            rendered_thinking = render_markdown_to_html(message["thinking"])
+        thinking = message["thinking"]
+        if not isinstance(thinking, str):
+            raise TypeError("AI chat message thinking must be a string")
+        if message["role"] == "assistant" and thinking != "":
+            rendered_thinking = render_ai_chat_thinking_to_html(thinking)
         messages.append(
             AiChatMessage(
                 id=message["id"],

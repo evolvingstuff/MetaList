@@ -10,6 +10,7 @@ import { ApplicationState } from '../application-state.js';
  */
 
 import { ModeContextInstance as ModeContext } from '../mode-manager/mode-context.js';
+import { escapeHtml } from '../html-escape.js';
 
 // A newly shown modal's first field is focused this much later.
 const FIRST_FIELD_FOCUS_DELAY_MS = 100;
@@ -173,8 +174,8 @@ export class BaseModal {
             modalElement.style.display = 'none';
             modalElement.innerHTML = `
                 <div class="modal-content">
-                    <h2 id="${this.modalElementId}-title">Password Management</h2>
-                    <div id="${this.modalElementId}-body">
+                    <h2 id="${escapeHtml(`${this.modalElementId}-title`)}">Password Management</h2>
+                    <div id="${escapeHtml(`${this.modalElementId}-body`)}">
                         <!-- Content will be dynamically inserted -->
                     </div>
                 </div>

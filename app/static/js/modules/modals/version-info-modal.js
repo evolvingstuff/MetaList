@@ -133,7 +133,7 @@ export class VersionInfoModal extends BaseModal {
             <div class="modal-content version-info-modal-content">
                 <h3>Version Info</h3>
                 ${bodyHtml}
-                <section class="version-update-section" aria-live="polite" data-update-pending="${isUpdating}">
+                <section class="version-update-section" aria-live="polite" data-update-pending="${escapeHtml(String(isUpdating))}">
                     <p>${escapeHtml(state.updateMessage)}</p>
                     ${this.buildUpdateControls(state)}
                 </section>

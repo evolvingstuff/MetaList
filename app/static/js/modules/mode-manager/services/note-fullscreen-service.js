@@ -6,6 +6,7 @@ import { ensureAnchorsOpenInNewTabs } from './link-target-service.js';
 import { queueMermaidDiagramRendering } from './mermaid-render-service.js';
 import { hydrateRemoteImageProxies } from './remote-image-proxy-service.js';
 import { recordNoteInteractionIfNew } from './search-interaction-service.js';
+import { serverRenderedHtml } from '../../server-rendered-html.js';
 
 const moduleState = ApplicationState.createFields('note-fullscreen-service', {
     activeOverlay: null,
@@ -83,7 +84,7 @@ function createNoteFullscreenOverlay(markup) {
     scrollContainer.classList.add('note-fullscreen-scroll');
     const tree = document.createElement('main');
     tree.classList.add('note-fullscreen-tree');
-    tree.innerHTML = markup;
+    tree.innerHTML = serverRenderedHtml(markup);
     scrollContainer.appendChild(tree);
     overlay.appendChild(scrollContainer);
     mainApp.appendChild(overlay);
