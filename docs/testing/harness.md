@@ -28,7 +28,7 @@ After the two gates, development startup also prints a **ShockHarness report**:
 [ShockHarness](https://github.com/evolvingstuff/ShockHarness) is a strict,
 deterministic static-analysis policy for Python and JavaScript (exception
 transparency, no implicit defaults, no magic numbers, advisory complexity). It
-is the `shockharness==0.15.0` pin in pyproject's `dev` extra (Python 3.11+ only)
+is the `shockharness==0.17.0` pin in pyproject's `dev` extra (Python 3.11+ only)
 and is scoped by `.shockharness.toml` at the repository root. The step is an
 assessment, not a gate: it never fails startup, whatever it finds, and the
 existing gates are unchanged. The console shows one headline (files, findings

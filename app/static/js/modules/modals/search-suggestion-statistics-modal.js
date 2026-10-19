@@ -427,20 +427,20 @@ export class SearchSuggestionStatisticsModal extends BaseModal {
             <details class="search-suggestion-statistics-day"${index === 0 ? ' open' : ''}>
                 <summary>
                     <span>${escapeHtml(day.date)}</span>
-                    <span>${day.totalTagCredits} ${pluralize(day.totalTagCredits, 'tag credit', 'tag credits')}</span>
+                    <span>${escapeHtml(String(day.totalTagCredits))} ${escapeHtml(pluralize(day.totalTagCredits, 'tag credit', 'tag credits'))}</span>
                 </summary>
                 <table class="search-suggestion-statistics-table">
                     <thead><tr><th scope="col">Tag</th><th scope="col">Credits</th></tr></thead>
                     <tbody>
                         ${day.tags.map((entry) => `
-                            <tr><td>${escapeHtml(entry.tag)}</td><td>${entry.count}</td></tr>
+                            <tr><td>${escapeHtml(entry.tag)}</td><td>${escapeHtml(String(entry.count))}</td></tr>
                         `).join('')}
                     </tbody>
                 </table>
             </details>
         `).join('');
         return `
-            <p class="search-suggestion-statistics-retention">${populatedDayCount} populated ${pluralize(populatedDayCount, 'day', 'days')} retained (maximum ${statistics.retentionPopulatedDayLimit}).</p>
+            <p class="search-suggestion-statistics-retention">${escapeHtml(String(populatedDayCount))} populated ${escapeHtml(pluralize(populatedDayCount, 'day', 'days'))} retained (maximum ${escapeHtml(String(statistics.retentionPopulatedDayLimit))}).</p>
             <div class="search-suggestion-statistics-days">${daySections}</div>
         `;
     }
