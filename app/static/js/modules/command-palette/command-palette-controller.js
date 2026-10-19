@@ -56,6 +56,7 @@ import { printNotes } from '../mode-manager/services/print-service.js';
 import { exportNotes } from '../mode-manager/services/export-service.js';
 
 import { VersionInfoModal } from '../modals/version-info-modal.js';
+import { MemoryUsageModal } from '../modals/memory-usage-modal.js';
 import { NoteLayoutAppearanceModal } from '../modals/note-layout-appearance-modal.js';
 import { VisualCuesModal, VISUAL_CUE_OPTIONS } from '../modals/visual-cues-modal.js';
 import { TagSuggestionSettingsModal, TAG_SUGGESTION_OPTIONS } from '../modals/tag-suggestion-settings-modal.js';
@@ -363,6 +364,7 @@ class CommandPaletteController {
         this._reminderModal = null;
 
         this._versionInfoModal = null;
+        this._memoryUsageModal = null;
         this._noteLayoutAppearanceModal = null;
         this._visualCuesModal = null;
         this._tagSuggestionSettingsModal = null;
@@ -441,6 +443,7 @@ class CommandPaletteController {
                 openReminders: this.openReminders.bind(this),
 
                 openVersionInfo: this.openVersionInfo.bind(this),
+                openMemoryUsage: this.openMemoryUsage.bind(this),
                 openNoteLayoutAppearance: this.openNoteLayoutAppearance.bind(this),
                 openVisualCues: this.openVisualCues.bind(this),
                 openTagSuggestionSettings: this.openTagSuggestionSettings.bind(this),
@@ -2339,6 +2342,17 @@ class CommandPaletteController {
 
     async notifyAppUpdate() {
         await showUpdateNotice(this._preferences, () => this.openVersionInfo());
+    }
+
+    async openMemoryUsage() {
+        const isReady = await this._prepareForModalOpen('commandPalette.openMemoryUsage');
+        if (!isReady) {
+            return;
+        }
+        if (this._memoryUsageModal === null) {
+            this._memoryUsageModal = new MemoryUsageModal(NotesAPI.getMemoryUsage.bind(NotesAPI));
+        }
+        await this._memoryUsageModal.open();
     }
 
     async openVersionInfo() {

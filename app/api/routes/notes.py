@@ -164,6 +164,7 @@ from app.api.request_auth import require_request_auth_token
 from app.security.shell_execution import is_loopback_host
 from app.services.input_errors import InputRejected
 from app.services.editing_image_sizes import editing_image_size_factors
+from app.services.memory_usage import describe_memory_usage
 
 
 logger = logging.getLogger(__name__)
@@ -624,6 +625,13 @@ def tab_search_interaction(request: Request, payload: TabSearchInteractionReques
 def get_tag_interactions(request: Request) -> Dict[str, object]:
     token = _require_bearer_token(request)
     return list_search_suggestion_statistics(token=token)
+
+
+@router.get("/notes/memory-usage")
+def get_memory_usage(request: Request) -> Dict[str, object]:
+    """The Memory Usage dialog: this namespace server process's memory and the notes it holds."""
+    _require_bearer_token(request)
+    return describe_memory_usage()
 
 
 @router.delete("/notes/tag-interactions")

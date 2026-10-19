@@ -72,6 +72,7 @@ export const CONFIG = {
             TAB_STATE_DELETE_TAB: `${API_NOTES_BASE}/tab-state/delete-tab`,
             TAB_STATE_SORT_MODE: `${API_NOTES_BASE}/tab-state/sort-mode`,
             TAG_INTERACTIONS: `${API_NOTES_BASE}/tag-interactions`,
+            MEMORY_USAGE: `${API_NOTES_BASE}/memory-usage`,
             SEARCH_SUGGESTION_INTERACTION: `${API_NOTES_BASE}/tag-interactions/search-suggestion`,
             TAB_SEARCH_INTERACTION: `${API_NOTES_BASE}/tag-interactions/tab-selection`,
             SEARCH_SUGGESTIONS: `${API_NOTES_BASE}/search-suggestions`,

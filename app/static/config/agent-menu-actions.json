@@ -78,6 +78,12 @@
     "presentation": "dialog"
   },
   {
+    "id": "form.memory_usage",
+    "label": "Memory usage",
+    "selector": "#memory-usage-modal",
+    "presentation": "dialog"
+  },
+  {
     "id": "form.restore_backup",
     "label": "Restore from backup",
     "selector": "#backup-restore-modal",

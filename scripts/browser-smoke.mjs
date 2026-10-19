@@ -488,7 +488,7 @@ try {
   await page.keyboard.type('help');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Escape');
-  for (const [method, args] of [['openKeyboardShortcutsHelp', []], ['openVersionInfo', []], ['openVersionInfo', []], ['openOntologyEditor', []], ['openReminders', [{search: ''}]], ['openCreateNamespace', []], ['openOpenNamespace', []], ['openManageNamespacePorts', []], ['openBackupRestore', []], ['openNoteLayoutAppearance', []], ['openSearchSuggestionStatistics', []], ['openReminders', [{search: ''}]], ['openOntologyEditor', []]]) {
+  for (const [method, args] of [['openKeyboardShortcutsHelp', []], ['openVersionInfo', []], ['openVersionInfo', []], ['openOntologyEditor', []], ['openReminders', [{search: ''}]], ['openCreateNamespace', []], ['openOpenNamespace', []], ['openManageNamespacePorts', []], ['openBackupRestore', []], ['openNoteLayoutAppearance', []], ['openSearchSuggestionStatistics', []], ['openMemoryUsage', []], ['openReminders', [{search: ''}]], ['openOntologyEditor', []]]) {
     console.log(`Checking modal ${method}`);
     await page.evaluate(async ({method, args}) => {
       const {CommandPalette} = await import('/static/js/modules/command-palette/command-palette-controller.js');
@@ -505,6 +505,19 @@ try {
         return (await response.json()).version;
       });
       assert.equal(await page.$eval('#version-info-modal .version-info-table td', cell => cell.textContent.trim()), version);
+    }
+    if (method === 'openMemoryUsage') {
+      // The server process's numbers, in MB, and the notes it holds; Refresh reads them again.
+      await page.waitForSelector('#memory-usage-modal .memory-usage-table');
+      const memoryRows = await page.$$eval('#memory-usage-modal .memory-usage-table tr',
+        rows => rows.map(row => [row.querySelector('th').textContent.trim(), row.querySelector('td').textContent.trim()]));
+      assert.deepEqual(memoryRows.map(([label]) => label), ['Server process memory now',
+        'Server process memory at its peak', 'Notes held decrypted in memory', 'Server running for']);
+      assert.match(memoryRows[0][1], /^[0-9.,]+ MB$/, `memory now: ${memoryRows[0][1]}`);
+      assert.match(memoryRows[2][1], /^[0-9,]+ notes, [0-9.,]+ MB of text$/, `notes held: ${memoryRows[2][1]}`);
+      await page.click('#memory-usage-refresh-btn');
+      await page.waitForSelector('#memory-usage-modal .memory-usage-table');
+      await page.waitForFunction(() => !document.querySelector('#memory-usage-refresh-btn').disabled);
     }
     assert.deepEqual(errors, []);
     await page.keyboard.press('Escape');
