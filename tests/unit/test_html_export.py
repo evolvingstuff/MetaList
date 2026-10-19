@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import base64
+import html as html_module
+import re
 from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Dict, List, Optional
@@ -111,8 +113,8 @@ def test_build_notes_export_document_keeps_collapsed_notes_collapsed_and_redacts
     assert 'id="search-input"' not in html
     assert "\n" in html
     assert '  <main id="notes-container">' in html
-    assert '    <article class="note collapsed" id="note-root" data-can-collapse="true">' in html
-    assert '      <div class="note-content">' in html
+    assert '\n<article class="note collapsed" id="note-root" data-can-collapse="true">' in html
+    assert '\n  <div class="note-content">' in html
 
 
 def test_build_notes_export_document_can_export_single_note_subtree(
@@ -843,3 +845,51 @@ def test_a_print_keeps_the_embed_tints(monkeypatch: pytest.MonkeyPatch) -> None:
     rule = html[html.index("body.html-export-body {"):]
     rule = rule[:rule.index("}")]
     assert "print-color-adjust: exact;" in rule and "-webkit-print-color-adjust: exact;" in rule
+
+
+def _preformatted_texts(markup: str) -> list[str]:
+    """The text of each <pre> block in the notes, as a browser shows it."""
+    return [
+        re.sub(r"<[^>]+>", "", html_module.unescape(block))
+        for block in re.findall(r"<pre[^>]*>(.*?)</pre>", markup, re.S)
+    ]
+
+
+_CODE = "def area(r):\n    return r * r"
+_CODE_FIRST_LINE = "def area(r):"
+
+
+# A download can collapse its notes, so each carries its collapsed first line as well.
+@pytest.mark.parametrize(("purpose", "expected"), [
+    ("download", [_CODE, _CODE_FIRST_LINE, _CODE, _CODE_FIRST_LINE]),
+    ("print", [_CODE, _CODE]),
+])
+def test_exported_code_lines_stay_as_written_at_every_depth(
+    monkeypatch: pytest.MonkeyPatch, purpose: str, expected: list[str],
+) -> None:
+    # The export used to indent its markup, and with it every line inside a code
+    # block: the root note's code lines moved right, its child's further.
+    code_html = "<div>def area(r):</div><div>    return r * r</div>"
+    notes = {
+        "root": _Note("root", None, None, None, False, code_html, "@code=python"),
+        "child": _Note("child", "root", None, None, False, code_html, "@code=python"),
+    }
+    store = _FakeNoteStore(notes=notes, children_by_parent={None: ["root"], "root": ["child"]})
+    monkeypatch.setattr(export_module, "note_store", store)
+    monkeypatch.setattr(snapshot_module, "note_store", store)
+    monkeypatch.setattr(export_module, "file_registry", _FakeFileRegistry(set()))
+
+    document = build_notes_export_document(
+        purpose=purpose,
+        title="",
+        include_credentials=False,
+        sort_mode="normal",
+        is_untagged_view=False,
+        search="",
+        theme="light",
+        token="token",
+        root_note_id="root",
+        editing_note_id=None,
+    )
+
+    assert _preformatted_texts(document) == expected

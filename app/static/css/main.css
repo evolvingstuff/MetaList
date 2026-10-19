@@ -6624,10 +6624,15 @@ body.tab-drag-active * {
     z-index: 10;
 }
 
-.search-highlight {
+/* A search's quoted phrases where they occur in the notes list (search-highlight-service.js). */
+::highlight(metalist-search) {
     background-color: #fff59d;
     color: inherit;
-    border-radius: 2px;
+}
+
+html[data-theme="dark"] ::highlight(metalist-search) {
+    background-color: #6b5d00;
+    color: #ffffff;
 }
 
 /* Meta tag formatting */

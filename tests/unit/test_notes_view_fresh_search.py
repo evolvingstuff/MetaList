@@ -17,6 +17,7 @@ def test_view_diff_does_not_use_cached_anchor_without_client_render_state(monkey
         children_by_parent={None: ["root-a"]},
         metadata={
             "rootCountTotal": 1,
+            "searchHighlightPhrases": ["fat"],
             "searchRootCountTotal": 1,
             "rootSortBuckets": [],
             "rootWindowStart": 0,
@@ -59,6 +60,7 @@ def test_view_diff_does_not_use_cached_anchor_without_client_render_state(monkey
     # A tab showing nothing starts fresh: nothing is treated as already loaded.
     assert captured["client_known_note_ids"] == set()
     assert result["snapshot"]["structure"] == [{"id": "root-a", "parentId": None, "hash": "new-hash"}]
+    assert result["snapshot"]["searchHighlightPhrases"] == ["fat"]
     assert "resultApproximateTokenCount" not in result["snapshot"]
 
 
@@ -74,6 +76,7 @@ def test_view_diff_can_use_cached_anchor_when_client_has_render_state(monkeypatc
         children_by_parent={None: ["root-a", "deep-root"]},
         metadata={
             "rootCountTotal": 2,
+            "searchHighlightPhrases": [],
             "searchRootCountTotal": 2,
             "rootSortBuckets": [],
             "rootWindowStart": 0,
@@ -125,4 +128,5 @@ def test_view_diff_can_use_cached_anchor_when_client_has_render_state(monkeypatc
     assert captured["visible_top_root_id"] is None
     assert captured["visible_bottom_root_id"] is None
     assert result["snapshot"]["diffOps"] == []
+    assert result["snapshot"]["searchHighlightPhrases"] == []
     assert "resultApproximateTokenCount" not in result["snapshot"]

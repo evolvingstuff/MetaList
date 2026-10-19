@@ -174,6 +174,64 @@ async function arrivesWhileTypingCase(page) {
   assert.deepEqual(state.tags, ['scratchpad'], 'the list shown is the one for what is in the box');
 }
 
+// A tag with a value (@code=python): "@c" suggests the family, "@code" its members, "="
+// can be typed, and "@code" finds every language while "@code=python" finds one
+// (reported 2026-10-19: nothing was suggested, found, or typeable).
+async function valuedTagCase(page) {
+  const ids = await page.evaluate(async () => {
+    const {NotesAPI} = await import('/static/js/modules/api-client.js');
+    const ids = {};
+    for (const language of ['python', 'javascript']) {
+      const note = await NotesAPI.createNote(null, '');
+      await NotesAPI.saveNote(note.id, `<div>print("${language}")</div>`, `@code=${language}`);
+      ids[language] = note.id;
+    }
+    return ids;
+  });
+  const listed = () => page.evaluate(ids => Object.fromEntries(Object.entries(ids).map(
+    ([language, id]) => [language, document.querySelector(`#notes-container .note[data-note-id="${id}"]`) !== null],
+  )), ids);
+  await clearSearch(page);
+  // Recently used tags come first (personalized), so only membership is fixed here.
+  const started = (await typeAndWaitForList(page, '@c')).tags;
+  assert.deepEqual(['@code', '@code=javascript', '@code=python'].filter(tag => started.includes(tag)),
+    ['@code', '@code=javascript', '@code=python'], `"@c" suggests the family and the languages in use: ${started}`);
+  await clearSearch(page);
+  const family = await typeAndWaitForList(page, '@code');
+  assert.deepEqual(family.tags, ['@code=javascript', '@code=python'], '"@code" suggests the languages in use');
+  await page.waitForFunction(async () => {
+    const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
+    return mode.getExecutedSearchQuery(mode.activeTabId) === '@code';
+  });
+  await idle(page);
+  assert.deepEqual(await listed(), {python: true, javascript: true}, '"@code" finds every language');
+  // Picking a language from the list records the pick and searches for it.
+  await clearSearch(page);
+  const picked = await typeAndWaitForList(page, '@code');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await idle(page);
+  await pause(SETTLE_MS);
+  const afterPick = await suggestionState(page);
+  assert.equal(await page.evaluate(() => {
+    const overlay = document.getElementById('fatal-error-overlay');
+    return overlay ? overlay.textContent : '';
+  }), '', 'picking a suggested language is no error');
+  assert.equal(afterPick.executed, picked.tags[1], 'Enter searches for the language picked');
+  await clearSearch(page);
+  // A whole tag has nothing left to suggest.
+  await page.keyboard.type('@code=python');
+  await idle(page);
+  assert.equal((await suggestionState(page)).value, '@code=python', 'the = is typed into the search box');
+  await page.waitForFunction(async () => {
+    const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
+    return mode.getExecutedSearchQuery(mode.activeTabId) === '@code=python';
+  });
+  await idle(page);
+  assert.deepEqual(await listed(), {python: true, javascript: false}, '"@code=python" finds that language only');
+  await clearSearch(page);
+}
+
 export async function checkSearchSuggestions(page) {
   const ids = await createNotes(page);
   await page.reload();
@@ -189,6 +247,7 @@ export async function checkSearchSuggestions(page) {
       ['arrow then Enter on an up-to-date list', freshArrowCase],
       ['arrow on an old list', staleArrowCase],
       ['a list arriving while typing', arrivesWhileTypingCase],
+      ['a tag with a value', valuedTagCase],
     ]) {
       try {
         await run(page);

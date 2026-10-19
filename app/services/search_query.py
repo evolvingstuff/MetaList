@@ -153,6 +153,18 @@ def parse_search_query(normalized_text: str) -> ParsedSearchQuery:
     return ParsedSearchQuery(clauses=tuple(clauses))
 
 
+def search_highlight_phrases(parsed: ParsedSearchQuery) -> Tuple[str, ...]:
+    """The quoted phrases a matching note contains, from every OR clause, each once and
+    as the search reads them (an edge space limits a match to a word edge there): what
+    the notes list highlights. Excluded phrases and tags never show, so never appear."""
+    phrases: List[str] = []
+    for clause in parsed.clauses:
+        for phrase in clause.required_text:
+            if phrase not in phrases:
+                phrases.append(phrase)
+    return tuple(phrases)
+
+
 def format_search_query(parsed: ParsedSearchQuery) -> str:
     """A search that parses back to `parsed`: each clause's required tags, then its
     excluded tags (-tag), then its quoted phrases, then its excluded phrases, with

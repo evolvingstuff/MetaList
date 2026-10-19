@@ -12,6 +12,13 @@ Search queries are a whitespace-separated list of terms.
 ### Tag Terms (unquoted)
 - `foo` and `+foo` are equivalent (required tag).
 - `-foo` excludes notes that have tag `foo`.
+- A tag with a value, `name=value` (`@code=python`, `@size=2`), can be searched whole
+  (`@code=python` finds Python notes only) or by its name alone: a tag without `=`
+  also matches every `tag=value` (`@code` finds every `@code=<language>` note, `-@code`
+  excludes them all, `priority` finds `priority=high`). The family is the part before
+  `=`, never a shorter prefix (`@cod` finds nothing). One `=` can be typed in a search
+  tag, as in the tag bar; it is never a tag's first character. Ontology rules still
+  match tags exactly.
 
 Tag matching uses the note’s tag-bar string (`notes.tags`) tokenized with the same
 rules as the tag bar:
@@ -48,8 +55,13 @@ Ontology rules also add **inferred tags** before search matching:
 - A typed prefix can match either the start of the full tag or the start of any connector-separated segment.
   - Example: `wor` suggests `workspaces` and `databricks-workspaces`.
   - Example: `orksp` suggests neither.
+- `@` (meta) tags are suggested from the built-in list (`@markdown`, `@size=2`…) and from
+  the `@` tags notes carry, with each valued tag's family: `@c` suggests `@code` and
+  `@code=python`, `@code` suggests `@code=python` and `@code=javascript`. Plain tags with a
+  value are suggested whole (`priority=high`), without their family name.
 - The server returns at most `MAX_SEARCH_SUGGESTIONS` suggestions; the default is 20.
-- This affects suggestions only; actual tag search matching remains exact against effective tag terms.
+- This affects suggestions only; tag search matches effective tag terms exactly, except that
+  a tag without a value also matches its `tag=value` family (above).
 
 ### Creating Notes From Search
 - New notes created while a positive tag search is active are initialized from
@@ -80,6 +92,23 @@ Text matching is:
   matches "fat cat" and "fat." but not "father"; `" fat"` needs it to start there, so
   it does not match "sulfate"; `" fat "` matches only the word "fat". Without edge
   spaces a term matches anywhere, also inside words (`"fat"` matches "father").
+
+### Highlighted Phrases
+The required quoted phrases of the search, from every `OR` clause, are marked in soft
+yellow (a dark gold in the dark theme) wherever they occur in the notes list: in each
+note's text, in embedded notes, in a matching note's children shown with it, and in
+tag-bar comments. A mark follows the matching rules above (any case, also inside words,
+edge spaces for word edges); a phrase running through formatting or across a line
+break is one mark. Excluded phrases and tags are never marked.
+
+- The note being edited is not marked; leaving edit mode marks it again.
+- Full screen, floating windows, export, print and copied text are not marked.
+- Marks are painted over the text (`search-highlight-service.js`, the CSS Custom
+  Highlight API): no note's HTML changes, and nothing moves or scrolls.
+- The server sends the phrases with each view (`searchHighlightPhrases`, its own
+  reading of the search), so the browser never parses the search itself.
+- Phrases the browser cannot see are not marked: a web page title or a hidden link
+  URL the note matched by.
 
 ### UUID Terms
 - UUIDs in positive terms are treated as direct note targets (including when pasted as `[[UUID]]`).

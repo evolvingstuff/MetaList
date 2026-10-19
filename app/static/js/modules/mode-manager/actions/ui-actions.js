@@ -17,6 +17,7 @@ import {
     captureEditingFocus, captureViewportRoot, holdViewportRoot, placeCaretAtClickAnchor, restoreEditingFocus,
 } from '../services/viewport-hold-service.js';
 import { MS_PER_SECOND } from '../../time-units.js';
+import { setSearchHighlightPhrases } from '../services/search-highlight-service.js';
 
 const PERF_LOG_MS_DECIMALS = 2;
 // waitForViewRequestIdle fails loudly once a notes.view request has blocked this long.
@@ -177,6 +178,7 @@ export async function actionRefreshAndMaybeSelect(options) {
         }
         const { snapshot } = viewResponse;
         ModeContext.setRootWindow(requestTabId, snapshot.rootWindowStart, snapshot.rootBandMargin);
+        setSearchHighlightPhrases(snapshot.searchHighlightPhrases);
         const hasDiffOps = Array.isArray(snapshot.diffOps);
         const previousHashes = ModeContext.getNoteHashPayload();
         if (!hasDiffOps) {

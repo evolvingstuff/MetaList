@@ -152,6 +152,29 @@ def test_search_suggestion_selection_credits_the_selected_known_tag(
     ]
 
 
+@pytest.mark.parametrize("query", ["@c", "@code", "@code=", "rec", ""])
+def test_every_offered_search_suggestion_can_be_selected(monkeypatch: pytest.MonkeyPatch, query: str) -> None:
+    # Picking @code=python from the list failed as "not a known tag" (2026-10-19): the
+    # suggestions offered @ tags in use, the selection checked a narrower vocabulary.
+    records = [
+        SearchRecord(note_id=note_id, content_text="text", tags=tags, tag_terms=extract_tags_for_search(tags))
+        for note_id, tags in (("python", "@code=python"), ("javascript", "@code=javascript"), ("recipes", "recipes"))
+    ]
+    index = _build_index(records, raw_tag_terms_by_id={record.note_id: record.tag_terms for record in records})
+    recorded: list[tuple[str, ...]] = []
+    monkeypatch.setattr(search_history_module, "search_index", index)
+    monkeypatch.setattr(
+        search_history_module.search_history_store,
+        "record_interaction",
+        lambda **kwargs: recorded.append(kwargs["tags"]) or True,
+    )
+    offered = index.suggest_all_tag_completions(query=query)
+    assert offered != []
+    for tag in offered:
+        assert record_search_suggestion_selection(tag=tag, token="token", interacted_on=date(2026, 10, 19)) is True
+    assert recorded == [(tag,) for tag in offered]
+
+
 def test_tab_selection_credits_only_known_positive_tag_terms(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

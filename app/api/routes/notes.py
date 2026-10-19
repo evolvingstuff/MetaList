@@ -383,6 +383,7 @@ def view_diff(payload: ViewDiffRequest):
         "version": VERSION,
         "currentClientId": client_id,
         "searchQuery": search,
+        "searchHighlightPhrases": state.metadata["searchHighlightPhrases"],
         "sortMode": sort_mode,
         "isUntaggedView": is_untagged_view,
         "rootCountTotal": state.metadata["rootCountTotal"],

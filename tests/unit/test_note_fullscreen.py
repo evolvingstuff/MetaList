@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import html
+import re
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -147,3 +149,26 @@ def test_floating_window_refreshes_only_when_revision_changes(monkeypatch: pytes
     store._notes["child"] = _Note("child", "parent", "Restored child", "")
     monkeypatch.setattr(notes_route, "get_current_sync_uuid", lambda: "revision-c")
     assert notes_route.note_floating_window("child", "revision-b:2")["status"] == "ready"
+
+
+def _preformatted_texts(markup: str) -> list[str]:
+    """The text of each <pre> block, as the page shows it."""
+    return [re.sub(r"<[^>]+>", "", html.unescape(block)) for block in re.findall(r"<pre[^>]*>(.*?)</pre>", markup, re.S)]
+
+
+@pytest.mark.parametrize("tags", ["@code=python", "@shell"])
+def test_fullscreen_keeps_code_lines_as_written_at_every_depth(monkeypatch: pytest.MonkeyPatch, tags: str) -> None:
+    # Full screen used to indent its markup, and with it every line inside a code
+    # block: 4 more spaces per line in the selected note, 8 in its child.
+    code_html = "<div>def area(r):</div><div>    return r * r</div>"
+    notes = {
+        "root": _Note("root", None, code_html, tags),
+        "child": _Note("child", "root", code_html, tags),
+    }
+    store = _FakeNoteStore(notes=notes, children={None: ["root"], "root": ["child"]})
+    monkeypatch.setattr(fullscreen_module, "note_store", store)
+    monkeypatch.setattr(fullscreen_module, "file_registry", _FakeFileRegistry())
+
+    markup = fullscreen_module.build_note_fullscreen_markup("root")
+
+    assert _preformatted_texts(markup) == ["def area(r):\n    return r * r", "def area(r):\n    return r * r"]

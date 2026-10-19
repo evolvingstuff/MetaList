@@ -52,6 +52,7 @@ function buildHarness() {
     };
     const uiDependencies = {
         MS_PER_SECOND,
+        setSearchHighlightPhrases() {},
         ModeContext,
         moduleState: ApplicationState.createFields(`test.tab-switch.${Math.random()}`, { viewRequestInFlight: false }),
         Logger: { logAction() {}, logDebug() {}, logNoop() {} },

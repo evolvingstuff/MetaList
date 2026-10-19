@@ -45,6 +45,7 @@ function refreshHarness({ isRemoved, isAnimated, isFullSnapshot }) {
     };
     const dependencies = {
         ModeContext,
+        setSearchHighlightPhrases() {},
         moduleState: ApplicationState.createFields("test.refresh", { viewRequestInFlight: false }),
         Logger: { logAction() {}, logDebug() {} },
         NotesAPI: { async fetchView() { return { snapshot }; } },

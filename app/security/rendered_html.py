@@ -75,7 +75,7 @@ _FIXED_VALUES: dict[tuple[str, str], frozenset[str]] = {
 # ai-chat-web-*, Pygments' tok-*, the JSON view's json-*, full-screen notes' own): inert names the app's own CSS
 # and scripts give meaning to.
 RENDERER_CLASS_PREFIXES = ("note-", "meta-", "link-title", "ai-chat-", "tok-", "json-")
-RENDERER_CLASS_NAMES = frozenset({"list-bulleted", "list-numbered", "note", "search-highlight"})
+RENDERER_CLASS_NAMES = frozenset({"list-bulleted", "list-numbered", "note"})
 # The size tags' factor (@size=2), a CSS variable the stylesheet scales text by.
 _SIZE_FACTOR_PROPERTY = "--meta-size-factor"
 _SIZE_FACTOR_DECLARATION_RE = re.compile(r"^--meta-size-factor\s*:\s*[0-9]+(?:\.[0-9]+)?$")
