@@ -725,6 +725,12 @@ export const NotesAPI = {
         });
     },
 
+    async getMemoryUsage() {
+        return this._apiCall(CONFIG.API.NOTES.MEMORY_USAGE, {
+            method: 'GET',
+        });
+    },
+
     async getSearchSuggestionStatistics() {
         return this._apiCall(CONFIG.API.NOTES.TAG_INTERACTIONS, {
             method: 'GET',

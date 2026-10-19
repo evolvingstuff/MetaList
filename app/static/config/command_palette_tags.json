@@ -113,6 +113,10 @@
       "tags": ["update", "updates", "upgrade", "release", "pypi", "version", "versions", "schema", "database", "sqlite", "migration", "migrations", "about", "info", "debug"]
     },
     {
+      "id": "form.memory_usage",
+      "tags": ["memory", "ram", "megabytes", "mb", "usage", "server", "process", "resident", "notes", "decrypted", "performance", "stats", "statistics", "debug", "about", "info"]
+    },
+    {
       "id": "form.note_layout_appearance",
       "tags": ["note", "notes", "layout", "appearance", "font", "size", "spacing", "indentation", "hierarchy", "display", "settings", "corners", "rounded", "radius", "tags", "pills"]
     },

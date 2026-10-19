@@ -150,11 +150,21 @@ def _run_startup_sanity_gates(*, repo_root: Path) -> None:
     print_report(console, label="ShockHarness report", detail=headline, lines=lines)
 
 
+def _prepare_namespaces_for_startup(*, namespaces_directory: Path, repo_root: Path) -> None:
+    """Finish any namespace operation a crash interrupted, then, in development only,
+    audit the encrypted storage. A production install runs a version the release matrix
+    already tested, so its restarts skip the audit (scripts/audit_encrypted_namespaces.py
+    and metalist-audit-encryption still run it on demand)."""
+    recover_pending_namespaces(namespaces_directory)
+    startup_environment = resolve_startup_environment(repo_root=repo_root, environ=os.environ)
+    if startup_environment == DEVELOPMENT_ENVIRONMENT:
+        _run_startup_encryption_audit(namespaces_directory=namespaces_directory)
+
+
 def _run_startup_encryption_audit(
     *,
     namespaces_directory: Path,
 ) -> EncryptionAuditReport:
-    recover_pending_namespaces(namespaces_directory)
     console = make_startup_console(environ=os.environ)
     with working(console, "Encrypted namespace audit"):
         report = audit_all_namespaces(namespaces_directory=namespaces_directory)
@@ -672,8 +682,8 @@ def main(argv: list[str]) -> None:
         apply_network_settings(environ=os.environ, persist=True)
     _record_self_executable_for_namespace_launch()
     _run_startup_sanity_gates(repo_root=Path(__file__).resolve().parent)
-    _run_startup_encryption_audit(
-        namespaces_directory=resolve_namespaces_directory(),
+    _prepare_namespaces_for_startup(
+        namespaces_directory=resolve_namespaces_directory(), repo_root=Path(__file__).resolve().parent,
     )
     original_environ = dict(os.environ)
     if _should_bootstrap_all_namespaces_without_cli_parse(
@@ -735,8 +745,8 @@ def run_namespace_server(argv: list[str]) -> None:
     logging.getLogger("uvicorn.access").addFilter(FilterCheckUpdates())
     if not resolve_test_mode(environ=os.environ, argv=argv):
         apply_network_settings(environ=os.environ, persist=True)
-    _run_startup_encryption_audit(
-        namespaces_directory=resolve_namespaces_directory(),
+    _prepare_namespaces_for_startup(
+        namespaces_directory=resolve_namespaces_directory(), repo_root=Path(__file__).resolve().parent,
     )
     apply_main_cli_args_to_environ(argv=argv, environ=os.environ)
     _run_namespace_server_for_current_env(argv=argv)

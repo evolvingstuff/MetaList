@@ -21,6 +21,7 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
             openReminders: noop,
             openSoundManager: noop,
             openVersionInfo: noop,
+            openMemoryUsage: noop,
             openNoteLayoutAppearance: noop,
             openVisualCues: noop,
             openTagSuggestionSettings: noop,
@@ -108,6 +109,7 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
     assert.equal(animatedTransitionsEndpoint.label, 'Hide animated transitions');
     assert.equal(endpointIds.has('form.reminders'), true);
     assert.equal(endpointIds.has('form.version_info'), true);
+    assert.equal(endpointIds.has('form.memory_usage'), true);
     assert.equal(endpointIds.has('form.note_layout_appearance'), true);
     assert.equal(endpointIds.has('form.agent_prompts'), false);
     assert.equal(endpointIds.has('form.tagging_vocabulary'), true);
