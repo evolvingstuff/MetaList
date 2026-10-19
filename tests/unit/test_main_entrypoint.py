@@ -456,14 +456,14 @@ def test_main_generates_default_tls_pair_on_explicit_namespace_startup(tmp_path,
     monkeypatch.setattr(main_entrypoint, "_run_main_listener", fake_run_main_listener)
     monkeypatch.setattr(main_entrypoint, "_record_self_executable_for_namespace_launch", lambda: calls.append("_record_self_executable_for_namespace_launch"))
     monkeypatch.setattr(main_entrypoint, "_run_startup_sanity_gates", lambda *, repo_root: calls.append("_run_startup_sanity_gates"))
-    monkeypatch.setattr(main_entrypoint, "_run_startup_encryption_audit", lambda *, namespaces_directory: calls.append("_run_startup_encryption_audit"))
+    monkeypatch.setattr(main_entrypoint, "_prepare_namespaces_for_startup", lambda *, namespaces_directory, repo_root: calls.append("_prepare_namespaces_for_startup"))
 
     main_entrypoint.main(argv=["--namespace", "default"])
 
     assert calls == [
         "_record_self_executable_for_namespace_launch",
         "_run_startup_sanity_gates",
-        "_run_startup_encryption_audit",
+        "_prepare_namespaces_for_startup",
         "apply_main_cli_args_to_environ",
         "resolve_database_runtime_config",
         "prepare_database_runtime_path",
@@ -533,14 +533,14 @@ def test_main_skips_default_tls_generation_in_test_mode(tmp_path, monkeypatch) -
     )
     monkeypatch.setattr(main_entrypoint, "_record_self_executable_for_namespace_launch", lambda: calls.append("_record_self_executable_for_namespace_launch"))
     monkeypatch.setattr(main_entrypoint, "_run_startup_sanity_gates", lambda *, repo_root: calls.append("_run_startup_sanity_gates"))
-    monkeypatch.setattr(main_entrypoint, "_run_startup_encryption_audit", lambda *, namespaces_directory: calls.append("_run_startup_encryption_audit"))
+    monkeypatch.setattr(main_entrypoint, "_prepare_namespaces_for_startup", lambda *, namespaces_directory, repo_root: calls.append("_prepare_namespaces_for_startup"))
 
     main_entrypoint.main(argv=["--test"])
 
     assert calls == [
         "_record_self_executable_for_namespace_launch",
         "_run_startup_sanity_gates",
-        "_run_startup_encryption_audit",
+        "_prepare_namespaces_for_startup",
         "apply_main_cli_args_to_environ",
         "resolve_database_runtime_config",
         "resolve_main_server_config",
@@ -548,12 +548,12 @@ def test_main_skips_default_tls_generation_in_test_mode(tmp_path, monkeypatch) -
     ]
 
 
-def test_namespace_server_entrypoint_runs_encryption_audit_before_starting(monkeypatch) -> None:
+def test_namespace_server_entrypoint_prepares_namespaces_before_starting(monkeypatch) -> None:
     calls: list[str] = []
     monkeypatch.setattr(
         main_entrypoint,
-        "_run_startup_encryption_audit",
-        lambda *, namespaces_directory: calls.append("_run_startup_encryption_audit"),
+        "_prepare_namespaces_for_startup",
+        lambda *, namespaces_directory, repo_root: calls.append("_prepare_namespaces_for_startup"),
     )
     monkeypatch.setattr(
         main_entrypoint,
@@ -569,7 +569,7 @@ def test_namespace_server_entrypoint_runs_encryption_audit_before_starting(monke
     main_entrypoint.run_namespace_server(argv=[])
 
     assert calls == [
-        "_run_startup_encryption_audit",
+        "_prepare_namespaces_for_startup",
         "apply_main_cli_args_to_environ",
         "_run_namespace_server_for_current_env",
     ]
@@ -678,7 +678,7 @@ def test_main_run_without_explicit_namespace_bootstraps_all_namespaces(
     )
     monkeypatch.setattr(main_entrypoint, "_record_self_executable_for_namespace_launch", lambda: calls.append("_record_self_executable_for_namespace_launch"))
     monkeypatch.setattr(main_entrypoint, "_run_startup_sanity_gates", lambda *, repo_root: calls.append("_run_startup_sanity_gates"))
-    monkeypatch.setattr(main_entrypoint, "_run_startup_encryption_audit", lambda *, namespaces_directory: calls.append("_run_startup_encryption_audit"))
+    monkeypatch.setattr(main_entrypoint, "_prepare_namespaces_for_startup", lambda *, namespaces_directory, repo_root: calls.append("_prepare_namespaces_for_startup"))
     monkeypatch.setattr(main_entrypoint, "_resolve_current_entrypoint", lambda: entrypoint)
     monkeypatch.setattr(
         main_entrypoint,
@@ -696,7 +696,7 @@ def test_main_run_without_explicit_namespace_bootstraps_all_namespaces(
     assert calls == [
         "_record_self_executable_for_namespace_launch",
         "_run_startup_sanity_gates",
-        "_run_startup_encryption_audit",
+        "_prepare_namespaces_for_startup",
         "_bootstrap_default_namespace_if_empty",
         "_prompt_for_missing_namespace_launch_profiles",
         "open_or_launch_all_namespaces",
@@ -722,7 +722,7 @@ def test_main_enable_shell_launches_all_namespaces_with_shared_capability(
 
     monkeypatch.setattr(main_entrypoint, "_record_self_executable_for_namespace_launch", lambda: None)
     monkeypatch.setattr(main_entrypoint, "_run_startup_sanity_gates", lambda *, repo_root: None)
-    monkeypatch.setattr(main_entrypoint, "_run_startup_encryption_audit", lambda *, namespaces_directory: None)
+    monkeypatch.setattr(main_entrypoint, "_prepare_namespaces_for_startup", lambda *, namespaces_directory, repo_root: None)
     monkeypatch.setattr(main_entrypoint, "enable_shell_execution_for_launch", fake_enable_shell_execution_for_launch)
     monkeypatch.setattr(
         main_entrypoint,
@@ -1161,3 +1161,22 @@ def test_evict_processes_listening_on_port_raises_if_current_process_owns_listen
 
     with pytest.raises(RuntimeError, match="current MetaList process"):
         main_entrypoint._evict_processes_listening_on_port(port=8443)
+
+
+@pytest.mark.parametrize("environment, expected", [("production", ["recover"]), ("development", ["recover", "audit"])])
+def test_startup_recovers_namespaces_always_and_audits_only_in_development(
+    monkeypatch, tmp_path: Path, environment: str, expected: list[str],
+) -> None:
+    """A production restart runs a release the matrix already tested, so it skips the
+    encryption audit; finishing an interrupted namespace operation is repair, not a
+    check, and runs everywhere."""
+    calls: list[str] = []
+    monkeypatch.setenv("METALIST_ENVIRONMENT", environment)
+    monkeypatch.setattr(main_entrypoint, "recover_pending_namespaces", lambda directory: calls.append("recover"))
+    monkeypatch.setattr(
+        main_entrypoint, "_run_startup_encryption_audit", lambda *, namespaces_directory: calls.append("audit"),
+    )
+
+    main_entrypoint._prepare_namespaces_for_startup(namespaces_directory=tmp_path, repo_root=tmp_path)
+
+    assert calls == expected

@@ -428,9 +428,12 @@ Installed packages also expose `metalist-audit-encryption`. Both commands scan
 every canonical database under `~/MetaList/namespaces`. Use
 `--namespaces-dir /path/to/namespaces` to audit another namespace root.
 
+In development (`METALIST_ENVIRONMENT=development`, from the process or `.env`),
 `main.py` runs the same read-only scan before every launcher startup, and
-`serve_namespace.py` runs it before every namespace-server startup. A passing
-scan is printed normally. Findings are classified as `MIGRATION` or `FATAL`.
+`serve_namespace.py` runs it before every namespace-server startup. Production
+restarts skip it: an installed release has already passed the full test matrix, and
+the scan is a check rather than repair. Recovering a namespace operation that a
+crash interrupted still runs at every startup. A passing scan is printed normally. Findings are classified as `MIGRATION` or `FATAL`.
 Only the known authenticated migrations—version-0 client-state payloads and
 version-2/3 search-history replacement—may defer remediation until login;
 startup continues solely so those migrations can unwrap the DEK and rewrite them. Plaintext anywhere else,

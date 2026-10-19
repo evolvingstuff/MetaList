@@ -91,6 +91,7 @@ export function buildCommandPaletteEndpoints(deps) {
     const openReminders = requireAction(actions, 'openReminders');
 
     const openVersionInfo = requireAction(actions, 'openVersionInfo');
+    const openMemoryUsage = requireAction(actions, 'openMemoryUsage');
     const openNoteLayoutAppearance = requireAction(actions, 'openNoteLayoutAppearance');
     const openVisualCues = requireAction(actions, 'openVisualCues');
     const openTagSuggestionSettings = requireAction(actions, 'openTagSuggestionSettings');
@@ -358,6 +359,12 @@ export function buildCommandPaletteEndpoints(deps) {
             kind: 'form',
             label: 'Version info',
             execute: async () => openVersionInfo(),
+        },
+        {
+            id: 'form.memory_usage',
+            kind: 'form',
+            label: 'Memory usage',
+            execute: async () => openMemoryUsage(),
         },
         {
             id: 'form.note_layout_appearance',
