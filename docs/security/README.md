@@ -262,6 +262,12 @@ Stored note bodies use a strict shared allowlist in
 - Scripts, event handlers, forms, frames, SVG/MathML, arbitrary classes/data
   attributes, unsafe URL schemes, and unsafe CSS are removed. Formatting tags,
   links, tables, indentation, and bounded embedded image markup remain supported.
+- What the browser receives is a rendering of that HTML (Markdown, embeds,
+  references, file previews) or a chat reply rendered from the AI's Markdown.
+  `app/security/rendered_html.py` sanitizes each rendering once more as it leaves
+  the server: the stored policy plus only the renderers' own inert markup
+  (buttons, `data-*` identifiers, ARIA, renderer class names, icon SVG shapes).
+  See [html-sinks.md](html-sinks.md#server-html-sanitized-last).
 
 HTTP responses also receive a nonce-based Content Security Policy. Scripts are
 limited to same-origin files and explicitly nonced inline startup blocks;
