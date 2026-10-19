@@ -9,7 +9,6 @@ app/api/routes/ai.py: Argument 1 to "events" of "ChatTurnStream" has incompatibl
 app/api/routes/ai.py: Argument 1 to "find_note_citation_ids" has incompatible type "object"; expected "str"  [arg-type]
 app/api/routes/ai.py: Argument 1 to "find_web_citation_ids" has incompatible type "object"; expected "str"  [arg-type]
 app/api/routes/ai.py: Argument 1 to "render_ai_chat_markdown_to_html" has incompatible type "object"; expected "str"  [arg-type]
-app/api/routes/ai.py: Argument 1 to "render_markdown_to_html" has incompatible type "object"; expected "str"  [arg-type]
 app/api/routes/ai.py: Argument 1 to "transactional_route" has incompatible type "Callable[[AiModelsRequest, str], Coroutine[Any, Any, AiModelsResponse]]"; expected "def (*Never, **Never) -> Never | def (*Never, **Never) -> Awaitable[Never]"  [arg-type]
 app/api/routes/ai.py: Argument 1 to "transactional_route" has incompatible type "Callable[[BulkAnswerRequest, str], Coroutine[Any, Any, Any]]"; expected "def (*Never, **Never) -> Never | def (*Never, **Never) -> Awaitable[Never]"  [arg-type]
 app/api/routes/ai.py: Argument 1 to "transactional_route" has incompatible type "Callable[[MenuResult, str], Coroutine[Any, Any, Any]]"; expected "def (*Never, **Never) -> Never | def (*Never, **Never) -> Awaitable[Never]"  [arg-type]

@@ -337,7 +337,7 @@ def test_compact_reference_shows_an_inline_image_thumbnail_with_its_line_text(mo
     rendered = state.payloads["host"]["content"]
     assert (
         '<span class="note-reference-link-thumbnail note-reference-link-thumbnail-image">'
-        f'<img class="note-reference-link-thumbnail-inline" src="{image}" alt="" draggable="false" /></span>'
+        f'<img class="note-reference-link-thumbnail-inline" src="{image}" alt="" draggable="false"></span>'
     ) in rendered
     assert '<span class="note-reference-link-caption">Route map</span>' in rendered
 

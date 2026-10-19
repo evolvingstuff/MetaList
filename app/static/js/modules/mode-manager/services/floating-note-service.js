@@ -12,6 +12,7 @@ import { hydrateRemoteImageProxies } from './remote-image-proxy-service.js';
 import { downloadFileReference } from './file-reference-service.js';
 import { copyTextToClipboard, normalizeCopyableText } from '../events/mouse-events.js';
 import { openReferenceInNewTab } from '../events/keyboard-events.js';
+import { serverRenderedHtml } from '../../server-rendered-html.js';
 
 const moduleState = ApplicationState.createFields('floating-note-service', {
     windows: Object.create(null),
@@ -149,7 +150,7 @@ async function refreshWindow(id) {
     if (snapshot.status === 'unchanged' || entry.markup === snapshot.html) return;
     entry.markup = snapshot.html;
     const scrollTop = entry.scroll.scrollTop;
-    entry.tree.innerHTML = snapshot.html;
+    entry.tree.innerHTML = serverRenderedHtml(snapshot.html);
     entry.scroll.scrollTop = scrollTop;
     if (snapshot.status === 'ready') {
         entry.title.textContent = `↗ ${getFloatingNoteTitle(entry.tree)}`;

@@ -337,6 +337,8 @@ class CommandPaletteController {
         this._endpoints = [];
 
         this._isOpen = false;
+        // An activation is recording its use or running: further ones are ignored.
+        this._isActivating = false;
         this._previousFocus = null;
         this._previousSelection = null;
 
@@ -1196,7 +1198,21 @@ class CommandPaletteController {
         return matches;
     }
 
+    // One activation does one thing. Picking an item records the use (a server round
+    // trip) before running it, and a second activation in that time (Enter twice, a click
+    // then Enter) used to run it again, so a dialog opened twice ("already open").
     async _activateSelected() {
+        if (this._isActivating) {
+            return;
+        }
+        this._isActivating = true;
+        // Cleared however the activation ends, also by an expected failure shown as a banner.
+        await this._activateSelectedOnce().finally(() => {
+            this._isActivating = false;
+        });
+    }
+
+    async _activateSelectedOnce() {
         const matches = this._getVisibleMatches();
         if (matches.length === 0) {
             return;

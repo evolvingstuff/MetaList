@@ -6,6 +6,7 @@ import html
 import re
 from collections.abc import Callable
 
+from app.security.rendered_html import sanitize_rendered_html
 from app.services.embedded_references import EmbedRenderContext
 from app.services.embedded_references import get_note_reference_preview
 from app.services.embedded_references import render_compact_note_reference_link
@@ -121,14 +122,14 @@ def render_ai_chat_markdown_to_html(
         starting_number=len(reference_groups) + 1,
     )
     if len(reference_groups) == 0 and len(cited_web_ids) == 0:
-        return body_html
+        return sanitize_rendered_html(body_html)
     references_html = _render_references_section(
         reference_groups,
         context=context,
         cited_web_ids=cited_web_ids,
         evidence_by_id=web_evidence_by_id,
     )
-    return f"{body_html}{references_html}"
+    return sanitize_rendered_html(f"{body_html}{references_html}")
 
 
 def render_ai_chat_streaming_markdown_to_html(
@@ -156,7 +157,14 @@ def render_ai_chat_streaming_markdown_to_html(
         markdown_text=normalized_markdown,
         transform=remove_reference_tokens,
     )
-    return render_markdown_to_html(reference_free_markdown)
+    return sanitize_rendered_html(render_markdown_to_html(reference_free_markdown))
+
+
+def render_ai_chat_thinking_to_html(thinking_text: str) -> str:
+    """The model's "thinking" text, rendered from its Markdown for the chat panel."""
+    if not isinstance(thinking_text, str):
+        raise TypeError("thinking_text must be a string")
+    return sanitize_rendered_html(render_markdown_to_html(thinking_text))
 
 
 def _reject_file_reference(file_id: str) -> object:

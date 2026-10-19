@@ -27,6 +27,7 @@ import {
 import { syncTagProposalPresentation } from './tag-proposal-service.js';
 import { applyEditingImageSizes } from './editing-image-size-service.js';
 import { splitTagsForDisplay } from './tag-syntax-service.js';
+import { serverRenderedHtml } from '../../server-rendered-html.js';
 
 const CONTENT_ELEMENT_CACHE = ApplicationState.createWeakCollection('CONTENT_ELEMENT_CACHE', 'map');
 const CHILD_CONTAINER_CACHE = ApplicationState.createWeakCollection('CHILD_CONTAINER_CACHE', 'map');
@@ -982,7 +983,7 @@ export function applyDifferentialView(payload, options) {
             );
 
         if (shouldRenderContent) {
-            contentElement.innerHTML = noteData.content;
+            contentElement.innerHTML = serverRenderedHtml(noteData.content);
             ensureAnchorsOpenInNewTabs(contentElement);
             // The edited note's images show at their size from the first frame.
             if (Array.isArray(noteData.flags.editingImageSizes)) {
@@ -1221,7 +1222,7 @@ function applyNoteDataFromPayload(noteElement, noteId, noteData, noteLocks, curr
 
     let contentChanged = false;
     if ((forceContentUpdate || !editingByCurrentClient || canReplaceWhileEditing) && typeof noteData.content === 'string') {
-        contentElement.innerHTML = noteData.content;
+        contentElement.innerHTML = serverRenderedHtml(noteData.content);
         ensureAnchorsOpenInNewTabs(contentElement);
         noteElement.dataset.contentHash = snapshotHash;
         contentChanged = true;

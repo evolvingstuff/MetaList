@@ -1581,7 +1581,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = "==1.2.2" },
     { name = "python-multipart", specifier = "==0.0.32" },
     { name = "rich", specifier = "==14.3.4" },
-    { name = "shockharness", marker = "python_full_version >= '3.11' and extra == 'dev'", specifier = "==0.13.0" },
+    { name = "shockharness", marker = "python_full_version >= '3.11' and extra == 'dev'", specifier = "==0.15.0" },
     { name = "starlette", specifier = "==1.3.1" },
     { name = "tqdm", specifier = "==4.70.0" },
     { name = "tree-sitter", specifier = "==0.25.2" },
@@ -2520,16 +2520,16 @@ wheels = [
 
 [[package]]
 name = "shockharness"
-version = "0.13.0"
+version = "0.15.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "tree-sitter", marker = "python_full_version >= '3.11'" },
     { name = "tree-sitter-javascript", marker = "python_full_version >= '3.11'" },
     { name = "tree-sitter-typescript", marker = "python_full_version >= '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/90/a8/812d6271349ae5ef8a111e3489db605f0154646412a776bbb9af40f42c7d/shockharness-0.13.0.tar.gz", hash = "sha256:3826cbbcdee213433cfccd8e7a4a8b22f100b4be02895ecdd8cc7ffd8e1be8e4", size = 3593431, upload-time = "2026-10-18T21:34:05.119Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/22/f7/ef9902b10c1018646ac3e223e64e8d31151a54674e8a1a5786c9bff1dc7f/shockharness-0.15.0.tar.gz", hash = "sha256:f3d057d07b584e49d57a5ae75f1af73ea072b4074fd2af447787c6ad0c89d7a9", size = 3611031, upload-time = "2026-10-19T03:16:48.072Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4e/4c/9b83ddf2a71cadc7c123e714f8261a5416893342fc3ba8a3e9b81205fcb5/shockharness-0.13.0-py3-none-any.whl", hash = "sha256:030b89ea148a2e49635eaa1b280563c9f25e5588c5d49c0162bf6ca7dc6f6247", size = 595553, upload-time = "2026-10-18T21:34:03.359Z" },
+    { url = "https://files.pythonhosted.org/packages/53/67/3b68307f7d706aeb4956931edeffa22ff1547243e8f8aad71ece953f1639/shockharness-0.15.0-py3-none-any.whl", hash = "sha256:6c44868cfd911b2013bca3c232ba27a7dc60d6e4f25eb5901b474bdf0cb0be22", size = 606689, upload-time = "2026-10-19T03:16:46.454Z" },
 ]
 
 [[package]]

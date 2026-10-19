@@ -41,6 +41,7 @@ function harness() {
         getFloatingNoteTitle: () => 'Root',
         applyFloatingNoteRect() {}, hydrateImageFilePreviews() {}, hydrateExcalidrawPreviews: async () => [], ensureAnchorsOpenInNewTabs() {},
         hydrateRemoteImageProxies() {}, queueMermaidDiagramRendering: async () => {},
+        serverRenderedHtml: html => html,
     };
     const build = new Function(...Object.keys(dependencies), source.replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '')
         + '\nreturn {openFloatingNote, closeFloatingNote, closeAllFloatingNotes, refreshFloatingNotes};');

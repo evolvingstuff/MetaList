@@ -75,11 +75,6 @@ Still as found:
   matches `backup_namespace`; only the browser keeps them consistent.
 - **Constant tables not frozen:** `VISUAL_CUE_SECTIONS` (visual cues dialog) is
   exported and could be changed by another module.
-- **Server HTML is trusted as is.** Note HTML is cleaned by nh3
-  (`app/security/note_html.py`) on every write and on load, but the server's own
-  later transforms (embeds, formatting, image proxy) are not cleaned again, and
-  the AI chat's markdown (`app/services/markdown_rendering.py`) escapes while it
-  builds HTML with no final sanitize pass.
 - **Paste insertion** (`html-paste-sanitizer-service.js`) inserts sanitized
   clipboard HTML into the live page with `createContextualFragment`; its
   sanitizer is a blocklist, so a tag or attribute missing from it lives until the
@@ -87,6 +82,42 @@ Still as found:
 - **`note-html-sanitizer.js`** parses HTML into a detached element of the live
   document before DOMPurify. Fine while its callers pass only HTML already in the
   editor.
+
+## Server HTML: sanitized last
+
+Note HTML is cleaned by nh3 (`app/security/note_html.py`) on every write and on
+load. What the page receives is mostly not that HTML but a rendering of it
+(Markdown, CSV, embeds, reference decorations, file previews, footnotes) and chat
+replies rendered from the AI's Markdown. Each renderer escapes as it builds, and
+since 2026-10-19 its result is also cleaned once more before it leaves the server
+(`app/security/rendered_html.py`), at the four exits that send rendered HTML:
+
+- the note view (`snapshot._render_note_view_html`, the list and its snapshots);
+- full-screen notes and floating windows (`note_fullscreen.build_note_fullscreen_markup`);
+- chat replies, finished and streaming (`ai_chat_rendering.render_ai_chat_markdown_to_html`
+  and its streaming twin);
+- the model's thinking text (`ai_chat_rendering.render_ai_chat_thinking_to_html`).
+
+The pass allows the stored-note policy plus exactly the inert markup the
+renderers add: buttons, `data-*` identifiers, ARIA, titles, renderer class names
+(`note-`, `meta-`, `link-title`, `ai-chat-`, `tok-`, `json-`), the icons' inline
+SVG shapes, and the size tags' `--meta-size-factor`. Attributes the renderers
+write with one fixed value (`target="_blank"`, `contenteditable="false"`,
+`role="img"`, ...) keep only that value. Event handlers and script-capable URLs
+never pass.
+
+Two tests keep the allowlist matched to the renderers. `tests/unit/conftest.py`
+checks every pass in the unit suite against the same HTML5 parse with nothing
+removed, so a renderer that adds markup the allowlist lacks fails the test that
+rendered it rather than losing it in the browser; and
+`tests/unit/test_rendered_html.py` renders one note per renderer and formatting
+tag through the pass, and feeds it unsafe markup to show it is removed.
+
+In the browser, `server-rendered-html.js:serverRenderedHtml` declares the
+server's HTML `sanitized_html` at the seven `innerHTML` sinks that take it (note
+view ×2, floating window, full screen, image resize, chat reply, thinking text).
+The image resize response and an edited note's snapshot are the note's stored
+HTML, sanitized on save.
 
 ## Escapers
 

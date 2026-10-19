@@ -647,6 +647,9 @@ producers = [
   "app/static/js/modules/note-html-sanitizer.js:sanitizeNoteHtmlForStorage",
   # Mermaid's own SVG, rendered with securityLevel 'strict'.
   "app/static/js/modules/mode-manager/services/mermaid-render-service.js:renderMermaidCodeElement",
+  # HTML the server sent: sanitized last by app/security/rendered_html.py, or stored
+  # HTML sanitized on save by app/security/note_html.py.
+  "app/static/js/modules/server-rendered-html.js:serverRenderedHtml",
 ]
 runtime = "static"
 literal_satisfies = true

@@ -695,7 +695,7 @@ test('completed assistant messages render server markdown and queue Mermaid diag
     assert.match(controller, /'rendered_content'/);
     assert.match(
         controller,
-        /message\.role === 'assistant' && message\.rendered_content !== ''[\s\S]*?classList\.add\('meta-markdown'\)[\s\S]*?content\.innerHTML = message\.rendered_content/,
+        /message\.role === 'assistant' && message\.rendered_content !== ''[\s\S]*?classList\.add\('meta-markdown'\)[\s\S]*?content\.innerHTML = serverRenderedHtml\(message\.rendered_content\)/,
     );
     assert.match(controller, /await queueMermaidDiagramRendering\(this\._elements\.messages\)/);
     assert.match(css, /\.ai-chat-message-content\.meta-markdown\s*\{[^}]*white-space:\s*normal;/s);
@@ -720,7 +720,7 @@ test('streaming thinking renders honest progress and only discloses real reasoni
     assert.match(controller, /assistantMessage\.content === ''[\s\S]*?_expandedThinkingMessageIds\.delete\(assistantMessage\.id\)/);
     assert.match(controller, /thinking\.addEventListener\('toggle'[\s\S]*?_expandedThinkingMessageIds\.add\(message\.id\)/);
     assert.match(controller, /ai-chat-thinking-content meta-markdown/);
-    assert.match(controller, /thinkingText\.innerHTML = message\.rendered_thinking/);
+    assert.match(controller, /thinkingText\.innerHTML = serverRenderedHtml\(message\.rendered_thinking\)/);
     assert.match(controller, /window\.setInterval/);
     assert.match(controller, /window\.clearInterval/);
     assert.match(controller, /`\$\{elapsedSeconds\}s`/);
