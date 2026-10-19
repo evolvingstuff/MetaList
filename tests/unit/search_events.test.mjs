@@ -323,13 +323,13 @@ test('fresh search input clears same-query render cache and active DOM', async (
         import('../../app/static/js/modules/mode-manager/mode-context.js'),
     ]);
     const tabId = ModeContext.activeTabId;
+    const originalTabState = ModeContext.getTabStatePayload();
 
     t.after(() => {
-        ModeContext.clearTabViewCache(tabId);
+        ModeContext.hydrateTabState(originalTabState, { emitUpdate: false });
         restoreDom();
     });
 
-    ModeContext.clearTabViewCache(tabId);
     ModeContext.setExecutedSearchQuery('journal', tabId);
     ModeContext.seedTabNoteHashes(tabId, new Map([
         ['root-a', 'hash-a'],

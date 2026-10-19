@@ -45,9 +45,8 @@ it before the fix.
 Found by the Suggest Tags with AI browser test: after the only note carrying a
 tag was deleted (or retagged), the tag bar's suggestions request failed with a
 server error, so no suggestions showed. The search index keeps a tag's note set
-once it is empty, and `list_explicit_tag_frequencies()`, `list_tag_frequencies()`,
-`list_non_meta_tag_terms()` and the search bar's candidate list still listed the
-tag with no notes. Before 0.18.0 that only meant a stale suggestion; since "Why
+once it is empty, and `list_explicit_tag_frequencies()`, `list_tag_frequencies()`
+and the search bar's candidate list still listed the tag with no notes. Before 0.18.0 that only meant a stale suggestion; since "Why
 suggested" (0.18.0), explaining it asserts the tag is on some note, which failed
 the whole request.
 

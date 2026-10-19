@@ -25,7 +25,6 @@ export const CONFIG = {
             CREATE_SIBLING: (noteId) => `${API_NOTES_BASE}/new-sibling/${noteId}`,
             CREATE_CHILD: (noteId) => `${API_NOTES_BASE}/new-child/${noteId}`,
             CREATE_FILE_PREVIEW_CHILD: (noteId) => `${API_NOTES_BASE}/file-preview-child/${noteId}`,
-            UPDATE: (noteId) => `${API_NOTES_BASE}/${noteId}`,
             SAVE: (noteId) => `${API_NOTES_BASE}/${noteId}/save`,
             ADD_SELECTED_TEXT_TAG: (noteId) => `${API_NOTES_BASE}/${noteId}/add-selected-text-tag`,
             ACCEPT_TAG_PROPOSAL: (noteId) => `${API_NOTES_BASE}/${noteId}/tag-proposals/accept`,
@@ -41,7 +40,6 @@ export const CONFIG = {
             EDITING_IMAGE_SIZES: (noteId) => `${API_NOTES_BASE}/${noteId}/editing-image-sizes`,
             RUN_SHELL: (noteId) => `${API_NOTES_BASE}/${noteId}/run-shell`,
             RUN_SHELL_STATUS: (noteId, runId) => `${API_NOTES_BASE}/${noteId}/run-shell/${runId}`,
-            REFERENCE_MODE: (noteId) => `${API_NOTES_BASE}/${noteId}/reference-mode`,
             MOVE: (noteId) => `${API_NOTES_BASE}/${noteId}/move`,
             MOVE_TO_TOP: (noteId) => `${API_NOTES_BASE}/${noteId}/move-to-top`,
             MOVE_TO_BOTTOM: (noteId) => `${API_NOTES_BASE}/${noteId}/move-to-bottom`,
@@ -186,8 +184,6 @@ export const CONFIG = {
         NOTE_CONTENT: 'note-content',
         EDITING: 'editing',
         CARET_HIDDEN: 'caret-hidden',
-        SEARCH_INPUT: 'search-input',
-        SEARCH_RESULTS: 'search-results',
         LOADING: 'loading'
     },
 

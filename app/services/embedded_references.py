@@ -8,7 +8,6 @@ from html.parser import HTMLParser
 from itertools import islice
 from typing import Callable, FrozenSet, Iterator, List, Optional, Tuple
 
-from app.services.content_formatting import find_consumed_content_wrapper_keys
 from app.services.content_formatting import CREDENTIAL_MASK
 from app.services.content_formatting import find_global_credential_tag
 from app.services.content_formatting import format_note_content_for_view
@@ -199,43 +198,6 @@ def normalize_reference_modes_for_comparison(content_html: str) -> str:
     return "".join(parts)
 
 
-def replace_reference_token_mode_in_html(
-    *,
-    content_html: str,
-    reference_note_id: str,
-    occurrence_index: int,
-    target_mode: str,
-) -> tuple[str, bool]:
-    if not isinstance(content_html, str):
-        raise TypeError("content_html must be a string")
-    if not isinstance(reference_note_id, str) or reference_note_id == "":
-        raise TypeError("reference_note_id must be a non-empty string")
-    if not isinstance(occurrence_index, int):
-        raise TypeError("occurrence_index must be an integer")
-    if occurrence_index < 0:
-        raise ValueError("occurrence_index must be >= 0")
-    if target_mode not in {"embed", "link"}:
-        raise ValueError("target_mode must be 'embed' or 'link'")
-
-    tokens = collect_reference_tokens_from_html(content_html)
-    if occurrence_index >= len(tokens):
-        return content_html, False
-
-    token = tokens[occurrence_index]
-    if token.note_id != reference_note_id:
-        return content_html, False
-
-    token_mode = "link"
-    if token.is_embed:
-        token_mode = "embed"
-    if token_mode == target_mode:
-        return content_html, False
-
-    replacement = _format_reference_token(note_id=token.note_id, mode=target_mode)
-    updated_content = f"{content_html[:token.start]}{replacement}{content_html[token.end:]}"
-    return updated_content, True
-
-
 def collect_active_reference_tokens(content_html: str) -> List[ReferenceToken]:
     """The note references the renderer shows: every [[note id]] and ![[note id]].
 
@@ -403,28 +365,10 @@ def extract_collapsed_preview_source_html(content_html: str) -> str:
     return _collapsed_preview_head(content_html)[0]
 
 
-def collapsed_preview_source_has_hidden_content(content_html: str) -> bool:
-    return _collapsed_preview_head(content_html)[1]
-
-
-def collapsed_preview_source_has_media(content_html: str) -> bool:
-    return preview_html_has_media(extract_collapsed_preview_source_html(content_html))
-
-
 def preview_html_has_media(preview_source_html: str) -> bool:
     if preview_source_html == "":
         return False
     return _fragment_has_media_tag(preview_source_html)
-
-
-def collapsed_preview_source_has_image_file_embed(
-    *,
-    content_html: str,
-    context: EmbedRenderContext,
-) -> bool:
-    return preview_html_has_image_file_embed(
-        preview_source_html=extract_collapsed_preview_source_html(content_html), context=context,
-    )
 
 
 def preview_html_has_image_file_embed(*, preview_source_html: str, context: EmbedRenderContext) -> bool:
@@ -499,16 +443,6 @@ def shows_note_embed(*, content_html: str, context: EmbedRenderContext) -> bool:
     if token is None:
         return False
     return context.has_note(token.note_id)
-
-
-def collapsed_preview_source_has_note_embed(
-    *,
-    content_html: str,
-    context: EmbedRenderContext,
-) -> bool:
-    return preview_html_has_note_embed(
-        preview_source_html=extract_collapsed_preview_source_html(content_html), context=context,
-    )
 
 
 def preview_html_has_note_embed(*, preview_source_html: str, context: EmbedRenderContext) -> bool:
@@ -1581,14 +1515,6 @@ def _format_thumbnail_badge(thumbnail_kind: str) -> str:
     if thumbnail_kind == "excalidraw":
         return "DRAW"
     return "FILE"
-
-
-def _format_reference_token(*, note_id: str, mode: str) -> str:
-    if mode == "embed":
-        return f"![[{note_id}]]"
-    if mode == "link":
-        return f"[[{note_id}]]"
-    raise ValueError("mode must be 'embed' or 'link'")
 
 
 def _is_html_segment(value: str) -> bool:

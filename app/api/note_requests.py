@@ -189,14 +189,6 @@ class CreateFilePreviewChildRequest(TypedDict):
     viewport: Viewport
 
 @with_config(ConfigDict(strict=True))
-class UpdateNoteRequest(TypedDict):
-    clientId: Identifier
-    content: Content
-    tags: Text
-    undoContext: UndoContext
-    viewport: Viewport
-
-@with_config(ConfigDict(strict=True))
 class SaveNoteRequest(TypedDict):
     clientId: Identifier
     content: Content
@@ -307,15 +299,6 @@ class DiscardFileEditSessionRequest(TypedDict):
 @with_config(ConfigDict(strict=True))
 class RunShellEndpointRequest(TypedDict):
     timeoutSeconds: Annotated[int, Field(ge=0, le=SHELL_SECONDS)]
-
-@with_config(ConfigDict(strict=True))
-class ToggleReferenceModeEndpointRequest(TypedDict):
-    reference_note_id: Identifier
-    occurrence_index: Nonnegative
-    mode: Literal['embed', 'link']
-    clientId: Identifier
-    undoContext: UndoContext
-    viewport: Viewport
 
 @with_config(ConfigDict(strict=True))
 class MoveNoteEndpointRequest(TypedDict):

@@ -117,44 +117,6 @@ def insert_note(
     )
 
 
-def update_note_content(
-    connection: GuardedConnection | sqlite3.Connection,
-    note_id: str,
-    *,
-    content: str,
-    encryption_nonce: Optional[bytes],
-    encryption_tag: Optional[bytes],
-    updated_at: datetime,
-) -> None:
-    update_note_fields(
-        connection,
-        note_id,
-        content=content,
-        encryption_nonce=encryption_nonce,
-        encryption_tag=encryption_tag,
-        updated_at=updated_at,
-    )
-
-
-def update_note_tags(
-    connection: GuardedConnection | sqlite3.Connection,
-    note_id: str,
-    *,
-    tags: str,
-    tags_encryption_nonce: Optional[bytes],
-    tags_encryption_tag: Optional[bytes],
-    updated_at: datetime,
-) -> None:
-    update_note_fields(
-        connection,
-        note_id,
-        tags=tags,
-        tags_encryption_nonce=tags_encryption_nonce,
-        tags_encryption_tag=tags_encryption_tag,
-        updated_at=updated_at,
-    )
-
-
 _LINK_FIELDS = {"parent_id", "prev_id", "next_id", "is_collapsed"}
 
 
@@ -423,50 +385,6 @@ def fetch_note(
     if row is None:
         return None
     return _deserialize_row(row)
-
-
-def fetch_children_ordered(
-    connection: GuardedConnection | sqlite3.Connection,
-    parent_id: Optional[str],
-) -> list[dict]:
-    conn = _conn(connection)
-    if parent_id is None:
-        rows = conn.execute(
-            f"SELECT * FROM {NOTES_TABLE} WHERE parent_id IS NULL",
-        ).fetchall()
-    else:
-        rows = conn.execute(
-            f"SELECT * FROM {NOTES_TABLE} WHERE parent_id = ?",
-            (parent_id,),
-        ).fetchall()
-
-    if not rows:
-        return []
-
-    notes = [_deserialize_row(row) for row in rows]
-    by_id = {note["id"]: note for note in notes}
-    # Corrupt links fail loudly, as the note store's ordering does on load.
-    heads = [note for note in notes if note["prev_id"] is None]
-    if len(heads) != 1:
-        raise RuntimeError(f"Sibling list under {parent_id!r} has {len(heads)} head notes, not one")
-
-    ordered: list[dict] = []
-    seen: set[str] = set()
-    current = heads[0]
-    while True:
-        if current["id"] in seen:
-            raise RuntimeError(f"Sibling list under {parent_id!r} has a cycle at {current['id']}")
-        ordered.append(current)
-        seen.add(current["id"])
-        next_id = current["next_id"]
-        if next_id is None:
-            break
-        if next_id not in by_id:
-            raise RuntimeError(f"Note {current['id']} links to a missing sibling {next_id}")
-        current = by_id[next_id]
-    if len(ordered) != len(notes):
-        raise RuntimeError(f"Sibling list under {parent_id!r} is disconnected: {len(notes) - len(ordered)} notes unreachable")
-    return ordered
 
 
 def fetch_all_for_cache(connection: GuardedConnection | sqlite3.Connection) -> list[dict]:

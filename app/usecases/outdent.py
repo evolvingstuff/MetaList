@@ -21,9 +21,6 @@ class CmdOutdent(QueryCommand):
     undo_context: str
     viewport: Dict[str, object]
 
-    def describe(self) -> str:
-        return f"CmdOutdent(note={self.note_id}, client={self.client_id})"
-
     def execute(self) -> Dict[str, str]:
         record = store.get(self.note_id)
         parent_id = record.parent_id

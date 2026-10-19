@@ -38,12 +38,10 @@ class ModeContext {
 
         this._currentNoteId = null;     
         this._lastSavedContent = null;  
-        this._cursorOffset = null;      
         this._searchQuery = null;       
         this._currentContent = null;    
 
         this._lastKeyPressed = null;    
-        this._lastClickTarget = null;   
         this._metaKeyPressed = false;   
         this._shiftKeyPressed = false;  
         this._hoveredNoteId = null;
@@ -320,25 +318,6 @@ class ModeContext {
         return this;
     }
 
-    clearNoteHashes() {
-        this._getActiveNoteHashes().clear();
-        return this;
-    }
-
-    clearTabViewCache(tabId) {
-        if (typeof tabId !== 'string' || tabId.length === 0) {
-            throw new Error('tabId must be a non-empty string');
-        }
-        this._ensureTabContainers(tabId);
-        if (this._tabNoteHashes[tabId].size > 0) this._tabNoteHashes[tabId].clear();
-        if (this._tabKnownRootIds[tabId].size > 0) this._tabKnownRootIds[tabId].clear();
-        if (this._tabSeenRootIds[tabId].size > 0) this._tabSeenRootIds[tabId].clear();
-        if (this._tabRootOrder[tabId].length > 0) this._tabRootOrder[tabId] = [];
-        if (this._tabRootAnchors[tabId] !== null) this._tabRootAnchors[tabId] = null;
-        if (this._tabVisibleTopRoots[tabId] !== null) this._tabVisibleTopRoots[tabId] = null;
-        return this;
-    }
-
 	resetTabDiffCache(tabId, options) {
 		if (typeof tabId !== 'string' || tabId.length === 0) {
 			throw new Error('tabId must be a non-empty string');
@@ -446,10 +425,6 @@ class ModeContext {
         return { cloned: true, count: target.size };
     }
 
-    clearActiveTabRevealedRedactions() {
-        return this.clearTabRevealedRedactions(this._activeTabId);
-    }
-
     clearTabRevealedRedactions(tabId) {
         if (typeof tabId !== 'string' || tabId.length === 0) {
             throw new Error('tabId must be a non-empty string');
@@ -527,19 +502,6 @@ class ModeContext {
         if (!stateValuesEqual(source, target)) this._tabRevealedRedactions[targetTabId] = new Set(source);
         return this;
     }
-
-	clearAllTabViewCaches() {
-		const tabs = this._tabs;
-		const noteHashesByTab = this._tabNoteHashes;
-		const tabIds = new Set([
-			...Object.keys(tabs),
-			...Object.keys(noteHashesByTab),
-		]);
-		for (const tabId of tabIds) {
-			this.clearTabViewCache(tabId);
-		}
-		return this;
-	}
 
     getNoteHashPayload() {
         const payload = {};
@@ -703,20 +665,6 @@ class ModeContext {
         return this._searching;
     }
 
-    get isIdle() {
-        return !this._editing && !this._searching && !this._loading;
-    }
-
-    setActive(value) {
-                
-        const normalized = Boolean(value);
-        this._assertStateChanged('active', this._active, normalized);
-
-        this._active = normalized;
-        this._notifyListeners('active', this._active);
-        return this;
-    }
-
     get isActive() {
         return this._active;
     }
@@ -848,16 +796,6 @@ class ModeContext {
         return this._lastSavedContent;
     }
 
-    setCursorOffset(offset) {
-        this._assertStateChanged('cursorOffset', this._cursorOffset, offset);
-        this._cursorOffset = offset;
-        return this;
-    }
-
-    get cursorOffset() {
-        return this._cursorOffset;
-    }
-
     setCurrentContent(content) {
                 
         this._assertStateChanged('currentContent', this._currentContent, content);
@@ -901,29 +839,6 @@ class ModeContext {
         };
     }
 
-	setClickTarget(target, coordinates) {
-        this._assertStateChanged('clickTarget', this._lastClickTarget, target);
-		this._lastClickTarget = target;
-		if (coordinates) {
-			this._coordinates = coordinates;
-		}
-		return this;
-	}
-
-    get clickTarget() {
-        return this._lastClickTarget;
-    }
-
-    get coordinates() {
-        return immutableSnapshot(this._coordinates);
-    }
-
-    resetCoordinates() {
-        this._assertStateChanged('coordinates', this._coordinates, null);
-        this._coordinates = null;
-        return this;
-    }
-
     addListener(callback) {
         if (typeof callback === 'function') {
             this._listeners.push(callback);
@@ -946,26 +861,6 @@ class ModeContext {
 			listener(property, newValue);
 		});
 	}
-
-    getFullState() {
-        const state = {
-            modes: {
-                editing: this._editing,
-                searching: this._searching,
-                loading: this._loading
-            },
-            context: {
-                currentNoteId: this._currentNoteId,
-                currentContent: this._currentContent,
-                searchQuery: this._searchQuery
-            },
-            event: this._eventMemory
-        };
-
-        Logger.logFullState(state);
-                
-        return state;
-    }
 
     validate() {
                 
@@ -1125,30 +1020,8 @@ class ModeContext {
         return changed;
     }
 
-    clearSeenRoots() {
-        if (this._getActiveSeenRoots().size === 0) {
-            throw new Error('Redundant state change: seen roots are already empty');
-        }
-        if (this._getActiveSeenRoots().size > 0) this._getActiveSeenRoots().clear();
-        return this;
-    }
-
-    getUnseenRootCount() {
-        const knownRoots = this._getActiveKnownRoots();
-        const seenRoots = this._getActiveSeenRoots();
-        return Math.max(0, knownRoots.size - seenRoots.size);
-    }
-
-    get seenRootCount() {
-        return this._getActiveSeenRoots().size;
-    }
-
     get knownRootCount() {
         return this._getActiveKnownRoots().size;
-    }
-
-    getSeenRootIds() {
-        return Array.from(this._getActiveSeenRoots());
     }
 
 		getLastKnownRootId() {
@@ -1315,12 +1188,6 @@ class ModeContext {
         }
         this._assertStateChanged('tabStateUpdateHook', this._tabStateUpdateHook, callback);
         this._tabStateUpdateHook = callback;
-        return this;
-    }
-
-    clearTabStateUpdateHook() {
-        this._assertStateChanged('tabStateUpdateHook', this._tabStateUpdateHook, null);
-        this._tabStateUpdateHook = null;
         return this;
     }
 

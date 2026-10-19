@@ -36,9 +36,6 @@ class CmdSplitNote(QueryCommand):
     undo_context: str
     viewport: Dict[str, object]
 
-    def describe(self) -> str:
-        return f"CmdSplitNote(note={self.note_id}, client={self.client_id})"
-
     def execute(self) -> Dict[str, object]:
         _validate_split_segments(self.segments)
         if not isinstance(self.tags, str):

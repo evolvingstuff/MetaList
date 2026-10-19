@@ -723,23 +723,6 @@ def delete_namespace(
     )
 
 
-def delete_current_namespace(
-    *,
-    environ: Mapping[str, str],
-    current_namespace: str | None,
-    confirmed_namespace: str,
-    redirect_namespace: str,
-) -> NamespaceDeleteResult:
-    if current_namespace is None:
-        raise RuntimeError("Current namespace is unavailable")
-    return _delete_active_namespace(
-        environ=environ,
-        current_namespace=validate_namespace(namespace=current_namespace),
-        confirmed_namespace=confirmed_namespace,
-        redirect_namespace=redirect_namespace,
-    )
-
-
 def _delete_active_namespace(
     *,
     environ: Mapping[str, str],

@@ -27,20 +27,6 @@ const ESCAPE_SEQUENCE_LENGTH = 2;
 // An opening and a closing quote.
 const QUOTED_TOKEN_MIN_LENGTH = 2;
 
-function escapeQuotedPhrase(phrase) {
-    if (typeof phrase !== 'string') {
-        throw new Error('escapeQuotedPhrase requires string');
-    }
-    return phrase.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-}
-
-function escapeRegexPattern(pattern) {
-    if (typeof pattern !== 'string') {
-        throw new Error('escapeRegexPattern requires string');
-    }
-    return pattern.replace(/\\/g, '\\\\').replace(/\//g, '\\/');
-}
-
 function isValidTagToken(token) {
     if (typeof token !== 'string') {
         throw new Error('isValidTagToken requires string');
@@ -389,7 +375,6 @@ export class OntologyModal extends BaseModal {
     constructor() {
         super('ontologyModal', 'ontology-modal');
         this._abortController = null;
-        this._rulesCache = null;
         this._searchSelectedIndex = NO_SELECTION;
         this._suppressNextSearchResults = false;
         // The search text the result list on screen was built for. Once the text
@@ -447,7 +432,6 @@ export class OntologyModal extends BaseModal {
         }
 
         this._closeDialog(null);
-        if (this._rulesCache !== null) this._rulesCache = null;
         if (this._searchSelectedIndex !== NO_SELECTION) this._searchSelectedIndex = NO_SELECTION;
         if (this._suppressNextSearchResults) this._suppressNextSearchResults = false;
         if (!this._shouldFocusSearchInput) this._shouldFocusSearchInput = true;
@@ -2230,11 +2214,6 @@ export class OntologyModal extends BaseModal {
         return rows.join('');
     }
 
-    _invalidateRulesCache() {
-        if (this._rulesCache === null) return;
-        this._rulesCache = null;
-    }
-
     async _createRule(text) {
         if (typeof text !== 'string' || text.trim() === '') {
             throw new Error('createRule requires non-empty text');
@@ -2255,42 +2234,6 @@ export class OntologyModal extends BaseModal {
         if (!Number.isInteger(id) || id < 0) {
             throw new Error('Invalid create rule response');
         }
-
-        this._invalidateRulesCache();
-    }
-
-    async _loadRulesCache() {
-        if (this._rulesCache !== null) {
-            return this._rulesCache;
-        }
-
-        const response = await fetch(`${ONTOLOGY_BASE}/rules`, {
-            method: 'GET',
-            headers: buildAuthHeaders(),
-        });
-        if (!response.ok) {
-            throw new HttpRequestError(await failureMessage(response));
-        }
-
-        const payload = await response.json();
-        const rules = payload.rules;
-        if (!Array.isArray(rules)) {
-            throw new Error('rules payload missing rules array');
-        }
-        const map = new Map();
-        for (const rule of rules) {
-            const id = rule.id;
-            const text = rule.text;
-            if (!Number.isInteger(id) || id < 0) {
-                throw new Error('invalid rule id from server');
-            }
-            if (typeof text !== 'string') {
-                throw new Error('invalid rule text from server');
-            }
-            map.set(id, text);
-        }
-        this._rulesCache = map;
-        return map;
     }
 
     async _editTagRelation(ruleId, relatedTag, relationKind) {
@@ -2359,7 +2302,6 @@ export class OntologyModal extends BaseModal {
         if (payload === null) {
             return;
         }
-        this._invalidateRulesCache();
     }
 
     async _editIncomingRule(ruleId) {
@@ -2432,7 +2374,6 @@ export class OntologyModal extends BaseModal {
         if (payload === null) {
             return;
         }
-        this._invalidateRulesCache();
 
         const focusTag = state.focusTag;
         if (typeof focusTag === 'string' && focusTag.trim() !== '') {
@@ -2497,7 +2438,6 @@ export class OntologyModal extends BaseModal {
         if (payload === null) {
             return;
         }
-        this._invalidateRulesCache();
         await this.setFocusTag(trimmed);
     }
 
@@ -2525,7 +2465,6 @@ export class OntologyModal extends BaseModal {
             return;
         }
 
-        this._invalidateRulesCache();
         this.clearSearchInput();
         this.updateModalState({ focusTag: '', focusView: null, error: null });
         this.renderFocusView(null);
@@ -2562,7 +2501,6 @@ export class OntologyModal extends BaseModal {
         if (payload === null) {
             return;
         }
-        this._invalidateRulesCache();
     }
 
     async _handleClick(event) {

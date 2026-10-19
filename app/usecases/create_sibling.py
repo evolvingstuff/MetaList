@@ -21,9 +21,6 @@ class CmdCreateSibling(QueryCommand):
     undo_context: str
     viewport: Dict[str, object]
 
-    def describe(self) -> str:
-        return f"CmdCreateSibling(ref={self.reference_note_id}, client={self.client_id})"
-
     def execute(self) -> Dict[str, str]:
         ref = store.get(self.reference_note_id)
         parent_id = ref.parent_id

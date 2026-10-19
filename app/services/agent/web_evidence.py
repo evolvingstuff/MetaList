@@ -13,7 +13,6 @@ from app.services.public_http import normalize_public_http_url
 
 MAX_RETAINED_WEB_PAGES = 64
 MAX_RETAINED_WEB_CHARACTERS = 4_000_000
-MAX_WEB_PROMPT_CHARACTERS = 480_000
 
 
 @dataclass(frozen=True, slots=True)
@@ -294,30 +293,6 @@ class WebEvidenceStore:
                 raise KeyError(f"Unknown web citation reference id: {evidence_id}")
             return references_by_id[evidence_id]
 
-    def available_for_ids(
-        self,
-        *,
-        session_key: str,
-        evidence_ids: tuple[str, ...],
-    ) -> tuple[WebPageEvidence, ...]:
-        _validate_session_key(session_key)
-        if not isinstance(evidence_ids, tuple):
-            raise TypeError("Web evidence ids must be a tuple")
-        if any(
-            not isinstance(evidence_id, str) or evidence_id == ""
-            for evidence_id in evidence_ids
-        ):
-            raise ValueError("Web evidence ids must be non-empty strings")
-        if len(set(evidence_ids)) != len(evidence_ids):
-            raise ValueError("Web evidence ids must be unique")
-        with self._lock:
-            by_id = self._retained_locked(session_key).by_id
-            return tuple(
-                by_id[evidence_id]
-                for evidence_id in evidence_ids
-                if evidence_id in by_id
-            )
-
     def available_references_for_ids(
         self,
         *,
@@ -351,25 +326,6 @@ class WebEvidenceStore:
         _validate_session_key(session_key)
         with self._lock:
             return tuple(self._retained_locked(session_key).by_id.values())
-
-    def prompt_evidence(
-        self,
-        *,
-        session_key: str,
-    ) -> tuple[tuple[WebPageEvidence, ...], int]:
-        _validate_session_key(session_key)
-        with self._lock:
-            all_evidence = tuple(self._retained_locked(session_key).by_id.values())
-        selected_newest_first: list[WebPageEvidence] = []
-        retained_characters = 0
-        for evidence in reversed(all_evidence):
-            page_characters = len(evidence.content_text)
-            if retained_characters + page_characters > MAX_WEB_PROMPT_CHARACTERS:
-                continue
-            selected_newest_first.append(evidence)
-            retained_characters += page_characters
-        selected = tuple(reversed(selected_newest_first))
-        return selected, len(all_evidence) - len(selected)
 
 
 def _validate_session_key(session_key: str) -> None:

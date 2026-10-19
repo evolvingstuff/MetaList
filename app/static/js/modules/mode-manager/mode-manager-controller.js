@@ -114,15 +114,8 @@ const ModeManager = {
         }
     },
 
-    debugState() {
-        const state = ModeContext.getFullState();
-        Logger.logState(state);
-        return this;
-    },
-
     get isEditing() { return ModeContext.isEditing; },
     get isSearching() { return ModeContext.isSearching; },
-    get isIdle() { return ModeContext.isIdle; },
     get isActive() { return ModeContext.isActive; }
 };
 

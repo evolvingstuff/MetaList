@@ -19,25 +19,25 @@ def _auth_service_without_database() -> AuthService:
 def test_password_policy_rejects_passwords_shorter_than_twelve_characters() -> None:
     auth = _auth_service_without_database()
 
-    assert auth.check_password_strength("S7!vN2@qP4x") is False
+    assert auth.password_policy_error("S7!vN2@qP4x") is not None
 
 
 def test_password_policy_rejects_passwords_longer_than_seventy_two_characters() -> None:
     auth = _auth_service_without_database()
 
-    assert auth.check_password_strength("x" * 73) is False
+    assert auth.password_policy_error("x" * 73) is not None
 
 
 def test_password_policy_rejects_common_predictable_passwords() -> None:
     auth = _auth_service_without_database()
 
-    assert auth.check_password_strength("password1234") is False
+    assert auth.password_policy_error("password1234") is not None
 
 
 def test_password_policy_accepts_a_strong_password_without_composition_rules() -> None:
     auth = _auth_service_without_database()
 
-    assert auth.check_password_strength("cobalt otter lantern violin") is True
+    assert auth.password_policy_error("cobalt otter lantern violin") is None
 
 
 def test_existing_short_password_remains_valid_for_login(

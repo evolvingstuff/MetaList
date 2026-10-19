@@ -73,10 +73,6 @@ function clampPopoverLeft(left, width) {
     return Math.min(Math.max(left, minLeft), maxLeft);
 }
 
-export function isSearchContextsOverlayBottomLeft() {
-    return false;
-}
-
 export function updateSearchContextsOverlayPlacement() {
     const searchContextsList = getSearchContextsListElement();
     if (!searchContextsList) {

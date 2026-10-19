@@ -9,6 +9,7 @@ import pytest
 
 from app.services import snapshot
 from app.services import undo_state
+from app.services.root_sorting import SORT_MODE_NORMAL
 from app.usecases import create_note
 from app.usecases import delete_subtree
 
@@ -56,13 +57,20 @@ class _RoundTripStore:
     def restore_subtree(self, records: list[SimpleNamespace]) -> None:
         assert self._record is None
         assert len(records) == 1
-        self._record = records[0]
+        self._record = SimpleNamespace(**vars(records[0]), proposed_tag_terms=frozenset())
 
     def get_note(self, note_id: str) -> SimpleNamespace:
         return self.get(note_id)
 
     def get_children(self, parent_id: str | None) -> list[str]:
         return self.children(parent_id)
+
+    def has_note(self, note_id: str) -> bool:
+        return self._record is not None and self._record.id == note_id
+
+    def has_backlinks(self, note_id: str) -> bool:
+        self.get(note_id)
+        return False
 
     def get_inherited_non_meta_tag_terms(self, note_id: str) -> frozenset[str]:
         self.get(note_id)
@@ -136,6 +144,18 @@ def test_create_undo_redo_preserves_timestamp_metadata_for_next_view(
     assert redo_payload is not None
     assert redo_payload["opType"] == "create_note"
 
-    metadata = snapshot._SnapshotTraversalCache().build_metadata(note_id)
+    # The view the notes route builds (build_view_state), as the browser receives it.
+    state = snapshot.build_view_state(
+        editing_note_id=None,
+        search=None,
+        sort_mode=SORT_MODE_NORMAL,
+        client_known_note_ids=set(),
+        previous_root_ids=[],
+        visible_top_root_id=None,
+        visible_bottom_root_id=None,
+        is_untagged_view=False,
+        start_at_list_end=False,
+    )
+    metadata = state.payloads[note_id]["metadata"]
     assert metadata["createdAt"] == original.created_at.isoformat()
     assert metadata["updatedAt"] == original.updated_at.isoformat()

@@ -1,6 +1,3 @@
-import { NotesAPI } from '../../api-client.js';
-
-const NOTE_SELECTOR = '.note';
 const NOTE_CONTENT_SELECTOR = '.note-content';
 const META_STATUS_TEXT_SELECTOR = ':scope > .meta-status > .meta-status-text, :scope > .note-with-backlinks > .meta-status > .meta-status-text';
 const COLLAPSED_DATA_KEY = 'isCollapsed';
@@ -146,16 +143,6 @@ export function resolveCanCollapseFromDataset(dataset) {
     return dataset.isCollapsible === 'true';
 }
 
-export function updateCollapseAffordances(root) {
-    if (!root) {
-        throw new Error('updateCollapseAffordances requires root node');
-    }
-    const noteElements = root.querySelectorAll(NOTE_SELECTOR);
-    noteElements.forEach((note) => {
-        updateCollapseAffordanceForNote(note);
-    });
-}
-
 export function updateCollapseAffordancesForNotes(noteElements) {
     if (!noteElements) {
         throw new Error('updateCollapseAffordancesForNotes requires note elements');
@@ -247,40 +234,5 @@ export function setNoteCollapsedLocally(noteElement, collapsed) {
     }
 
     noteElement.dataset[COLLAPSED_DATA_KEY] = collapsed ? 'true' : 'false';
-    updateCollapseAffordanceForNote(noteElement);
-}
-
-export function ensureNoteExpandedLocally(noteId) {
-    if (!noteId) {
-        throw new Error('ensureNoteExpandedLocally requires a noteId');
-    }
-
-    const noteElement = document.querySelector(`[data-note-id="${noteId}"]`);
-    if (!noteElement) {
-        throw new Error(`Cannot ensure local expanded state: note ${noteId} not found`);
-    }
-
-    setNoteCollapsedLocally(noteElement, false);
-}
-
-export async function ensureNoteExpanded(noteId) {
-    if (!noteId) {
-        throw new Error('ensureNoteExpanded requires a noteId');
-    }
-
-    const noteElement = document.querySelector(`[data-note-id="${noteId}"]`);
-    if (!noteElement) {
-        throw new Error(`Cannot ensure expanded state: note ${noteId} not found`);
-    }
-
-    const isCollapsed = noteElement.dataset[COLLAPSED_DATA_KEY] === 'true';
-    if (!isCollapsed) {
-        return;
-    }
-
-    await NotesAPI.expandNote(noteId);
-    noteElement.dataset[COLLAPSED_DATA_KEY] = 'false';
-    noteElement.classList.remove('collapsed');
-
     updateCollapseAffordanceForNote(noteElement);
 }

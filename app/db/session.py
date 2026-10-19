@@ -59,7 +59,6 @@ class GuardedConnection:
 class _RequestTransactionState:
     session: Optional[SafeSession]
     guard: Optional[GuardedConnection]
-    commit_callbacks: list[Callable[[], None]]
     rollback_callbacks: list[Callable[[], None]]
     recoveries: dict[Path, LiveDatabaseRecovery | MemoryDatabaseRecovery]
     did_write: bool
@@ -95,21 +94,8 @@ def get_request_session() -> Optional[SafeSession]:
     return session
 
 
-def after_request_commit(callback: Callable[[], None]) -> None:
-    """Publish memory changes only after successful request persistence."""
-    state = _request_transaction_state.get()
-    if state is None:
-        callback()
-        return
-    state.commit_callbacks.append(callback)
-
-
 def enable_read_guard() -> None:
     SafeSession.enable_read_guard()
-
-
-def disable_read_guard() -> None:
-    SafeSession.disable_read_guard()
 
 
 @contextmanager
@@ -165,15 +151,13 @@ def recoverable_database_change(database_path: Path):
 def begin_request_transaction() -> Iterator[None]:
     if _request_transaction_state.get() is not None:
         raise RuntimeError("Request transaction already active")
-    state = _RequestTransactionState(session=None, guard=None, commit_callbacks=[], rollback_callbacks=[], recoveries={}, did_write=False)
+    state = _RequestTransactionState(session=None, guard=None, rollback_callbacks=[], recoveries={}, did_write=False)
     token = _request_transaction_state.set(state)
     succeeded = False
     try:
         yield
         if state.session is not None:
             state.session.commit()
-        for callback in state.commit_callbacks:
-            callback()
         for recovery in state.recoveries.values():
             recovery.commit()
         succeeded = True

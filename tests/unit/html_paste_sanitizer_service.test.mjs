@@ -7,7 +7,6 @@ import {
     hasImmediateLineBreakBefore,
     normalizeSoftWrappedTextLineBreaks,
     shouldInsertLineBreakBeforeTimestampAnchor,
-    shouldInlineStandaloneCitationMarker,
     shouldPreserveTimestampSiblingLineBreaks,
     shouldRemoveStandaloneCitationMarker,
     splitMeaningfulTextLineBreaks,
@@ -254,30 +253,8 @@ test('shouldInsertLineBreakBeforeTimestampAnchor ignores non-timestamp inline li
     );
 });
 
-test('shouldInlineStandaloneCitationMarker recognizes citation markers between prose', () => {
-    assert.equal(
-        shouldInlineStandaloneCitationMarker(
-            '[6]',
-            'In the past, mechanistic interpretability has largely focused on CNN vision models',
-            ', but recently, we presented progress',
-        ),
-        true,
-    );
-});
-
 test('shouldRemoveStandaloneCitationMarker handles invisible-character wrapped markers', () => {
     assert.equal(shouldRemoveStandaloneCitationMarker('\u200b[7]\u200b'), true);
-});
-
-test('shouldInlineStandaloneCitationMarker ignores non-citation bracket text', () => {
-    assert.equal(
-        shouldInlineStandaloneCitationMarker(
-            '[A] [B]',
-            'forming the sequence ',
-            ' in the example',
-        ),
-        false,
-    );
 });
 
 test('shouldRemoveStandaloneCitationMarker ignores model notation', () => {

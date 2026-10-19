@@ -1196,43 +1196,6 @@ export async function unformatCurrentNoteContent(selectedTextRange) {
     return true;
 }
 
-export async function toggleReferenceModeForNote(hostNoteId, referenceNoteId, occurrenceIndex, mode) {
-    const startedAt = performance.now();
-    Logger.logAction('toggleReferenceModeForNote', {
-        hostNoteId,
-        referenceNoteId,
-        occurrenceIndex,
-        mode,
-        isEditing: ModeContext.isEditing,
-        currentNoteId: ModeContext.currentNoteId,
-    });
-
-    if (typeof hostNoteId !== 'string' || hostNoteId.length === 0) {
-        throw new Error('Cannot toggle reference mode: hostNoteId is required');
-    }
-    if (typeof referenceNoteId !== 'string' || referenceNoteId.length === 0) {
-        throw new Error('Cannot toggle reference mode: referenceNoteId is required');
-    }
-    if (!Number.isInteger(occurrenceIndex) || occurrenceIndex < 0) {
-        throw new Error('Cannot toggle reference mode: occurrenceIndex must be a non-negative integer');
-    }
-    if (mode !== 'embed' && mode !== 'link') {
-        throw new Error('Cannot toggle reference mode: mode must be embed|link');
-    }
-    if (ModeContext.isEditing) {
-        throw new Error('toggleReferenceModeForNote must not run while editing');
-    }
-
-    await NotesAPI.toggleReferenceMode(hostNoteId, referenceNoteId, occurrenceIndex, mode);
-    const refreshedContent = await actionRefreshAndMaybeSelect({
-        startedAt,
-        context: 'toggleReferenceModeForNote',
-    });
-    if (typeof refreshedContent === 'string' && ModeContext.currentContent !== refreshedContent) {
-        ModeContext.setCurrentContent(refreshedContent);
-    }
-}
-
 // Pastes below the edited note (or into it, when it is empty with no children)
 // what requestPaste(targetNoteId) puts there: the copied note, or its reference.
 async function pasteAsSibling(actionName, requestPaste) {

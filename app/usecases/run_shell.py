@@ -30,9 +30,6 @@ class CmdRunShellStart(QueryCommand):
     note_id: str
     timeout_seconds: int
 
-    def describe(self) -> str:
-        return f"CmdRunShellStart(note={self.note_id})"
-
     def execute(self) -> Dict[str, object]:
         if not isinstance(self.timeout_seconds, int) or self.timeout_seconds < 0:
             raise TypeError("timeout_seconds must be a non-negative integer")
@@ -62,9 +59,6 @@ class CmdRunShellStart(QueryCommand):
 class CmdRunShellStatus(QueryCommand):
     note_id: str
     run_id: str
-
-    def describe(self) -> str:
-        return f"CmdRunShellStatus(note={self.note_id}, run={self.run_id})"
 
     def execute(self) -> Dict[str, object]:
         if not is_shell_execution_enabled():

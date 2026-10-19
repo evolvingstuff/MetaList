@@ -64,10 +64,6 @@ def enable_read_guard() -> None:
     _safe_session().enable_read_guard()
 
 
-def disable_read_guard() -> None:
-    _safe_session().disable_read_guard()
-
-
 @contextmanager
 def allow_reads(reason: str) -> Iterator[None]:
     with _safe_session().allow_reads(reason):

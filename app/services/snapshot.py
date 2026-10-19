@@ -510,16 +510,6 @@ class _SnapshotTraversalCache:
             self._record_by_id[note_id] = note_store.get_note(note_id)
         return self._record_by_id[note_id]
 
-    def build_metadata(self, note_id: str) -> Dict[str, str]:
-        # The client reads only the timestamps (note-timestamp-hover-service).
-        # Paths, counts, and inherited tags were computed per visible note on
-        # every view, including a full subtree walk, and never read.
-        record = self.get_note(note_id)
-        return {
-            "createdAt": _timestamp_iso(record, "created_at"),
-            "updatedAt": _timestamp_iso(record, "updated_at"),
-        }
-
     def count_proposals_in_subtree(
         self,
         note_id: str,
@@ -1015,7 +1005,7 @@ def build_view_state(
                 "tags": rec.tags,
                 "proposedTags": rec.proposed_tags,
                 "flags": flags,
-                # Same values build_metadata would produce, already formatted in flags.
+                # The client reads only the timestamps (note-timestamp-hover-service), already formatted in flags.
                 "metadata": {"createdAt": flags["createdAt"], "updatedAt": flags["updatedAt"]},
                 "hash": h,
             }
@@ -1077,27 +1067,3 @@ def build_view_state(
         hash_by_id=hash_by_id,
         metadata=metadata,
     )
-
-
-def build_view_snapshot(
-    *,
-    editing_note_id: Optional[str],
-    search: Optional[str],
-    sort_mode: str,
-    client_known_note_ids: Set[str],
-    visible_top_root_id: Optional[str],
-    visible_bottom_root_id: Optional[str],
-    is_untagged_view: bool,
-) -> Tuple[List[Dict[str, object]], Dict[str, Dict[str, object]], Dict[str, str]]:
-    state = build_view_state(
-        editing_note_id=editing_note_id,
-        search=search,
-        sort_mode=sort_mode,
-        client_known_note_ids=client_known_note_ids,
-        previous_root_ids=[],
-        visible_top_root_id=visible_top_root_id,
-        visible_bottom_root_id=visible_bottom_root_id,
-        is_untagged_view=is_untagged_view,
-        start_at_list_end=False,
-    )
-    return state.structure, state.payloads, state.locks

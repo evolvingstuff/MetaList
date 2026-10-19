@@ -14,6 +14,3 @@ class ViewState:
     children_by_parent: Dict[Optional[str], List[str]]
     hash_by_id: Dict[str, str]
     metadata: Dict[str, object]
-
-    def visible_note_ids(self) -> List[str]:
-        return list(self.hash_by_id.keys())

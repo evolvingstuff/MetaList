@@ -681,7 +681,6 @@ Notes:
 - `POST /api2/notes/new`
 - `POST /api2/notes/new-sibling/{note_id}`
 - `POST /api2/notes/new-child/{note_id}`
-- `PUT /api2/notes/{note_id}`
 - `PUT /api2/notes/{note_id}/save`
 - `POST /api2/notes/{note_id}/move`
 - `POST /api2/notes/{note_id}/collapse`

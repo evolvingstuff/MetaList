@@ -610,6 +610,52 @@ directory = ".shockharness-cache"
 
 # Property contracts (ShockHarness spec, docs/security/cloud-privacy-boundary.md): note
 # text reaches an AI provider only after the cloud privacy rules let the AI see it.
+# Dead code (DEAD001: nothing calls it; DEAD002: only tests do). Entry points are
+# functions reached in ways the analysis cannot see; each says how.
+[tool.shockharness.rules.dead_code]
+enabled = true
+entry_points = [
+  # The installed console script: pyproject [project.scripts] metalist = "main:cli".
+  "main.py::cli",
+  # A socketserver hook: TCPServer.__init__ calls it (the class derives from
+  # ThreadingHTTPServer through a project class).
+  "main.py::_HttpsProxyServer.server_bind",
+  # TextIO methods of the stream installed as sys.stdout and sys.stderr; libraries call them.
+  "app/security/authenticated_logging.py::EncryptedTextStream.writable",
+  "app/security/authenticated_logging.py::EncryptedTextStream.isatty",
+  # Called through the exported singleton ApplicationState.
+  "app/static/js/modules/application-state.js::ApplicationStateStore.receiveOwnerSnapshot",
+  "app/static/js/modules/application-state.js::ApplicationStateStore.createScope",
+  # Called on the result of a chained call (agent_loop.py, tag_suggestions.py).
+  "app/services/agent/web_actions.py::NoteTextGuard.addresses_needing_confirmation",
+  "app/services/tag_suggestions.py::_RankedSuggestions.with_reasons",
+  # Re-exported by content_formatting.py and called through it.
+  "app/services/structured_note_renderers.py::extract_plain_text_from_note_html",
+  # The legacy JSON importer (convert-from-legacy.py, outside the analysis) uses it:
+  # friends still on the old MetaList move over with it.
+  "app/db/notes_sql.py::update_links",
+  # The developer LLM eval harness (evals/, outside the analysis) uses it.
+  "app/services/agent/note_aliases.py::NoteAliases.unaliased",
+  # Test seams: production has no reason to call them; tests use them to reset shared
+  # module state or to observe live behaviour through the module's own API.
+  "app/static/js/modules/mode-manager/mode-context.js::ModeContext.removeListener",
+  "app/static/js/modules/mode-manager/services/password-clipboard-service.js::clearRememberedGeneratedPasswordCopy",
+  "app/static/js/modules/mode-manager/services/search-interaction-service.js::resetNoteInteractionStateForTests",
+  "app/static/js/modules/mode-manager/services/reference-source-navigation-service.js::getActiveReferenceSourceQuery",
+  "app/services/reminders.py::ReminderStore.clear_persisted_state_for_tests",
+  "app/services/file_edit_sessions.py::open_file_edit_session_count",
+  "app/services/view_cache.py::ViewCache.diagnostics",
+  "app/encryption_audit.py::EncryptionAuditReport.migration_findings",
+  # Tests read stored rows back with it, and lift the request read guard to do so.
+  "app/db/notes_sql.py::fetch_note",
+  "app/models/database.py::SafeSession.disable_read_guard",
+  # Reads back the encrypted log sink: tests prove logs hold no plaintext with it.
+  "app/security/authenticated_logging.py::decrypt_log_records",
+  # Checks that every data-changing route runs in a transaction; the unit suite runs it
+  # against the real app (tests/unit/test_route_transaction_audit.py).
+  "app/api/transactions.py::assert_mutation_routes_wrapped",
+]
+
 [tool.shockharness.rules.property_contracts]
 enabled = true
 roles = ["production"]

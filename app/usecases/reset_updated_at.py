@@ -65,9 +65,6 @@ class CmdResetUpdatedAtToCreatedAt(QueryCommand):
     undo_context: str
     viewport: Dict[str, object]
 
-    def describe(self) -> str:
-        return f"CmdResetUpdatedAtToCreatedAt(client={self.client_id})"
-
     def execute(self) -> Dict[str, object]:
         root_ids = _resolve_context_root_ids(self.search_query)
         if len(root_ids) == 0:

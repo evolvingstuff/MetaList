@@ -1,10 +1,6 @@
 import { CONFIG } from './config.js';
 
 export const DOMUtils = {
-    findNoteElement(element) {
-        return element.closest(`.${CONFIG.CLASSES.NOTE}`);
-    },
-
     getNoteContent(noteElement) {
         return noteElement.querySelector(`.${CONFIG.CLASSES.NOTE_CONTENT}`);
     },
@@ -56,10 +52,6 @@ export const DOMUtils = {
             throw new Error(`Note not found: ${noteId}`);
         }
         return note;
-    },
-
-    getAllNotes() {
-        return document.querySelectorAll(`.${CONFIG.CLASSES.NOTE}`);
     },
 
     focusNote(noteElement, cursorOffset) {
@@ -180,49 +172,6 @@ export const DOMUtils = {
 		selection.addRange(targetRange);
 	},
 
-    getCursorOffsetFromClick(noteElement, coordinates) {
-        if (!noteElement) {
-            throw new Error('Note element is required');
-        }
-        if (!coordinates) {
-            throw new Error('Coordinates are required');
-        }
-        if (typeof coordinates.x !== 'number' || typeof coordinates.y !== 'number') {
-            throw new Error('Invalid coordinates');
-        }
-
-        const range = document.caretRangeFromPoint(coordinates.x, coordinates.y);
-        if (!range) {
-            throw new Error('Could not create range from click point');
-        }
-
-        const content = this.getNoteContent(noteElement);
-        if (!content) {
-            throw new Error('Note missing content element');
-        }
-
-        if (!content.contains(range.startContainer)) {
-            throw new Error('Click not in note content');
-        }
-
-        let offset = 0;
-        const path = this.getNodePath(range.startContainer, content);
-        if (!path) {
-            throw new Error('Could not find path to clicked node');
-        }
-
-        const textRange = document.createRange();
-        textRange.selectNodeContents(content);
-        textRange.setEnd(range.startContainer, range.startOffset);
-        const selectedText = textRange.toString();
-        offset = selectedText.length;
-
-        console.log("[DEBUG] Range-based offset:", offset);
-        console.log("[DEBUG] Clicked node:", range.startContainer.nodeName);
-
-        return offset;
-    },
-
     getNoteContentHTML(noteElement) {
         if (!noteElement) {
             throw new Error('Note element is required');
@@ -241,11 +190,6 @@ export const DOMUtils = {
         return html;
     },
 
-    getNoteContentHTMLById(noteId) {
-        const noteElement = this.getNoteById(noteId);
-        return this.getNoteContentHTML(noteElement);
-    },
-
     getNodePath(node, ancestor) {
         if (!node || !ancestor) {
             return null;
@@ -260,43 +204,6 @@ export const DOMUtils = {
         }
 
         return current === ancestor ? path : null;
-    },
-
-	isNoteContent(element) {
-		if (!element) {
-			return false;
-		}
-
-		const classList = element.classList;
-		if (classList && classList.contains(CONFIG.CLASSES.NOTE_CONTENT)) {
-			return true;
-		}
-		return Boolean(element.closest(`.${CONFIG.CLASSES.NOTE_CONTENT}`));
-	},
-
-    isInSearchResults(coordinates) {
-        if (!coordinates || !coordinates.x || !coordinates.y) {
-            throw new Error('Valid coordinates required');
-        }
-
-        const searchResults = document.querySelector(`.${CONFIG.CLASSES.SEARCH_RESULTS}`);
-        if (!searchResults) {
-            throw new Error('Search results panel not found');
-        }
-
-        const rect = searchResults.getBoundingClientRect();
-        return coordinates.x >= rect.left && 
-               coordinates.x <= rect.right &&
-               coordinates.y >= rect.top && 
-               coordinates.y <= rect.bottom;
-    },
-
-    focusSearch() {
-        const searchInput = document.querySelector(`.${CONFIG.CLASSES.SEARCH_INPUT}`);
-        if (!searchInput) {
-            throw new Error('Search input not found');
-        }
-        searchInput.focus();
     },
 };
 

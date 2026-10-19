@@ -107,9 +107,6 @@ class CmdMoveToTop(QueryCommand):
     undo_context: str
     viewport: Dict[str, object]
 
-    def describe(self) -> str:
-        return f"CmdMoveToTop(note={self.note_id}, client={self.client_id})"
-
     def execute(self) -> Dict[str, str]:
         record = store.get(self.note_id)
         parent_id = record.parent_id
@@ -126,9 +123,6 @@ class CmdMoveToBottom(QueryCommand):
     client_id: str
     undo_context: str
     viewport: Dict[str, object]
-
-    def describe(self) -> str:
-        return f"CmdMoveToBottom(note={self.note_id}, client={self.client_id})"
 
     def execute(self) -> Dict[str, str]:
         record = store.get(self.note_id)

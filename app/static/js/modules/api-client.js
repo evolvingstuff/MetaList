@@ -286,15 +286,6 @@ export const NotesAPI = {
         });
     },
 
-    async updateNote(noteId, content, tags) {
-        const sanitizedContent = sanitizeNoteHtmlForStorage(content);
-        return this._apiCall(CONFIG.API.NOTES.UPDATE(noteId), {
-            method: 'PUT',
-            claimSession: true,
-            body: JSON.stringify({ content: sanitizedContent, tags })
-        });
-    },
-
     async saveNote(noteId, content, tags) {
         const sanitizedContent = sanitizeNoteHtmlForStorage(content);
         return this._apiCall(CONFIG.API.NOTES.SAVE(noteId), {
@@ -509,31 +500,6 @@ export const NotesAPI = {
         });
     },
 
-    async toggleReferenceMode(hostNoteId, referenceNoteId, occurrenceIndex, mode) {
-        if (typeof hostNoteId !== 'string' || hostNoteId.length === 0) {
-            throw new Error('NotesAPI.toggleReferenceMode requires hostNoteId string');
-        }
-        if (typeof referenceNoteId !== 'string' || referenceNoteId.length === 0) {
-            throw new Error('NotesAPI.toggleReferenceMode requires referenceNoteId string');
-        }
-        if (!Number.isInteger(occurrenceIndex) || occurrenceIndex < 0) {
-            throw new Error('NotesAPI.toggleReferenceMode requires non-negative integer occurrenceIndex');
-        }
-        if (mode !== 'embed' && mode !== 'link') {
-            throw new Error('NotesAPI.toggleReferenceMode requires mode embed|link');
-        }
-        const body = {
-            reference_note_id: referenceNoteId,
-            occurrence_index: occurrenceIndex,
-            mode,
-        };
-        return this._apiCall(CONFIG.API.NOTES.REFERENCE_MODE(hostNoteId), {
-            method: 'POST',
-            claimSession: true,
-            body: JSON.stringify(body),
-        });
-    },
-
     async moveNote(noteId, siblingId, position, newParentId) {
         const body = {
             sibling_id: siblingId,
@@ -549,43 +515,6 @@ export const NotesAPI = {
             method: 'POST',
             claimSession: true,
             body: JSON.stringify(body)
-        });
-    },
-
-    async moveNoteRelative(noteId, direction) {
-        console.log('Moving note:', { noteId, direction });
-
-        const noteElement = DOMUtils.getNoteById(noteId);
-        if (!noteElement) {
-            throw new Error('Note element not found');
-        }
-
-        const siblingElement = direction === 'before' ? 
-            noteElement.previousElementSibling : 
-            noteElement.nextElementSibling;
-        console.log('Sibling element:', siblingElement);
-
-        if (!siblingElement) {
-            console.log('No sibling found in direction:', direction);
-            return;
-        }
-
-        const siblingId = DOMUtils.getNoteId(siblingElement);
-        console.log('Found sibling:', { siblingId });
-
-        const payload = { 
-            position: direction.toUpperCase(),
-            sibling_id: siblingId
-        };
-        console.log('Sending payload:', payload);
-
-        return this._apiCall(CONFIG.API.NOTES.MOVE(noteId), {
-            method: 'POST',
-            claimSession: true,
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
         });
     },
 
@@ -745,14 +674,6 @@ export const NotesAPI = {
         return noteElement;
     },
 
-    getNoteContentElement(noteId) {
-        const noteElement = document.querySelector(`[data-note-id="${noteId}"]`);
-        if (!noteElement) {
-            throw new Error(`Note not found: ${noteId}`);
-        }
-        return noteElement.querySelector('.note-content');
-    },
-
     async fetchView(noteId, searchQuery, tabId, visibleRootRange, startAtListEnd) {
         if (typeof noteId === 'undefined') {
             throw new Error('NotesAPI.fetchView requires noteId (use null when not editing)');
@@ -850,23 +771,6 @@ export const NotesAPI = {
             windowDays,
         };
         return this._apiCall(CONFIG.API.NOTES.SEARCH_TAG_DETAILS, {
-            method: 'POST',
-            body: JSON.stringify(payload),
-        });
-    },
-
-    async fetchPrioritizeTagSuggestions(query, searchQuery) {
-        if (typeof query !== 'string') {
-            throw new Error('NotesAPI.fetchPrioritizeTagSuggestions requires query string');
-        }
-        if (searchQuery !== null && typeof searchQuery !== 'string') {
-            throw new Error('NotesAPI.fetchPrioritizeTagSuggestions requires searchQuery string or null');
-        }
-        const payload = {
-            query,
-            search_query: searchQuery,
-        };
-        return this._apiCall(CONFIG.API.NOTES.PRIORITIZE_TAG_SUGGESTIONS, {
             method: 'POST',
             body: JSON.stringify(payload),
         });

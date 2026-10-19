@@ -26,7 +26,7 @@ from app.services.content_cache import clear_cache, populate_cache_from_db
 from app.services.file_registry import file_registry
 from app.services.file_storage import create_file, get_file_reference_record
 from app.services.search_history import (
-    list_recent_search_tags_for_first_query,
+    list_recent_search_tag_selections_for_first_query,
     record_note_interaction,
 )
 from app.services.search_index import SearchIndex, SearchRecord, extract_tags_for_search
@@ -342,13 +342,16 @@ def test_password_transitions_rewrite_search_history_rows(
 
             dek = auth.unwrap_dek_for_password("aQ7!mZ2#vL9@xR4")
             set_session_dek(dek)
-            assert list_recent_search_tags_for_first_query(
-                query="jour",
-                candidate_tags=["journal"],
-                window_days=(1, 7, 30),
-                token="token",
-                today=date(2026, 8, 20),
-            ) == ["journal"]
+            assert [
+                selection.tag
+                for selection in list_recent_search_tag_selections_for_first_query(
+                    query="jour",
+                    candidate_tags=["journal"],
+                    window_days=(1, 7, 30),
+                    token="token",
+                    today=date(2026, 8, 20),
+                )
+            ] == ["journal"]
 
             success, message = auth.remove_password("aQ7!mZ2#vL9@xR4")
             assert success, message

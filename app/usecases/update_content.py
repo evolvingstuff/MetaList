@@ -148,9 +148,6 @@ class CmdUpdateContent(QueryCommand):
     undo_context: str
     viewport: Dict[str, object]
 
-    def describe(self) -> str:
-        return f"CmdUpdateContent(note={self.note_id}, client={self.client_id})"
-
     def execute(self) -> Dict[str, str]:
         # Capture previous plaintext for undo recording
         record = store.get(self.note_id)

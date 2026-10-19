@@ -88,12 +88,6 @@ def inspect_namespace_runtime_legitimacy(*, namespace: str) -> NamespaceRuntimeL
     return NamespaceRuntimeLegitimacy(is_legitimate=True, failure_reason="")
 
 
-def assert_namespace_runtime_is_legitimate(*, namespace: str) -> None:
-    legitimacy = inspect_namespace_runtime_legitimacy(namespace=namespace)
-    if not legitimacy.is_legitimate:
-        raise RuntimeError(legitimacy.failure_reason)
-
-
 def _terminate_current_process() -> None:
     os.kill(os.getpid(), signal.SIGTERM)
 

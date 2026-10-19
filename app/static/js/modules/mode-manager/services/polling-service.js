@@ -73,22 +73,6 @@ export function startPolling() {
     Logger.logInit('Unified polling started (connectivity + updates)');
 }
 
-export function stopPolling() {
-    if (moduleState.pollingInterval) {
-        clearInterval(moduleState.pollingInterval);
-        moduleState.pollingInterval = null;
-        Logger.logDebug('Unified polling stopped');
-    }
-    if (moduleState.linkTitleRefreshTimer !== null) {
-        window.clearTimeout(moduleState.linkTitleRefreshTimer);
-        moduleState.linkTitleRefreshTimer = null;
-    }
-    if (moduleState.visibilityListener !== null) {
-        document.removeEventListener('visibilitychange', moduleState.visibilityListener);
-        moduleState.visibilityListener = null;
-    }
-}
-
 async function refreshTokenOnActivity() {
     const response = await fetch(CONFIG.API.AUTH.SESSIONS, {
         method: 'GET',

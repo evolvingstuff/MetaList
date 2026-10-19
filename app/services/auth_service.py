@@ -178,10 +178,6 @@ class AuthService:
         )
         return secrets.compare_digest(candidate, settings.auth_verifier)
 
-    def check_password_strength(self, password: str) -> bool:
-        """Return True when a new password meets the current policy."""
-        return self.password_policy_error(password) is None
-
     def password_policy_error(self, password: str) -> str | None:
         """Return a user-facing policy error for a new password, if any."""
         if not isinstance(password, str):

@@ -95,44 +95,6 @@ def test_implicit_tag_inheritance_excludes_meta_and_comments(monkeypatch: pytest
     assert index.query_note_ids('"secret"') == {"a"}
 
 
-def test_local_effective_tags_exclude_ancestor_inheritance(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    content_by_id = {"root": "<div>root</div>", "child": "<div>child</div>"}
-    tags_by_id = {"root": "ancestor-tag", "child": "child-tag"}
-    rows = [
-        {
-            "id": "root",
-            "parent_id": None,
-            "prev_id": None,
-            "next_id": None,
-            "is_collapsed": 0, "created_at": None, "updated_at": None,
-        },
-        {
-            "id": "child",
-            "parent_id": "root",
-            "prev_id": None,
-            "next_id": None,
-            "is_collapsed": 0, "created_at": None, "updated_at": None,
-        },
-    ]
-    store, index = _load_store(
-        monkeypatch,
-        content_by_id=content_by_id,
-        tags_by_id=tags_by_id,
-        proposed_tags_by_id={"root": "", "child": ""},
-        rows=rows,
-    )
-
-    assert index.list_effective_tag_terms_for_note("child") == frozenset(
-        {"ancestor-tag", "child-tag"}
-    )
-    assert store.list_local_effective_tag_terms(
-        note_id="child",
-        plaintext="child",
-    ) == frozenset({"child-tag"})
-
-
 def test_implicit_tag_inheritance_updates_when_ancestor_tags_change(monkeypatch: pytest.MonkeyPatch) -> None:
     # Tree:
     # a(x)

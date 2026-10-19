@@ -34,10 +34,6 @@ class AiSetup:
     # Set up and usable now, in preference order.
     ready_providers: tuple[AiProvider, ...]
 
-    @property
-    def is_ready(self) -> bool:
-        return len(self.ready_providers) > 0
-
     def is_ready_for(self, provider: AiProvider) -> bool:
         assert provider in AI_PROVIDERS, f"Unregistered AI provider: {provider}"
         return provider in self.ready_providers

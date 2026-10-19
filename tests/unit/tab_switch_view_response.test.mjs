@@ -38,7 +38,7 @@ function buildHarness() {
     const ModeContext = {
         activeTabId: 'A', tabOrder: ['A', 'B'], isEditing: false, isUntaggedView: false,
         activeTabSortMode: 'normal', currentNoteId: null, isInitialPageLoad: false,
-        knownRootCount: 1, seenRootCount: 1, noteCount: 1,
+        knownRootCount: 1, noteCount: 1,
         getExecutedSearchQuery: () => '', getRootAnchorId: () => null, getLastKnownRootId: () => null,
         getVisibleRootRange: () => ({ topRootId: null, bottomRootId: null }), setRootWindow() {},
         getTabNoteHashCount: () => 1, tabs: { A: { anchorRootId: null }, B: { anchorRootId: null } },

@@ -410,19 +410,6 @@ function savedTags(page, noteId) {
   return page.$eval(`.note[data-note-id="${noteId}"]`, note => note.dataset.noteTags);
 }
 
-// Pressing + on a suggested tag makes it a tag at once: in the tag bar, and on
-// the note once editing ends.
-async function acceptSuggestion(page, noteId, tag) {
-  await page.click(`.note.editing[data-note-id="${noteId}"] .note-tag-proposal-accept[data-proposal="${tag}"]`);
-  await pause(SETTLE_MS);
-  await idle(page);
-  const accepted = await screenState(page, noteId);
-  assert(accepted.tagBar.value.split(/\s+/u).includes(tag), `+ puts ${tag} in the tag bar: ${JSON.stringify(accepted.tagBar.value)}`);
-  assert(!accepted.row.includes(tag) && !accepted.row.includes(`${tag} [new]`), `${tag} leaves the proposals`);
-  await leaveEditing(page);
-  assert((await savedTags(page, noteId)).split(/\s+/u).includes(tag), `${tag} stays on the note after editing: ${await savedTags(page, noteId)}`);
-}
-
 async function acceptFromNoteMenuCase(page, ids) {
   await startEditing(page, ids.acceptFromMenu);
   await openNoteMenu(page, ids.acceptFromMenu);
@@ -433,15 +420,17 @@ async function acceptFromNoteMenuCase(page, ids) {
   await placeCaretAtTextEnd(page, ids.acceptFromMenu);
   await page.keyboard.type(' More text.');
   const typed = await screenState(page, ids.acceptFromMenu);
-  await acceptSuggestionKeepingEdit(page, ids.acceptFromMenu, 'kyoto', typed);
+  await acceptSuggestionKeepingEdit(page, ids.acceptFromMenu, 'kyoto', typed, ['menu-accepted [new]']);
 }
 
-async function acceptSuggestionKeepingEdit(page, noteId, tag, typed) {
+// remaining: the proposals left in the row once the tag is accepted.
+async function acceptSuggestionKeepingEdit(page, noteId, tag, typed, remaining) {
   await page.click(`.note.editing[data-note-id="${noteId}"] .note-tag-proposal-accept[data-proposal="${tag}"]`);
   await pause(SETTLE_MS);
   await idle(page);
   const accepted = await screenState(page, noteId);
   assert(accepted.tagBar.value.split(/\s+/u).includes(tag), `+ puts ${tag} in the tag bar: ${JSON.stringify(accepted.tagBar.value)}`);
+  assert.deepEqual(accepted.row, remaining, `${tag} leaves the proposals and the others stay`);
   assert.equal(accepted.text, typed.text, 'the typed text stays');
   assert.deepEqual(accepted.caret, typed.caret, 'the caret stays');
   await leaveEditing(page);

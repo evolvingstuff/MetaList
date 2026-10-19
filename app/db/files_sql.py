@@ -140,14 +140,6 @@ def fetch_all_file_ids(connection: sqlite3.Connection) -> list[str]:
     return ids
 
 
-def fetch_all_files(connection: sqlite3.Connection) -> list[dict[str, object]]:
-    rows = connection.execute(f"SELECT * FROM {FILES_TABLE} ORDER BY created_at ASC").fetchall()
-    records: list[dict[str, object]] = []
-    for row in rows:
-        records.append(_deserialize_row(row))
-    return records
-
-
 def update_file_storage_fields(
     connection: sqlite3.Connection,
     *,

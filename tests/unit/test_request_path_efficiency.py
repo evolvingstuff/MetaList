@@ -11,11 +11,10 @@ import app.services.snapshot as snapshot_module
 import app.services.sync as sync
 import app.services.undo_state as undo_state
 from app.services.embedded_references import EmbedRenderContext
-from app.services.embedded_references import collapsed_preview_source_has_hidden_content
+from app.services.embedded_references import collapsed_preview_head
 from app.services.embedded_references import extract_collapsed_preview_source_html
 from app.services.link_titles import LinkTitleStore
 from app.services.note_store import NoteRecord
-from app.services.snapshot import _SnapshotTraversalCache
 
 
 _VIEWPORT = {"scrollY": 0, "scrollAnchor": None}
@@ -32,7 +31,7 @@ def test_collapsed_preview_head_matches_full_fragment_scan() -> None:
         fragments = list(embedded_references._iter_collapsed_preview_meaningful_fragments(content))
 
         assert extract_collapsed_preview_source_html(content) == "".join(fragments[:1])
-        assert collapsed_preview_source_has_hidden_content(content) == (len(fragments) > 1)
+        assert collapsed_preview_head(content)[1] == (len(fragments) > 1)
 
 
 def test_collapsed_preview_head_stops_after_second_fragment(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -52,17 +51,6 @@ def test_collapsed_preview_head_stops_after_second_fragment(monkeypatch: pytest.
     assert embedded_references._collapsed_preview_head(content) == ("<div>line 0</div>", True)
     assert yielded == ["<div>line 0</div>", "<div>line 1</div>"]
     embedded_references._collapsed_preview_head.cache_clear()
-
-
-def test_view_metadata_carries_only_client_timestamps(monkeypatch: pytest.MonkeyPatch) -> None:
-    class _Record:
-        created_at = None
-        updated_at = None
-
-    cache = _SnapshotTraversalCache()
-    monkeypatch.setattr(cache, "get_note", lambda _note_id: _Record())
-
-    assert cache.build_metadata("note") == {"createdAt": "", "updatedAt": ""}
 
 
 def test_undo_budget_walk_skipped_for_existing_clients(monkeypatch: pytest.MonkeyPatch) -> None:

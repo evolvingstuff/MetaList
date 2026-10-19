@@ -630,15 +630,6 @@ async function formattedClickCases(page, ids) {
   assert.deepEqual(problems, [], `formatted notes should keep the clicked spot in place both ways:\n${problems.join('\n')}`);
 }
 
-// Enter outside edit mode adds an empty note at the top and scrolls up to it,
-// so it is visible below the search controls.
-function noteTopOf(page, prefix) {
-  return page.evaluate(prefix => {
-    const paragraph = [...document.querySelectorAll('#notes-container p')].find(p => p.textContent.trim().startsWith(prefix));
-    return paragraph.closest('.note').getBoundingClientRect().top;
-  }, prefix);
-}
-
 function headerBottomOf(page) {
   return page.evaluate(() => document.querySelector('.controls').getBoundingClientRect().bottom);
 }

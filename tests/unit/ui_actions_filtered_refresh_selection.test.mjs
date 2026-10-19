@@ -27,7 +27,7 @@ function refreshHarness({ isRemoved, isAnimated, isFullSnapshot }) {
     const ModeContext = {
         isEditing: true, currentNoteId: 'edited-note', currentContent: '<p>saved</p>',
         activeTabId: 'tab', isInitialPageLoad: false, isCaretHidden: false,
-        knownRootCount: 1, seenRootCount: 1, noteCount: 1,
+        knownRootCount: 1, noteCount: 1,
         getExecutedSearchQuery: () => 'implied-tag',
         getRootAnchorId: () => 'edited-note',
         getVisibleRootRange: () => ({ topRootId: 'edited-note', bottomRootId: 'edited-note' }),

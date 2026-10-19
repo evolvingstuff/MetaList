@@ -39,7 +39,7 @@ def test_runtime_paths_follow_data_directory_without_initializing_storage(tmp_pa
             "assert 'app.config' not in sys.modules; "
             "print(json.dumps([str(path) for path in ("
             "runtime.resolve_namespaces_directory(), runtime.resolve_runtime_logs_directory(), "
-            "runtime.resolve_managed_runtime_directory(), runtime.resolve_namespace_delete_jobs_directory(), "
+            "runtime.resolve_namespace_delete_jobs_directory(), "
             "runtime.resolve_namespace_rename_jobs_directory(), runtime._DEFAULT_CERT_PATH, runtime._DEFAULT_KEY_PATH)]))"
         )],
         cwd=Path(__file__).resolve().parents[2], env=environment,
@@ -47,7 +47,7 @@ def test_runtime_paths_follow_data_directory_without_initializing_storage(tmp_pa
     )
 
     assert json.loads(completed.stdout) == [
-        str(directory / "namespaces"), str(directory / "logs"), str(directory / "runtime"),
+        str(directory / "namespaces"), str(directory / "logs"),
         str(directory / "runtime" / "namespace-delete-jobs"),
         str(directory / "runtime" / "namespace-rename-jobs"),
         str(directory / "certs" / "metalist-cert.pem"),

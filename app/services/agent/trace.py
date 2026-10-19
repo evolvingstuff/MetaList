@@ -60,11 +60,6 @@ class AgentTraceStore:
             else:
                 self._exact_detail_hidden_sessions.add(session_key)
 
-    def is_exact_details_enabled(self, *, session_key: str) -> bool:
-        self._validate_session_key(session_key)
-        with self._lock:
-            return session_key not in self._exact_detail_hidden_sessions
-
     def start_run(self, *, session_key: str, model: str, user_message: str) -> str:
         self._validate_session_key(session_key)
         if not isinstance(model, str) or model == "":

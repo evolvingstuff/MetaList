@@ -8,7 +8,6 @@ import pytest
 from app.db.notes_sql import insert_note
 from app.db.session import begin_writer
 from app.models.database import SafeSession
-from app.models.list_traversal import ListTraversal
 import app.services.integrity as integrity
 
 
@@ -48,13 +47,6 @@ def test_assert_linked_list_integrity_validates_nested_lists_in_one_pass(
 ) -> None:
     monkeypatch.setattr(SafeSession, "_db_path", tmp_path / "notes.db")
     SafeSession.use_memory_db()
-    monkeypatch.setattr(
-        ListTraversal,
-        "validate_list",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(
-            AssertionError("assert_linked_list_integrity must not run one query per parent")
-        ),
-    )
     try:
         _insert_note(note_id="root-1", parent_id=None, prev_id=None, next_id="root-2")
         _insert_note(note_id="root-2", parent_id=None, prev_id="root-1", next_id=None)

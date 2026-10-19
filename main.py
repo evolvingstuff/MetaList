@@ -741,17 +741,6 @@ def cli() -> None:
     main(argv)
 
 
-def run_namespace_server(argv: list[str]) -> None:
-    logging.getLogger("uvicorn.access").addFilter(FilterCheckUpdates())
-    if not resolve_test_mode(environ=os.environ, argv=argv):
-        apply_network_settings(environ=os.environ, persist=True)
-    _prepare_namespaces_for_startup(
-        namespaces_directory=resolve_namespaces_directory(), repo_root=Path(__file__).resolve().parent,
-    )
-    apply_main_cli_args_to_environ(argv=argv, environ=os.environ)
-    _run_namespace_server_for_current_env(argv=argv)
-
-
 def run_orchestrated_namespace_server(argv: list[str]) -> None:
     logging.getLogger("uvicorn.access").addFilter(FilterCheckUpdates())
     if not resolve_test_mode(environ=os.environ, argv=argv):

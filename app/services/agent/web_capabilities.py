@@ -51,12 +51,6 @@ class WebUrlCapabilitySet:
         normalized = normalize_public_http_url(url)
         return normalized is not None and normalized in self._by_url
 
-    def require(self, url: str) -> WebUrlCapability:
-        normalized = normalize_public_http_url(url)
-        if normalized is None or normalized not in self._by_url:
-            raise PermissionError("URL is not available in permitted agent context")
-        return self._by_url[normalized]
-
     @property
     def normalized_urls(self) -> tuple[str, ...]:
         return tuple(capability.normalized_url for capability in self._capabilities)

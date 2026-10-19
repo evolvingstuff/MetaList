@@ -46,10 +46,6 @@ def is_root_reorder_locked(sort_mode: object) -> bool:
     return normalize_sort_mode(sort_mode) != SORT_MODE_NORMAL
 
 
-def is_timestamp_sort_mode(sort_mode: object) -> bool:
-    return normalize_sort_mode(sort_mode) in TIMESTAMP_SORT_MODES
-
-
 def _get_note_timestamp(note_id: str, sort_mode: str) -> datetime:
     record = note_store.get_note(note_id)
     if sort_mode == SORT_MODE_CREATED:

@@ -548,33 +548,6 @@ def test_main_skips_default_tls_generation_in_test_mode(tmp_path, monkeypatch) -
     ]
 
 
-def test_namespace_server_entrypoint_prepares_namespaces_before_starting(monkeypatch) -> None:
-    calls: list[str] = []
-    monkeypatch.setattr(
-        main_entrypoint,
-        "_prepare_namespaces_for_startup",
-        lambda *, namespaces_directory, repo_root: calls.append("_prepare_namespaces_for_startup"),
-    )
-    monkeypatch.setattr(
-        main_entrypoint,
-        "apply_main_cli_args_to_environ",
-        lambda *, argv, environ: calls.append("apply_main_cli_args_to_environ"),
-    )
-    monkeypatch.setattr(
-        main_entrypoint,
-        "_run_namespace_server_for_current_env",
-        lambda *, argv: calls.append("_run_namespace_server_for_current_env"),
-    )
-
-    main_entrypoint.run_namespace_server(argv=[])
-
-    assert calls == [
-        "_prepare_namespaces_for_startup",
-        "apply_main_cli_args_to_environ",
-        "_run_namespace_server_for_current_env",
-    ]
-
-
 def test_run_namespace_server_prints_resolved_config(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

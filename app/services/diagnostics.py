@@ -118,10 +118,6 @@ def allow_plaintext_diagnostics(record: Mapping[str, object]) -> bool:
     return not _authenticated_logging_active
 
 
-def authenticated_logging_is_active() -> bool:
-    return _authenticated_logging_active
-
-
 def log_unexpected_exception(
     *, context: str, exception: BaseException, request_id: str, level: str,
 ) -> None:

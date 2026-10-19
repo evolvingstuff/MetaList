@@ -101,7 +101,6 @@ test('showSearchContextsOverlay positions visible tab popover from controls and 
     const { searchContextsList } = installOverlayDom(t, { isTabUiEnabled: true });
 
     const {
-        isSearchContextsOverlayBottomLeft,
         showSearchContextsOverlay,
     } = await import('../../app/static/js/modules/mode-manager/services/search-contexts-overlay-service.js');
 
@@ -112,7 +111,6 @@ test('showSearchContextsOverlay positions visible tab popover from controls and 
     assert.equal(searchContextsList.style.right, 'auto');
     assert.equal(searchContextsList.style.bottom, 'auto');
     assert.equal(searchContextsList.classList.contains('search-contexts-list--hover'), true);
-    assert.equal(isSearchContextsOverlayBottomLeft(), false);
 });
 
 test('updateSearchContextsOverlayPlacement hides tab popover when tab UI is disabled', async (t) => {
@@ -120,13 +118,11 @@ test('updateSearchContextsOverlayPlacement hides tab popover when tab UI is disa
     searchContextsList.style.display = 'block';
 
     const {
-        isSearchContextsOverlayBottomLeft,
         updateSearchContextsOverlayPlacement,
     } = await import('../../app/static/js/modules/mode-manager/services/search-contexts-overlay-service.js');
 
     assert.equal(updateSearchContextsOverlayPlacement(), false);
     assert.equal(searchContextsList.style.display, 'none');
-    assert.equal(isSearchContextsOverlayBottomLeft(), false);
 });
 
 test('isSearchContextsKeyboardCreateActive is true while pointer is over tab hover zone', async (t) => {

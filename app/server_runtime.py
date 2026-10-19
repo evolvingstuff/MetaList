@@ -42,7 +42,6 @@ _DEFAULT_NAMESPACES_DIRECTORY_NAME = "namespaces"
 _DEFAULT_NAMESPACE_DELETE_JOBS_DIRECTORY_NAME = "namespace-delete-jobs"
 _DEFAULT_NAMESPACE_RENAME_JOBS_DIRECTORY_NAME = "namespace-rename-jobs"
 _DEFAULT_LOGS_DIRECTORY_NAME = "logs"
-_DEFAULT_MANAGED_RUNTIME_DIRECTORY_NAME = "runtime"
 _DEFAULT_NAMESPACE = "default"
 _DEFAULT_HTTP_PORT = 8000
 _DEFAULT_HTTPS_PORT = 8443
@@ -150,10 +149,6 @@ def resolve_namespace_rename_jobs_directory() -> Path:
 
 def resolve_runtime_logs_directory() -> Path:
     return _DEFAULT_DATABASE_DIRECTORY / _DEFAULT_LOGS_DIRECTORY_NAME
-
-
-def resolve_managed_runtime_directory() -> Path:
-    return _DEFAULT_DATABASE_DIRECTORY / _DEFAULT_MANAGED_RUNTIME_DIRECTORY_NAME
 
 
 def resolve_namespace_directory(*, namespace: str) -> Path:
@@ -450,27 +445,6 @@ def save_namespace_launch_profile(
     )
 
 
-def delete_namespace_launch_profile(*, namespace: str) -> None:
-    normalized_namespace = validate_namespace(namespace=namespace)
-    connection = _connect_namespace_database(
-        namespace=normalized_namespace,
-        create_if_missing=False,
-    )
-    if connection is None:
-        return
-    try:
-        connection.execute(
-            f"""
-            DELETE FROM {NAMESPACE_LAUNCH_PROFILE_TABLE}
-            WHERE namespace = ?
-            """,
-            (normalized_namespace,),
-        )
-        connection.commit()
-    finally:
-        connection.close()
-
-
 def resolve_namespace_launch_defaults(
     *,
     namespace: str,
@@ -584,21 +558,6 @@ def resolve_database_runtime_config(
         namespace=namespace,
         test_mode=False,
     )
-
-
-def apply_namespace_arg_to_environ(
-    *,
-    argv: Sequence[str],
-    environ: MutableMapping[str, str],
-) -> str | None:
-    parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--namespace", type=_parse_namespace_argument)
-    parsed_args, _ = parser.parse_known_args(list(argv))
-    namespace = parsed_args.namespace
-    if namespace is None:
-        return None
-    environ[_NAMESPACE_ENV_NAME] = namespace
-    return namespace
 
 
 def apply_main_cli_args_to_environ(

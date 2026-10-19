@@ -64,10 +64,6 @@ function updateSearchResultsCount(snapshot, tabId) {
     el.textContent = total.toLocaleString('en-US');
 }
 
-export function isViewRequestInFlight() {
-    return moduleState.viewRequestInFlight;
-}
-
 // Resolves once no notes.view request is in flight, i.e. its response has been
 // applied. Anything that changes the active tab must await this first.
 export async function waitForViewRequestIdle() {

@@ -54,30 +54,12 @@ export function serializeSearchSuggestionWindows(windowDays) {
     return JSON.stringify(validateSearchSuggestionWindows(windowDays));
 }
 
-export function setSearchSuggestionWindowsValue(value) {
-    moduleState.currentWindowDays = Object.freeze(parseSearchSuggestionWindowsValue(value));
-}
-
 export function getSearchSuggestionWindowDays() {
     return moduleState.currentWindowDays.slice();
 }
 
-export function setShowSearchSuggestionWindowLabelsValue(value) {
-    if (value !== 'true' && value !== 'false') {
-        throw new Error('Search suggestion window labels value must be true or false');
-    }
-    moduleState.shouldShowWindowLabels = value === 'true';
-}
-
 export function getShowSearchSuggestionWindowLabels() {
     return moduleState.shouldShowWindowLabels;
-}
-
-export function setLimitNoteCreditsPerSearchContextValue(value) {
-    if (value !== 'true' && value !== 'false') {
-        throw new Error('Search-context note credit limit value must be true or false');
-    }
-    moduleState.shouldLimitNoteCreditsPerSearchContext = value === 'true';
 }
 
 export function getLimitNoteCreditsPerSearchContext() {

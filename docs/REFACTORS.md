@@ -29,7 +29,7 @@ Functions that coordinate several ordered phases can remain longer than 50 lines
 
 A repository-wide import/reference audit found no active application entrypoint using `base_service.py`, `dependencies.py`, `note_service.py`, `query_service.py`, `transaction_manager.py`, or `undo_service.py`. Their only outside executable reference was a logging test of the old transaction manager; it now checks the active `undo_state` path. No supported external Python import API for these modules was documented. They have been removed; private consumers outside this repository would need to migrate to the active usecase/store APIs.
 
-Routine undo imports moved to module scope in resize, expand, unformat, reference-mode, and todo usecases. Four deferred imports remain documented in `collapse.py`, `delete_subtree.py`, `move.py`, and `update_content.py`: `undo_state` imports those modules' apply functions for replay, so eager reverse imports create a cycle.
+Routine undo imports moved to module scope in resize, expand, unformat and todo usecases. Four deferred imports remain documented in `collapse.py`, `delete_subtree.py`, `move.py`, and `update_content.py`: `undo_state` imports those modules' apply functions for replay, so eager reverse imports create a cycle.
 
 Active undo-context reset logs no longer include search text. Missing internal store/ontology capabilities and unknown metadata IDs raise instead of producing empty suggestions or ignoring updates. Move/undo invariant failures raise so transaction cleanup can execute; they no longer terminate the process with `os._exit`. Expected external failures and legitimate first-request/unsaved-note absence remain explicit.
 

@@ -24,13 +24,6 @@ class CmdResizeImage(QueryCommand):
     undo_context: str
     viewport: Dict[str, object]
 
-    def describe(self) -> str:
-        return (
-            "CmdResizeImage("
-            f"note={self.note_id}, source={self.source_kind}, occurrence={self.occurrence_index}, "
-            f"action={self.action}, client={self.client_id})"
-        )
-
     def execute(self) -> Dict[str, object]:
         record = store.get(self.note_id)
         if not isinstance(record.content, str):
