@@ -52,9 +52,6 @@ class CmdMove(QueryCommand):
     undo_context: str
     viewport: Dict[str, object]
 
-    def describe(self) -> str:
-        return f"CmdMove(note={self.note_id}, sib={self.sibling_id}, pos={self.position}, parent={self.new_parent_id})"
-
     def execute(self) -> Dict[str, str]:
         if not self.sibling_id or not isinstance(self.position, str):
             raise RuntimeError("Move requires a sibling ID and position")

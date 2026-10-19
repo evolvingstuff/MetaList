@@ -23,10 +23,6 @@ const moduleState = ApplicationState.createFields('paste-format-offer-service', 
     editCheckTimer: null,
 });
 
-export function isPasteFormatOfferOpen() {
-    return moduleState.card !== null;
-}
-
 export function closePasteFormatOffer() {
     if (moduleState.card === null) {
         return;

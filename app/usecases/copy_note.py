@@ -61,9 +61,6 @@ class CmdCopyNote(QueryCommand):
     note_id: str
     client_id: str
 
-    def describe(self) -> str:
-        return f"CmdCopyNote(note={self.note_id}, client={self.client_id})"
-
     def execute(self) -> Dict[str, Any]:
         # Snapshot for server-side clipboard (structure + plaintext content)
         records = snapshot_subtree_preorder(self.note_id)

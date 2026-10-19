@@ -895,17 +895,6 @@ function handleDeleteNoteShortcut(event) {
     }
 }
 
-function handleSearchShortcut() {
-    if (typeof ModeContext.setSearching !== 'function') {
-        throw new Error('ModeContext missing setSearching method in handleSearchShortcut');
-    }
-        
-    ModeContext.setSearching(true);
-    ModeContext.validate();
-    Logger.logDebug('Search activated via keyboard shortcut');
-
-}
-
 function handleMoveNoteUpShortcut(event) {
     if (!event) {
         throw new Error('handleMoveNoteUpShortcut called without an event object');
@@ -1230,85 +1219,6 @@ async function handleCopyNoteShortcut(event) {
     if (!clipboardResult.didWrite) {
         Logger.logDebug('Unable to write rendered note content to system clipboard', {}, Logger.LogCategory.EVENT);
     }
-}
-
-function _lineHasVisibleText(text) {
-    if (typeof text !== 'string') {
-        throw new Error('_lineHasVisibleText requires string');
-    }
-    const normalized = text.replace(/\u00a0/g, ' ');
-    return normalized.trim().length > 0;
-}
-
-function _findDirectLineContainer(contentElement, node) {
-    if (!(contentElement instanceof HTMLElement)) {
-        throw new Error('_findDirectLineContainer requires content element');
-    }
-    if (!node) {
-        return null;
-    }
-
-    let current = node;
-    while (current && current !== contentElement) {
-        if (current.parentNode === contentElement) {
-            if (current instanceof HTMLElement) {
-                return current;
-            }
-            return null;
-        }
-        current = current.parentNode;
-    }
-    return null;
-}
-
-function _lineElementIsVisuallyEmpty(lineElement) {
-    if (!(lineElement instanceof HTMLElement)) {
-        throw new Error('_lineElementIsVisuallyEmpty requires HTMLElement');
-    }
-    if (
-        lineElement.querySelector(
-            'img,video,audio,iframe,svg,math,canvas,input,textarea,button,table,hr',
-        )
-    ) {
-        return false;
-    }
-    const text = typeof lineElement.textContent === 'string' ? lineElement.textContent : '';
-    const normalized = text.replace(/\u00a0/g, ' ');
-    return normalized.trim().length === 0;
-}
-
-function _isSelectionCollapsedOnEmptyVisualLine(contentElement, range) {
-    if (!(contentElement instanceof HTMLElement)) {
-        throw new Error('_isSelectionCollapsedOnEmptyVisualLine requires content element');
-    }
-    if (!(range instanceof Range)) {
-        throw new Error('_isSelectionCollapsedOnEmptyVisualLine requires range');
-    }
-    if (!range.collapsed) {
-        return false;
-    }
-
-    const lineElement = _findDirectLineContainer(contentElement, range.startContainer);
-    if (lineElement) {
-        return _lineElementIsVisuallyEmpty(lineElement);
-    }
-
-    if (range.startContainer === contentElement) {
-        if (contentElement.childNodes.length === 0) {
-            return true;
-        }
-        if (contentElement.childNodes.length === 1) {
-            const onlyChild = contentElement.childNodes[0];
-            if (onlyChild instanceof HTMLBRElement) {
-                return true;
-            }
-            if (onlyChild instanceof Text) {
-                return !(_lineHasVisibleText(onlyChild.data));
-            }
-        }
-    }
-
-    return false;
 }
 
 function insertPlainTextAtCurrentSelection(text) {

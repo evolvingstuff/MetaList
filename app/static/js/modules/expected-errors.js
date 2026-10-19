@@ -38,11 +38,6 @@ export class FileEditSessionExpiredError extends HttpRequestError {
     }
 }
 
-export function isRequestCancellation(error, signal) {
-    return signal instanceof AbortSignal && signal.aborted
-        && (error === signal.reason || (error instanceof DOMException && error.name === 'AbortError'));
-}
-
 // This whitelist covers expected platform failures, not arbitrary Error,
 // TypeError, or errors whose message merely happens to mention fetch.
 export function rethrowUnexpectedError(error) {

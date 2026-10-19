@@ -1288,22 +1288,6 @@ export function shouldInsertLineBreakBeforeTimestampAnchor(timestampText, timest
     return TIMESTAMP_SECTION_LABEL_PATTERN.test(previousText);
 }
 
-export function shouldInlineStandaloneCitationMarker(markerText, previousText, nextText) {
-    if (typeof markerText !== 'string') {
-        throw new Error('shouldInlineStandaloneCitationMarker expects markerText string');
-    }
-    if (typeof previousText !== 'string') {
-        throw new Error('shouldInlineStandaloneCitationMarker expects previousText string');
-    }
-    if (typeof nextText !== 'string') {
-        throw new Error('shouldInlineStandaloneCitationMarker expects nextText string');
-    }
-    if (!CITATION_MARKER_PATTERN.test(normalizeVisibleText(markerText))) {
-        return false;
-    }
-    return previousText.trim().length > 0 && nextText.trim().length > 0;
-}
-
 export function shouldRemoveStandaloneCitationMarker(markerText) {
     if (typeof markerText !== 'string') {
         throw new Error('shouldRemoveStandaloneCitationMarker expects markerText string');

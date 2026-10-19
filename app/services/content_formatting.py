@@ -273,12 +273,6 @@ def find_global_credential_tag(tags: str) -> str | None:
     return _find_global_credential_tag(tags)
 
 
-def find_consumed_content_wrapper_keys(tags: str) -> FrozenSet[Tuple[str, int]]:
-    if not isinstance(tags, str):
-        raise TypeError(f"tags must be a string, got {type(tags)}")
-    return _parse_meta_tags(tags).wrappers_to_consume
-
-
 def has_scoped_footnotes(tags: str) -> bool:
     if not isinstance(tags, str):
         raise TypeError("tags must be a string")

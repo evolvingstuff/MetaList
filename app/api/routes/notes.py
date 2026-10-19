@@ -28,7 +28,6 @@ from app.api.note_requests import (
     CreateSiblingRequest,
     CreateChildRequest,
     CreateFilePreviewChildRequest,
-    UpdateNoteRequest,
     SaveNoteRequest,
     AddSelectedTextTagRequest,
     AcceptTagProposalRequest,
@@ -42,7 +41,6 @@ from app.api.note_requests import (
     ResizeNoteImageRequest,
     EditingImageSizesRequest,
     RunShellEndpointRequest,
-    ToggleReferenceModeEndpointRequest,
     MoveNoteEndpointRequest,
     MoveNoteToBottomEndpointRequest,
     MoveNoteToTopEndpointRequest,
@@ -113,7 +111,6 @@ from app.usecases.paste_sibling import CmdPasteSibling
 from app.usecases.paste_child import CmdPasteChild
 from app.usecases.paste_reference import CmdPasteReferenceChild, CmdPasteReferenceSibling
 from app.usecases.split_note import CmdSplitNote
-from app.usecases.toggle_reference_mode import CmdToggleReferenceMode
 from app.usecases.unformat_content import CmdUnformatContent
 from app.usecases.resize_image import CmdResizeImage
 from app.usecases.undo import CmdUndo
@@ -892,15 +889,6 @@ def _compute_lock_diff(previous: Dict[str, str], current: Dict[str, str]) -> Dic
     return diff
 
 
-# Stub endpoints for the rest of the notes API (501 Not Implemented)
-
-def _not_impl(exc: Exception) -> None:
-    # Turn NotImplementedError into HTTP 501; re-raise anything else
-    if isinstance(exc, NotImplementedError):
-        raise HTTPException(status_code=HTTPStatus.NOT_IMPLEMENTED, detail=str(exc))
-    raise exc
-
-
 @router.post("/notes/new")
 @transactional_route
 def create_note_top(request: Request, body: CreateNoteTopRequest):
@@ -966,28 +954,6 @@ def create_file_preview_child(request: Request, note_id: str, body: CreateFilePr
         search_query=body["search_query"],
         token=token,
         client_id=body["clientId"],
-        undo_context=body["undoContext"],
-        viewport=viewport,
-    )
-    return cmd.execute()
-
-
-@router.put("/notes/{note_id}")
-@transactional_route
-def update_note(request: Request, note_id: str, body: UpdateNoteRequest):
-    # Required fields; let KeyError surface for missing keys
-    client_id = body["clientId"]
-    content = body["content"]
-    tags = body["tags"]
-    viewport = _require_viewport(body)
-    token = _require_bearer_token(request)
-    _require_note_present(note_id, context="notes.update")
-    cmd = CmdUpdateContent(
-        note_id=note_id,
-        content=content,
-        tags=tags,
-        token=token,
-        client_id=client_id,
         undo_context=body["undoContext"],
         viewport=viewport,
     )
@@ -1254,25 +1220,6 @@ def run_shell_endpoint(request: Request, note_id: str, body: RunShellEndpointReq
 def run_shell_status_endpoint(request: Request, note_id: str, run_id: str) -> Dict[str, object]:
     _require_loopback_shell_request(request)
     cmd = CmdRunShellStatus(note_id=note_id, run_id=run_id)
-    return cmd.execute()
-
-
-@router.post("/notes/{note_id}/reference-mode")
-@transactional_route
-def toggle_reference_mode_endpoint(request: Request, note_id: str, body: ToggleReferenceModeEndpointRequest):
-    viewport = _require_viewport(body)
-    token = _require_bearer_token(request)
-    _require_note_present(note_id, context="notes.reference-mode")
-    cmd = CmdToggleReferenceMode(
-        note_id=note_id,
-        reference_note_id=body["reference_note_id"],
-        occurrence_index=body["occurrence_index"],
-        mode=body["mode"],
-        token=token,
-        client_id=body["clientId"],
-        undo_context=body["undoContext"],
-        viewport=viewport,
-    )
     return cmd.execute()
 
 

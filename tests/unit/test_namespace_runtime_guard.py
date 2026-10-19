@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import shutil
+import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 import pytest
 
 import app.server_runtime as server_runtime
 import app.services.namespace_runtime_guard as namespace_runtime_guard
-from app.server_runtime import delete_namespace_launch_profile
+from app.db.schema import NAMESPACE_LAUNCH_PROFILE_TABLE
 from app.server_runtime import save_namespace_launch_profile
 
 
@@ -23,7 +25,10 @@ def test_namespace_runtime_guard_accepts_registered_namespace(
         mcp_port=None,
     )
 
-    namespace_runtime_guard.assert_namespace_runtime_is_legitimate(namespace="work")
+    legitimacy = namespace_runtime_guard.inspect_namespace_runtime_legitimacy(namespace="work")
+
+    assert legitimacy.is_legitimate is True
+    assert legitimacy.failure_reason == ""
 
 
 def test_namespace_runtime_guard_rejects_removed_namespace(
@@ -39,8 +44,10 @@ def test_namespace_runtime_guard_rejects_removed_namespace(
     )
     shutil.rmtree(server_runtime.resolve_namespace_directory(namespace="work"))
 
-    with pytest.raises(RuntimeError, match="database is missing"):
-        namespace_runtime_guard.assert_namespace_runtime_is_legitimate(namespace="work")
+    legitimacy = namespace_runtime_guard.inspect_namespace_runtime_legitimacy(namespace="work")
+
+    assert legitimacy.is_legitimate is False
+    assert "database is missing" in legitimacy.failure_reason
 
 
 def test_namespace_runtime_guard_rejects_namespace_without_launch_profile(
@@ -54,10 +61,15 @@ def test_namespace_runtime_guard_rejects_namespace_without_launch_profile(
         https_port=None,
         mcp_port=None,
     )
-    delete_namespace_launch_profile(namespace="work")
+    database_path = server_runtime.resolve_namespaced_database_path(namespace="work")
+    with closing(sqlite3.connect(database_path)) as connection:
+        connection.execute(f"DELETE FROM {NAMESPACE_LAUNCH_PROFILE_TABLE} WHERE namespace = ?", ("work",))
+        connection.commit()
 
-    with pytest.raises(RuntimeError, match="launch profile is missing"):
-        namespace_runtime_guard.assert_namespace_runtime_is_legitimate(namespace="work")
+    legitimacy = namespace_runtime_guard.inspect_namespace_runtime_legitimacy(namespace="work")
+
+    assert legitimacy.is_legitimate is False
+    assert legitimacy.failure_reason == "Namespace work launch profile is missing"
 
 
 def test_namespace_runtime_guard_terminates_after_failed_check(

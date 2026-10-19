@@ -8,11 +8,6 @@ from argon2.low_level import ARGON2_VERSION, Type, hash_secret_raw
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.backends import default_backend
-from app.config import (
-    KDF_MEMORY_COST_KIB,
-    KDF_PARALLELISM,
-    KDF_TIME_COST,
-)
 
 # Base64 text comes in groups of this many characters; a short last group needs "=" padding.
 _BASE64_GROUP_CHARS = 4
@@ -146,38 +141,6 @@ class EncryptionService:
         # Decrypt the DEK
         dek = decryptor.update(encrypted_dek) + decryptor.finalize()
         return dek
-    
-    def set_master_key_and_dek(
-        self,
-        password: str,
-        salt: bytes,
-        encrypted_dek: Optional[bytes],
-        dek_nonce: Optional[bytes],
-        dek_tag: Optional[bytes],
-    ) -> None:
-        """Set both master key and DEK for this session.
-        
-        Args:
-            password: User's password
-            salt: Salt for key derivation
-            encrypted_dek: Encrypted DEK from database (optional)
-            dek_nonce: Nonce for DEK decryption (optional)
-            dek_tag: Tag for DEK decryption (optional)
-        """
-        # Derive master key
-        self.master_key = self.derive_master_key(
-            password,
-            salt,
-            KDF_TIME_COST,
-            KDF_MEMORY_COST_KIB,
-            KDF_PARALLELISM,
-        )
-        
-        # If DEK is provided, decrypt it; otherwise generate new one
-        if encrypted_dek and dek_nonce and dek_tag:
-            self.dek = self.decrypt_dek(encrypted_dek, dek_nonce, dek_tag, self.master_key)
-        else:
-            self.dek = self.generate_dek()
     
     def clear_keys(self) -> None:
         """Clear all encryption keys from memory."""

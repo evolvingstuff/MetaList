@@ -52,10 +52,6 @@ function plainNote(page) {
   return createNote(page, LINES.map(line => `<p>${line}</p>`).join(''), '');
 }
 
-function middleY(rect) {
-  return rect.top + rect.height / 2;
-}
-
 // A point in the note: a padding corner, or LINE_INSET_PX into one of its lines.
 function pointIn(page, noteId, spot) {
   return page.evaluate(({noteId, spot, padding, inset}) => {

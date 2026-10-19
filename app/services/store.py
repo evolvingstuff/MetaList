@@ -57,23 +57,6 @@ class _AdapterStore:
         assert isinstance(note.proposed_tags, str)
         _note_store.add_note_from_db(row, note.content, note.tags, note.proposed_tags)
 
-    def update_content_and_tags(
-        self,
-        note_id: str,
-        new_content: str,
-        tags: str,
-        *,
-        updated_at: datetime,
-    ) -> None:
-        proposed_tags = _note_store.get_note(note_id).proposed_tags
-        self.update_note_sources(
-            note_id,
-            new_content,
-            tags,
-            proposed_tags,
-            updated_at=updated_at,
-        )
-
     def update_note_sources(
         self,
         note_id: str,
@@ -85,23 +68,6 @@ class _AdapterStore:
     ) -> None:
         _note_store.update_note_content(
             note_id=note_id, plaintext=new_content, tags=tags, proposed_tags=proposed_tags, updated_at=updated_at,
-        )
-
-    def update_tag_sources(
-        self,
-        note_id: str,
-        tags: str,
-        proposed_tags: str,
-        *,
-        updated_at: datetime,
-    ) -> None:
-        record = _note_store.get_note(note_id)
-        self.update_note_sources(
-            note_id,
-            record.content,
-            tags,
-            proposed_tags,
-            updated_at=updated_at,
         )
 
     def delete_subtree(self, note_id: str) -> None:
@@ -158,7 +124,3 @@ class _AdapterStore:
 # Public adapter instance
 store = _AdapterStore()
 
-
-def hydrate_from_prefetched(rows: Iterable[Mapping[str, object]], *, get_plaintext) -> None:  # noqa: ARG001
-    # Canonical NoteStore can load from prefetched rows using the decrypted cache.
-    _note_store.load_from_db(None, prefetched_rows=list(rows))

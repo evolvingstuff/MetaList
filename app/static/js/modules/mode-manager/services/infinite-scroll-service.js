@@ -67,14 +67,6 @@ export function startInfiniteScrollMonitor() {
     Logger.logInit('Infinite scroll poller started');
 }
 
-export function stopInfiniteScrollMonitor() {
-    if (moduleState.pollTimer) {
-        clearInterval(moduleState.pollTimer);
-        moduleState.pollTimer = null;
-        Logger.logDebug('Infinite scroll poller stopped');
-    }
-}
-
 // A reset starts a fresh polling episode; unchanged cache observations are not
 // setter requests. Replace only the changed per-context snapshot.
 function receivePollReset(resetFetchTime) {

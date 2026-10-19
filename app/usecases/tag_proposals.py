@@ -71,9 +71,6 @@ class CmdAcceptTagProposal(QueryCommand):
     undo_context: str
     viewport: Dict[str, object]
 
-    def describe(self) -> str:
-        return f"CmdAcceptTagProposal(note={self.note_id}, proposal={self.proposal})"
-
     def execute(self) -> Dict[str, object]:
         record = note_store.get_note(self.note_id)
         proposal = _find_proposal_token(
@@ -136,9 +133,6 @@ class CmdRejectTagProposal(QueryCommand):
     undo_context: str
     viewport: Dict[str, object]
 
-    def describe(self) -> str:
-        return f"CmdRejectTagProposal(note={self.note_id}, proposal={self.proposal})"
-
     def execute(self) -> Dict[str, object]:
         record = note_store.get_note(self.note_id)
         proposal = _find_proposal_token(
@@ -191,9 +185,6 @@ class CmdAddTagProposals(QueryCommand):
     client_id: str
     undo_context: str
     viewport: Dict[str, object]
-
-    def describe(self) -> str:
-        return f"CmdAddTagProposals(note={self.note_id}, notes={len(self.proposals)})"
 
     def execute(self) -> Dict[str, object]:
         assert isinstance(self.proposals, dict) and len(self.proposals) > 0
@@ -294,9 +285,6 @@ class CmdOpenToTagProposals(QueryCommand):
     undo_context: str
     viewport: Dict[str, object]
 
-    def describe(self) -> str:
-        return f"CmdOpenToTagProposals(note={self.note_id})"
-
     def execute(self) -> Dict[str, object]:
         assert self.note_id in self.scope_note_ids
         # The note to edit: the highest one with proposals of its own, in outline order.
@@ -332,9 +320,6 @@ class CmdResolveRobotProposals(QueryCommand):
     client_id: str
     undo_context: str
     viewport: Dict[str, object]
-
-    def describe(self) -> str:
-        return f"CmdResolveRobotProposals(note={self.note_id}, action={self.action})"
 
     def execute(self) -> Dict[str, object]:
         assert self.action in {"accept", "reject"}

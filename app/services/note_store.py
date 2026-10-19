@@ -1113,9 +1113,6 @@ class NoteStore:
                 referrers |= self._referrers_locked(note_id)
             return frozenset(referrers - subtree)
 
-    def _rebuild_indexes_locked(self) -> None:
-        self._ordering = NoteOrdering.from_records(self._note_map)
-
     def _insert_link(self, parent_id, note_id, prev_id, next_id) -> None:
         note = self._note_map[note_id]
         assert note.parent_id == parent_id
@@ -1133,24 +1130,6 @@ class NoteStore:
             if note_id not in self._note_map:
                 raise KeyError(f"Note {note_id} not present in NoteStore")
             return self._note_map[note_id]
-
-    def list_local_effective_tag_terms(
-        self,
-        *,
-        note_id: str,
-        plaintext: str,
-    ) -> FrozenSet[str]:
-        """Infer searchable tags from this note alone, excluding ancestors."""
-        if not isinstance(note_id, str) or note_id == "":
-            raise TypeError("note_id must be a non-empty string")
-        if not isinstance(plaintext, str):
-            raise TypeError("plaintext must be a string")
-        record = self.get_note(note_id)
-        ontology = get_ontology()
-        return ontology.infer_effective_tags(
-            base_tags=record.tag_terms | record.proposed_tag_terms,
-            plaintext=plaintext,
-        )
 
     def draft_effective_tag_terms(self, *, note_id: str, tags: str, plaintext: str) -> FrozenSet[str]:
         """The note's searchable tags if its own tags and text were the unsaved draft.
@@ -1336,12 +1315,6 @@ class NoteStore:
     def get_children(self, parent_id: Optional[str]) -> List[str]:
         with self._lock:
             return self._get_children_locked(parent_id)
-
-    def debug_validate_links(self, *note_ids: Optional[str]) -> None:
-        with self._lock:
-            for note_id in note_ids:
-                if note_id is not None and note_id in self._note_map:
-                    self._ordering.validate_neighbors(self._note_map, note_id)
 
 
 store = NoteStore()

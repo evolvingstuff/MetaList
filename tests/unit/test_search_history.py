@@ -15,7 +15,6 @@ from app.services.search_history import (
     is_first_search_tag_suggestion_context,
     list_search_suggestion_statistics,
     list_recent_search_tag_selections_for_first_query,
-    list_recent_search_tags_for_first_query,
     prioritize_first_search_tag_suggestions,
     record_explicit_tag_addition_batch,
     record_explicit_tag_additions,
@@ -80,13 +79,6 @@ def test_note_interaction_credits_raw_inherited_tags_not_ontology_tags(
             token="token",
             interacted_on=date(2026, 8, 20),
         ) is True
-        assert list_recent_search_tags_for_first_query(
-            query="shor",
-            candidate_tags=["short-story", "shortcut", "inferred"],
-            window_days=DEFAULT_TAG_ACTIVITY_WINDOWS,
-            token="token",
-            today=date(2026, 8, 20),
-        ) == ["shortcut"]
         assert list_recent_search_tag_selections_for_first_query(
             query="shor",
             candidate_tags=["short-story", "shortcut", "inferred"],

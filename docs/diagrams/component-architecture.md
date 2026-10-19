@@ -42,7 +42,6 @@ graph LR
     subgraph "Services"
         APIClient[api-client.js<br/>HTTP Requests]
         Auth[auth.js<br/>Authentication]
-        ConnMonitor[connectivity-monitor.js<br/>Online Status]
         ActivityTracker[activity-tracker.js<br/>User Activity]
         PollingService[polling-service.js<br/>Auto-refresh]
         ErrorHandler[error-handler.js<br/>Error Display]
@@ -50,7 +49,6 @@ graph LR
     
     Main --> Controller
     Main --> Auth
-    Main --> ConnMonitor
     
     Controller --> Context
     Controller --> Logger
@@ -78,7 +76,6 @@ graph LR
     UIAct --> APIClient
     
     Auth --> APIClient
-    ConnMonitor --> ErrorHandler
     ActivityTracker --> Auth
     
     BaseModal --> PasswordModals

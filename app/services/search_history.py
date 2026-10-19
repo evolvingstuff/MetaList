@@ -164,24 +164,6 @@ def rank_tag_activity_window_selections(
     return selections
 
 
-def rank_tag_activity_windows(
-    *,
-    counts_by_date: dict[str, dict[str, int]],
-    candidate_tags: list[str],
-    window_days: tuple[int, ...],
-    today: date,
-) -> list[str]:
-    return [
-        selection.tag
-        for selection in rank_tag_activity_window_selections(
-            counts_by_date=counts_by_date,
-            candidate_tags=candidate_tags,
-            window_days=window_days,
-            today=today,
-        )
-    ]
-
-
 def _copy_counts_by_date(
     counts_by_date: dict[str, dict[str, int]],
 ) -> dict[str, dict[str, int]]:
@@ -368,24 +350,6 @@ class SearchHistoryStore:
             self._stored_row = row
             self._is_decrypted = True
         return True
-
-    def list_recent_tags(
-        self,
-        *,
-        candidate_tags: list[str],
-        window_days: tuple[int, ...],
-        token: str,
-        today: date,
-    ) -> list[str]:
-        return [
-            selection.tag
-            for selection in self.list_recent_tag_selections(
-                candidate_tags=candidate_tags,
-                window_days=window_days,
-                token=token,
-                today=today,
-            )
-        ]
 
     def list_recent_tag_selections(
         self,
@@ -614,27 +578,6 @@ def record_tab_search_selection(
         tags=tuple(resolved_by_casefold.values()),
         token=token,
         interacted_on=interacted_on,
-    )
-
-
-def list_recent_search_tags_for_first_query(
-    *,
-    query: str,
-    candidate_tags: list[str],
-    window_days: tuple[int, ...],
-    token: str,
-    today: date,
-) -> list[str]:
-    if not isinstance(query, str):
-        raise TypeError("query must be a string")
-    prefix = _extract_first_search_tag_prefix(query)
-    if prefix is None:
-        return []
-    return search_history_store.list_recent_tags(
-        candidate_tags=candidate_tags,
-        window_days=window_days,
-        token=token,
-        today=today,
     )
 
 

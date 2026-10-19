@@ -91,12 +91,6 @@ class CmdAlphabetizeRootNotes(QueryCommand):
     undo_context: str
     viewport: Dict[str, object]
 
-    def describe(self) -> str:
-        return (
-            f"CmdAlphabetizeRootNotes(direction={self.direction!r}, "
-            f"client={self.client_id})"
-        )
-
     def execute(self) -> Dict[str, object]:
         normalized_direction = _normalize_direction(self.direction)
 

@@ -367,10 +367,6 @@ export function enforceSearchQueryInputForEditing(rawInput) {
     return analyzeSearchQueryInput(rawInput).enforcedText;
 }
 
-export function normalizeSearchQueryInput(rawInput) {
-    return analyzeSearchQueryInput(rawInput).normalizedText;
-}
-
 export function findSearchTagAtIndex(rawInput, cursorIndex) {
     if (typeof rawInput !== 'string') {
         throw new Error('findSearchTagAtIndex expects a string');

@@ -829,16 +829,6 @@ class ReminderStore:
             self._try_decrypt_locked(token="", require_success=True)
             return [deepcopy(reminder) for reminder in self._sorted_reminders_locked()]
 
-    def get_reminder(self, *, reminder_id: str) -> dict[str, object]:
-        if not isinstance(reminder_id, str) or reminder_id == "":
-            raise InputRejected("reminder_id must be a non-empty string")
-        with self._lock:
-            self._try_decrypt_locked(token="", require_success=True)
-            if reminder_id not in self._reminders:
-                raise ResourceNotFound(f"Reminder not found: {reminder_id}")
-            return deepcopy(self._reminders[reminder_id])
-
-
     def create_reminder(self, *, payload: Mapping[str, object], token: str) -> dict[str, object]:
         if not isinstance(token, str):
             raise TypeError("token must be a string")

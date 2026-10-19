@@ -202,7 +202,3 @@ export function detachEditorSurface() {
     if (getActiveEditable() === null) return;
     clearActiveEditable();
 }
-
-export function refreshToolbarState() {
-    updateButtonStates();
-}

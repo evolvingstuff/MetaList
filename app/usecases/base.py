@@ -6,9 +6,5 @@ from typing import Any
 
 class QueryCommand(ABC):
     @abstractmethod
-    def describe(self) -> str:
-        ...
-
-    @abstractmethod
     def execute(self) -> Any:
         ...

@@ -40,7 +40,6 @@ function hydrateRemoteImagesForCurrentMode(notesContainer) {
         }
     });
 }
-const COLLAPSE_TOGGLE_CACHE = ApplicationState.createWeakCollection('COLLAPSE_TOGGLE_CACHE', 'map');
 const LOCK_ICON_CACHE = ApplicationState.createWeakCollection('LOCK_ICON_CACHE', 'map');
 const TAGS_ELEMENT_CACHE = ApplicationState.createWeakCollection('TAGS_ELEMENT_CACHE', 'map');
 
@@ -486,7 +485,6 @@ function createNoteElement(noteId) {
     collapseToggle.type = 'button';
     collapseToggle.setAttribute('aria-label', 'Collapse note');
     noteElement.appendChild(collapseToggle);
-    COLLAPSE_TOGGLE_CACHE.set(noteElement, collapseToggle);
 
     const contentElement = document.createElement('div');
     contentElement.classList.add(CONFIG.CLASSES.NOTE_CONTENT);
@@ -526,18 +524,6 @@ function getContentElement(noteElement) {
     }
     CONTENT_ELEMENT_CACHE.set(noteElement, contentElement);
     return contentElement;
-}
-
-function getCollapseToggle(noteElement) {
-    if (COLLAPSE_TOGGLE_CACHE.has(noteElement)) {
-        return COLLAPSE_TOGGLE_CACHE.get(noteElement);
-    }
-    const collapseToggle = getDirectChildByClass(noteElement, 'note-collapse-toggle');
-    if (!collapseToggle) {
-        throw new Error(`Note ${JSON.stringify(noteElement.dataset.noteId)} missing collapse toggle element`);
-    }
-    COLLAPSE_TOGGLE_CACHE.set(noteElement, collapseToggle);
-    return collapseToggle;
 }
 
 function getTagsElement(noteElement) {

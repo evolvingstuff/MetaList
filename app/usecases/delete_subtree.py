@@ -155,9 +155,6 @@ class CmdDeleteSubtree(QueryCommand):
     undo_context: str
     viewport: Dict[str, object]
 
-    def describe(self) -> str:
-        return f"CmdDeleteSubtree(note={self.note_id}, client={self.client_id})"
-
     def execute(self) -> Dict[str, str]:
         # Snapshot before delete for undo
         snapshot = _snapshot_subtree(self.note_id)

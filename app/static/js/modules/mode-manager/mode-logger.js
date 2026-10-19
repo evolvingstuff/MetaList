@@ -33,10 +33,6 @@ export function logState(property, newValue, oldValue) {
     console.log(`[${LogCategory.STATE}]: ${property} changed`);
 }
 
-export function logFullState(stateObj) {
-    console.log(`[${LogCategory.STATE}]: Current State requested`);
-}
-
 export function logInit(componentName) {
     console.log(`[${LogCategory.INIT}]: ${componentName} initialized`);
 }

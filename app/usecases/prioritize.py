@@ -226,12 +226,6 @@ class CmdPrioritize(QueryCommand):
     undo_context: str
     viewport: Dict[str, object]
 
-    def describe(self) -> str:
-        return (
-            f"CmdPrioritize(tag={self.tag!r}, direction={self.direction!r}, "
-            f"client={self.client_id})"
-        )
-
     def execute(self) -> Dict[str, object]:
         normalized_tag = _normalize_tag(self.tag)
         normalized_direction = _normalize_direction(self.direction)

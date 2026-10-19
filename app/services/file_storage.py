@@ -11,7 +11,7 @@ from typing import Optional
 
 from app.upload_limits import MAX_ATTACHMENT_BYTES
 from app.db.file_schema import FILE_PREVIEW_VARIANTS
-from app.db.file_session import begin_file_writer, connect_file_reader, resolve_file_database_path
+from app.db.file_session import begin_file_writer, connect_file_reader
 from app.db.files_sql import (
     delete_file_previews,
     delete_files,
@@ -28,7 +28,6 @@ from app.db.files_sql import (
     update_file_storage_fields,
     upsert_file_preview,
 )
-from app.models.database import SafeSession
 from app.security.encryption import (
     get_encryption_service,
     get_encryption_service_with_token,
@@ -118,13 +117,6 @@ class FileSnapshot:
 class TrimUnusedFilesResult:
     deleted_count: int
     deleted_file_ids: list[str]
-
-
-def resolve_live_file_database_path() -> Path:
-    if bool(SafeSession._use_memory):  # type: ignore[attr-defined]
-        raise RuntimeError("File database path is unavailable when using the in-memory notes database")
-    note_path = SafeSession._db_path  # type: ignore[attr-defined]
-    return resolve_file_database_path(note_path)
 
 
 def bootstrap_file_registry() -> set[str]:

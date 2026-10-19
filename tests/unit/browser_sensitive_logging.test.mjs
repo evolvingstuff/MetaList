@@ -26,7 +26,6 @@ test('mode logger never serializes caller-provided values', (t) => {
     Logger.logDebug('debug event', { value: 'private debug value' });
     Logger.logAction('private action value', { value: 'private action data' });
     Logger.logState('currentContent', 'private new content', 'private old content');
-    Logger.logFullState({ currentContent: 'private full state content' });
     Logger.logError('private error message', new Error('private exception value'));
 
     const rendered = JSON.stringify(calls);
@@ -34,7 +33,6 @@ test('mode logger never serializes caller-provided values', (t) => {
     assert.doesNotMatch(rendered, /private action data/);
     assert.doesNotMatch(rendered, /private new content/);
     assert.doesNotMatch(rendered, /private old content/);
-    assert.doesNotMatch(rendered, /private full state content/);
     assert.doesNotMatch(rendered, /private exception value/);
 });
 
@@ -43,7 +41,6 @@ test('known direct console calls do not emit decrypted values', async () => {
     const paths = [
         'app/static/js/modules/api-client.js',
         'app/static/js/modules/dom-utils.js',
-        'app/static/js/modules/dom-utils-fixed.js',
         'app/static/js/modules/mode-manager/mode-context.js',
     ];
     const forbidden = [

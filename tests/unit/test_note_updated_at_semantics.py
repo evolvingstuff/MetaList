@@ -9,7 +9,6 @@ import pytest
 import app.usecases.move as move_module
 import app.usecases.update_content as update_content_module
 from app.services import undo_state
-from app.usecases.toggle_reference_mode import CmdToggleReferenceMode
 
 
 @contextmanager
@@ -248,26 +247,16 @@ def reference_timestamp_store(monkeypatch):
     undo_state.reset_all_undo_state()
 
 
-def test_reference_form_toggle_undo_and_redo_preserve_updated_at(reference_timestamp_store):
+def test_switching_a_reference_between_link_and_embed_preserves_updated_at(reference_timestamp_store):
+    # Only the reference's form changed ([[id]] to ![[id]]): the note's text did not.
     record, writes = reference_timestamp_store
     original_time = record.updated_at
-    original_content = record.content
-    command = CmdToggleReferenceMode(
-        note_id=record.id, reference_note_id="22222222-2222-2222-2222-222222222222",
-        occurrence_index=0, mode="embed", token="", client_id="reference-test", undo_context="context",
-        viewport={"scrollY": 0, "scrollAnchor": None},
-    )
-    command.execute()
-    assert "![[" in record.content
+    embedded = "<div>![[22222222-2222-2222-2222-222222222222]]</div>"
+    update_content_module.apply_update_content(record.id, embedded, record.tags, "")
+    assert record.content == embedded
     assert record.updated_at == original_time
-    assert undo_state.undo("reference-test", "") is not None
-    assert record.content == original_content
-    assert record.updated_at == original_time
-    assert undo_state.redo("reference-test", "") is not None
-    assert "![[" in record.content
-    assert record.updated_at == original_time
-    assert len(writes) == 3
-    assert all("content" in write and "updated_at" not in write for write in writes)
+    assert len(writes) == 1
+    assert "content" in writes[0] and "updated_at" not in writes[0]
 
 
 @pytest.mark.parametrize("replacement", [

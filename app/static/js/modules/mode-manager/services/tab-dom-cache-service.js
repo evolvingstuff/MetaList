@@ -125,10 +125,6 @@ export function cloneNotesDomForTab(sourceTabId, targetTabId, options) {
     return { cloned: true, nodeCount, noteHashes };
 }
 
-export function clearAllCachedNotesDom() {
-    if (moduleState.tabDomCache.size > 0) moduleState.tabDomCache.clear();
-}
-
 export function clearCachedNotesDomForTab(tabId) {
     requireTabId(tabId);
     if (moduleState.tabDomCache.has(tabId)) moduleState.tabDomCache.delete(tabId);

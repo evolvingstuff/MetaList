@@ -140,9 +140,6 @@ class CmdCreateNote(QueryCommand):
     undo_context: str
     viewport: Dict[str, object]
 
-    def describe(self) -> str:
-        return f"CmdCreateNote(client={self.client_id})"
-
     def execute(self) -> Dict[str, str]:
         siblings = store.children(None)
         next_id = None

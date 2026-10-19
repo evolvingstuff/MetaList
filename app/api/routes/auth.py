@@ -34,7 +34,6 @@ from app.services.login_rate_limit import login_rate_limiter
 from app.services.maintenance_mode import maintenance_service
 from app.services.namespace_switcher import build_namespace_catalog
 from app.services.namespace_switcher import build_login_namespace_catalog
-from app.services.namespace_switcher import delete_current_namespace
 from app.services.namespace_switcher import delete_namespace
 from app.services.namespace_switcher import open_login_namespace
 from app.services.namespace_switcher import open_or_launch_namespace

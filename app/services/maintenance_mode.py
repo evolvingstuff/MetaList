@@ -40,13 +40,6 @@ class MaintenanceModeService:
                 return True
             return bool(self._transaction_holds)
     
-    def get_operation_description(self) -> str:
-        """Get current operation description."""
-        with self._lock:
-            if self._transaction_holds:
-                return self._transaction_holds[-1]
-            return self._operation_description
-
     @contextmanager
     def hold_for_transaction(self, description: str):
         """Keep readers blocked through commit and any rollback recovery."""

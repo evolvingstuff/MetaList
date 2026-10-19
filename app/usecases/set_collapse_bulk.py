@@ -19,9 +19,6 @@ class CmdSetCollapseBulk(QueryCommand):
     undo_context: str
     viewport: Dict[str, object]
 
-    def describe(self) -> str:
-        return f"CmdSetCollapseBulk(count={len(self.note_ids)}, collapsed={self.collapsed}, client={self.client_id})"
-
     def execute(self) -> Dict[str, object]:
         reset_undo_stack(self.client_id, self.undo_context)
         note_ids_to_update: List[str] = []

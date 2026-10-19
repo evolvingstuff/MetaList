@@ -117,10 +117,15 @@ def test_run_selection_requires_exact_commit_branch_event_and_workflow() -> None
         "name": release.WORKFLOW_NAME,
         "path": f".github/workflows/{release.WORKFLOW}",
     }
-    wrong = dict(valid, id=13, head_sha="different")
-    assert release.select_run([wrong, valid], commit="abc", branch="v1.2.3") == valid
-    with pytest.raises(release.ReleaseError, match="No Publish to PyPI push run"):
-        release.select_run([wrong], commit="abc", branch="v1.2.3")
+    wrong_runs = [
+        dict(valid, id=13, head_sha="different"),
+        dict(valid, id=14, head_branch="main"),
+        dict(valid, id=15, event="workflow_dispatch"),
+        dict(valid, id=16, name="Other workflow"),
+        dict(valid, id=17, path=".github/workflows/other.yml"),
+    ]
+    assert release.matching_runs([*wrong_runs, valid], commit="abc", branch="v1.2.3") == [valid]
+    assert release.matching_runs(wrong_runs, commit="abc", branch="v1.2.3") == []
 
 
 def test_release_driver_rejects_rerun_before_tagging() -> None:

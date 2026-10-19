@@ -30,14 +30,6 @@ function getDirectChildByClass(parent, className) {
     return null;
 }
 
-function isElementPartiallyInViewport(element) {
-    const rect = element.getBoundingClientRect();
-    return rect.bottom > 0
-        && rect.top < window.innerHeight
-        && rect.right > 0
-        && rect.left < window.innerWidth;
-}
-
 function nextTagBarAnimationVersion(tagBar) {
     const currentVersion = tagBarAnimationVersions.has(tagBar)
         ? tagBarAnimationVersions.get(tagBar)

@@ -10,9 +10,6 @@ class CmdPrefetchLinkTitles(QueryCommand):
     content: str
     tags: str
 
-    def describe(self) -> str:
-        return "CmdPrefetchLinkTitles"
-
     def execute(self) -> dict[str, str]:
         # Reuse view eligibility (including footnotes and Markdown) without saving
         # the draft or publishing generated HTML back into the active editor.

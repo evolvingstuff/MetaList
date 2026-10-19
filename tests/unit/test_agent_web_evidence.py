@@ -3,7 +3,6 @@ from dataclasses import replace
 import pytest
 
 from app.services.agent.web_evidence import WebEvidenceStore
-from app.services.agent import web_evidence
 from app.services.agent.web_evidence import citation_references_for_pages
 from app.services.agent.web_fetch import WebPageFetchResult
 
@@ -108,56 +107,8 @@ def test_store_clear_is_session_scoped() -> None:
 
     with pytest.raises(KeyError):
         store.get(session_key="left", evidence_id=left.evidence_id)
-    assert store.available_for_ids(
+    assert store.available_references_for_ids(
         session_key="left",
         evidence_ids=(left.evidence_id,),
     ) == ()
     assert len(store.evidence(session_key="right")) == 1
-
-
-def test_available_evidence_preserves_requested_order_and_omits_cleared_ids() -> None:
-    store = WebEvidenceStore()
-    first = store.retain_success(
-        session_key="session",
-        result=_result(
-            requested="https://example.com/first",
-            final="https://example.com/first",
-        ),
-    )
-    second = store.retain_success(
-        session_key="session",
-        result=_result(
-            requested="https://example.com/second",
-            final="https://example.com/second",
-        ),
-    )
-
-    available = store.available_for_ids(
-        session_key="session",
-        evidence_ids=(second.evidence_id, "cleared-evidence-id", first.evidence_id),
-    )
-
-    assert available == (second, first)
-
-
-def test_prompt_evidence_prefers_recent_pages_and_reports_omissions(monkeypatch) -> None:
-    monkeypatch.setattr(web_evidence, "MAX_WEB_PROMPT_CHARACTERS", 25)
-    store = WebEvidenceStore()
-    for suffix in ("one", "two", "three"):
-        result = replace(
-            _result(
-                requested="https://example.com/a",
-                final="https://example.com/a",
-            ),
-            requested_url=f"https://example.com/{suffix}",
-            final_url=f"https://example.com/{suffix}",
-            content_text=f"{suffix}-evidence",
-        )
-        store.retain_success(session_key="session", result=result)
-
-    selected, omitted = store.prompt_evidence(session_key="session")
-
-    assert [page.final_url for page in selected] == [
-        "https://example.com/three"
-    ]
-    assert omitted == 2

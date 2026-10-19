@@ -13,25 +13,6 @@ from app.services.agent.staged_summary import classify_uncitable_note_ids
 from app.services.agent.staged_summary import partition_summary_results
 from app.services.agent.staged_summary import structural_placeholder_note_ids
 from app.services.agent.staged_summary import summarize_partial_findings
-from app.services.agent.staged_summary import validate_summary_batch_result
-
-
-def test_summary_batch_requires_exact_root_coverage_and_in_batch_citations() -> None:
-    result = SummaryBatchResult(
-        covered_root_ids=["root-a", "root-b"],
-        findings=[
-            SummaryFinding(
-                text="The notes compare two approaches.",
-                supporting_note_ids=["child-a", "root-b"],
-            )
-        ],
-    )
-
-    assert validate_summary_batch_result(
-        result=result,
-        expected_root_ids=("root-a", "root-b"),
-        allowed_note_ids=frozenset({"root-a", "child-a", "root-b"}),
-    ) is result
 
 
 def test_application_attaches_authoritative_root_coverage() -> None:
@@ -48,8 +29,7 @@ def test_application_attaches_authoritative_root_coverage() -> None:
 
 
 def test_summary_batch_rejects_invented_note_ids() -> None:
-    result = SummaryBatchResult(
-        covered_root_ids=["root-a"],
+    result = SummaryFindingsResult(
         findings=[
             SummaryFinding(
                 text="Unsupported claim.",
@@ -59,24 +39,10 @@ def test_summary_batch_rejects_invented_note_ids() -> None:
     )
 
     with pytest.raises(ValueError, match="outside the disclosed evidence"):
-        validate_summary_batch_result(
+        attach_summary_coverage(
             result=result,
             expected_root_ids=("root-a",),
             allowed_note_ids=frozenset({"root-a"}),
-        )
-
-
-def test_summary_batch_rejects_missing_or_reordered_root_coverage() -> None:
-    result = SummaryBatchResult(
-        covered_root_ids=["root-b", "root-a"],
-        findings=[],
-    )
-
-    with pytest.raises(ValueError, match="exact root coverage"):
-        validate_summary_batch_result(
-            result=result,
-            expected_root_ids=("root-a", "root-b"),
-            allowed_note_ids=frozenset({"root-a", "root-b"}),
         )
 
 

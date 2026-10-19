@@ -12,9 +12,6 @@ class CmdRedo(QueryCommand):
     token: str
     undo_context: str
 
-    def describe(self) -> str:
-        return f"CmdRedo(client={self.client_id})"
-
     def execute(self):
         maybe_reset_on_context(self.client_id, self.undo_context)
         scroll_restore = do_redo(self.client_id, self.token)

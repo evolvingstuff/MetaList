@@ -11,13 +11,11 @@ import pytest
 
 import app.server_runtime as server_runtime
 import app.services.namespace_switcher as namespace_switcher
-from app.server_runtime import delete_namespace_launch_profile
 from app.server_runtime import load_namespace_launch_profile
 from app.server_runtime import NamespaceLaunchProfile
 from app.server_runtime import save_namespace_launch_profile
 from app.services.namespace_switcher import build_namespace_catalog
 from app.services.namespace_switcher import build_login_namespace_catalog
-from app.services.namespace_switcher import delete_current_namespace
 from app.services.namespace_switcher import delete_namespace
 from app.services.namespace_switcher import open_login_namespace
 from app.services.namespace_switcher import open_or_launch_namespace
@@ -1283,9 +1281,10 @@ def test_delete_current_namespace_launches_default_and_spawns_cleanup_worker(
     )
     monkeypatch.setattr(namespace_switcher.os, "getpid", lambda: 4321)
 
-    result = delete_current_namespace(
+    result = delete_namespace(
         environ={},
         current_namespace="work",
+        target_namespace="work",
         confirmed_namespace=" work ",
         redirect_namespace="default",
     )
@@ -1307,9 +1306,10 @@ def test_delete_current_namespace_launches_default_and_spawns_cleanup_worker(
 
 def test_delete_current_namespace_requires_confirmed_namespace_name() -> None:
     with pytest.raises(RuntimeError, match="Type 'work' to confirm namespace deletion"):
-        delete_current_namespace(
+        delete_namespace(
             environ={},
             current_namespace="work",
+            target_namespace="work",
             confirmed_namespace="permanently delete",
             redirect_namespace="default",
         )
@@ -1353,9 +1353,10 @@ def test_delete_final_default_recreates_default_on_current_ports(
     )
     monkeypatch.setattr(namespace_switcher.os, "getpid", lambda: 4321)
 
-    result = delete_current_namespace(
+    result = delete_namespace(
         environ={},
         current_namespace="default",
+        target_namespace="default",
         confirmed_namespace="default",
         redirect_namespace="default",
     )
@@ -1428,25 +1429,6 @@ def test_delete_inactive_namespace_fails_if_directory_remains(
             confirmed_namespace="default",
             redirect_namespace="cla",
         )
-
-
-def test_delete_namespace_launch_profile_removes_saved_entry(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(server_runtime, "_DEFAULT_DATABASE_DIRECTORY", tmp_path)
-    save_namespace_launch_profile(
-        namespace="work",
-        port=8123,
-        https_port=None,
-        mcp_port=8766,
-    )
-
-    assert load_namespace_launch_profile(namespace="work") is not None
-
-    delete_namespace_launch_profile(namespace="work")
-
-    assert load_namespace_launch_profile(namespace="work") is None
 
 
 @pytest.mark.parametrize("ready_after", [20.0, None])

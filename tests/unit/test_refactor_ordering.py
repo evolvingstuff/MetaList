@@ -1,6 +1,7 @@
+from datetime import datetime, timezone
 from types import SimpleNamespace
+from app.db.notes_sql import insert_note
 from app.models.database import SafeSession
-from app.models import note_crud, list_operations
 from app.services import store as adapter_module
 from app.security import encryption
 from app.usecases.delete_subtree import _snapshot_subtree, apply_delete_subtree, apply_restore_records
@@ -86,31 +87,26 @@ def database_store(store, monkeypatch):
     SafeSession.use_memory_db()
     SafeSession.disable_read_guard()
     encryption.set_encryption_required(False)
-    store.load_from_db(None, prefetched_rows=[])
-    monkeypatch.setattr(note_crud, 'note_store', store)
-    monkeypatch.setattr(list_operations, 'note_store', store)
     monkeypatch.setattr(adapter_module, '_note_store', store)
     session = SafeSession()
-    for note_id in ['tail', 'middle', 'head']:
-        note_crud.NoteCRUD.create_note_top(session, note_id, None)
+    timestamp = datetime.now(timezone.utc)
+    for note_id, prev_id, next_id in [('head', None, 'middle'), ('middle', 'head', 'tail'), ('tail', 'middle', None)]:
+        insert_note(
+            session.connection(), note_id=note_id, content='', encryption_nonce=None, encryption_tag=None,
+            tags='', tags_encryption_nonce=None, tags_encryption_tag=None, proposed_tags='',
+            proposed_tags_encryption_nonce=None, proposed_tags_encryption_tag=None,
+            parent_id=None, prev_id=prev_id, next_id=next_id, is_collapsed=False,
+            created_at=timestamp, updated_at=timestamp,
+        )
     session.commit()
+    store.load_from_db(session, prefetched_rows=None)
     yield store, session
     session.close()
 
 
-def test_database_delete_middle_keeps_neighbors_and_hydration_consistent(database_store):
-    store, session = database_store
-    note_crud.NoteCRUD.delete_note(session, 'middle')
-    session.commit()
-    assert store.get_children(None) == ['head', 'tail']
-    store.load_from_db(session, prefetched_rows=None)
-    assert store.get_children(None) == ['head', 'tail']
-
-
 def test_database_cross_parent_move_and_undo_delete_restore(database_store):
     store, session = database_store
-    list_operations.ListOperations.move_note(session, 'middle', 'head', None, None)
-    session.commit()
+    apply_move('middle', 'head', None, None)
     assert store.get_children(None) == ['head', 'tail']
     assert store.get_children('head') == ['middle']
     snapshot = [store.get_note('head'), store.get_note('middle')]
@@ -127,9 +123,8 @@ def test_database_cross_parent_move_and_undo_delete_restore(database_store):
 
 def test_undo_delete_restores_a_note_with_several_children(database_store):
     store, session = database_store
-    list_operations.ListOperations.move_note(session, 'middle', 'head', None, None)
-    list_operations.ListOperations.move_note(session, 'tail', 'head', 'middle', 'after')
-    session.commit()
+    apply_move('middle', 'head', None, None)
+    apply_move('tail', 'head', 'middle', None)
     assert store.get_children('head') == ['middle', 'tail']
     snapshot = _snapshot_subtree('head')
 

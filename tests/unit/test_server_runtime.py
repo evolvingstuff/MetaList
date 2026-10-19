@@ -6,7 +6,6 @@ import pytest
 
 import app.server_runtime as server_runtime
 from app.server_runtime import apply_main_cli_args_to_environ
-from app.server_runtime import apply_namespace_arg_to_environ
 from app.server_runtime import load_namespace_launch_profile
 from app.server_runtime import load_all_namespace_launch_profiles_read_only
 from app.server_runtime import resolve_database_runtime_config
@@ -547,18 +546,6 @@ def test_apply_main_cli_args_to_environ_saves_default_namespace_profile_when_por
     assert profile.port == 9000
     assert profile.https_port == 9443
     assert profile.mcp_port is None
-
-
-def test_apply_namespace_arg_to_environ_bootstraps_known_args_only() -> None:
-    environ: dict[str, str] = {}
-
-    namespace = apply_namespace_arg_to_environ(
-        argv=["--namespace", "work", "--input", "/tmp/example.json"],
-        environ=environ,
-    )
-
-    assert namespace == "work"
-    assert environ["METALIST_NAMESPACE"] == "work"
 
 
 def test_resolve_namespace_launch_defaults_uses_tls_sensitive_defaults_and_saved_profile(

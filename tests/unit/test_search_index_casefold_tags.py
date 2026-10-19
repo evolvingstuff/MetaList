@@ -95,7 +95,6 @@ def test_a_tag_whose_last_note_is_gone_is_no_longer_listed() -> None:
     assert "edgefixture" not in index.suggest_tag_completions(query="edge", limit=10)
     assert index.list_explicit_tag_frequencies() == {"kept": 1}
     assert index.list_tag_frequencies() == {"kept": 1}
-    assert index.list_non_meta_tag_terms() == frozenset({"kept"})
     # Retagging empties a tag the same way.
     index.upsert(note_id="n2", content_text="Kept", tags="other",
                  raw_tag_terms=frozenset({"other"}), tag_terms=frozenset({"other"}))

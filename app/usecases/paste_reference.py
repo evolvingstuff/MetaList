@@ -39,9 +39,6 @@ class CmdPasteReferenceSibling(QueryCommand):
     undo_context: str
     viewport: Dict[str, object]
 
-    def describe(self) -> str:
-        return f"CmdPasteReferenceSibling(target={self.target_note_id}, reference={self.reference_note_id})"
-
     def execute(self) -> Dict[str, str]:
         # The copied note was deleted since: the same answer as an expired clipboard.
         if not store.contains(self.reference_note_id):
@@ -66,9 +63,6 @@ class CmdPasteReferenceChild(QueryCommand):
     client_id: str
     undo_context: str
     viewport: Dict[str, object]
-
-    def describe(self) -> str:
-        return f"CmdPasteReferenceChild(target={self.target_note_id}, reference={self.reference_note_id})"
 
     def execute(self) -> Dict[str, str]:
         if not store.contains(self.reference_note_id):

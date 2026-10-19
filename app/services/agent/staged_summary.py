@@ -162,26 +162,6 @@ def summarize_partial_findings(
     return len(findings), latest_text[-tail_characters:]
 
 
-def validate_summary_batch_result(
-    *,
-    result: SummaryBatchResult,
-    expected_root_ids: tuple[str, ...],
-    allowed_note_ids: frozenset[str],
-) -> SummaryBatchResult:
-    if not isinstance(result, SummaryBatchResult):
-        raise TypeError("result must be SummaryBatchResult")
-    if tuple(result.covered_root_ids) != expected_root_ids:
-        raise ValueError("Summary batch did not confirm exact root coverage")
-    for finding in result.findings:
-        unknown_note_ids = set(finding.supporting_note_ids) - allowed_note_ids
-        if unknown_note_ids:
-            raise ValueError(
-                "Summary finding cited note IDs outside the disclosed evidence: "
-                + ", ".join(sorted(unknown_note_ids))
-            )
-    return result
-
-
 def summary_reference_note_ids(
     results: tuple[SummaryBatchResult, ...],
 ) -> tuple[str, ...]:

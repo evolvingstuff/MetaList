@@ -26,7 +26,6 @@ const {
     resetNoteInteractionStateForTests,
 } = await import('../../app/static/js/modules/mode-manager/services/search-interaction-service.js');
 const {
-    setLimitNoteCreditsPerSearchContextValue,
     receiveSearchSuggestionPreferences,
 } = await import('../../app/static/js/modules/mode-manager/services/search-suggestion-windows-service.js');
 
@@ -74,7 +73,7 @@ test('disabled limit credits every qualifying interaction', async (t) => {
     };
     ApplicationState.receiveOwnerSnapshot(ModeContext, {_tabExecutedSearchQuery: {...ModeContext._tabExecutedSearchQuery, '0': ''}});
     resetNoteInteractionStateForTests();
-    setLimitNoteCreditsPerSearchContextValue('false');
+    receiveSearchSuggestionPreferences({windows: '[1,7,30]', showLabels: true, limitCredits: false});
     t.after(() => {
         NotesAPI.recordNoteInteraction = originalRecordNoteInteraction;
         ApplicationState.receiveOwnerSnapshot(ModeContext, {_tabExecutedSearchQuery: {...ModeContext._tabExecutedSearchQuery, '0': originalQuery}});

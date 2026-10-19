@@ -151,16 +151,6 @@ class CmdSetCollapseInContext(QueryCommand):
     undo_context: str
     viewport: Dict[str, object]
 
-    def describe(self) -> str:
-        normalized = ""
-        if self.search_query is not None:
-            normalized = self.search_query
-        return (
-            f"CmdSetCollapseInContext(search={normalized!r}, "
-            f"collapsed={self.collapsed}, recursive={self.recursive}, "
-            f"client={self.client_id})"
-        )
-
     def execute(self) -> Dict[str, object]:
         root_ids = _collect_context_root_ids(self.search_query)
         note_ids = list(root_ids)
@@ -192,12 +182,6 @@ class CmdSetCollapseSubtree(QueryCommand):
     client_id: str
     undo_context: str
     viewport: Dict[str, object]
-
-    def describe(self) -> str:
-        return (
-            f"CmdSetCollapseSubtree(note={self.note_id}, "
-            f"collapsed={self.collapsed}, client={self.client_id})"
-        )
 
     def execute(self) -> Dict[str, object]:
         note_ids = collect_subtree_note_ids([self.note_id])

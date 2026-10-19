@@ -22,9 +22,6 @@ class CmdStartFileEditSession(QueryCommand):
     file_id: str
     token: str
 
-    def describe(self) -> str:
-        return f"CmdStartFileEditSession(file={self.file_id})"
-
     def execute(self) -> Dict[str, object]:
         session = start_file_edit_session(file_id=self.file_id, token=self.token)
         return {
@@ -48,12 +45,6 @@ class CmdFinishFileEditSession(QueryCommand):
     client_id: str
     undo_context: str
     viewport: Dict[str, object]
-
-    def describe(self) -> str:
-        return (
-            f"CmdFinishFileEditSession(file={self.file_id}, session={self.session_id}, "
-            f"note={self.host_note_id}, client={self.client_id})"
-        )
 
     def execute(self) -> Dict[str, object]:
         session = get_file_edit_session(session_id=self.session_id, file_id=self.file_id)
@@ -87,9 +78,6 @@ class CmdDiscardFileEditSession(QueryCommand):
     session_id: str
     content_revision: int
     token: str
-
-    def describe(self) -> str:
-        return f"CmdDiscardFileEditSession(file={self.file_id}, session={self.session_id})"
 
     def execute(self) -> Dict[str, object]:
         session = get_file_edit_session(session_id=self.session_id, file_id=self.file_id)

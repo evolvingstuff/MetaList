@@ -30,9 +30,6 @@ class CmdCreateFilePreviewChild(QueryCommand):
     undo_context: str
     viewport: Dict[str, object]
 
-    def describe(self) -> str:
-        return f"CmdCreateFilePreviewChild(parent={self.parent_note_id}, file={self.file_id}, client={self.client_id})"
-
     def execute(self) -> Dict[str, str]:
         parent = store.get(self.parent_note_id)
         if f"[[{self.file_id}]]" not in parent.content:

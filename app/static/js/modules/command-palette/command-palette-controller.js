@@ -116,9 +116,6 @@ import {
     DEFAULT_SEARCH_SUGGESTION_WINDOWS_VALUE,
     parseSearchSuggestionWindowsValue,
     serializeSearchSuggestionWindows,
-    setLimitNoteCreditsPerSearchContextValue,
-    setShowSearchSuggestionWindowLabelsValue,
-    setSearchSuggestionWindowsValue,
 } from '../mode-manager/services/search-suggestion-windows-service.js';
 
 import { shouldActivateCommandPaletteRowClick } from './click-activation-service.js';

@@ -191,10 +191,6 @@ class SearchSuggestionFacts:
     matching_counts: Dict[str, int]
     cooccurrences: Dict[str, TagCooccurrence]
 
-    @property
-    def is_ranked_by_cooccurrence(self) -> bool:
-        return any(anchor and not anchor.startswith("@") for anchor in self.anchors)
-
 
 @dataclass(frozen=True, slots=True)
 class SearchRecord:
@@ -397,9 +393,6 @@ class SearchIndex:
             self._revision += 1
             self._result_cache.clear()
 
-    def update_tag_terms(self, *, note_id: str, tag_terms: FrozenSet[str]) -> None:
-        self.bulk_update_tag_terms({note_id: tag_terms})
-
     def bulk_update_tag_terms(self, updates: Dict[str, FrozenSet[str]]) -> None:
         if not updates:
             return
@@ -499,23 +492,6 @@ class SearchIndex:
         logger.bind(
             metrics={"elapsed_ms": elapsed_ms, "count": len(note_ids), "revision": self._revision}
         ).info("search.index.remove_many.finish")
-
-    def list_non_meta_tag_terms(self) -> FrozenSet[str]:
-        """Return all tag terms currently indexed (excluding @meta tags)."""
-        with self._lock:
-            return frozenset(
-                term
-                for term, note_ids in self._tag_notes.items()
-                if note_ids and term and not term.startswith("@")
-            )
-
-    def list_non_meta_tag_suggestion_terms(self) -> FrozenSet[str]:
-        with self._lock:
-            representatives = self._build_suggestion_representatives_locked(
-                anchor_casefold_set=frozenset(),
-                partial_prefix="",
-            )
-            return frozenset(representatives.values())
 
     def list_tag_suggestion_terms(self) -> FrozenSet[str]:
         """Every term a suggestion can offer: the tag vocabulary and the meta tags the

@@ -187,14 +187,6 @@ def matching_runs(
     ]
 
 
-def select_run(runs: list[dict[str, object]], *, commit: str, branch: str) -> dict[str, object]:
-    matching = matching_runs(runs, commit=commit, branch=branch)
-    if not matching:
-        raise ReleaseError(f"No {WORKFLOW_NAME} push run found for {branch} at {commit}")
-    matching.sort(key=lambda run: int(run["id"]), reverse=True)
-    return matching[0]
-
-
 def artifact_hashes(archive: bytes, *, version: str) -> dict[str, str]:
     filenames = {
         f"metalist-{version}-py3-none-any.whl",

@@ -378,15 +378,6 @@ export const Auth = {
         button.textContent = 'OK';
     },
 
-    async _waitForBrowserPaint() {
-        await new Promise((resolveFirstFrame) => {
-            window.requestAnimationFrame(resolveFirstFrame);
-        });
-        await new Promise((resolveSecondFrame) => {
-            window.requestAnimationFrame(resolveSecondFrame);
-        });
-    },
-
     /**
      * Show the login page and hide main app
      */

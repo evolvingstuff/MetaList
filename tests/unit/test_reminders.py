@@ -173,7 +173,7 @@ def test_retired_sound_fields_are_discarded_from_reminders(
             store.bootstrap(connection=session.connection())
         finally:
             session.close()
-        reloaded = store.get_reminder(reminder_id=reminder["id"])
+        [reloaded] = [listed for listed in store.list_reminders() if listed["id"] == reminder["id"]]
         assert not any("sound" in key for key in reloaded)
     finally:
         store.clear_persisted_state_for_tests()

@@ -29,7 +29,7 @@ from pydantic import TypeAdapter, ValidationError
 from app.https_proxy import BoundedProxyServer, make_proxy_handler
 from app.api import upload_limits
 from app.api.transactions import transactional_route
-from app.api.note_requests import ViewDiffRequest, UpdateNoteRequest, ResizeNoteImageRequest
+from app.api.note_requests import ViewDiffRequest, ResizeNoteImageRequest
 from app.security.request_boundary import RequestBoundaryMiddleware
 from app.services import file_storage
 from main import _build_https_proxy_forward_headers

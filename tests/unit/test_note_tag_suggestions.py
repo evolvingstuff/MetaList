@@ -184,7 +184,6 @@ def _suggest(request, inference) -> tuple[str, ...]:
 def test_ai_setup_reports_ready_providers_and_refuses_a_connection_without_one(monkeypatch) -> None:
     _set_ai_ready(monkeypatch, is_ready=False)
     setup = ai_setup_module.describe_ai_setup(token="token", session_key="session")
-    assert setup.is_ready is False
     assert setup.is_ready_for("openai") is False
     with pytest.raises(ai_setup_module.AiNotSetUp):
         ai_setup_module.connect_to_ai(provider="openai", token="token", session_key="session")
