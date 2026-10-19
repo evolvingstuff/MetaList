@@ -35,15 +35,16 @@ function renderInstalledModelOptions(state) {
     }
     const hasSelectedModel = state.installedModels.includes(state.model);
     const placeholderSelected = hasSelectedModel ? '' : 'selected';
-    let options = `<option value="" disabled ${placeholderSelected}>Select model</option>`;
-    for (const model of state.installedModels) {
+    // Built with map and join: ShockHarness 0.15 never finishes on a template that
+    // accumulates in a loop (docs/design/shockharness-0.13-markup-feedback.md).
+    const modelOptions = state.installedModels.map((model) => {
         if (typeof model !== 'string' || model === '') {
             throw new Error('AI settings installed model name is invalid');
         }
         const selected = model === state.model ? 'selected' : '';
-        options += `<option value="${escapeHtml(model)}" ${selected}>${escapeHtml(model)}</option>`;
-    }
-    return options;
+        return `<option value="${escapeHtml(model)}" ${selected}>${escapeHtml(model)}</option>`;
+    }).join('');
+    return `<option value="" disabled ${placeholderSelected}>Select model</option>${modelOptions}`;
 }
 
 
@@ -221,11 +222,11 @@ export class AiAgentSettingsModal extends BaseModal {
                         </p>
                         <label for="ai-agent-max-page-approximate-tokens">
                             <span>Maximum approximate evidence tokens</span>
-                            <input id="ai-agent-max-page-approximate-tokens" name="ai-agent-max-page-approximate-tokens" type="number" autocomplete="off" data-1p-ignore data-lpignore="true" min="500" max="500000" step="100" value="${state.maxPageApproximateTokens}">
+                            <input id="ai-agent-max-page-approximate-tokens" name="ai-agent-max-page-approximate-tokens" type="number" autocomplete="off" data-1p-ignore data-lpignore="true" min="500" max="500000" step="100" value="${escapeHtml(String(state.maxPageApproximateTokens))}">
                         </label>
                         <label for="ai-agent-tagging-batch-tokens">
                             <span>Tagging batch token window</span>
-                            <input id="ai-agent-tagging-batch-tokens" name="ai-agent-tagging-batch-tokens" type="number" autocomplete="off" data-1p-ignore data-lpignore="true" min="500" max="500000" step="100" value="${state.taggingBatchTokens}">
+                            <input id="ai-agent-tagging-batch-tokens" name="ai-agent-tagging-batch-tokens" type="number" autocomplete="off" data-1p-ignore data-lpignore="true" min="500" max="500000" step="100" value="${escapeHtml(String(state.taggingBatchTokens))}">
                         </label>
                     </fieldset>
                     <fieldset class="ai-agent-cloud-privacy-settings">

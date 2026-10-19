@@ -215,7 +215,7 @@ class ExportOptionsModal extends BaseModal {
                             <span class="export-title-ai-stop"><span class="export-title-ai-spinner" aria-hidden="true"></span>Stop</span>
                         </button>`;
         const note = Object.hasOwn(AI_TITLE_NOTES, state.aiTitle)
-            ? `<p class="export-title-ai-note">${AI_TITLE_NOTES[state.aiTitle]}</p>` : '';
+            ? `<p class="export-title-ai-note">${escapeHtml(AI_TITLE_NOTES[state.aiTitle])}</p>` : '';
         return `
                 <div class="form-group export-title-group">
                     <div class="export-title-row">
