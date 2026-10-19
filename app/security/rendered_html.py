@@ -117,7 +117,7 @@ def _sanitize_rendered_attribute(tag_name: str, attribute_name: str, value: str)
         return _sanitize_renderer_classes(value)
     if attribute_name == "style":
         return _sanitize_renderer_style(tag_name, value)
-    if attribute_name not in RENDERER_ATTRIBUTES.get(tag_name, frozenset()):
+    if tag_name not in RENDERER_ATTRIBUTES or attribute_name not in RENDERER_ATTRIBUTES[tag_name]:
         return sanitize_note_attribute(tag_name, attribute_name, value)
     if (tag_name, attribute_name) in _FIXED_VALUES:
         if value not in _FIXED_VALUES[(tag_name, attribute_name)]:
