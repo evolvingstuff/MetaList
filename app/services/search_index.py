@@ -42,6 +42,28 @@ def _add_posting(postings: Dict[str, Set[int]], key: str, note_int_id: int) -> N
     postings[key].add(note_int_id)
 
 
+# A tag's name and its value: @code=python is the tag @code with the value python.
+TAG_VALUE_SEPARATOR = "="
+
+
+def tag_family_prefix(tag_casefold: str) -> str | None:
+    """What every valued member of a tag's family starts with ("@code=" for @code), or
+    None for a tag that carries a value itself (it matches only itself)."""
+    if TAG_VALUE_SEPARATOR in tag_casefold:
+        return None
+    return f"{tag_casefold}{TAG_VALUE_SEPARATOR}"
+
+
+def _carries_tag_family(tag_terms_casefold: FrozenSet[str], tag_casefold: str) -> bool:
+    """Whether a note's tags include the tag or, for a tag without a value, any tag=value."""
+    if tag_casefold in tag_terms_casefold:
+        return True
+    prefix = tag_family_prefix(tag_casefold)
+    if prefix is None:
+        return False
+    return any(term.startswith(prefix) for term in tag_terms_casefold)
+
+
 def _posting_or_empty(postings: Mapping[str, Set[int]], key: str) -> Set[int]:
     """The notes with this term; a term no note has has no posting."""
     if key not in postings:  # shockharness: ignore[DEF002] reason="a term no note has has no posting"
@@ -496,14 +518,16 @@ class SearchIndex:
             return frozenset(representatives.values())
 
     def list_tag_suggestion_terms(self) -> FrozenSet[str]:
-        """Return canonical autocomplete vocabulary, including known meta tags."""
+        """Every term a suggestion can offer: the tag vocabulary and the meta tags the
+        meta suggestions draw on (known ones, those in use, and their families), so any
+        suggestion picked is a known tag."""
         with self._lock:
             representatives = self._build_suggestion_representatives_locked(
                 anchor_casefold_set=frozenset(),
                 partial_prefix="",
             )
             return frozenset(
-                tuple(representatives.values()) + tuple(list_known_meta_tag_terms())
+                tuple(representatives.values()) + tuple(self._meta_tag_suggestion_terms_locked())
             )
 
     def list_tag_frequencies(self) -> Dict[str, int]:
@@ -830,7 +854,7 @@ class SearchIndex:
                 return []
             completions: List[str] = []
             for term in suggestions:
-                posting = _posting_or_empty(self._tag_notes_casefold, term.casefold())
+                posting = self._tag_family_posting_locked(term.casefold())
                 if context.is_exclusion:
                     has_matches = not matching_ids.issubset(posting)
                 else:
@@ -1155,15 +1179,25 @@ class SearchIndex:
             lower_case_penalty = 1
         return (lower_case_penalty, term)
 
+    def _meta_tag_suggestion_terms_locked(self) -> List[str]:
+        """The known meta tags, the @ tags notes carry (@code=python) and each one's
+        family (@code), once each by casefold; a known spelling wins (@LaTeX)."""
+        by_casefold: Dict[str, str] = {}
+        in_use = [term for term, notes in self._tag_notes.items() if notes and term.startswith("@")]
+        families = [term.split(TAG_VALUE_SEPARATOR, 1)[0] for term in in_use if TAG_VALUE_SEPARATOR in term]
+        for term in [*families, *in_use, *list_known_meta_tag_terms()]:
+            by_casefold[term.casefold()] = term
+        return list(by_casefold.values())
+
     def _suggest_meta_tag_completions_locked(self, *, partial_prefix: str, limit: int) -> List[str]:
         partial_prefix_casefold = partial_prefix.casefold()
         candidates: List[Tuple[int, int, str, str]] = []
-        for term in list_known_meta_tag_terms():
+        for term in self._meta_tag_suggestion_terms_locked():
             if partial_prefix != "" and term.casefold() == partial_prefix_casefold:
                 continue
             if partial_prefix != "" and not term.casefold().startswith(partial_prefix_casefold):
                 continue
-            usage_count = len(_posting_or_empty(self._tag_notes_casefold, term.casefold()))
+            usage_count = len(self._tag_family_posting_locked(term.casefold()))
             lower_case_penalty, term_tiebreak = self._suggestion_term_tiebreak_locked(term)
             candidates.append((-usage_count, lower_case_penalty, term_tiebreak, term))
         candidates.sort()
@@ -1173,9 +1207,10 @@ class SearchIndex:
         constraints: List[Set[int]] = []
 
         for tag in clause.required_tags:
-            if tag.casefold() not in self._tag_notes_casefold:
+            posting = self._tag_family_posting_locked(tag.casefold())
+            if not posting:
                 return set()
-            constraints.append(self._tag_notes_casefold[tag.casefold()])
+            constraints.append(posting)
 
         candidate_ids: Optional[Set[int]] = None
         if constraints:
@@ -1191,7 +1226,7 @@ class SearchIndex:
 
         if clause.forbidden_tags:
             for tag in clause.forbidden_tags:
-                candidate_ids.difference_update(_posting_or_empty(self._tag_notes_casefold, tag.casefold()))
+                candidate_ids.difference_update(self._tag_family_posting_locked(tag.casefold()))
 
         return candidate_ids
 
@@ -1214,9 +1249,21 @@ class SearchIndex:
                 return False
         note_tag_terms_casefold = self._note_tag_terms_casefold[note_int_id]
         for tag in clause.forbidden_tags:
-            if tag.casefold() in note_tag_terms_casefold:
+            if _carries_tag_family(note_tag_terms_casefold, tag.casefold()):
                 return False
         return True
+
+    def _tag_family_posting_locked(self, tag_casefold: str) -> Set[int]:
+        """The notes carrying a tag; for a tag without a value (@code), also those
+        carrying any tag=value (@code=python, @code=sql)."""
+        exact = _posting_or_empty(self._tag_notes_casefold, tag_casefold)
+        prefix = tag_family_prefix(tag_casefold)
+        if prefix is None:
+            return exact
+        members = [notes for term, notes in self._tag_notes_casefold.items() if term.startswith(prefix)]
+        if not members:
+            return exact
+        return set(exact).union(*members)
 
 
 search_index = SearchIndex()

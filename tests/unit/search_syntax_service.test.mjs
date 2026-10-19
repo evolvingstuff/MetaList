@@ -3,6 +3,8 @@ import test from 'node:test';
 
 import {
     analyzeSearchQueryInput,
+    enforceSearchQueryInputForEditing,
+    normalizeSearchQueryInput,
     findOpenQuoteAtIndex,
     findSearchTagAtIndex,
     quotePastedSearchText,
@@ -102,4 +104,15 @@ test('text pasted into a phrase stays as copied, on one line, without ending the
     const pasted = analyzeSearchQueryInput(`"${quotePastedSearchText('say "hi"', '"')}"`);
     assert.equal(pasted.isComplete, true);
     assert.equal(pasted.sanitizedText, '"say \\"hi\\""');
+});
+
+test('a tag in a search keeps one = as typed, as the tag bar does (@code=python)', () => {
+    assert.equal(enforceSearchQueryInputForEditing('@code=python'), '@code=python');
+    assert.equal(enforceSearchQueryInputForEditing('@code='), '@code=');
+    assert.equal(enforceSearchQueryInputForEditing('-@code=python recipes'), '-@code=python recipes');
+    assert.equal(normalizeSearchQueryInput('@size=2'), '@size=2');
+    // One = only, and never as the tag's first character.
+    assert.equal(enforceSearchQueryInputForEditing('@code==py'), '@code=py');
+    assert.equal(enforceSearchQueryInputForEditing('a=b=c'), 'a=bc');
+    assert.equal(enforceSearchQueryInputForEditing('=code'), 'code');
 });

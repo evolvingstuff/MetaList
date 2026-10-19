@@ -4,7 +4,6 @@ const TAG_CONTAINS_DISALLOWED = new Set([
     '\\',
     '>',
     '<',
-    '=',
     '[',
     ']',
     '{',
@@ -19,6 +18,8 @@ const TAG_CONTAINS_DISALLOWED = new Set([
 ]);
 
 const TOKEN_START_DISALLOWED = new Set(['-', '+', '/']);
+// A tag's name and value: @code=python (app/services/search_index.py TAG_VALUE_SEPARATOR).
+const TAG_VALUE_SEPARATOR = '=';
 // Same wording as the server's rejection (app/services/search_query.py).
 const SPACED_PREFIX_WARNING = 'In a search, + or - must be directly followed by the tag or quoted text, with no space (for example -tag)';
 
@@ -52,9 +53,19 @@ function enforceTagToken(rawToken) {
         token = token.slice(1);
     }
 
+    // One = joins a tag's name and value (@code=python), as in the tag bar; it is
+    // never the first character, and any further = is dropped.
     let output = '';
+    let hasValueSeparator = false;
     for (const char of token) {
         if (!isAsciiPrintable(char)) {
+            continue;
+        }
+        if (char === TAG_VALUE_SEPARATOR) {
+            if (output !== '' && !hasValueSeparator) {
+                output += char;
+                hasValueSeparator = true;
+            }
             continue;
         }
         if (TAG_CONTAINS_DISALLOWED.has(char)) {

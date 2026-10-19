@@ -11,10 +11,6 @@ from app.services.file_registry import file_registry
 from app.services.file_storage import get_file_reference_record
 from app.services.note_store import store as note_store
 
-# Content and children sit two levels deep (inside the article and its div),
-# at two spaces per level.
-_NESTED_BLOCK_INDENT_SPACES = 4
-
 
 def build_note_fullscreen_markup(note_id: str) -> str:
     if not isinstance(note_id, str) or note_id == "":
@@ -74,12 +70,14 @@ def _render_fullscreen_note(
     elif list_style == "numbered":
         classes.append("list-numbered")
 
-    lines = [
+    # No indentation is added for readability: inside a code block every added space
+    # would show (an @code note's lines moved right by four spaces per level).
+    parts = [
         f'<article class="{" ".join(classes)}">',
-        '  <div class="note-content" contenteditable="false">',
-        _indent_block(rendered_content, _NESTED_BLOCK_INDENT_SPACES),
-        "  </div>",
-        f'  <div class="note-tags" aria-hidden="true">{html.escape(record.tags)}</div>',
+        '<div class="note-content" contenteditable="false">',
+        rendered_content,
+        "</div>",
+        f'<div class="note-tags" aria-hidden="true">{html.escape(record.tags)}</div>',
     ]
 
     child_parts = [
@@ -91,23 +89,8 @@ def _render_fullscreen_note(
         for child_id in note_store.get_children(note_id)
     ]
     if child_parts:
-        child_markup = "\n".join(child_parts)
-        lines.extend(
-            [
-                '  <div class="note-children">',
-                _indent_block(child_markup, _NESTED_BLOCK_INDENT_SPACES),
-                "  </div>",
-            ]
-        )
-    lines.append("</article>")
+        parts.extend(['<div class="note-children">', *child_parts, "</div>"])
+    parts.append("</article>")
     visiting.remove(note_id)
-    return "\n".join(lines)
+    return "".join(parts)
 
-
-def _indent_block(value: str, spaces: int) -> str:
-    if not isinstance(value, str):
-        raise TypeError("value must be a string")
-    if not isinstance(spaces, int) or spaces < 0:
-        raise TypeError("spaces must be a non-negative integer")
-    prefix = " " * spaces
-    return "\n".join(f"{prefix}{line}" for line in value.splitlines())

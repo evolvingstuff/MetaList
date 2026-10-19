@@ -412,7 +412,6 @@ app/services/snapshot.py: "object" has no attribute "proposed_tags"  [attr-defin
 app/services/snapshot.py: "object" has no attribute "proposed_tags"  [attr-defined]
 app/services/snapshot.py: "object" has no attribute "tags"  [attr-defined]
 app/services/snapshot.py: "object" has no attribute "tags"  [attr-defined]
-app/services/snapshot.py: Argument "metadata" to "ViewState" has incompatible type "dict[str, dict[str, dict[str, str]] | int | str | None]"; expected "dict[str, object]"  [arg-type]
 app/services/snapshot.py: Argument 1 to "_render_view_note" has incompatible type "object"; expected "NoteRecord"  [arg-type]
 app/services/snapshot.py: Incompatible return value type (got "tuple[str, dict[str, bool | str | None]]", expected "tuple[str, dict[str, object]]")  [return-value]
 app/services/snapshot.py: Incompatible types in assignment (expression has type "int", target has type "bool | str | None")  [assignment]

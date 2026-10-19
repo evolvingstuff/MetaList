@@ -50,6 +50,7 @@ Examples:
 Notes:
 - `+`/`-` semantics are out of scope here; they are just syntactic prefixes.
 - Tag tokens follow the same character rules as tag-bar *non-wrapper* tokens.
+- A tag with a value (`@code=python`) is searched whole or by its name: `@code` finds every `@code=<language>` note and `-@code` excludes them all; `@code=python` finds Python notes only. Typing `@c` or `@code` suggests `@code` and the languages in use.
 - Bracket wrappers (`[foo]`, `{foo}`, `((foo))`) are **not** part of search syntax.
 
 ### Text Terms
@@ -65,6 +66,11 @@ Escapes inside quoted text (backslash approach):
 Searching for quote characters without escaping:
 - Search for a literal `"`: use single quotes: `'"'`
 - Search for a literal `'`: use double quotes: `"'"`
+
+Highlighting: the notes list marks each required quoted phrase (from every `OR` clause)
+in yellow wherever it occurs: in note text, embedded notes, children shown with a match,
+and tag-bar comments. Excluded phrases and tags are not marked, nor is the note being
+edited (until the user leaves edit mode), full screen, floating windows, export or print.
 
 ## Normalization
 - Runs of whitespace are normalized to single spaces.

@@ -30,9 +30,8 @@ from app.services.content_formatting import extract_note_text_for_agent
 
 
 _VALID_EXPORT_THEMES = frozenset({"dark", "light"})
-# Spaces for one level of nesting in the exported HTML.
-_HTML_INDENT_LEVEL_SPACES = 2
-# Two indent levels: the content of a tag that is itself one level in.
+# The stylesheet and script sit two levels in (inside <head><style>, <body><script>),
+# at two spaces per level. Note markup is not indented: a code block would show it.
 _HTML_INNER_INDENT_SPACES = 4
 # A note ID is a UUID written like this.
 _NOTE_ID_SHAPE = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -373,7 +372,8 @@ def build_notes_export_document(
         lines.append(f'  <h1 class="html-export-title">{html.escape(title.strip())}</h1>')
     lines.append('  <main id="notes-container">')
     if notes_markup != "":
-        lines.append(_indent_block(notes_markup, _HTML_INNER_INDENT_SPACES))
+        # Note markup is never indented: inside a code block every added space would show.
+        lines.append(notes_markup)
     lines.append("  </main>")
     if is_download:
         lines.extend(["  <script>", _indent_block(_EXPORT_SCRIPT, _HTML_INNER_INDENT_SPACES), "  </script>"])
@@ -668,7 +668,7 @@ def _render_exported_note_node(
         children_markup = "\n".join(children_html_parts)
         children_html = (
             "<div class=\"note-children\">\n"
-            f"{_indent_block(children_markup, _HTML_INDENT_LEVEL_SPACES)}\n"
+            f"{children_markup}\n"
             "</div>"
         )
 
@@ -684,7 +684,7 @@ def _render_exported_note_node(
         lines = [
             f'<article class="{class_attr}" id="note-{escaped_note_id}">',
             '  <div class="note-content">',
-            _indent_block(rendered_content, _HTML_INNER_INDENT_SPACES),
+            rendered_content,
             "  </div>",
         ]
     else:
@@ -711,14 +711,14 @@ def _render_exported_note_node(
             f'<article class="{class_attr}" id="note-{escaped_note_id}" data-can-collapse="true">',
             f'  <button type="button" class="note-collapse-toggle" aria-expanded="{expanded_attr}" aria-label="{toggle_label}"></button>',
             '  <div class="note-content">',
-            _indent_block(rendered_content, _HTML_INNER_INDENT_SPACES),
+            rendered_content,
             "  </div>",
             '  <div class="note-content note-content-collapsed">',
-            _indent_block(collapsed_content, _HTML_INNER_INDENT_SPACES),
+            collapsed_content,
             "  </div>",
         ]
     if children_html != "":
-        lines.append(_indent_block(children_html, _HTML_INDENT_LEVEL_SPACES))
+        lines.append(children_html)
     lines.append("</article>")
     return "\n".join(lines)
 

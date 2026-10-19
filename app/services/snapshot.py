@@ -31,7 +31,7 @@ from app.services.root_sorting import get_root_ids_for_sort_mode
 from app.services.root_sorting import get_root_sort_timestamps
 from app.services.root_sorting import normalize_sort_mode
 from app.services.search_index import search_index
-from app.services.search_query import ParsedSearchQuery, SearchClause, parse_search_query
+from app.services.search_query import ParsedSearchQuery, SearchClause, parse_search_query, search_highlight_phrases
 from app.services.sync import get_all_locks
 from app.services.view_state import ViewState
 from app.services.editing_image_sizes import editing_image_size_factors
@@ -98,6 +98,15 @@ def _extract_direct_uuid_note_ids(clause: SearchClause) -> Set[str]:
         if note_store.has_note(candidate):
             direct_ids.add(candidate)
     return direct_ids
+
+
+def view_search_highlight_phrases(search: Optional[str]) -> List[str]:
+    """The quoted phrases the browser highlights in this view's notes; none without a search."""
+    if search is None:
+        return []
+    if not isinstance(search, str):
+        raise TypeError(f"search must be a string or null, got {type(search)}")
+    return list(search_highlight_phrases(parse_search_query(search)))
 
 
 def _has_search_terms(parsed: ParsedSearchQuery) -> bool:
@@ -1028,9 +1037,10 @@ def build_view_state(
     else:
         visible_root_ids = []
 
-    metadata = {
+    metadata: Dict[str, object] = {
         "editingNoteId": editing_note_id,
         "search": search,
+        "searchHighlightPhrases": view_search_highlight_phrases(search),
         "sortMode": selection.sort_mode,
         "isUntaggedView": is_untagged_view,
         "rootCountTotal": selection.root_count,

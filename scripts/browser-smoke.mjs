@@ -53,6 +53,7 @@ import {checkFloatingControlsWhileEditing} from './browser-floating-control-regr
 import {checkDeleteWarning} from './browser-delete-warning-regressions.mjs';
 import {FOCUSED_SUITES} from './browser-suite-names.mjs';
 import {checkPaletteActivation} from './browser-palette-activation-regressions.mjs';
+import {checkSearchHighlight} from './browser-search-highlight-regressions.mjs';
 
 const directory = await mkdtemp(join(tmpdir(), 'metalist-browser-'));
 // Free ports for HTTP and HTTPS: the user's own MetaList keeps its usual ports (HTTPS 8443).
@@ -214,6 +215,10 @@ try {
     await checkPaletteActivation(page);
     assert.deepEqual(errors, []);
     console.log(`PASS palette activation regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'search-highlight') {
+    await checkSearchHighlight(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS search highlight regressions in ${await browser.version()}`);
   } else if (process.env.BROWSER_TEST_SUITE === 'picture-drag') {
     await checkPictureDrag(page);
     assert.deepEqual(errors, []);
