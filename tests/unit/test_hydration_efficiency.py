@@ -69,7 +69,10 @@ def test_cache_hydration_sanitizes_and_extracts_text_once_per_note(
         strip_calls.append(content)
         return content.removeprefix("<div>").removesuffix("</div>")
 
-    monkeypatch.setattr(content_cache, "fetch_all_for_cache", lambda _connection: rows)
+    monkeypatch.setattr(content_cache, "iter_all_for_cache", lambda _connection: iter(rows))
+    monkeypatch.setattr(content_cache, "count_notes", lambda _connection: len(rows))
+    # The rows come from the stubs above; the fake connection is passed through as is.
+    monkeypatch.setattr(content_cache, "raw_sqlite_connection", lambda connection: connection)
     monkeypatch.setattr(content_cache, "sanitize_note_html", sanitize_once)
     monkeypatch.setattr(content_cache, "strip_html", strip_once)
     monkeypatch.setattr(content_cache, "_CACHE_TIMING_ENABLED", False)
@@ -80,7 +83,12 @@ def test_cache_hydration_sanitizes_and_extracts_text_once_per_note(
 
     returned_rows = content_cache.populate_cache_from_db(_FakeDatabase())
 
-    assert returned_rows == rows
+    # Only each note's structure comes back: no content, tags or ciphertext stays held.
+    assert returned_rows == [
+        {"id": row["id"], "parent_id": None, "prev_id": None, "next_id": None,
+         "is_collapsed": False, "created_at": None, "updated_at": None}
+        for row in rows
+    ]
     assert sanitize_calls == ["<div>One</div>", "<div>Two</div>"]
     assert strip_calls == ["<div>One</div>", "<div>Two</div>"]
     assert content_cache.get_cached_content("one") == "<div>One</div>"

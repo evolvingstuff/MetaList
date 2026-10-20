@@ -234,7 +234,6 @@ app/services/client_state_service.py: Argument 1 to "update_command_palette_usag
 app/services/code_rendering.py: Library stubs not installed for "pygments"  [import-untyped]
 app/services/code_rendering.py: Library stubs not installed for "pygments.formatters"  [import-untyped]
 app/services/code_rendering.py: Library stubs not installed for "pygments.lexers"  [import-untyped]
-app/services/content_cache.py: Argument 1 to "fetch_all_for_cache" has incompatible type "app.db.session.GuardedConnection"; expected "app.db.engine.GuardedConnection | Connection"  [arg-type]
 app/services/content_formatting.py: "object" has no attribute "append"  [attr-defined]
 app/services/content_formatting.py: "object" has no attribute "append"  [attr-defined]
 app/services/content_formatting.py: Argument "render_tag" to "_render_scoped_renderer" has incompatible type "str | None"; expected "str"  [arg-type]

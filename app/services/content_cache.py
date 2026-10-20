@@ -7,10 +7,11 @@ manually by the sqlite helper layer and service hooks.
 
 import logging
 import time
-from typing import Dict, Mapping, Optional, Sequence
+from typing import Dict, Iterator, Mapping, Optional, Sequence
 
 from app.db.session import connect_reader
-from app.db.notes_sql import fetch_all_for_cache
+from app.db.notes_sql import count_notes, iter_all_for_cache
+from app.db.raw_connection import raw_sqlite_connection
 
 from ..models.database import SafeSession
 from ..utils.encryption import get_encryption_service
@@ -95,34 +96,38 @@ def clear_cache() -> None:
     logger.info("Cache cleared")
 
 
+# What the note store reads from a row once the cache holds its decrypted text and tags.
+_NOTE_STRUCTURE_FIELDS = ("id", "parent_id", "prev_id", "next_id", "is_collapsed", "created_at", "updated_at")
+
+
 def populate_cache_from_db(db: SafeSession | None) -> Sequence[Mapping[str, object]]:
-    """Populate cache with all notes from database on startup.
+    """Fill the cache with every note, decrypted and sanitized, and return each note's
+    structure fields (_NOTE_STRUCTURE_FIELDS) for the note store.
 
-    The optional ``db`` parameter is retained for backwards compatibility but
-    is no longer used now that the helper layer opens its own read
-    connections.
+    Rows stream from the database one at a time and only their structure fields are
+    kept, so no more than one row's ciphertext is ever held: holding them all until the
+    note store had loaded made unlocking peak hundreds of MB above what it keeps.
     """
-    global _search_cache, _tag_cache, _proposed_tag_cache, _text_cache
-
     logger.info("Populating content cache from database...")
-
-    fetch_start = time.perf_counter()
+    # notes_sql reads through the plain sqlite3 connection either way.
     if db is None:
         with connect_reader("cache:populate") as connection:
-            notes = list(fetch_all_for_cache(connection))
-    else:
-        with SafeSession.allow_reads("cache:populate"):
-            notes = list(fetch_all_for_cache(db.connection()))
+            raw = raw_sqlite_connection(connection)
+            return _populate_from_rows(count_notes(raw), iter_all_for_cache(raw))
+    with SafeSession.allow_reads("cache:populate"):
+        raw = raw_sqlite_connection(db.connection())
+        return _populate_from_rows(count_notes(raw), iter_all_for_cache(raw))
+
+
+def _populate_from_rows(note_count: int, notes: Iterator[dict]) -> Sequence[Mapping[str, object]]:
+    global _search_cache, _tag_cache, _proposed_tag_cache, _text_cache
+
     if _CACHE_TIMING_ENABLED:
-        fetch_duration = time.perf_counter() - fetch_start
-        print(f"[startup] cache query returned {len(notes)} rows in {fetch_duration:.2f}s")
-        logger.info(
-            "[startup] cache query returned %d rows in %.2fs",
-            len(notes),
-            fetch_duration,
-        )
+        print(f"[startup] cache populating {note_count} notes")
+        logger.info("[startup] cache populating %d notes", note_count)
 
     clear_cache()
+    structures: list[Mapping[str, object]] = []
 
     hydrated_content: Dict[str, str] = {}
     hydrated_tags: Dict[str, str] = {}
@@ -133,7 +138,7 @@ def populate_cache_from_db(db: SafeSession | None) -> Sequence[Mapping[str, obje
         hydration_state.set_phase(
             phase="decrypt",
             message="Decrypting notes into memory",
-            total=len(notes),
+            total=note_count,
         )
 
     encryption_service = get_encryption_service()
@@ -243,6 +248,7 @@ def populate_cache_from_db(db: SafeSession | None) -> Sequence[Mapping[str, obje
         hydrated_tags[note_id] = decrypted_tags
         hydrated_proposed_tags[note_id] = decrypted_proposed_tags
         hydrated_text[note_id] = strip_html(sanitized_content)
+        structures.append({field: note[field] for field in _NOTE_STRUCTURE_FIELDS})
 
         processed += 1
         if _CACHE_TIMING_ENABLED and processed % _CACHE_TIMING_BATCH_NOTES == 0:
@@ -265,6 +271,8 @@ def populate_cache_from_db(db: SafeSession | None) -> Sequence[Mapping[str, obje
 
     if hydration_state.is_running():
         hydration_state.update(processed)
+    if processed != note_count:
+        raise RuntimeError(f"Cache population read {processed} notes but the database counted {note_count}")
 
     _search_cache = hydrated_content
     _tag_cache = hydrated_tags
@@ -274,14 +282,14 @@ def populate_cache_from_db(db: SafeSession | None) -> Sequence[Mapping[str, obje
     if _CACHE_TIMING_ENABLED:
         total_loop = time.perf_counter() - loop_started
         print(
-            f"[startup] cache decrypt loop processed {len(notes)} notes in {total_loop:.2f}s"
+            f"[startup] cache decrypt loop processed {processed} notes in {total_loop:.2f}s"
         )
         logger.info(
             "[startup] cache decrypt loop processed %d notes in %.2fs",
-            len(notes),
+            processed,
             total_loop,
         )
 
-    logger.info(f"Content cache populated with {len(notes)} notes")
+    logger.info(f"Content cache populated with {processed} notes")
 
-    return notes
+    return structures

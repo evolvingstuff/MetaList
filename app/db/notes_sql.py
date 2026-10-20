@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 from datetime import datetime
-from typing import Iterable, Optional, Any
+from typing import Any, Iterable, Iterator, Optional
 
 from .engine import GuardedConnection
 from .raw_connection import raw_sqlite_connection
@@ -391,6 +391,21 @@ def fetch_all_for_cache(connection: GuardedConnection | sqlite3.Connection) -> l
     conn = _conn(connection)
     rows = conn.execute(f"SELECT * FROM {NOTES_TABLE}").fetchall()
     return [_deserialize_row(row) for row in rows]
+
+
+def iter_all_for_cache(connection: GuardedConnection | sqlite3.Connection) -> Iterator[dict]:
+    """Every note row, one at a time: a caller that keeps only part of each row never
+    holds all of them (with their ciphertext) at once."""
+    conn = _conn(connection)
+    for row in conn.execute(f"SELECT * FROM {NOTES_TABLE}"):
+        yield _deserialize_row(row)
+
+
+def count_notes(connection: GuardedConnection | sqlite3.Connection) -> int:
+    conn = _conn(connection)
+    (count,) = conn.execute(f"SELECT COUNT(*) FROM {NOTES_TABLE}").fetchone()
+    assert isinstance(count, int)
+    return count
 
 
 def clear_encryption_metadata_for_empty_notes(
