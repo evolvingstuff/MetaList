@@ -13,7 +13,7 @@ from app.services.tag_term_matching import site_name_of_url
     ("http://en.wikipedia.org/wiki/Tag_(metadata)", "wikipedia"),
     ("https://docs.python.org/3/library/re.html", "python"),
     ("https://www.bbc.co.uk/news", "bbc"),
-    ("www.github.com/evolvingstuff/metalist", "github"),
+    ("www.github.com/metalist-app/metalist", "github"),
     ("https://m.facebook.com/", "facebook"),
     ("http://localhost:8000/notes", "localhost"),
     ("http://127.0.0.1:8443/", ""),

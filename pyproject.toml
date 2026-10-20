@@ -37,9 +37,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/evolvingstuff/metalist"
-Repository = "https://github.com/evolvingstuff/metalist"
-Issues = "https://github.com/evolvingstuff/metalist/issues"
+Homepage = "https://metalist.app"
+Repository = "https://github.com/metalist-app/metalist"
+Issues = "https://github.com/metalist-app/metalist/issues"
 
 [project.optional-dependencies]
 dev = [

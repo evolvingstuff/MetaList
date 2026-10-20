@@ -46,23 +46,23 @@ def test_main_gate_requires_exact_commit_identity_and_first_successful_attempt()
         "event": "push",
         "name": gate.WORKFLOW_NAME,
         "path": f".github/workflows/{gate.WORKFLOW}",
-        "head_repository": {"full_name": "evolvingstuff/metalist"},
+        "head_repository": {"full_name": "metalist-app/metalist"},
         "status": "completed",
         "conclusion": "success",
         "run_attempt": 1,
     }
     assert gate.select_main_run(
-        [valid], repository="evolvingstuff/metalist", commit="abc123",
+        [valid], repository="metalist-app/metalist", commit="abc123",
     ) == valid
     with pytest.raises(gate.ReleaseValidationError, match="found 0"):
         gate.select_main_run(
             [dict(valid, head_sha="other")],
-            repository="evolvingstuff/metalist", commit="abc123",
+            repository="metalist-app/metalist", commit="abc123",
         )
     with pytest.raises(gate.ReleaseValidationError, match="rerun"):
         gate.select_main_run(
             [dict(valid, run_attempt=2)],
-            repository="evolvingstuff/metalist", commit="abc123",
+            repository="metalist-app/metalist", commit="abc123",
         )
 
 
