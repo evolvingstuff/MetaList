@@ -28,6 +28,7 @@ from app.services.backup_service import (
     create_timestamped_backup,
     restore_backup,
 )
+from app.process_memory import release_freed_memory
 from app.services.content_cache import clear_cache, populate_cache_from_db
 from app.services.exception_capture import CapturedExceptionContext
 from app.services.login_rate_limit import login_rate_limiter
@@ -309,6 +310,11 @@ def _run_hydration(*, rebuild_required: bool) -> None:
 
     note_store.load_from_db(None, prefetched_rows=prefetched_rows)
     auth_cache_state.mark_cache_ready()
+    # Unlocking made and dropped many short-lived objects: hand their memory back.
+    del prefetched_rows
+    release_started = time.perf_counter()
+    release_freed_memory()
+    hydration_state.record_steps({"hand freed memory back": time.perf_counter() - release_started})
     hydration_state.finish()
 
 
@@ -425,6 +431,8 @@ def _reset_runtime_state_after_restore() -> bool:
         prefetched_rows = populate_cache_from_db(session)
         note_store.load_from_db(None, prefetched_rows=prefetched_rows)
         auth_cache_state.mark_cache_ready()
+        del prefetched_rows
+        release_freed_memory()
         return False
     finally:
         session.close()

@@ -522,7 +522,7 @@ try {
       const memoryRows = await page.$$eval('#memory-usage-modal .memory-usage-table:not(.memory-usage-breakdown):not(.memory-usage-unlock) tr',
         rows => rows.map(row => [row.querySelector('th').textContent.trim(), row.querySelector('td').textContent.trim()]));
       assert.deepEqual(memoryRows.map(([label]) => label), ['Server process memory now',
-        'Server process memory at its peak', 'Notes held decrypted in memory', 'Server running for']);
+        'Server process memory at its peak', 'Measured as', 'Notes held decrypted in memory', 'Server running for']);
       assert.match(memoryRows[0][1], /^[0-9.,]+ MB$/, `memory now: ${memoryRows[0][1]}`);
       assert.match(memoryRows[2][1], /^[0-9,]+ notes, [0-9.,]+ MB of text$/, `notes held: ${memoryRows[2][1]}`);
       // Measure: each part of the server by size, then everything else.

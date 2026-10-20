@@ -49,7 +49,8 @@ def test_the_notes_held_and_their_text_are_counted(live_database) -> None:
     assert usage["noteCount"] == 2
     held = "<p>Héllo</p>trip<p>Two</p>"
     assert usage["noteTextBytes"] == len(held.encode("utf-8"))
-    assert usage["residentBytes"] > 0 and usage["peakResidentBytes"] >= usage["residentBytes"] - BYTES_PER_MEGABYTE
+    assert usage["processBytes"] > 0 and usage["peakProcessBytes"] >= usage["processBytes"] - BYTES_PER_MEGABYTE
+    assert usage["processMeasure"] in ("footprint", "resident")
     assert usage["uptimeSeconds"] >= 0
 
 
@@ -69,8 +70,8 @@ def test_the_route_requires_a_session(monkeypatch) -> None:
     monkeypatch.setattr(notes_routes, "_require_bearer_token", require_token)
     usage = notes_routes.get_memory_usage(request="request")
     assert calls == ["request"] and set(usage) == {
-        "residentBytes", "peakResidentBytes", "notesLoaded", "noteCount", "noteTextBytes", "uptimeSeconds",
-        "lastUnlock",
+        "processBytes", "peakProcessBytes", "processMeasure", "notesLoaded", "noteCount", "noteTextBytes",
+        "uptimeSeconds", "lastUnlock",
     }
 
 

@@ -3,13 +3,15 @@ notes it holds decrypted in memory."""
 
 from __future__ import annotations
 
-from app.process_memory import current_resident_bytes, peak_resident_bytes, seconds_since_start
+from app.process_memory import PROCESS_MEMORY_MEASURE, peak_process_memory_bytes, process_memory_bytes
+from app.process_memory import seconds_since_start
 from app.services.hydration_state import hydration_state
 from app.services.note_store import store as note_store
 
 
 def describe_memory_usage() -> dict[str, object]:
-    """The server process's resident memory now and at its peak, the notes the note store
+    """The memory the system charges the server process now and at its peak, and which
+    measure that is (process_memory.process_memory_bytes), the notes the note store
     holds (decrypted, for an unlocked namespace) and their text in UTF-8 bytes, and how
     long the server has run. `notesLoaded` is false until the namespace has hydrated."""
     note_count = 0
@@ -20,8 +22,9 @@ def describe_memory_usage() -> dict[str, object]:
             note_count += 1
             note_text_bytes += len(record.content.encode("utf-8")) + len(record.tags.encode("utf-8"))
     return {
-        "residentBytes": current_resident_bytes(),
-        "peakResidentBytes": peak_resident_bytes(),
+        "processBytes": process_memory_bytes(),
+        "peakProcessBytes": peak_process_memory_bytes(),
+        "processMeasure": PROCESS_MEMORY_MEASURE,
         "notesLoaded": note_store.loaded,
         "noteCount": note_count,
         "noteTextBytes": note_text_bytes,

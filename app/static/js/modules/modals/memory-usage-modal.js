@@ -9,18 +9,28 @@ const SECONDS_PER_MINUTE = 60;
 const MINUTES_PER_HOUR = 60;
 const HOURS_PER_DAY = 24;
 
+// How the server measured its memory: on macOS the footprint Activity Monitor shows,
+// elsewhere the resident memory top and Task Manager show.
+const PROCESS_MEMORY_MEASURES = {
+    footprint: 'footprint, as Activity Monitor counts it',
+    resident: 'resident memory, as top and Task Manager count it',
+};
+
 // The server's answer, checked: a missing or mistyped field is a bug, not a blank row.
 function validateMemoryUsage(usage) {
     if (usage === null || typeof usage !== 'object') {
         throw new Error('Memory usage response must be an object');
     }
-    for (const key of ['residentBytes', 'peakResidentBytes', 'noteCount', 'noteTextBytes']) {
+    for (const key of ['processBytes', 'peakProcessBytes', 'noteCount', 'noteTextBytes']) {
         if (!Number.isInteger(usage[key]) || usage[key] < 0) {
             throw new Error(`Memory usage response missing ${key}`);
         }
     }
     if (typeof usage.uptimeSeconds !== 'number' || usage.uptimeSeconds < 0) {
         throw new Error('Memory usage response missing uptimeSeconds');
+    }
+    if (!Object.hasOwn(PROCESS_MEMORY_MEASURES, usage.processMeasure)) {
+        throw new Error(`Memory usage response has an unknown processMeasure: ${usage.processMeasure}`);
     }
     if (typeof usage.notesLoaded !== 'boolean') {
         throw new Error('Memory usage response missing notesLoaded');
@@ -53,8 +63,12 @@ function validateMemoryBreakdown(breakdown) {
     return breakdown;
 }
 
+// Unlock times to the hundredth of a second.
+const SECONDS_FRACTION_DIGITS = 2;
+
 function seconds(value) {
-    return `${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} s`;
+    const digits = { minimumFractionDigits: SECONDS_FRACTION_DIGITS, maximumFractionDigits: SECONDS_FRACTION_DIGITS };
+    return `${value.toLocaleString(undefined, digits)} s`;
 }
 
 function megabytes(bytes) {
@@ -163,7 +177,7 @@ export class MemoryUsageModal extends BaseModal {
     // index's, as the code names them, largest first), then what is left over.
     _breakdownRows(state) {
         const measured = state.breakdown.parts.reduce((sum, part) => sum + part.bytes, 0);
-        const unmeasured = state.usage.residentBytes - measured;
+        const unmeasured = state.usage.processBytes - measured;
         // The system can compress memory a part still holds: then the parts add up to
         // more than is resident, and nothing is left over to name.
         let everythingElse = 'none: the system has compressed some of the parts above';
@@ -219,8 +233,9 @@ export class MemoryUsageModal extends BaseModal {
             ? `${usage.noteCount.toLocaleString()} notes, ${megabytes(usage.noteTextBytes)} of text`
             : 'Not loaded yet (the namespace is still unlocking)';
         return [
-            ['Server process memory now', megabytes(usage.residentBytes)],
-            ['Server process memory at its peak', megabytes(usage.peakResidentBytes)],
+            ['Server process memory now', megabytes(usage.processBytes)],
+            ['Server process memory at its peak', megabytes(usage.peakProcessBytes)],
+            ['Measured as', PROCESS_MEMORY_MEASURES[usage.processMeasure]],
             ['Notes held decrypted in memory', notesHeld],
             ['Server running for', duration(usage.uptimeSeconds)],
         ];
@@ -266,8 +281,11 @@ export class MemoryUsageModal extends BaseModal {
         }
         const state = this.getModalState();
         let body = '<p class="memory-usage-status">Loading…</p>';
+        // Until the first answer arrives, neither the usage nor the last unlock is shown.
+        let unlockHtml = '';
         if (state.usage !== null) {
             body = `<table class="memory-usage-table"><tbody>${this._rowsHtml(state.usage)}</tbody></table>`;
+            unlockHtml = this._unlockHtml(state.usage);
         }
         const refreshDisabled = state.loading || state.measuring ? ' disabled' : '';
         const copyDisabled = state.usage === null || state.loading || state.measuring ? ' disabled' : '';
@@ -277,7 +295,7 @@ export class MemoryUsageModal extends BaseModal {
                 <p class="note-layout-description">For this namespace's server process, which holds the decrypted notes. The browser's own memory is not included.</p>
                 ${body}
                 <h3 class="memory-usage-subheading">Last unlock</h3>
-                ${state.usage === null ? '' : this._unlockHtml(state.usage)}
+                ${unlockHtml}
                 <h3 class="memory-usage-subheading">What holds it</h3>
                 ${this._breakdownHtml(state)}
                 <div class="form-actions">

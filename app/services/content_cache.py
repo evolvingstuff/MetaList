@@ -191,10 +191,15 @@ def _populate_from_rows(
     decrypt_seconds = 0.0
     sanitize_seconds = 0.0
     text_seconds = 0.0
+    read_seconds = 0.0
+    tag_decrypt_seconds = 0.0
     cleaned_notes: Dict[str, str] = {}
     processed = 0
     last_checkpoint = loop_started
+    # Waiting for the next row: SQLite reading it and sqlite3 building its row.
+    read_started = time.perf_counter()
     for note in notes:
+        read_seconds += time.perf_counter() - read_started
         note_id = note["id"]
         content = note["content"]
         nonce = note["encryption_nonce"]
@@ -266,6 +271,7 @@ def _populate_from_rows(
         else:
             decrypted_content = content
 
+        tags_started = time.perf_counter()
         if tags_encrypted:
             if not encryption_service or not encryption_service.dek:
                 raise RuntimeError(
@@ -292,6 +298,7 @@ def _populate_from_rows(
             )
         else:
             decrypted_proposed_tags = proposed_tags
+        tag_decrypt_seconds += time.perf_counter() - tags_started
 
         sanitized_content = decrypted_content
         if clean_stored_html:
@@ -328,10 +335,12 @@ def _populate_from_rows(
             last_checkpoint = now
             if hydration_state.is_running():
                 hydration_state.update(processed)
+        read_started = time.perf_counter()
 
     if hydration_state.is_running():
         hydration_state.update(processed)
-        steps = {"decrypt note text": decrypt_seconds}
+        steps = {"read note rows": read_seconds, "decrypt note text": decrypt_seconds,
+                 "decrypt tags": tag_decrypt_seconds}
         if clean_stored_html:
             steps["sanitize note HTML (once)"] = sanitize_seconds
         steps["extract note text"] = text_seconds
