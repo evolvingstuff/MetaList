@@ -26,6 +26,22 @@ function validateMemoryUsage(usage) {
     return usage;
 }
 
+// The server's answer to Measure: each part's size in bytes, in the order it measured them.
+function validateMemoryBreakdown(breakdown) {
+    if (breakdown === null || typeof breakdown !== 'object' || !Array.isArray(breakdown.parts)) {
+        throw new Error('Memory breakdown response must have parts');
+    }
+    for (const part of breakdown.parts) {
+        if (typeof part.label !== 'string' || part.label === '' || !Number.isInteger(part.bytes) || part.bytes < 0) {
+            throw new Error('Memory breakdown part is invalid');
+        }
+    }
+    if (typeof breakdown.seconds !== 'number' || breakdown.seconds < 0) {
+        throw new Error('Memory breakdown response missing seconds');
+    }
+    return breakdown;
+}
+
 function megabytes(bytes) {
     return `${(bytes / BYTES_PER_MEGABYTE).toLocaleString(undefined, { maximumFractionDigits: 1 })} MB`;
 }
@@ -40,20 +56,24 @@ function duration(seconds) {
 }
 
 // Memory used by this namespace's server process (not the browser): now, at its peak,
-// and the notes it holds decrypted in memory.
+// the notes it holds decrypted in memory, and, on request, what holds it part by part.
 export class MemoryUsageModal extends BaseModal {
-    constructor(loadMemoryUsage) {
+    constructor(loadMemoryUsage, loadMemoryBreakdown) {
         super('memoryUsageModal', 'memory-usage-modal');
         if (typeof loadMemoryUsage !== 'function') {
             throw new Error('MemoryUsageModal requires loadMemoryUsage');
         }
+        if (typeof loadMemoryBreakdown !== 'function') {
+            throw new Error('MemoryUsageModal requires loadMemoryBreakdown');
+        }
         this._loadMemoryUsage = loadMemoryUsage;
+        this._loadMemoryBreakdown = loadMemoryBreakdown;
         this._loadGeneration = 0;
         ApplicationState.own(this, 'MemoryUsageModal', new.target === MemoryUsageModal);
     }
 
     getInitialModalState() {
-        return { loading: true, usage: null };
+        return { loading: true, usage: null, measuring: false, breakdown: null };
     }
 
     showModalElement() {
@@ -73,9 +93,10 @@ export class MemoryUsageModal extends BaseModal {
         await this._load();
     }
 
-    // The Refresh button: shows Loading… again, then reads the numbers anew.
+    // The Refresh button: shows Loading… again, then reads the numbers anew. A breakdown
+    // measured against the old total goes with it.
     async _refresh() {
-        this.updateModalState({ loading: true });
+        this.updateModalState({ loading: true, breakdown: null });
         this.renderModalContent();
         await this._load();
     }
@@ -89,6 +110,47 @@ export class MemoryUsageModal extends BaseModal {
         }
         this.updateModalState({ loading: false, usage });
         this.renderModalContent();
+    }
+
+    // The Measure button: the server measures each part (a few seconds), then the rows show.
+    async _measure() {
+        const loadGeneration = this._loadGeneration;
+        this.updateModalState({ measuring: true });
+        this.renderModalContent();
+        const breakdown = validateMemoryBreakdown(await this._loadMemoryBreakdown());
+        if (!this.isOpen || loadGeneration !== this._loadGeneration) {
+            return;
+        }
+        this.updateModalState({ measuring: false, breakdown });
+        this.renderModalContent();
+    }
+
+    _breakdownHtml(state) {
+        if (state.measuring) {
+            return '<p class="memory-usage-status">Measuring… this takes a few seconds.</p>';
+        }
+        if (state.breakdown === null) {
+            const measureDisabled = state.usage === null ? ' disabled' : '';
+            return `
+                <p class="note-layout-description">Measures each part of the server by size (never its content). Takes a few seconds; saving waits meanwhile.</p>
+                <button type="button" class="secondary-btn" id="memory-usage-measure-btn"${measureDisabled}>Measure what holds it</button>`;
+        }
+        const measured = state.breakdown.parts.reduce((sum, part) => sum + part.bytes, 0);
+        const unmeasured = state.usage.residentBytes - measured;
+        // The system can compress memory a part still holds: then the parts add up to
+        // more than is resident, and nothing is left over to name.
+        let everythingElse = 'none: the system has compressed some of the parts above';
+        if (unmeasured >= 0) {
+            everythingElse = megabytes(unmeasured);
+        }
+        const rows = [
+            ...state.breakdown.parts.map(part => [part.label, megabytes(part.bytes)]),
+            ['Everything else (Python, libraries, free space)', everythingElse],
+        ];
+        const rowsHtml = rows.map(([label, value]) => `<tr><th scope="row">${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`).join('');
+        const seconds = state.breakdown.seconds.toLocaleString(undefined, { maximumFractionDigits: 1 });
+        return `<table class="memory-usage-table memory-usage-breakdown"><tbody>${rowsHtml}</tbody></table>
+                <p class="note-layout-description">Measured in ${escapeHtml(seconds)} s.</p>`;
     }
 
     _rowsHtml(usage) {
@@ -114,12 +176,14 @@ export class MemoryUsageModal extends BaseModal {
         if (state.usage !== null) {
             body = `<table class="memory-usage-table"><tbody>${this._rowsHtml(state.usage)}</tbody></table>`;
         }
-        const refreshDisabled = state.loading ? ' disabled' : '';
+        const refreshDisabled = state.loading || state.measuring ? ' disabled' : '';
         modalElement.innerHTML = `
             <div class="modal-content memory-usage-modal-content">
                 <h2>Memory Usage</h2>
                 <p class="note-layout-description">For this namespace's server process, which holds the decrypted notes. The browser's own memory is not included.</p>
                 ${body}
+                <h3 class="memory-usage-subheading">What holds it</h3>
+                ${this._breakdownHtml(state)}
                 <div class="form-actions">
                     <button type="button" class="secondary-btn" id="memory-usage-refresh-btn"${refreshDisabled}>Refresh</button>
                 </div>
@@ -130,5 +194,9 @@ export class MemoryUsageModal extends BaseModal {
             throw new Error('Memory usage refresh button missing');
         }
         refreshButton.onclick = async () => this._refresh();
+        const measureButton = document.getElementById('memory-usage-measure-btn');
+        if (measureButton instanceof HTMLButtonElement) {
+            measureButton.onclick = async () => this._measure();
+        }
     }
 }
