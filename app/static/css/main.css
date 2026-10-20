@@ -840,6 +840,19 @@ html[data-theme="dark"] .search-suggestion-statistics-day summary {
     content: "▾";
 }
 
+/* Memory Usage: a part's fields (the note store's, the search index's), named as in the code. */
+.memory-usage-field th,
+.memory-usage-field td {
+    color: var(--modal-text-muted);
+    font-size: 0.9em;
+    font-weight: normal;
+}
+
+.memory-usage-field th {
+    padding-left: 2em;
+    font-family: monospace;
+}
+
 .search-suggestion-statistics-table {
     width: 100%;
     border-collapse: collapse;

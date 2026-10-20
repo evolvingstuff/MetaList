@@ -31,8 +31,10 @@ function validateMemoryBreakdown(breakdown) {
     if (breakdown === null || typeof breakdown !== 'object' || !Array.isArray(breakdown.parts)) {
         throw new Error('Memory breakdown response must have parts');
     }
+    const isSize = entry => typeof entry.label === 'string' && entry.label !== ''
+        && Number.isInteger(entry.bytes) && entry.bytes >= 0;
     for (const part of breakdown.parts) {
-        if (typeof part.label !== 'string' || part.label === '' || !Number.isInteger(part.bytes) || part.bytes < 0) {
+        if (!isSize(part) || !Array.isArray(part.fields) || !part.fields.every(isSize)) {
             throw new Error('Memory breakdown part is invalid');
         }
     }
@@ -143,11 +145,19 @@ export class MemoryUsageModal extends BaseModal {
         if (unmeasured >= 0) {
             everythingElse = megabytes(unmeasured);
         }
+        // A part that lists its fields (the note store, the search index) shows each one
+        // under it, as the code names it, largest first.
         const rows = [
-            ...state.breakdown.parts.map(part => [part.label, megabytes(part.bytes)]),
-            ['Everything else (Python, libraries, free space)', everythingElse],
+            ...state.breakdown.parts.flatMap(part => [
+                { label: part.label, value: megabytes(part.bytes), isField: false },
+                ...part.fields.map(field => ({ label: field.label, value: megabytes(field.bytes), isField: true })),
+            ]),
+            { label: 'Everything else (Python, libraries, free space)', value: everythingElse, isField: false },
         ];
-        const rowsHtml = rows.map(([label, value]) => `<tr><th scope="row">${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`).join('');
+        const rowsHtml = rows.map(row => {
+            const rowClass = row.isField ? ' class="memory-usage-field"' : '';
+            return `<tr${rowClass}><th scope="row">${escapeHtml(row.label)}</th><td>${escapeHtml(row.value)}</td></tr>`;
+        }).join('');
         const seconds = state.breakdown.seconds.toLocaleString(undefined, { maximumFractionDigits: 1 });
         return `<table class="memory-usage-table memory-usage-breakdown"><tbody>${rowsHtml}</tbody></table>
                 <p class="note-layout-description">Measured in ${escapeHtml(seconds)} s.</p>`;

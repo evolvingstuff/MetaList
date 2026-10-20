@@ -113,6 +113,13 @@ def test_the_breakdown_measures_every_part_of_a_loaded_namespace(live_database) 
     sizes = {part["label"]: part["bytes"] for part in breakdown["parts"]}
     assert sizes["Note store (tree, tags, references)"] > 0 and sizes["Search index"] > 0
     assert breakdown["seconds"] >= 0
+    # The note store and search index list their fields, largest first, within their total.
+    fields = {part["label"]: part["fields"] for part in breakdown["parts"]}
+    for label in ("Note store (tree, tags, references)", "Search index"):
+        field_sizes = [field["bytes"] for field in fields[label]]
+        assert field_sizes == sorted(field_sizes, reverse=True) and 0 < sum(field_sizes) <= sizes[label]
+    assert "tag_notes_casefold" in {field["label"] for field in fields["Search index"]}
+    assert fields["Note text cache"] == [] and fields["Undo history"] == []
 
 
 def test_the_breakdown_route_requires_a_session(monkeypatch) -> None:

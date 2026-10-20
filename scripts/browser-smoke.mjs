@@ -528,7 +528,7 @@ try {
       // Measure: each part of the server by size, then everything else.
       await page.click('#memory-usage-measure-btn');
       await page.waitForSelector('#memory-usage-modal .memory-usage-breakdown');
-      const partRows = await page.$$eval('#memory-usage-modal .memory-usage-breakdown tr',
+      const partRows = await page.$$eval('#memory-usage-modal .memory-usage-breakdown tr:not(.memory-usage-field)',
         rows => rows.map(row => [row.querySelector('th').textContent.trim(), row.querySelector('td').textContent.trim()]));
       assert.deepEqual(partRows.map(([label]) => label), ['Note text cache', 'Note store (tree, tags, references)',
         'Search index', 'Rendered note views', 'Open views per tab', 'Link titles', 'Attachments index', 'Undo history',
@@ -536,6 +536,9 @@ try {
       for (const [label, value] of partRows.slice(0, -1)) {
         assert.match(value, /^[0-9.,]+ MB$/, `${label}: ${value}`);
       }
+      // The note store and search index list their fields under them, as the code names them.
+      const fieldLabels = await page.$$eval('#memory-usage-modal .memory-usage-field th', cells => cells.map(cell => cell.textContent.trim()));
+      assert(fieldLabels.includes('note_map') && fieldLabels.includes('tag_notes_casefold'), `fields: ${fieldLabels}`);
       // Refresh reads the numbers again; the breakdown, measured against the old total, goes.
       await page.click('#memory-usage-refresh-btn');
       await page.waitForSelector('#memory-usage-modal .memory-usage-table');

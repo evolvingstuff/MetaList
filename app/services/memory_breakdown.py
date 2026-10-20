@@ -133,6 +133,8 @@ class _Part:
     label: str
     roots: Callable[[], tuple[object, ...]]
     lock: Callable[[], AbstractContextManager[object]]
+    # A part made of one object whose fields are listed too, largest first.
+    lists_fields: bool
 
 
 # In order: a shared object is counted in the first part that holds it. The content
@@ -142,15 +144,23 @@ _PARTS = (
     _Part("Note text cache", lambda: (
         content_cache._search_cache, content_cache._text_cache,
         content_cache._tag_cache, content_cache._proposed_tag_cache,
-    ), nullcontext),
-    _Part("Note store (tree, tags, references)", lambda: (note_store,), lambda: note_store._lock),
-    _Part("Search index", lambda: (search_index,), lambda: search_index._lock),
-    _Part("Rendered note views", lambda: (snapshot._VIEW_RENDER_MEMO,), lambda: sensitive_cache._lock),
-    _Part("Open views per tab", lambda: (view_cache,), lambda: view_cache._lock),
-    _Part("Link titles", lambda: (link_title_store,), lambda: link_title_store._lock),
-    _Part("Attachments index", lambda: (file_registry,), lambda: file_registry._lock),
-    _Part("Undo history", lambda: (undo_state._clients,), nullcontext),
+    ), nullcontext, False),
+    _Part("Note store (tree, tags, references)", lambda: (note_store,), lambda: note_store._lock, True),
+    _Part("Search index", lambda: (search_index,), lambda: search_index._lock, True),
+    _Part("Rendered note views", lambda: (snapshot._VIEW_RENDER_MEMO,), lambda: sensitive_cache._lock, False),
+    _Part("Open views per tab", lambda: (view_cache,), lambda: view_cache._lock, False),
+    _Part("Link titles", lambda: (link_title_store,), lambda: link_title_store._lock, False),
+    _Part("Attachments index", lambda: (file_registry,), lambda: file_registry._lock, False),
+    _Part("Undo history", lambda: (undo_state._clients,), nullcontext, False),
 )
+
+
+def _field_sizes(owner: object, counted: _PackedIdSet) -> list[tuple[str, int]]:
+    """Each field of owner (named as in the code, without its leading underscore) and
+    what only it holds, largest first."""
+    counted.add_if_new(id(owner))
+    sizes = [(name.lstrip("_"), _deep_size(value, counted)) for name, value in vars(owner).items()]
+    return sorted(sizes, key=lambda field: -field[1])
 
 
 def measure_memory_breakdown() -> dict[str, object]:
@@ -161,6 +171,18 @@ def measure_memory_breakdown() -> dict[str, object]:
     parts: list[dict[str, object]] = []
     for part in _PARTS:
         with part.lock():
-            size = sum(_deep_size(root, counted) for root in part.roots())
-        parts.append({"label": part.label, "bytes": size})
+            roots = part.roots()
+            fields: list[tuple[str, int]] = []
+            if part.lists_fields:
+                assert len(roots) == 1, f"{part.label} lists the fields of one object"
+                fields = _field_sizes(roots[0], counted)
+                # The object and its table of fields, then what each field holds.
+                size = sys.getsizeof(roots[0]) + sys.getsizeof(vars(roots[0])) + sum(size for _, size in fields)
+            else:
+                size = sum(_deep_size(root, counted) for root in roots)
+        parts.append({
+            "label": part.label,
+            "bytes": size,
+            "fields": [{"label": label, "bytes": field_size} for label, field_size in fields],
+        })
     return {"parts": parts, "seconds": time.perf_counter() - started}
