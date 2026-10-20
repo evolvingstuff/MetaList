@@ -3,6 +3,8 @@ note (docs/ui/search-semantics.md), and suggestions offer the family and its mem
 
 from __future__ import annotations
 
+import random
+
 import pytest
 
 from app.services.search_index import SearchIndex, SearchRecord, extract_tags_for_search
@@ -61,3 +63,38 @@ def test_a_tag_without_a_value_matches_every_value(search, expected):
 ])
 def test_suggestions_offer_tags_in_use_with_their_family(query, expected):
     assert _index().suggest_all_tag_completions(query=query) == expected
+
+
+_FAMILY_SEED = 31
+_FAMILY_STEPS = 300
+_FAMILY_TERMS = ["@code", "@code=python", "@code=sql", "@Code=Rust", "priority=high", "priority",
+                 "priority=low=now", "trip", "a=b=c", "a=b", "journal"]
+
+
+def _scanned_family_posting(index: SearchIndex, tag_casefold: str) -> set[int]:
+    """The family as the old full scan found it: every term starting with tag=."""
+    prefix = f"{tag_casefold}="
+    found = set(index._tag_notes_casefold.get(tag_casefold, set()))
+    for term, notes in index._tag_notes_casefold.items():
+        if "=" not in tag_casefold and term.startswith(prefix):
+            found |= notes
+    return found
+
+
+def test_a_family_is_the_terms_the_old_scan_found_after_any_edits() -> None:
+    generator = random.Random(_FAMILY_SEED)
+    index = SearchIndex()
+    index.rebuild([], raw_tag_terms_by_id={}, progress_update=lambda _count: None,
+                  progress_interval=_PROGRESS_INTERVAL)
+    for step in range(_FAMILY_STEPS):
+        note_id = f"n{generator.randint(0, 20)}"
+        terms = frozenset(generator.sample(_FAMILY_TERMS, generator.randint(0, 4)))
+        if generator.random() < 0.15:
+            index.remove_many({note_id})
+        else:
+            index.upsert(note_id=note_id, content_text="text", tags=" ".join(sorted(terms)),
+                         raw_tag_terms=terms, tag_terms=terms)
+        for term in _FAMILY_TERMS:
+            tag_casefold = term.casefold()
+            with index._lock:
+                assert set(index._tag_family_posting_locked(tag_casefold)) == _scanned_family_posting(index, tag_casefold), (step, term)

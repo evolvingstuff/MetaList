@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import combinations
 from threading import RLock
 import time
 from typing import Callable, Dict, FrozenSet, Iterable, List, Mapping, Optional, Set, Tuple
@@ -94,6 +95,50 @@ def tag_family_prefix(tag_casefold: str) -> str | None:
     if TAG_VALUE_SEPARATOR in tag_casefold:
         return None
     return f"{tag_casefold}{TAG_VALUE_SEPARATOR}"
+
+
+# Up to this many anchors, a term's co-occurrence is found from intersections of its
+# notes with each group of anchors, in C; beyond it, groups outnumber the notes and each
+# note's anchors are collected one by one. Both give the same answer.
+_MAX_ANCHORS_BY_GROUPS = 6
+
+
+def _most_anchors_cooccurrence(shared_by_anchor: Mapping[str, Set[int]]) -> TagCooccurrence | None:
+    """The most anchors any of a term's notes carries, how many notes carry that many,
+    and which anchors they carry. shared_by_anchor: each anchor's notes that are the
+    term's (none empty). From the largest group of anchors down, the first size whose
+    notes are shared is the most: a note there carries exactly that group (it carries no
+    more), so each counts in one group and the groups' counts add up. Collecting each
+    note's anchors one by one in Python took 0.3 s for a 50,000-note anchor (2026-10-20)."""
+    if not shared_by_anchor:
+        return None
+    anchors = sorted(shared_by_anchor)
+    if len(anchors) > _MAX_ANCHORS_BY_GROUPS:
+        anchors_by_note: Dict[int, Set[str]] = {}
+        for anchor in anchors:
+            for note_id in shared_by_anchor[anchor]:
+                if note_id not in anchors_by_note:
+                    anchors_by_note[note_id] = set()
+                anchors_by_note[note_id].add(anchor)
+        most_anchors = max(len(note_anchors) for note_anchors in anchors_by_note.values())
+        at_most = [frozenset(note_anchors) for note_anchors in anchors_by_note.values()
+                   if len(note_anchors) == most_anchors]
+        return TagCooccurrence(anchor_count=most_anchors, note_count=len(at_most), anchor_sets=frozenset(at_most))
+    for size in range(len(anchors), 0, -1):
+        notes_by_group: Dict[FrozenSet[str], int] = {}
+        for group in combinations(anchors, size):
+            notes = shared_by_anchor[group[0]]
+            for anchor in group[1:]:
+                notes = notes & shared_by_anchor[anchor]
+                if not notes:
+                    break
+            if notes:
+                notes_by_group[frozenset(group)] = len(notes)
+        if notes_by_group:
+            return TagCooccurrence(
+                anchor_count=size, note_count=sum(notes_by_group.values()), anchor_sets=frozenset(notes_by_group),
+            )
+    raise AssertionError("every anchor shares a note, so the single anchors do")
 
 
 def _carries_tag_family(tag_terms_casefold: FrozenSet[str], tag_casefold: str) -> bool:
@@ -299,6 +344,10 @@ class SearchIndex:
         self._raw_tag_notes_casefold = _NoteCounts()
         self._tag_notes = _NoteCounts()
         self._tag_notes_casefold: Dict[str, Set[int]] = {}
+        # Each tag family's valued members (@code: @code=python, @code=sql), as
+        # tag_family_prefix defines them. Scanning every tag for every candidate made
+        # each suggestion after a broad tag take most of a second (2026-10-20).
+        self._tag_family_members: Dict[str, List[str]] = {}
 
         self._result_cache: Dict[str, tuple[int, FrozenSet[str]]] = {}
         self._untagged_result_cache: tuple[int, FrozenSet[str]] | None = None
@@ -337,6 +386,7 @@ class SearchIndex:
             self._raw_tag_notes_casefold.clear()
             self._tag_notes.clear()
             self._tag_notes_casefold.clear()
+            self._tag_family_members.clear()
             self._result_cache.clear()
 
             self._revision += 1
@@ -477,7 +527,7 @@ class SearchIndex:
                 for term in new_tag_terms - old_tag_terms:
                     self._tag_notes.add(term)
                 for term_casefold in new_casefold - old_casefold:
-                    _add_posting(self._tag_notes_casefold, term_casefold, note_int_id)
+                    self._add_tag_casefold_posting_locked(term_casefold, note_int_id)
 
                 self._note_tag_terms[note_int_id] = new_tag_terms
                 self._note_tag_terms_casefold[note_int_id] = new_casefold
@@ -630,23 +680,19 @@ class SearchIndex:
                 term_casefold = term.casefold()
                 if term_casefold not in self._tag_notes_casefold:
                     continue
-                term_notes = self._tag_notes_casefold[term_casefold] - excluded
-                anchors_by_note: Dict[int, Set[str]] = {}
-                for anchor_casefold in anchor_casefold_set:
-                    if anchor_casefold == term_casefold or anchor_casefold not in self._tag_notes_casefold:
-                        continue
-                    for note_id in term_notes & self._tag_notes_casefold[anchor_casefold]:
-                        if note_id not in anchors_by_note:
-                            anchors_by_note[note_id] = set()
-                        anchors_by_note[note_id].add(anchor_casefold)
-                if not anchors_by_note:
-                    continue
-                most_anchors = max(len(note_anchors) for note_anchors in anchors_by_note.values())
-                at_most = [frozenset(note_anchors) for note_anchors in anchors_by_note.values()
-                           if len(note_anchors) == most_anchors]
-                described[term] = TagCooccurrence(
-                    anchor_count=most_anchors, note_count=len(at_most), anchor_sets=frozenset(at_most),
+                term_notes = self._tag_notes_casefold[term_casefold]
+                if excluded:
+                    term_notes = term_notes - excluded
+                shared_by_anchor = {
+                    anchor_casefold: term_notes & self._tag_notes_casefold[anchor_casefold]
+                    for anchor_casefold in anchor_casefold_set
+                    if anchor_casefold != term_casefold and anchor_casefold in self._tag_notes_casefold
+                }
+                cooccurrence = _most_anchors_cooccurrence(
+                    {anchor: notes for anchor, notes in shared_by_anchor.items() if notes}
                 )
+                if cooccurrence is not None:
+                    described[term] = cooccurrence
         return described
 
     def describe_search_suggestions(self, *, query: str, terms: Iterable[str]) -> SearchSuggestionFacts:
@@ -666,9 +712,11 @@ class SearchIndex:
             note_counts: Dict[str, int] = {}
             matching_counts: Dict[str, int] = {}
             for term in shown:
-                posting: FrozenSet[int] = frozenset()
-                if term.casefold() in self._tag_notes_casefold:
-                    posting = frozenset(self._tag_notes_casefold[term.casefold()])
+                if term.casefold() not in self._tag_notes_casefold:
+                    note_counts[term] = 0
+                    matching_counts[term] = 0
+                    continue
+                posting = self._tag_notes_casefold[term.casefold()]
                 note_counts[term] = len(posting)
                 matching_counts[term] = len(posting & matching_ids)
             cooccurrences = self.describe_tag_cooccurrence(
@@ -1063,7 +1111,7 @@ class SearchIndex:
             term_casefold = casefold_by_term[term]
             tag_terms_casefold.append(term_casefold)
             self._tag_notes.add(term)
-            _add_posting(self._tag_notes_casefold, term_casefold, note_int_id)
+            self._add_tag_casefold_posting_locked(term_casefold, note_int_id)
         self._note_tag_terms_casefold.append(frozenset(tag_terms_casefold))
         return note_int_id
 
@@ -1114,7 +1162,7 @@ class SearchIndex:
                 self._tag_notes_casefold[term.casefold()].discard(note_int_id)
             for term in new_tag_terms:
                 self._tag_notes.add(term)
-                _add_posting(self._tag_notes_casefold, term.casefold(), note_int_id)
+                self._add_tag_casefold_posting_locked(term.casefold(), note_int_id)
             self._note_tag_terms[note_int_id] = new_tag_terms
             self._note_tag_terms_casefold[note_int_id] = frozenset(
                 term.casefold() for term in new_tag_terms
@@ -1282,6 +1330,18 @@ class SearchIndex:
                 return False
         return True
 
+    def _add_tag_casefold_posting_locked(self, term_casefold: str, note_int_id: int) -> None:
+        # Postings are never deleted: a term gets its posting, and joins its family, once.
+        if term_casefold not in self._tag_notes_casefold:
+            self._tag_notes_casefold[term_casefold] = set()
+            if TAG_VALUE_SEPARATOR in term_casefold:
+                family = term_casefold.split(TAG_VALUE_SEPARATOR, 1)[0]
+                if family in self._tag_family_members:
+                    self._tag_family_members[family].append(term_casefold)
+                else:
+                    self._tag_family_members[family] = [term_casefold]
+        self._tag_notes_casefold[term_casefold].add(note_int_id)
+
     def _tag_family_posting_locked(self, tag_casefold: str) -> Set[int]:
         """The notes carrying a tag; for a tag without a value (@code), also those
         carrying any tag=value (@code=python, @code=sql)."""
@@ -1289,9 +1349,10 @@ class SearchIndex:
         prefix = tag_family_prefix(tag_casefold)
         if prefix is None:
             return exact
-        members = [notes for term, notes in self._tag_notes_casefold.items() if term.startswith(prefix)]
-        if not members:
+        assert prefix == f"{tag_casefold}{TAG_VALUE_SEPARATOR}", "a family is its members' part before the first separator"
+        if tag_casefold not in self._tag_family_members:
             return exact
+        members = [self._tag_notes_casefold[term] for term in self._tag_family_members[tag_casefold]]
         return set(exact).union(*members)
 
 
