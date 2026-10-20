@@ -34,28 +34,16 @@ from app.services.agent.structured_inference import _create_structured_completio
 from app.services.agent.structured_inference import _extract_reasoning
 from app.services.agent.structured_inference import _json_object
 from app.services.agent.structured_inference import _structured_max_output_tokens
+from app.services.agent.openai_models import OPENAI_API_BASE_URL
+from app.services.agent.openai_models import OPENAI_MODEL_CONTEXT_TOKENS
+from app.services.agent.openai_models import OPENAI_MODELS
+from app.services.agent.openai_models import validate_openai_model
 
 
-OPENAI_API_BASE_URL = "https://api.openai.com/v1"
-OPENAI_MODEL_CONTEXT_TOKENS = 1_050_000
-OPENAI_MODELS = (
-    "gpt-5.6-sol",
-    "gpt-5.6-terra",
-    "gpt-5.6-luna",
-)
 
 
 class OpenAIProviderError(InferenceProviderError):
     """Expected OpenAI API or transport failure."""
-
-
-def validate_openai_model(model: str) -> str:
-    if not isinstance(model, str):
-        raise TypeError("OpenAI model must be text")
-    normalized = model.strip()
-    if normalized not in OPENAI_MODELS:
-        raise ValueError(f"Unsupported OpenAI model: {model}")
-    return normalized
 
 
 def resolve_openai_reasoning_effort(thinking_level: str) -> str:

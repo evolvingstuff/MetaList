@@ -7,17 +7,20 @@ manually by the sqlite helper layer and service hooks.
 
 import logging
 import time
-from typing import Dict, Iterator, Mapping, Optional, Sequence
+from typing import Dict, Iterator, Mapping, Sequence
 
-from app.db.session import connect_reader
+from app.db.content_migrations_sql import is_content_migration_complete
+from app.db.content_migrations_sql import record_content_migration_complete
 from app.db.notes_sql import count_notes, iter_all_for_cache
+from app.db.notes_sql import update_note_fields_preserving_updated_at
 from app.db.raw_connection import raw_sqlite_connection
+from app.db.session import begin_writer
 
 from ..models.database import SafeSession
-from ..utils.encryption import get_encryption_service
+from ..utils.encryption import encrypt, get_encryption_service
 from app.services.hydration_state import hydration_state
 from app.utils.text_utils import strip_sanitized_html
-from app.security.note_html import sanitize_note_html
+from app.security.note_html import sanitize_note_html, sanitizer_fingerprint
 
 logger = logging.getLogger(__name__)
 
@@ -99,27 +102,67 @@ def clear_cache() -> None:
 # What the note store reads from a row once the cache holds its decrypted text and tags.
 _NOTE_STRUCTURE_FIELDS = ("id", "parent_id", "prev_id", "next_id", "is_collapsed", "created_at", "updated_at")
 
+# The namespace_content_migrations record that every note in the database is stored as
+# the current cleaning (sanitize_note_html) writes it; it ends in that cleaning's
+# fingerprint, so a changed cleaning has no record yet.
+STORED_HTML_CLEANED_PREFIX = "stored-note-html-cleaned:"
 
-def populate_cache_from_db(db: SafeSession | None) -> Sequence[Mapping[str, object]]:
-    """Fill the cache with every note, decrypted and sanitized, and return each note's
-    structure fields (_NOTE_STRUCTURE_FIELDS) for the note store.
+
+def stored_html_cleaned_migration_id() -> str:
+    return STORED_HTML_CLEANED_PREFIX + sanitizer_fingerprint()
+
+
+def populate_cache_from_db(db: SafeSession) -> Sequence[Mapping[str, object]]:
+    """Fill the cache with every note, decrypted, and return each note's structure
+    fields (_NOTE_STRUCTURE_FIELDS) for the note store.
+
+    Every save cleans a note before storing it, so stored notes are cleaned already.
+    Notes stored some other way (before cleaning existed, under an earlier cleaning, by
+    a restore, an import or convert-from-legacy.py) are in a database without the
+    record for the current cleaning: then every note is cleaned here once, and a note
+    the cleaning changes is stored cleaned in the same write that adds the record.
+    Cleaning every note took a quarter of unlocking (2026-10-19).
 
     Rows stream from the database one at a time and only their structure fields are
     kept, so no more than one row's ciphertext is ever held: holding them all until the
     note store had loaded made unlocking peak hundreds of MB above what it keeps.
     """
     logger.info("Populating content cache from database...")
-    # notes_sql reads through the plain sqlite3 connection either way.
-    if db is None:
-        with connect_reader("cache:populate") as connection:
-            raw = raw_sqlite_connection(connection)
-            return _populate_from_rows(count_notes(raw), iter_all_for_cache(raw))
     with SafeSession.allow_reads("cache:populate"):
         raw = raw_sqlite_connection(db.connection())
-        return _populate_from_rows(count_notes(raw), iter_all_for_cache(raw))
+        migration_id = stored_html_cleaned_migration_id()
+        clean_stored_html = not is_content_migration_complete(raw, migration_id)
+        structures, cleaned_notes = _populate_from_rows(
+            count_notes(raw), iter_all_for_cache(raw), clean_stored_html=clean_stored_html,
+        )
+    if clean_stored_html:
+        _store_cleaned_notes(cleaned_notes, migration_id=migration_id)
+    return structures
 
 
-def _populate_from_rows(note_count: int, notes: Iterator[dict]) -> Sequence[Mapping[str, object]]:
+def _store_cleaned_notes(cleaned_notes: Mapping[str, str], *, migration_id: str) -> None:
+    """Stores each note as cleaned, encrypted as a save would, keeping its updated time
+    (the note reads as it always has: the cache has always held it cleaned), and records
+    that the database is cleaned, all in one write."""
+    with begin_writer() as writer:
+        connection = raw_sqlite_connection(writer)
+        for note_id, cleaned_content in cleaned_notes.items():
+            content, nonce, tag = encrypt(cleaned_content, "")
+            update_note_fields_preserving_updated_at(
+                connection, note_id, content=content, encryption_nonce=nonce, encryption_tag=tag,
+            )
+        record_content_migration_complete(
+            connection, migration_id=migration_id, converted_count=len(cleaned_notes),
+            superseded_prefix=STORED_HTML_CLEANED_PREFIX,
+        )
+    logger.info("Cleaned stored note HTML once: %d notes changed", len(cleaned_notes))
+
+
+def _populate_from_rows(
+    note_count: int, notes: Iterator[dict], *, clean_stored_html: bool,
+) -> tuple[Sequence[Mapping[str, object]], Mapping[str, str]]:
+    """The structure rows, and when clean_stored_html, each note the cleaning changed
+    with its cleaned content."""
     global _search_cache, _tag_cache, _proposed_tag_cache, _text_cache
 
     if _CACHE_TIMING_ENABLED:
@@ -148,6 +191,7 @@ def _populate_from_rows(note_count: int, notes: Iterator[dict]) -> Sequence[Mapp
     decrypt_seconds = 0.0
     sanitize_seconds = 0.0
     text_seconds = 0.0
+    cleaned_notes: Dict[str, str] = {}
     processed = 0
     last_checkpoint = loop_started
     for note in notes:
@@ -249,13 +293,18 @@ def _populate_from_rows(note_count: int, notes: Iterator[dict]) -> Sequence[Mapp
         else:
             decrypted_proposed_tags = proposed_tags
 
-        step_started = time.perf_counter()
-        sanitized_content = sanitize_note_html(decrypted_content)
-        sanitize_seconds += time.perf_counter() - step_started
+        sanitized_content = decrypted_content
+        if clean_stored_html:
+            step_started = time.perf_counter()
+            sanitized_content = sanitize_note_html(decrypted_content)
+            sanitize_seconds += time.perf_counter() - step_started
+            if sanitized_content != decrypted_content:
+                cleaned_notes[note_id] = sanitized_content
         hydrated_content[note_id] = sanitized_content
         hydrated_tags[note_id] = decrypted_tags
         hydrated_proposed_tags[note_id] = decrypted_proposed_tags
         # The sanitizer's output: its text without Python's HTML parser, same result.
+        # It refuses a comment, script or style, which the sanitizer never writes.
         step_started = time.perf_counter()
         hydrated_text[note_id] = strip_sanitized_html(sanitized_content)
         text_seconds += time.perf_counter() - step_started
@@ -282,11 +331,11 @@ def _populate_from_rows(note_count: int, notes: Iterator[dict]) -> Sequence[Mapp
 
     if hydration_state.is_running():
         hydration_state.update(processed)
-        hydration_state.record_steps({
-            "decrypt note text": decrypt_seconds,
-            "sanitize note HTML": sanitize_seconds,
-            "extract note text": text_seconds,
-        })
+        steps = {"decrypt note text": decrypt_seconds}
+        if clean_stored_html:
+            steps["sanitize note HTML (once)"] = sanitize_seconds
+        steps["extract note text"] = text_seconds
+        hydration_state.record_steps(steps)
     if processed != note_count:
         raise RuntimeError(f"Cache population read {processed} notes but the database counted {note_count}")
 
@@ -308,4 +357,4 @@ def _populate_from_rows(note_count: int, notes: Iterator[dict]) -> Sequence[Mapp
 
     logger.info(f"Content cache populated with {processed} notes")
 
-    return structures
+    return structures, cleaned_notes

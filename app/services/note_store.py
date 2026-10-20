@@ -544,7 +544,8 @@ class NoteStore:
             if effective_with_ontology != base_terms:
                 updates[note_id] = effective_with_ontology
             processed_candidates += 1
-            if hydration_state.is_running() and processed_candidates % _HYDRATION_PROGRESS_INTERVAL_NOTES == 0:
+            # The interval first: is_running takes a lock, once per interval rather than per note.
+            if processed_candidates % _HYDRATION_PROGRESS_INTERVAL_NOTES == 0 and hydration_state.is_running():
                 hydration_state.update(processed_candidates)
 
         if timing_enabled:
@@ -617,7 +618,7 @@ class NoteStore:
                     f"[startup] note_store hydrated {processed} notes | last {_STARTUP_TIMING_LOG_INTERVAL_NOTES} in {batch_elapsed:.2f}s | total {total_elapsed:.2f}s"
                 )
                 last_checkpoint = now
-            if hydration_state.is_running() and processed % _HYDRATION_PROGRESS_INTERVAL_NOTES == 0:
+            if processed % _HYDRATION_PROGRESS_INTERVAL_NOTES == 0 and hydration_state.is_running():
                 hydration_state.update(processed)
 
         if hydration_state.is_running():

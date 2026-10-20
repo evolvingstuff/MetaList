@@ -6,13 +6,17 @@ import json
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import httpx
 from pydantic import BaseModel
 from pydantic import ValidationError
 
-from instructor.v2.core.client import AsyncInstructor
-from instructor.v2.core.errors import InstructorRetryException
+# Instructor loads the OpenAI SDK (about 250 ms); the routes import this module for its
+# constants, so it loads only when a structured request first runs (openai_models.py).
+if TYPE_CHECKING:
+    from instructor.v2.core.client import AsyncInstructor
+    from instructor.v2.core.errors import InstructorRetryException
 
 from app.services.agent.history import record_provider_event
 from app.services.agent.judging import OutputJudgment
@@ -563,6 +567,9 @@ async def _run_structured_attempt(
     request_options: dict[str, object],
     attempt_number: int,
 ) -> tuple[BaseModel, object]:
+    # Imported here, not at the top: see the TYPE_CHECKING import above.
+    from instructor.v2.core.errors import InstructorRetryException
+
     # lint: allow-PY001 rationale="Provider responses and model-produced structured JSON are external and receive one bounded retry"
     try:
         return await _collect_structured_output(

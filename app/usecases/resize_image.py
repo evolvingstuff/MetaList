@@ -51,31 +51,35 @@ class CmdResizeImage(QueryCommand):
                 "updateUUID": update_uuid,
             }
 
+        before_content = record.content
+        before_tags = record.tags
         apply_update_content(
             self.note_id,
             mutation.content_html,
             mutation.tags,
             self.token,
         )
-
+        # The editor puts the content into the page as HTML: it gets what the save
+        # stored, cleaned, not the resize's own result from before cleaning.
+        stored = store.get(self.note_id)
 
         undo_state.record_update(
             self.client_id,
             self.undo_context,
             self.note_id,
-            before=record.content,
-            after=mutation.content_html,
-            before_tags=record.tags,
-            after_tags=mutation.tags,
+            before=before_content,
+            after=stored.content,
+            before_tags=before_tags,
+            after_tags=stored.tags,
             viewport=self.viewport,
         )
 
         return {
             "status": "updated",
-            "content": mutation.content_html,
-            "tags": mutation.tags,
+            "content": stored.content,
+            "tags": stored.tags,
             "sizeFactor": mutation.size_factor,
             # The editor shows them with the new text, in the same frame.
-            "editingImageSizes": editing_image_size_factors(content_html=mutation.content_html, tags=mutation.tags),
+            "editingImageSizes": editing_image_size_factors(content_html=stored.content, tags=stored.tags),
             "updateUUID": update_uuid,
         }

@@ -56,6 +56,8 @@ _OPEN_TO_CLOSE = {
     "(": ")",
 }
 _CLOSE_TO_OPEN = {value: key for key, value in _OPEN_TO_CLOSE.items()}
+# Any wrapper opener, found in one C-level search (unlocking scans every note's tags).
+_WRAPPER_OPENER_RE = re.compile("[" + re.escape("".join(_OPEN_TO_CLOSE)) + "]")
 
 MAX_DELIMITER_DEPTH = 3
 # A wrapped tag token has an opener run and an equally long closer run.
@@ -1401,7 +1403,7 @@ def _tokenize_tag_bar(tags: str) -> List[str]:
     # Without comments or wrapper openers the scanner below only splits on
     # whitespace (str.isspace, the same set str.split uses), so take the
     # C-speed path for plain tag strings.
-    if "/*" not in tags and not any(opener in tags for opener in _OPEN_TO_CLOSE):
+    if "/*" not in tags and _WRAPPER_OPENER_RE.search(tags) is None:
         return tags.split()
     return _scan_tag_bar_tokens(tags)
 

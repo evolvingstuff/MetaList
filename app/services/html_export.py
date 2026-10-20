@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 from datetime import datetime
 from dataclasses import dataclass
 from functools import lru_cache
@@ -8,6 +9,7 @@ import html
 import re
 from pathlib import Path
 
+from app.security.rendered_html import sanitize_exported_html
 from app.services.content_formatting import find_list_style
 from app.services.content_formatting import is_password_note
 from app.services.content_formatting import is_username_note
@@ -213,6 +215,12 @@ _EMBED_TOKEN = re.compile(r"!?\[\[[^\]]+\]\]")
 # (in an embed too) shows only its first line and hides its children, and a
 # click on a username, an included password or a copyable value copies it.
 # Printing shows everything and drops the arrows.
+# What the file may load: its images (inline data, or remote as in the note), its own
+# styles, and the download's own script (by hash; a print has none). Nothing else.
+_EXPORT_POLICY = (
+    "default-src 'none'; img-src data: https: http:; style-src 'unsafe-inline'; "
+    "script-src {script_source}; base-uri 'none'; form-action 'none'"
+)
 _EXPORT_SCRIPT = r"""
 function flashCopied(element, className) {
   element.classList.remove(className);
@@ -355,11 +363,18 @@ def build_notes_export_document(
     document_title = title.strip()
     if document_title == "":
         document_title = _DEFAULT_TITLE
+    # The download's own script, as the element holds it, which the policy names by hash.
+    script_text = "\n" + _indent_block(_EXPORT_SCRIPT, _HTML_INNER_INDENT_SPACES) + "\n  "
+    script_source = "'none'"
+    if is_download:
+        script_source = f"'sha256-{base64.b64encode(hashlib.sha256(script_text.encode('utf-8')).digest()).decode('ascii')}'"
     lines = [
         "<!DOCTYPE html>",
         f'<html lang="en" data-theme="{normalized_theme}">',
         "<head>",
         '  <meta charset="utf-8" />',
+        # A download opens from disk, outside MetaList's own policy: the file sets its own.
+        f'  <meta http-equiv="Content-Security-Policy" content="{_EXPORT_POLICY.format(script_source=script_source)}" />',
         '  <meta name="viewport" content="width=device-width, initial-scale=1" />',
         f"  <title>{html.escape(document_title)}</title>",
         "  <style>",
@@ -376,7 +391,7 @@ def build_notes_export_document(
         lines.append(notes_markup)
     lines.append("  </main>")
     if is_download:
-        lines.extend(["  <script>", _indent_block(_EXPORT_SCRIPT, _HTML_INNER_INDENT_SPACES), "  </script>"])
+        lines.append(f"  <script>{script_text}</script>")
     lines.extend(["</body>", "</html>"])
     return "\n".join(lines)
 
@@ -726,11 +741,12 @@ def _render_exported_note_node(
 def _as_drawn_in_metalist(*, note_id: str, record, context: EmbedRenderContext, rendered_content: str) -> str:
     """A note's content with the wrapper MetaList's view gives it: a holder (a note
     that is only a reference) is tinted and its embed has no panel of its own.
-    There is no backlinks button: a file has no backlinks view to open."""
-    return decorate_note_references(
+    There is no backlinks button: a file has no backlinks view to open. Like the view,
+    it is sanitized last (rendered_html.py), allowing the file's inline images."""
+    return sanitize_exported_html(decorate_note_references(
         note_id=note_id, content_html=record.content, tags=record.tags,
         rendered_content=rendered_content, context=context, has_backlinks=False,
-    )
+    ))
 
 
 @lru_cache(maxsize=1)

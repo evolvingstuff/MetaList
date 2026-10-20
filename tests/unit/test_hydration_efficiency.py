@@ -73,6 +73,13 @@ def test_cache_hydration_sanitizes_and_extracts_text_once_per_note(
     monkeypatch.setattr(content_cache, "count_notes", lambda _connection: len(rows))
     # The rows come from the stubs above; the fake connection is passed through as is.
     monkeypatch.setattr(content_cache, "raw_sqlite_connection", lambda connection: connection)
+    # A database not yet recorded as cleaned: this unlock cleans every note once.
+    monkeypatch.setattr(content_cache, "is_content_migration_complete", lambda _connection, _migration_id: False)
+    stored_cleaned: list[dict[str, str]] = []
+    monkeypatch.setattr(
+        content_cache, "_store_cleaned_notes",
+        lambda cleaned_notes, *, migration_id: stored_cleaned.append(dict(cleaned_notes)),
+    )
     monkeypatch.setattr(content_cache, "sanitize_note_html", sanitize_once)
     monkeypatch.setattr(content_cache, "strip_sanitized_html", strip_once)
     monkeypatch.setattr(content_cache, "_CACHE_TIMING_ENABLED", False)
@@ -90,6 +97,8 @@ def test_cache_hydration_sanitizes_and_extracts_text_once_per_note(
         for row in rows
     ]
     assert sanitize_calls == ["<div>One</div>", "<div>Two</div>"]
+    # Cleaning changed neither, so nothing is stored again.
+    assert stored_cleaned == [{}]
     assert strip_calls == ["<div>One</div>", "<div>Two</div>"]
     assert content_cache.get_cached_content("one") == "<div>One</div>"
     assert content_cache.get_cached_tags("two") == "beta"

@@ -35,8 +35,8 @@ from app.services.agent.cloud_privacy import cloud_privacy_evaluator
 from app.services.agent.cloud_privacy import resolve_cloud_privacy_boundary
 from app.services.agent.inference import InferenceAdapter
 from app.services.agent.model_policy import SingleModelPolicy
-from app.services.agent.openai_inference import OPENAI_MODELS
-from app.services.agent.openai_inference import validate_openai_model
+from app.services.agent.openai_models import OPENAI_MODELS
+from app.services.agent.openai_models import validate_openai_model
 from app.services.agent.openai_cost_tracking import OpenAICostSnapshot
 from app.services.agent.openai_cost_tracking import openai_cost_tracker
 from app.services.agent.prompt_settings import AgentPromptSet

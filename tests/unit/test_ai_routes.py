@@ -8,6 +8,7 @@ from fastapi import HTTPException, Response
 from pydantic import ValidationError
 
 import app.api.routes.ai as ai_routes
+import app.services.agent.openai_inference as openai_inference_module
 import app.services.ai_setup as ai_setup_module
 from app.security.note_html import sanitize_note_html
 from app.services.ai_chat import AiChatSessionStore
@@ -912,7 +913,7 @@ def test_stream_chat_uses_openai_provider_with_cloud_boundary(
         assert cost_tracker is ai_routes.openai_cost_tracker
         return inference_sentinel
 
-    monkeypatch.setattr(ai_setup_module, "OpenAIInferenceAdapter", fake_openai_adapter)
+    monkeypatch.setattr(openai_inference_module, "OpenAIInferenceAdapter", fake_openai_adapter)
 
     def fake_runtime_factory(*, inference):
         # The connection's adapter, wrapped so it stops sending if the privacy settings change.

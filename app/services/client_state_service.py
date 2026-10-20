@@ -29,7 +29,7 @@ from app.services.agent.retrieval_settings import OPENAI_MAX_PAGE_APPROXIMATE_TO
 from app.services.agent.retrieval_settings import validate_openai_max_page_approximate_tokens_preference
 from app.services.agent.web_settings import WEB_ACCESS_MODE_PREFERENCE_KEY
 from app.services.agent.web_settings import WEB_ACCESS_MODES
-from app.services.agent.openai_inference import validate_openai_model
+from app.services.agent.openai_models import validate_openai_model
 
 _DICTATION_PHRASE_MIN_CHARS = 2
 _DICTATION_PHRASE_MAX_CHARS = 64

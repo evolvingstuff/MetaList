@@ -14,6 +14,7 @@ contracts rely on it).
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from functools import lru_cache
 
 import nh3
@@ -129,8 +130,7 @@ def _sanitize_rendered_attribute(tag_name: str, attribute_name: str, value: str)
     return value
 
 
-@lru_cache(maxsize=1)
-def _build_rendered_cleaner() -> nh3.Cleaner:
+def _renderer_cleaner(attribute_filter: Callable[[str, str, str], str | None]) -> nh3.Cleaner:
     policy = load_note_html_policy()
     attributes = {tag: set(names) for tag, names in policy["allowed_attributes"].items()}
     for tag, names in RENDERER_ATTRIBUTES.items():
@@ -141,12 +141,17 @@ def _build_rendered_cleaner() -> nh3.Cleaner:
         # Stored notes drop a button with its content; rendered views keep the renderers' buttons.
         clean_content_tags=set(policy["clean_content_tags"]) - RENDERER_TAGS,
         attributes=attributes,
-        attribute_filter=_sanitize_rendered_attribute,
+        attribute_filter=attribute_filter,
         strip_comments=True,
         link_rel=None,
         url_schemes=set(policy["allowed_url_schemes"]),
         filter_style_properties={*policy["allowed_style_properties"], _SIZE_FACTOR_PROPERTY},
     )
+
+
+@lru_cache(maxsize=1)
+def _build_rendered_cleaner() -> nh3.Cleaner:
+    return _renderer_cleaner(_sanitize_rendered_attribute)
 
 
 def sanitize_rendered_html(html: str) -> str:
@@ -155,3 +160,29 @@ def sanitize_rendered_html(html: str) -> str:
     if not isinstance(html, str):
         raise TypeError("html must be a string")
     return _build_rendered_cleaner().clean(html)
+
+
+# An exported file carries its attached images and diagram previews (SVG) inline, as
+# base64 data URLs of any image type and size. An image never runs script, an SVG one
+# included, so in an <img> source these are inert.
+_EXPORTED_DATA_IMAGE_RE = re.compile(r"^data:image/[a-z0-9.+-]+;base64,[a-z0-9+/=]+$", re.IGNORECASE)
+
+
+def _sanitize_exported_attribute(tag_name: str, attribute_name: str, value: str) -> str | None:
+    if tag_name == "img" and attribute_name == "src" and _EXPORTED_DATA_IMAGE_RE.match(value):
+        return value
+    return _sanitize_rendered_attribute(tag_name, attribute_name, value)
+
+
+@lru_cache(maxsize=1)
+def _build_exported_cleaner() -> nh3.Cleaner:
+    return _renderer_cleaner(_sanitize_exported_attribute)
+
+
+def sanitize_exported_html(html: str) -> str:
+    """A note rendered for an exported file (html_export.py), with anything outside the
+    rendered-HTML allowlist removed; its images may be data URLs of the namespace's own
+    files, of any image type and size."""
+    if not isinstance(html, str):
+        raise TypeError("html must be a string")
+    return _build_exported_cleaner().clean(html)
