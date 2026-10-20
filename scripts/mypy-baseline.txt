@@ -336,7 +336,6 @@ app/services/note_store.py: Argument 1 to "fetch_all_for_cache" has incompatible
 app/services/note_store.py: Argument 1 to "from_records" of "NoteOrdering" has incompatible type "dict[str, NoteRecord]"; expected "Mapping[str, OrderedNote]"  [arg-type]
 app/services/note_store.py: Argument 1 to "from_records" of "NoteOrdering" has incompatible type "dict[str, NoteRecord]"; expected "Mapping[str, OrderedNote]"  [arg-type]
 app/services/note_store.py: Incompatible types in assignment (expression has type "str | None", variable has type "str")  [assignment]
-app/services/note_store.py: Need type annotation for "dependencies" (hint: "dependencies: dict[<type>, <type>] = ...")  [var-annotated]
 app/services/note_store.py: Need type annotation for "referrer_ids" (hint: "referrer_ids: set[<type>] = ...")  [var-annotated]
 app/services/note_store.py: Value of type variable "Record" of "insert" of "NoteOrdering" cannot be "NoteRecord"  [type-var]
 app/services/note_store.py: Value of type variable "Record" of "remove" of "NoteOrdering" cannot be "NoteRecord"  [type-var]

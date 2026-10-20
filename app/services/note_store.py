@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from datetime import datetime
 from threading import RLock
-from typing import Dict, FrozenSet, Iterable, List, Optional, Sequence, Mapping, Set
+from typing import Dict, FrozenSet, Iterable, List, Optional, Protocol, Sequence, Mapping, Set
 from types import SimpleNamespace
 import time
 import logging
@@ -132,6 +132,41 @@ def _components_sources_first(dependencies: Mapping[str, Set[str]]) -> List[List
             components.append(component)
     assert len(index) == len(dependencies) and not stack
     return components
+
+
+class _TermSets(Protocol):
+    def __getitem__(self, note_id: str) -> FrozenSet[str]: ...
+    def __setitem__(self, note_id: str, value: FrozenSet[str]) -> None: ...
+    def __contains__(self, note_id: object) -> bool: ...
+
+
+class _PendingTermSets:
+    """A propagation's results over a shared map: read here first, then from the map
+    (notes outside the propagation, already final), and stored in the map once at the
+    end. Writing each note's direct terms to the map and then its result took twice
+    the shared-copy bookkeeping, a sixth of building the note store (2026-10-19)."""
+
+    def __init__(self, published: SharedSetMap) -> None:
+        self._published = published
+        self._pending: Dict[str, FrozenSet[str]] = {}
+
+    def __getitem__(self, note_id: str) -> FrozenSet[str]:
+        if note_id in self._pending:  # shockharness: ignore[DEF002] reason="two layers, no default: a pending result is newer than the published one, and a note in neither raises KeyError"
+            return self._pending[note_id]
+        return self._published[note_id]
+
+    def __setitem__(self, note_id: str, value: FrozenSet[str]) -> None:
+        self._pending[note_id] = value
+
+    def __contains__(self, note_id: object) -> bool:
+        if note_id in self._pending:
+            return True
+        return note_id in self._published
+
+    def publish(self) -> None:
+        for note_id, value in self._pending.items():
+            self._published[note_id] = value
+        self._pending.clear()
 
 
 def _union_term_sets(parts: List[FrozenSet[str]]) -> FrozenSet[str]:
@@ -317,38 +352,59 @@ class NoteStore:
                 current = self._note_map[current].parent_id
             visited.update(path)
 
+    def _parents_first_locked(self, affected: set[str]) -> List[str]:
+        """The affected notes, each after its parent when the parent is affected too."""
+        order: List[str] = []
+        pending = [note_id for note_id in affected if self._note_map[note_id].parent_id not in affected]
+        while pending:
+            note_id = pending.pop()
+            order.append(note_id)
+            pending.extend(child for child in self._get_children_locked(note_id) if child in affected)
+        if len(order) != len(affected):
+            raise RuntimeError("Integrity failure: hierarchy cycle during tag inheritance")
+        return order
+
     def _propagate_inherited_tag_terms_locked(self, affected: set[str]) -> Dict[str, FrozenSet[str]]:
-        dependencies = {}
-        for note_id in affected:
+        # Inherited terms flow only from a parent, and the hierarchy has no cycles: in
+        # parents-first order each note's terms are final when it is reached, with no
+        # dependency graph to order.
+        accepted = _PendingTermSets(self._effective_non_meta_tag_terms)
+        proposed = _PendingTermSets(self._effective_proposed_non_meta_tag_terms)
+        for note_id in self._parents_first_locked(affected):
             record = self._note_map[note_id]
             targets = self._reference_targets_locked(note_id)
-            self._effective_non_meta_tag_terms[note_id] = record.non_meta_tag_terms | frozenset().union(
+            own_accepted = record.non_meta_tag_terms | frozenset().union(
                 *(self._subtree_non_meta_tag_terms[target] for target in targets))
-            self._effective_proposed_non_meta_tag_terms[note_id] = (
-                record.proposed_non_meta_tag_terms | frozenset().union(
-                    *(self._subtree_proposed_non_meta_tag_terms[target] for target in targets)))
-            dependencies[note_id] = set()
-            if record.parent_id is not None:
-                dependencies[note_id].add(record.parent_id)
-        self._propagate_tag_dependencies_locked(
-            dependencies, self._effective_non_meta_tag_terms, self._effective_proposed_non_meta_tag_terms)
+            own_proposed = record.proposed_non_meta_tag_terms | frozenset().union(
+                *(self._subtree_proposed_non_meta_tag_terms[target] for target in targets))
+            if record.parent_id is None:
+                accepted[note_id] = own_accepted
+                proposed[note_id] = own_proposed
+                continue
+            accepted[note_id] = _union_term_sets([own_accepted, accepted[record.parent_id]])
+            proposed[note_id] = _union_term_sets([own_proposed, proposed[record.parent_id]])
+        accepted.publish()
+        proposed.publish()
         return {note_id: self._raw_tag_terms_locked(note_id) for note_id in affected}
 
     def _propagate_subtree_tag_terms_locked(self, affected: set[str]) -> None:
         dependencies = {}
+        accepted = _PendingTermSets(self._subtree_non_meta_tag_terms)
+        proposed = _PendingTermSets(self._subtree_proposed_non_meta_tag_terms)
         for note_id in affected:
             record = self._note_map[note_id]
-            self._subtree_non_meta_tag_terms[note_id] = record.non_meta_tag_terms
-            self._subtree_proposed_non_meta_tag_terms[note_id] = record.proposed_non_meta_tag_terms
+            accepted[note_id] = record.non_meta_tag_terms
+            proposed[note_id] = record.proposed_non_meta_tag_terms
             dependencies[note_id] = (set(self._get_children_locked(note_id))
                                      | self._reference_targets_locked(note_id))
-        self._propagate_tag_dependencies_locked(
-            dependencies, self._subtree_non_meta_tag_terms, self._subtree_proposed_non_meta_tag_terms)
+        self._propagate_tag_dependencies_locked(dependencies, accepted, proposed)
+        accepted.publish()
+        proposed.publish()
 
     @staticmethod
     def _propagate_tag_dependencies_locked(
         dependencies: Dict[str, set[str]],
-        accepted_terms: SharedSetMap, proposed_terms: SharedSetMap,
+        accepted_terms: _TermSets, proposed_terms: _TermSets,
     ) -> None:
         # Callers reset the affected closure to direct contributions first, so
         # cycles converge to the least fixed point even when tags are removed.
@@ -636,6 +692,7 @@ class NoteStore:
         search_records: List[SearchRecord] = []
         tag_only_terms_by_id: Dict[str, FrozenSet[str]] = {}
         tag_only_start = time.perf_counter()
+        search_text_seconds = 0.0
         if hydration_state.is_running():
             hydration_state.set_phase(
                 phase="tag_inference",
@@ -650,15 +707,18 @@ class NoteStore:
                 raise RuntimeError(f"Integrity failure: missing raw text for note {record.id}")
             tag_only_terms = ontology.infer_implication_only(base_tags=effective_terms)
             tag_only_terms_by_id[record.id] = tag_only_terms
+            step_started = time.perf_counter()
+            content_text = _search_text(record.content, content_text_by_id[record.id])
+            search_text_seconds += time.perf_counter() - step_started
             search_records.append(
                 SearchRecord(
                     note_id=record.id,
-                    content_text=_search_text(record.content, content_text_by_id[record.id]),
+                    content_text=content_text,
                     tags=record.tags,
                     tag_terms=tag_only_terms,
                 )
             )
-            if hydration_state.is_running() and len(search_records) % _HYDRATION_PROGRESS_INTERVAL_NOTES == 0:
+            if len(search_records) % _HYDRATION_PROGRESS_INTERVAL_NOTES == 0 and hydration_state.is_running():
                 hydration_state.update(len(search_records))
         if timing_enabled:
             print(
@@ -680,12 +740,15 @@ class NoteStore:
             if hydration_state.is_running():
                 hydration_state.update(processed)
 
-        search_index.rebuild(
+        index_steps = search_index.rebuild(
             search_records,
             raw_tag_terms_by_id=effective_tag_terms_by_id,
             progress_update=_update_search_index_progress,
             progress_interval=_HYDRATION_PROGRESS_INTERVAL_NOTES,
         )
+        if hydration_state.is_running():
+            # Where the search index's time goes, for the Memory Usage dialog's Last unlock.
+            hydration_state.record_steps({"tag inference: text with link addresses": search_text_seconds, **index_steps})
         if timing_enabled:
             print(
                 f"[startup] search index rebuild in {time.perf_counter() - index_start:.2f}s"

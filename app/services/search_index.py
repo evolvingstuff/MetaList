@@ -43,6 +43,47 @@ def _add_posting(postings: Dict[str, Set[int]], key: str, note_int_id: int) -> N
     postings[key].add(note_int_id)
 
 
+class _NoteCounts:
+    """How many live notes carry each key, for the postings only ever counted: a set
+    of note ids per tag held about 100 MB in a 107,500-note namespace (2026-10-19).
+    Each note adds a key once and removes it once, so a count never goes below one;
+    a key goes with its last note."""
+
+    __slots__ = ("_counts",)
+
+    def __init__(self) -> None:
+        self._counts: Dict[str, int] = {}
+
+    def add(self, key: str) -> None:
+        if key in self._counts:
+            self._counts[key] += 1
+        else:
+            self._counts[key] = 1
+
+    def remove(self, key: str) -> None:
+        count = self._counts[key]
+        assert count > 0, f"no note carries {key!r}"
+        if count == 1:
+            del self._counts[key]
+        else:
+            self._counts[key] = count - 1
+
+    def count(self, key: str) -> int:
+        return self._counts[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._counts
+
+    def items(self) -> Iterable[tuple[str, int]]:
+        return self._counts.items()
+
+    def __len__(self) -> int:
+        return len(self._counts)
+
+    def clear(self) -> None:
+        self._counts.clear()
+
+
 # A tag's name and its value: @code=python is the tag @code with the value python.
 TAG_VALUE_SEPARATOR = "="
 
@@ -252,10 +293,11 @@ class SearchIndex:
         self._note_raw_tag_terms = SharedSetColumn(self._shared_tag_sets)
         self._note_tag_terms = SharedSetColumn(self._shared_tag_sets)
         self._note_tag_terms_casefold = SharedSetColumn(self._shared_tag_sets)
-        self._explicit_tag_notes: Dict[str, Set[int]] = {}
-        self._explicit_tag_notes_casefold: Dict[str, Set[int]] = {}
-        self._raw_tag_notes_casefold: Dict[str, Set[int]] = {}
-        self._tag_notes: Dict[str, Set[int]] = {}
+        # Only counted (frequencies, suggestion spellings): counts, not sets of notes.
+        self._explicit_tag_notes = _NoteCounts()
+        self._explicit_tag_notes_casefold = _NoteCounts()
+        self._raw_tag_notes_casefold = _NoteCounts()
+        self._tag_notes = _NoteCounts()
         self._tag_notes_casefold: Dict[str, Set[int]] = {}
 
         self._result_cache: Dict[str, tuple[int, FrozenSet[str]]] = {}
@@ -268,7 +310,9 @@ class SearchIndex:
         raw_tag_terms_by_id: Dict[str, FrozenSet[str]],
         progress_update: Callable[[int], None],
         progress_interval: int,
-    ) -> None:
+    ) -> Dict[str, float]:
+        """Indexes the records in place of what it held; returns the seconds spent on
+        the notes' text and on their tags, for the Memory Usage dialog's Last unlock."""
         if progress_interval <= 0:
             raise ValueError("progress_interval must be > 0")
         t0 = time.perf_counter()
@@ -303,19 +347,24 @@ class SearchIndex:
             # sets repeat the same terms, so parse and casefold each only once.
             explicit_terms_by_tags: Dict[str, FrozenSet[str]] = {}
             casefold_by_term: Dict[str, str] = {}
+            text_seconds = 0.0
+            tag_seconds = 0.0
             for record in materialized:
+                step_started = time.perf_counter()
                 if record.tags not in explicit_terms_by_tags:
                     explicit_terms_by_tags[record.tags] = extract_tags_for_search(record.tags)
                 explicit_tag_terms = explicit_terms_by_tags[record.tags]
-                self._insert_new_locked(
+                note_int_id = self._insert_new_locked(
                     record.note_id,
-                    record.content_text,
-                    record.tags,
                     explicit_tag_terms,
                     raw_tag_terms_by_id[record.note_id],
                     record.tag_terms,
                     casefold_by_term,
                 )
+                text_started = time.perf_counter()
+                tag_seconds += text_started - step_started
+                self._set_note_text_locked(note_int_id, record.content_text, record.tags)
+                text_seconds += time.perf_counter() - text_started
                 processed += 1
                 if processed - last_reported >= progress_interval:
                     last_reported = processed
@@ -333,6 +382,7 @@ class SearchIndex:
                 "revision": self._revision,
             }
         ).info("search.index.rebuild.finish")
+        return {"search index: note text": text_seconds, "search index: tags": tag_seconds}
 
     def upsert(
         self,
@@ -359,15 +409,14 @@ class SearchIndex:
                     tag_terms,
                 )
             else:
-                self._insert_new_locked(
+                note_int_id = self._insert_new_locked(
                     note_id,
-                    content_text,
-                    tags,
                     extract_tags_for_search(tags),
                     raw_tag_terms,
                     tag_terms,
                     {},
                 )
+                self._set_note_text_locked(note_int_id, content_text, tags)
 
             self._revision += 1
             self._result_cache.clear()
@@ -420,13 +469,13 @@ class SearchIndex:
                 # large and mostly stable, so remove-all/add-all dominated.
                 # Postings are never deleted, so a term the note had has one.
                 for term in old_tag_terms - new_tag_terms:
-                    self._tag_notes[term].discard(note_int_id)
+                    self._tag_notes.remove(term)
                 new_casefold = frozenset(term.casefold() for term in new_tag_terms)
                 old_casefold = self._note_tag_terms_casefold[note_int_id]
                 for term_casefold in old_casefold - new_casefold:
                     self._tag_notes_casefold[term_casefold].discard(note_int_id)
                 for term in new_tag_terms - old_tag_terms:
-                    _add_posting(self._tag_notes, term, note_int_id)
+                    self._tag_notes.add(term)
                 for term_casefold in new_casefold - old_casefold:
                     _add_posting(self._tag_notes_casefold, term_casefold, note_int_id)
 
@@ -467,9 +516,9 @@ class SearchIndex:
                 old_raw_casefold = {term.casefold() for term in old_raw_tag_terms}
                 new_raw_casefold = {term.casefold() for term in new_raw_tag_terms}
                 for term_casefold in old_raw_casefold - new_raw_casefold:
-                    self._raw_tag_notes_casefold[term_casefold].discard(note_int_id)
+                    self._raw_tag_notes_casefold.remove(term_casefold)
                 for term_casefold in new_raw_casefold - old_raw_casefold:
-                    _add_posting(self._raw_tag_notes_casefold, term_casefold, note_int_id)
+                    self._raw_tag_notes_casefold.add(term_casefold)
 
                 self._note_raw_tag_terms[note_int_id] = new_raw_tag_terms
                 touched += 1
@@ -514,18 +563,18 @@ class SearchIndex:
         """Return tag term -> note count (excluding @meta tags)."""
         with self._lock:
             return {
-                term: len(note_ids)
-                for term, note_ids in self._tag_notes.items()
-                if note_ids and term and not term.startswith("@")
+                term: note_count
+                for term, note_count in self._tag_notes.items()
+                if term and not term.startswith("@")
             }
 
     def list_raw_tag_frequencies_by_casefold(self) -> Dict[str, int]:
         """Return raw tag -> distinct note count after inheritance, before ontology."""
         with self._lock:
             return {
-                term_casefold: len(note_ids)
-                for term_casefold, note_ids in self._raw_tag_notes_casefold.items()
-                if note_ids and term_casefold and not term_casefold.startswith("@")
+                term_casefold: note_count
+                for term_casefold, note_count in self._raw_tag_notes_casefold.items()
+                if term_casefold and not term_casefold.startswith("@")
             }
 
     def list_raw_tag_terms_for_note(self, note_id: str) -> FrozenSet[str]:
@@ -555,11 +604,10 @@ class SearchIndex:
     def list_explicit_tag_frequencies(self) -> Dict[str, int]:
         """Return explicitly written tag term -> note count (excluding @meta tags)."""
         with self._lock:
-            # A tag's posting stays, empty, once its last note is deleted or retagged.
             return {
-                term: len(note_ids)
-                for term, note_ids in self._explicit_tag_notes.items()
-                if note_ids and term and not term.startswith("@")
+                term: note_count
+                for term, note_count in self._explicit_tag_notes.items()
+                if term and not term.startswith("@")
             }
 
     def describe_tag_cooccurrence(
@@ -658,10 +706,7 @@ class SearchIndex:
         if not isinstance(term, str) or term == "":
             raise TypeError("term must be a non-empty string")
         with self._lock:
-            term_casefold = term.casefold()
-            if term_casefold not in self._explicit_tag_notes_casefold:
-                return False
-            return len(self._explicit_tag_notes_casefold[term_casefold]) > 0
+            return term.casefold() in self._explicit_tag_notes_casefold
 
     def count_notes_with_tag(self, term: str) -> int:
         """Notes carrying the tag, as suggestions count usage (case-insensitive)."""
@@ -984,13 +1029,12 @@ class SearchIndex:
     def _insert_new_locked(
         self,
         note_id: str,
-        content_text: str,
-        tags: str,
         explicit_tag_terms: FrozenSet[str],
         raw_tag_terms: FrozenSet[str],
         tag_terms: FrozenSet[str],
         casefold_by_term: Dict[str, str],
-    ) -> None:
+    ) -> int:
+        """Adds the note with its tags and no text; the caller sets its text next."""
         assert isinstance(explicit_tag_terms, frozenset)
         note_int_id = len(self._id_to_uuid)
         self._uuid_to_id[note_id] = note_int_id
@@ -999,32 +1043,42 @@ class SearchIndex:
 
         self._note_text_casefold.append("")
         self._note_link_title_urls.append(frozenset())
-        self._set_note_text_locked(note_int_id, content_text, tags)
         self._note_explicit_tag_terms.append(explicit_tag_terms)
         self._note_raw_tag_terms.append(raw_tag_terms)
         self._note_tag_terms.append(tag_terms)
 
-        for term in explicit_tag_terms:
-            _add_posting(self._explicit_tag_notes, term, note_int_id)
-            _add_posting(self._explicit_tag_notes_casefold, term.casefold(), note_int_id)
+        self._add_explicit_terms_locked(explicit_tag_terms)
+        raw_casefold = set()
         for term in raw_tag_terms:
             if term not in casefold_by_term:
                 casefold_by_term[term] = term.casefold()
-            _add_posting(self._raw_tag_notes_casefold, casefold_by_term[term], note_int_id)
+            raw_casefold.add(casefold_by_term[term])
+        # Once per note: Trip and trip are one lowercased tag.
+        for term_casefold in raw_casefold:
+            self._raw_tag_notes_casefold.add(term_casefold)
         tag_terms_casefold = []
         for term in tag_terms:
             if term not in casefold_by_term:
                 casefold_by_term[term] = term.casefold()
             term_casefold = casefold_by_term[term]
             tag_terms_casefold.append(term_casefold)
-            _add_posting(self._tag_notes, term, note_int_id)
+            self._tag_notes.add(term)
             _add_posting(self._tag_notes_casefold, term_casefold, note_int_id)
         self._note_tag_terms_casefold.append(frozenset(tag_terms_casefold))
+        return note_int_id
 
-    def _discard_explicit_posting_locked(self, term: str, note_int_id: int) -> None:
-        # Postings are never deleted, so a term the note had has one.
-        self._explicit_tag_notes[term].discard(note_int_id)
-        self._explicit_tag_notes_casefold[term.casefold()].discard(note_int_id)
+    def _add_explicit_terms_locked(self, terms: FrozenSet[str]) -> None:
+        for term in terms:
+            self._explicit_tag_notes.add(term)
+        # Once per note: Trip and trip are one lowercased tag.
+        for term_casefold in {term.casefold() for term in terms}:
+            self._explicit_tag_notes_casefold.add(term_casefold)
+
+    def _remove_explicit_terms_locked(self, terms: FrozenSet[str]) -> None:
+        for term in terms:
+            self._explicit_tag_notes.remove(term)
+        for term_casefold in {term.casefold() for term in terms}:
+            self._explicit_tag_notes_casefold.remove(term_casefold)
 
     def _update_existing_locked(
         self,
@@ -1043,26 +1097,23 @@ class SearchIndex:
         old_tag_terms = self._note_tag_terms[note_int_id]
 
         if old_explicit_tag_terms != new_explicit_tag_terms:
-            for term in old_explicit_tag_terms:
-                self._discard_explicit_posting_locked(term, note_int_id)
-            for term in new_explicit_tag_terms:
-                _add_posting(self._explicit_tag_notes, term, note_int_id)
-                _add_posting(self._explicit_tag_notes_casefold, term.casefold(), note_int_id)
+            self._remove_explicit_terms_locked(old_explicit_tag_terms)
+            self._add_explicit_terms_locked(new_explicit_tag_terms)
             self._note_explicit_tag_terms[note_int_id] = new_explicit_tag_terms
 
         if old_raw_tag_terms != new_raw_tag_terms:
-            for term in old_raw_tag_terms:
-                self._raw_tag_notes_casefold[term.casefold()].discard(note_int_id)
-            for term in new_raw_tag_terms:
-                _add_posting(self._raw_tag_notes_casefold, term.casefold(), note_int_id)
+            for term_casefold in {term.casefold() for term in old_raw_tag_terms}:
+                self._raw_tag_notes_casefold.remove(term_casefold)
+            for term_casefold in {term.casefold() for term in new_raw_tag_terms}:
+                self._raw_tag_notes_casefold.add(term_casefold)
             self._note_raw_tag_terms[note_int_id] = new_raw_tag_terms
 
         if old_tag_terms != new_tag_terms:
             for term in old_tag_terms:
-                self._tag_notes[term].discard(note_int_id)
+                self._tag_notes.remove(term)
                 self._tag_notes_casefold[term.casefold()].discard(note_int_id)
             for term in new_tag_terms:
-                _add_posting(self._tag_notes, term, note_int_id)
+                self._tag_notes.add(term)
                 _add_posting(self._tag_notes_casefold, term.casefold(), note_int_id)
             self._note_tag_terms[note_int_id] = new_tag_terms
             self._note_tag_terms_casefold[note_int_id] = frozenset(
@@ -1077,12 +1128,11 @@ class SearchIndex:
         self._alive.remove(note_int_id)
 
         for term in self._note_tag_terms[note_int_id]:
-            self._tag_notes[term].discard(note_int_id)
+            self._tag_notes.remove(term)
             self._tag_notes_casefold[term.casefold()].discard(note_int_id)
-        for term in self._note_explicit_tag_terms[note_int_id]:
-            self._discard_explicit_posting_locked(term, note_int_id)
-        for term in self._note_raw_tag_terms[note_int_id]:
-            self._raw_tag_notes_casefold[term.casefold()].discard(note_int_id)
+        self._remove_explicit_terms_locked(self._note_explicit_tag_terms[note_int_id])
+        for term_casefold in {term.casefold() for term in self._note_raw_tag_terms[note_int_id]}:
+            self._raw_tag_notes_casefold.remove(term_casefold)
         self._note_text_casefold[note_int_id] = ""
         self._set_link_title_urls_locked(note_int_id, frozenset())
         if note_int_id in self._note_base_text_casefold:
@@ -1123,9 +1173,8 @@ class SearchIndex:
     ) -> Dict[str, str]:
         partial_prefix_casefold = partial_prefix.casefold()
         representatives: Dict[str, str] = {}
-        for term, note_ids in self._tag_notes.items():
-            # Empty once the tag's last note is deleted or retagged.
-            if not note_ids or not term or term == "OR" or term.startswith("@"):
+        for term, _note_count in self._tag_notes.items():
+            if not term or term == "OR" or term.startswith("@"):
                 continue
             term_casefold = term.casefold()
             if term_casefold in anchor_casefold_set:
@@ -1143,8 +1192,8 @@ class SearchIndex:
         return representatives
 
     def _is_better_suggestion_variant_locked(self, *, candidate: str, incumbent: str) -> bool:
-        candidate_count = len(self._tag_notes[candidate])
-        incumbent_count = len(self._tag_notes[incumbent])
+        candidate_count = self._tag_notes.count(candidate)
+        incumbent_count = self._tag_notes.count(incumbent)
         if candidate_count != incumbent_count:
             return candidate_count > incumbent_count
         candidate_penalty, candidate_tiebreak = self._suggestion_term_tiebreak_locked(candidate)
@@ -1163,7 +1212,7 @@ class SearchIndex:
         """The known meta tags, the @ tags notes carry (@code=python) and each one's
         family (@code), once each by casefold; a known spelling wins (@LaTeX)."""
         by_casefold: Dict[str, str] = {}
-        in_use = [term for term, notes in self._tag_notes.items() if notes and term.startswith("@")]
+        in_use = [term for term, _note_count in self._tag_notes.items() if term.startswith("@")]
         families = [term.split(TAG_VALUE_SEPARATOR, 1)[0] for term in in_use if TAG_VALUE_SEPARATOR in term]
         for term in [*families, *in_use, *list_known_meta_tag_terms()]:
             by_casefold[term.casefold()] = term
