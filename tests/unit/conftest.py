@@ -137,3 +137,5 @@ def _rendered_html_pass_removes_nothing(request, monkeypatch):
         return
     cleaner = rendered_html._build_rendered_cleaner()
     monkeypatch.setattr(rendered_html, "_build_rendered_cleaner", lambda: _CheckedCleaner(cleaner))
+    exported_cleaner = rendered_html._build_exported_cleaner()
+    monkeypatch.setattr(rendered_html, "_build_exported_cleaner", lambda: _CheckedCleaner(exported_cleaner))

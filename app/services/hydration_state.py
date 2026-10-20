@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import time
 from threading import Lock
-from typing import Dict
+from typing import Dict, List
 
 _PHASE_ORDER = (
     "database_check",
@@ -51,9 +52,23 @@ class HydrationState:
         self._total = 0
         self._first_load = False
         self._error = ""
+        # How long each phase of the running unlock took, and of the last one finished
+        # (the Memory Usage dialog shows it; timings only, never content).
+        self._phase_started_at = 0.0
+        self._run_started_at = 0.0
+        self._phase_seconds: List[Dict[str, object]] = []
+        self._step_seconds: List[Dict[str, object]] = []
+        self._last_phases: List[Dict[str, object]] = []
+        self._last_steps: List[Dict[str, object]] = []
+        self._last_total_seconds = 0.0
 
     def begin(self, first_load: bool, message: str) -> None:
         with self._lock:
+            now = time.perf_counter()
+            self._run_started_at = now
+            self._phase_started_at = now
+            self._phase_seconds = []
+            self._step_seconds = []
             self._status = "running"
             self._phase = "starting"
             self._message = message
@@ -68,6 +83,7 @@ class HydrationState:
         with self._lock:
             if self._status != "running":
                 raise RuntimeError("Hydration is not running")
+            self._close_phase_locked()
             self._phase = phase
             self._message = message
             self._processed = 0
@@ -96,9 +112,36 @@ class HydrationState:
                 raise RuntimeError("Hydration is not running")
             if self._total > 0:
                 self._processed = self._total
+            self._close_phase_locked()
+            self._last_phases = list(self._phase_seconds)
+            self._last_steps = list(self._step_seconds)
+            self._last_total_seconds = time.perf_counter() - self._run_started_at
             self._status = "ready"
             self._phase = "complete"
             self._message = "Workspace ready"
+
+    def _close_phase_locked(self) -> None:
+        now = time.perf_counter()
+        self._phase_seconds.append({"phase": self._phase, "seconds": now - self._phase_started_at})
+        self._phase_started_at = now
+
+    def record_steps(self, seconds_by_step: Dict[str, float]) -> None:
+        """Time spent on steps within a phase (decrypting, sanitizing, extracting text)."""
+        with self._lock:
+            if self._status != "running":
+                raise RuntimeError("Hydration is not running")
+            for step, seconds in seconds_by_step.items():
+                assert seconds >= 0, f"step {step} took negative time"
+                self._step_seconds.append({"step": step, "seconds": seconds})
+
+    def last_run_timings(self) -> Dict[str, object]:
+        """The last finished unlock's phases and steps in seconds; none before the first."""
+        with self._lock:
+            return {
+                "phases": list(self._last_phases),
+                "steps": list(self._last_steps),
+                "totalSeconds": self._last_total_seconds,
+            }
 
     def fail(self, message: str) -> None:
         with self._lock:

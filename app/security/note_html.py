@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from functools import lru_cache
+from importlib.metadata import version as package_version
 from pathlib import Path
 from typing import Any
 
@@ -90,6 +92,19 @@ _MATHML_VARIANTS = frozenset(
 _MATHML_NOTATIONS = frozenset(
     {"box", "downdiagonalstrike", "horizontalstrike", "updiagonalstrike"}
 )
+
+
+@lru_cache(maxsize=1)
+def sanitizer_fingerprint() -> str:
+    """Names the stored-note cleaning exactly: what this module does, the policy file it
+    applies and the nh3 release that runs it. Any change to one gives a new fingerprint,
+    so notes stored under the old cleaning are cleaned again (stored_note_html.py). Line
+    endings are normalized so a Windows checkout names the same cleaning."""
+    digest = hashlib.sha256()
+    for source_path in (Path(__file__), _POLICY_PATH):
+        digest.update(source_path.read_bytes().replace(b"\r\n", b"\n"))
+    digest.update(package_version("nh3").encode("ascii"))
+    return digest.hexdigest()
 
 
 @lru_cache(maxsize=1)

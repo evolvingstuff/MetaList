@@ -2374,7 +2374,10 @@ class CommandPaletteController {
             return;
         }
         if (this._memoryUsageModal === null) {
-            this._memoryUsageModal = new MemoryUsageModal(NotesAPI.getMemoryUsage.bind(NotesAPI));
+            this._memoryUsageModal = new MemoryUsageModal(
+                NotesAPI.getMemoryUsage.bind(NotesAPI),
+                NotesAPI.getMemoryBreakdown.bind(NotesAPI),
+            );
         }
         await this._memoryUsageModal.open();
     }

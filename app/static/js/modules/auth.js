@@ -21,6 +21,7 @@ import {
 import { formatElapsedDuration } from './elapsed-time.js';
 import { MS_PER_SECOND } from './time-units.js';
 import { escapeHtml } from './html-escape.js';
+import { beginStartupTiming, enterStartupStage, finishStartupTiming } from './startup-timing.js';
 
 // Matches the 350 ms slide in main.css (.login-view-leaving).
 const LOGIN_SLIDE_MS = 350;
@@ -603,6 +604,7 @@ export const Auth = {
         // Nothing moves until the password is accepted (PLAN.md, cases 2-4).
         this._clearLoginError();
         this._setLoginSubmitBusy(true);
+        beginStartupTiming('checking the password');
 
         let response;
         try {
@@ -632,7 +634,7 @@ export const Auth = {
         }
 
         const responseText = await response.text();
-        let startupPhase = 'reading the login response';
+        let startupPhase = enterStartupStage('reading the login response');
         try {
             const data = JSON.parse(responseText);
 
@@ -644,16 +646,16 @@ export const Auth = {
             if (data.hydration_required !== true) {
                 throw new Error('Login response must require the progress flow');
             }
-            startupPhase = 'hydrating the workspace';
+            startupPhase = enterStartupStage('hydrating the workspace');
             await this._runHydrationFlow();
 
             console.log('[Auth] Login successful, initializing ModeManager');
             if (window.ModeManager) {
-                startupPhase = 'initializing the workspace UI';
+                startupPhase = enterStartupStage('initializing the workspace UI');
                 await window.ModeManager.init({});
-                startupPhase = 'initializing the command palette';
+                startupPhase = enterStartupStage('initializing the command palette');
                 await CommandPalette.init();
-                startupPhase = 'initializing AI chat';
+                startupPhase = enterStartupStage('initializing AI chat');
                 await AiChatPanel.init({
                     getSettings: () => CommandPalette.getAiSettings(),
                     saveSettings: (settings) => CommandPalette.saveAiSettings(settings),
@@ -669,16 +671,17 @@ export const Auth = {
                     openSettings: () => CommandPalette.openAiAgentSettings(false),
                     openMenu: (menuId, scope, signal) => CommandPalette.openAgentMenu(menuId, scope, signal),
                 });
-                startupPhase = 'revealing the workspace';
+                startupPhase = enterStartupStage('revealing the workspace');
                 this.revealMainApp();
-                startupPhase = 'starting reminders';
+                startupPhase = enterStartupStage('starting reminders');
                 await ReminderSurface.start();
-                startupPhase = 'starting the backup reminder';
+                startupPhase = enterStartupStage('starting the backup reminder');
                 await CommandPalette.startBackupReminder();
                 document.body.dataset.appReady = 'true';
+                finishStartupTiming();
                 CommandPalette.startUpdateNotice();
             } else {
-                startupPhase = 'reloading the workspace';
+                startupPhase = enterStartupStage('reloading the workspace');
                 window.location.reload();
             }
         } catch (error) {

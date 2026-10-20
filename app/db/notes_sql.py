@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 from datetime import datetime
-from typing import Iterable, Optional, Any
+from typing import Any, Iterable, Iterator, Optional
 
 from .engine import GuardedConnection
 from .raw_connection import raw_sqlite_connection
@@ -391,6 +391,40 @@ def fetch_all_for_cache(connection: GuardedConnection | sqlite3.Connection) -> l
     conn = _conn(connection)
     rows = conn.execute(f"SELECT * FROM {NOTES_TABLE}").fetchall()
     return [_deserialize_row(row) for row in rows]
+
+
+# The columns _deserialize_row reads, in its order.
+_CACHE_COLUMNS = (
+    "id", "content", "tags", "proposed_tags", "encryption_nonce", "encryption_tag",
+    "tags_encryption_nonce", "tags_encryption_tag", "proposed_tags_encryption_nonce",
+    "proposed_tags_encryption_tag", "parent_id", "prev_id", "next_id", "is_collapsed",
+    "created_at", "updated_at",
+)
+_CACHE_SELECT = f"SELECT {', '.join(_CACHE_COLUMNS)} FROM {NOTES_TABLE}"
+
+
+def iter_all_for_cache(connection: GuardedConnection | sqlite3.Connection) -> Iterator[dict]:
+    """Every note row as _deserialize_row gives it, one at a time: a caller that keeps
+    only part of each row never holds all of them (with their ciphertext) at once.
+    Rows come as plain tuples and become dicts in one step: reading every column by
+    name from a sqlite3.Row took 0.4 s of unlocking 107,500 notes (2026-10-19)."""
+    cursor = _conn(connection).cursor()
+    cursor.row_factory = None
+    for values in cursor.execute(_CACHE_SELECT):
+        row = dict(zip(_CACHE_COLUMNS, values))
+        for field in ("created_at", "updated_at"):
+            if not isinstance(row[field], str):
+                raise TypeError(f"notes.{field} must be a string | note_id={row['id']} value={row[field]!r}")
+            row[field] = datetime.fromisoformat(row[field])
+        row["is_collapsed"] = bool(row["is_collapsed"])
+        yield row
+
+
+def count_notes(connection: GuardedConnection | sqlite3.Connection) -> int:
+    conn = _conn(connection)
+    (count,) = conn.execute(f"SELECT COUNT(*) FROM {NOTES_TABLE}").fetchone()
+    assert isinstance(count, int)
+    return count
 
 
 def clear_encryption_metadata_for_empty_notes(

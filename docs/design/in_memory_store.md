@@ -81,6 +81,17 @@ Ordinary authenticated middleware uses in-memory key/session state. Auth status/
 
 Immutable `NoteRecord` pointers are the ordering authority. `note_ordering.py` maintains derived boundaries; hydration and bulk metadata validate before publication. Sorted views keep per-root subtree aggregates and, after an edit, re-aggregate only the roots whose notes changed (found by comparing immutable records by identity). The view cache holds one warm view per client/tab for the tab's lifetime. See [refactor ownership](../REFACTORS.md) and [runtime budgets](../security/README.md#runtime-memory-and-shell-budgets-2026-09-12).
 
+## Search Speed: Measured Limits and Future Options
+
+Measured 2026-10-20 on a synthetic 107,500-note namespace (Apple M4):
+
+- **Text-only quoted searches scan every note: about 106 ms.** Each note's lowercased text is searched in C, but the loop over 107,500 notes runs in Python (about 1 µs a note). A text term matches inside words ("fat" finds "father"), so a word index cannot answer it. Good enough for now (text search is rarely used; it still runs about ten times a second). Searches combining tags and text check only the tags' notes and are unaffected. If it ever needs to be faster:
+  1. Keep the lowercased text joined into blocks of about 1,000 notes, separated by a character no term can contain, and search each block with one `str.find` (in C), mapping a hit back to its note by a binary search of the block's note offsets. The separator is not alphanumeric, so word-edge terms (" fat", "fat ") behave as at a note's start or end. Memory stays about the same (the blocks replace the per-note strings); an edit rebuilds one block. Expected: about 15–25 ms.
+  2. While typing, search only the previous term's results when the new term contains the old one and the old one has no word-edge spaces ("journa" ⊆ "journ" results).
+  A trigram index would make the first keystroke a few milliseconds, but at hundreds of MB and seconds more at unlock.
+- **Tag postings stay sets of note numbers.** Sorted arrays (about 104 MB to 9 MB) and bitmaps for large tags (to about 15–30 MB) were both tried and rejected: Python intersects two sets in C, but a set with an array or a bitmap needs a Python-level conversion, so suggestions after a tag and a space (thousands of candidate tags) became noticeably slower. Speed comes first here (cloud CPUs are slower than the M4); any change to search or suggestions must be benchmarked on "broad tag + space" against the previous version.
+- **Tag-only clauses skip the per-note check** (`_matching_note_int_ids_for_clause_locked`): the postings already hold exactly the live notes carrying the tags, with excluded tags' notes removed.
+
 ## Testing Notes
 
 Python and Node suites are established regression gates. `test_refactor_ordering.py`, `test_next_batch.py`, request recovery tests, and the real browser smoke cover hierarchy/store invariants, read-guard isolation, mutation rollback, cache limits, and ordering across reload. See [the coverage map](../testing/coverage-map.md).

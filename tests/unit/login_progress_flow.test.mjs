@@ -164,9 +164,9 @@ test('post-login startup failures expose the underlying browser error', async ()
     const loginEnd = source.indexOf('async logout()', loginStart);
     const loginSource = source.slice(loginStart, loginEnd);
 
-    assert.match(loginSource, /let startupPhase = 'reading the login response'/);
-    assert.match(loginSource, /startupPhase = 'hydrating the workspace'/);
-    assert.match(loginSource, /startupPhase = 'initializing the workspace UI'/);
+    assert.match(loginSource, /let startupPhase = enterStartupStage\('reading the login response'\)/);
+    assert.match(loginSource, /startupPhase = enterStartupStage\('hydrating the workspace'\)/);
+    assert.match(loginSource, /startupPhase = enterStartupStage\('initializing the workspace UI'\)/);
     assert.match(loginSource, /const errorMessage = error instanceof Error/);
     assert.match(loginSource, /loadingMessage\.textContent =[\s\S]*\$\{startupPhase\}: \$\{errorMessage\}/);
     assert.doesNotMatch(loginSource, /window\.alert\(/);

@@ -40,6 +40,7 @@ from app.db.settings_sql import (
     insert_default_settings,
     update_password_settings,
 )
+from app.process_memory import release_freed_memory
 from app.services.content_cache import (
     cache_note,
     cache_note_proposed_tags,
@@ -375,6 +376,7 @@ class AuthService:
         if note_store.loaded:
             with SafeSession.allow_reads("auth:set_password:refresh_store"):
                 note_store.load_from_db(get_request_session(), prefetched_rows=None)
+            release_freed_memory()
 
         return (
             True,
@@ -528,6 +530,7 @@ class AuthService:
         if note_store.loaded:
             with SafeSession.allow_reads("auth:remove_password:refresh_store"):
                 note_store.load_from_db(get_request_session(), prefetched_rows=None)
+            release_freed_memory()
 
         return (
             True,

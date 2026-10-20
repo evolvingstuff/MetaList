@@ -85,18 +85,24 @@ Still as found:
 
 ## Server HTML: sanitized last
 
-Note HTML is cleaned by nh3 (`app/security/note_html.py`) on every write and on
-load. What the page receives is mostly not that HTML but a rendering of it
+Note HTML is cleaned by nh3 (`app/security/note_html.py`) on every write, and
+once at unlock for rows stored any other way (see the security README). What the page receives is mostly not that HTML but a rendering of it
 (Markdown, CSV, embeds, reference decorations, file previews, footnotes) and chat
 replies rendered from the AI's Markdown. Each renderer escapes as it builds, and
 since 2026-10-19 its result is also cleaned once more before it leaves the server
-(`app/security/rendered_html.py`), at the four exits that send rendered HTML:
+(`app/security/rendered_html.py`), at the five exits that send rendered HTML:
 
 - the note view (`snapshot._render_note_view_html`, the list and its snapshots);
 - full-screen notes and floating windows (`note_fullscreen.build_note_fullscreen_markup`);
 - chat replies, finished and streaming (`ai_chat_rendering.render_ai_chat_markdown_to_html`
   and its streaming twin);
 - the model's thinking text (`ai_chat_rendering.render_ai_chat_thinking_to_html`).
+- the HTML export, downloaded or printed (`html_export._as_drawn_in_metalist`, each note's
+  drawing). Its variant of the pass also keeps the file's own images inline: `<img>` data
+  URLs of any image type and size (attached images, SVG diagram previews), which never run
+  script. A download opens from disk, outside MetaList's policy, so the file carries its
+  own Content-Security-Policy: images, inline styles, and only its own script, named by
+  hash (a print gets `script-src 'none'`).
 
 The pass allows the stored-note policy plus exactly the inert markup the
 renderers add: buttons, `data-*` identifiers, ARIA, titles, renderer class names
@@ -105,6 +111,10 @@ SVG shapes, and the size tags' `--meta-size-factor`. Attributes the renderers
 write with one fixed value (`target="_blank"`, `contenteditable="false"`,
 `role="img"`, ...) keep only that value. Event handlers and script-capable URLs
 never pass.
+
+Copying or cutting a note (`copy_note.py` → `models/utils.py:note_data_to_html`) writes
+a rendering to the system clipboard without this pass. It never enters MetaList's page;
+pasted back into MetaList it is sanitized on save, and other apps sanitize what they paste.
 
 Two tests keep the allowlist matched to the renderers. `tests/unit/conftest.py`
 checks every pass in the unit suite against the same HTML5 parse with nothing
@@ -117,7 +127,8 @@ In the browser, `server-rendered-html.js:serverRenderedHtml` declares the
 server's HTML `sanitized_html` at the seven `innerHTML` sinks that take it (note
 view ×2, floating window, full screen, image resize, chat reply, thinking text).
 The image resize response and an edited note's snapshot are the note's stored
-HTML, sanitized on save.
+HTML, sanitized on save: the resize answers with what the save stored, not its own
+result from before sanitizing (2026-10-19).
 
 ## Escapers
 

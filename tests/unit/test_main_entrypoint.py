@@ -836,6 +836,7 @@ def test_print_namespace_bootstrap_results_shows_http_and_https_urls(monkeypatch
             ssl_keyfile=None,
         ),
     )
+    monkeypatch.setattr(main_entrypoint, "seconds_since_launch", lambda: 3.4712)
     main_entrypoint._print_namespace_bootstrap_results(
         environ={},
         launch_results=[
@@ -877,6 +878,9 @@ def test_print_namespace_bootstrap_results_shows_http_and_https_urls(monkeypatch
         " cla      restarted",
         "   http://127.0.0.1:8001",
         "   disabled",
+        "",
+        # Since this process started, every import included, to two decimal places.
+        " Ready in 3.47 s",
     ]
 
 

@@ -58,3 +58,32 @@ Checks:
 False positives: low once owners are declared; bootstrap writes at import time or construction can be exempted by role (module initialization, __init__).
 MetaList use case: TODO.md, "Server State: Owned Stores And Redundant-Write Detection".
 ```
+
+## Proposed 2026-10-20: SQLite copies and immutable files
+
+From reviewing how MetaList copies its databases. MetaList's own startup checker (BKP001) covers part of this for its backup code only; a general rule would hold every project, and every file of MetaList, to it.
+
+```text
+RULE F: A live SQLite database copied as a file (Python)
+Bug shape: in WAL mode, recent commits live in the -wal file until a checkpoint folds them into the .db. A plain file copy of a database in use misses them, or catches the main file mid-write and yields a copy that opens but is subtly corrupt; it is found at restore time. MetaList copies correctly today (Connection.backup() for backups, pre-update backups, restores and recovery snapshots), but nothing outside its backup code stops a future shutil.copy of a live database.
+Shape: a file copy whose source is a SQLite database: shutil.copy / copy2 / copyfile / copyfileobj / move, Path.read_bytes() written elsewhere, or tarfile/zipfile adding the path, where the path ends in .db / .sqlite / .sqlite3 (or comes from a variable or function the project declares as a database path), and the source was not produced by sqlite3.Connection.backup() or VACUUM INTO. Also: sqlite3.connect with immutable=1 on a path that may have a -wal sidecar (the newest commits are ignored).
+Remediation: Connection.backup() into the destination, or VACUUM INTO; or checkpoint (PRAGMA wal_checkpoint(TRUNCATE)) with writers stopped before a plain copy.
+False positives: copies of a database known to be closed or sealed (a finished snapshot); allow a suppression with a reason.
+
+RULE G: Files declared immutable (Python), configured per project
+Shape: paths or roles the project declares immutable (MetaList: backups) may be opened only for reading or exclusive creation (mode "x", "x:gz"), never "w" / "a" / "r+" / "w:gz"; no os.replace / rename / chmod / utime / truncate / unlink on them except through one configured delete function; no writable SQLite connection to them. Publishing by write-then-rename is forbidden too (it replaces).
+False positives: low once the roles are declared. This is the reusable core of MetaList's BKP001.
+
+RULE H: Import boundaries (Python, JavaScript), configured per project
+Shape: module A must not import module B (MetaList: startup and database migrations must not import the backup service, so a migration can never touch a backup). Reported at the import.
+False positives: none for an exact configured pair.
+```
+
+Also proposed during the same work (2026-10-19 and 20), for the maintainer to pass on with these:
+
+- A stub that the code under test no longer reaches: a test that patches a function the test never ends up calling (a refactor routed around it) is a test that silently tests the real thing. A MetaList launch test, bypassed this way, stopped and relaunched the user's real servers.
+- Set methods given a non-set inside a loop: `set.intersection` / `issubset` / `isdisjoint` / `difference` called with an array, list or generator in a loop each read the whole argument instead of hashing; sorted-array tag postings made suggestions after a tag and a space stall this way.
+- A full scan per candidate: a loop over N candidates whose body iterates a whole collection of similar size (O(N²)); finding each candidate's tag family by scanning every tag did 16 million comparisons a keystroke.
+- A long-lived string made by casefold() / lower() in a new set while the same code keeps a memo for that conversion: the memo is bypassed and copies multiply (38 MB in MetaList's search index).
+- Server HTML handed to a browser sink that declares sanitized_html must carry sanitized_html on the Python side too (an image-resize response returned the input it had passed to the sanitizing save).
+- A function that builds a whole HTML document (<!DOCTYPE html>) from rendered parts must pass them through a declared sanitizer and include a Content-Security-Policy meta (MetaList's HTML export did neither).

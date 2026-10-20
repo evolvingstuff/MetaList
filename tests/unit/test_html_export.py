@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import html as html_module
 import re
 from dataclasses import dataclass
@@ -13,6 +14,7 @@ from starlette.requests import Request
 import app.api.routes.notes as notes_route
 import app.services.html_export as export_module
 import app.services.snapshot as snapshot_module
+from app.security.rendered_html import sanitize_exported_html
 from app.services.content_formatting import CREDENTIAL_MASK
 from app.services.html_export import build_notes_export_document
 from app.services.search_index import SearchIndex
@@ -893,3 +895,61 @@ def test_exported_code_lines_stay_as_written_at_every_depth(
     )
 
     assert _preformatted_texts(document) == expected
+
+
+_UNSAFE_RENDERING = '<div onclick="steal()">Trip plan</div><script>steal()</script><a href="javascript:steal()">x</a>'
+
+
+@pytest.mark.parametrize("purpose", ["download", "print"])
+def test_each_exported_note_goes_through_the_final_pass(
+    monkeypatch: pytest.MonkeyPatch, purpose: str, unchecked_rendered_html_pass,
+) -> None:
+    # A download is opened from disk, outside MetaList's own protections: whatever a
+    # renderer writes, the file holds only allowlisted HTML, as the note view does.
+    monkeypatch.setattr(export_module, "render_note_content_with_embeds", lambda **_kwargs: _UNSAFE_RENDERING)
+    monkeypatch.setattr(export_module, "render_collapsed_note_content_with_embeds", lambda **_kwargs: _UNSAFE_RENDERING)
+    notes, children = _tree()
+    html = _export(monkeypatch, notes, children, purpose=purpose, title="", include_credentials=False, editing_note_id=None)
+    assert "Trip plan" in html
+    assert "steal()" not in html
+
+
+def _download_script(html: str) -> str:
+    return html[html.index("<script>") + len("<script>"):html.index("</script>")]
+
+
+def test_a_download_may_run_only_its_own_script(monkeypatch: pytest.MonkeyPatch) -> None:
+    notes, children = _tree()
+    html = _export(monkeypatch, notes, children, purpose="download", title="", include_credentials=False, editing_note_id=None)
+    policy = re.search(r'<meta http-equiv="Content-Security-Policy" content="([^"]+)" />', html)
+    assert policy is not None and html.index(policy.group(0)) < html.index("<style>"), "before anything it governs"
+    digest = base64.b64encode(hashlib.sha256(_download_script(html).encode("utf-8")).digest()).decode("ascii")
+    assert f"script-src 'sha256-{digest}'" in policy.group(1)
+    assert "default-src 'none'" in policy.group(1)
+    assert "unsafe-eval" not in policy.group(1) and "script-src 'unsafe-inline'" not in policy.group(1)
+
+
+def test_a_print_has_the_policy_without_any_script(monkeypatch: pytest.MonkeyPatch) -> None:
+    notes, children = _tree()
+    html = _export(monkeypatch, notes, children, purpose="print", title="", include_credentials=False, editing_note_id=None)
+    assert "script-src 'none'" in html and "default-src 'none'" in html
+
+
+_SVG_PREVIEW = "data:image/svg+xml;base64," + base64.b64encode(b'<svg xmlns="http://www.w3.org/2000/svg"/>').decode("ascii")
+# Over the 10 MB a stored note may embed: an attached image can be larger.
+_LARGE_IMAGE_BYTES = 11 * 1024 * 1024
+
+
+def test_exported_files_keep_their_diagram_previews_and_large_images() -> None:
+    large_png = "data:image/png;base64," + base64.b64encode(bytes(_LARGE_IMAGE_BYTES)).decode("ascii")
+    for source in (_SVG_PREVIEW, large_png):
+        markup = f'<span class="note-reference-link-thumbnail"><img class="note-reference-link-thumbnail-static" src="{source}" alt="" /></span>'
+        assert f'src="{source}"' in sanitize_exported_html(markup)
+
+
+def test_exported_images_still_lose_handlers_and_non_image_data(unchecked_rendered_html_pass) -> None:
+    cleaned = sanitize_exported_html(
+        f'<img src="{_SVG_PREVIEW}" onerror="steal()"><img src="data:text/html;base64,PHNjcmlwdD4=">'
+    )
+    assert "steal()" not in cleaned and "data:text/html" not in cleaned
+    assert f'src="{_SVG_PREVIEW}"' in cleaned

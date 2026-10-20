@@ -35,6 +35,13 @@ def print_environment(console: Console, *, version: str, environment: str) -> No
     console.print(Text.assemble(("MetaList", "bold"), " ", (version, "bold"), " · ", (environment, "cyan")))
 
 
+def print_ready_in(console: Console, *, seconds: float) -> None:
+    """The last line of a launch: how long since this process started, every import
+    included, to two decimal places."""
+    console.print()
+    console.print(Text.assemble(" Ready in ", (f"{seconds:.2f} s", "bold")))
+
+
 def print_shell_enabled(console: Console) -> None:
     console.print(Text.assemble(
         (" @shell", "bold yellow"), " enabled for authenticated loopback clients (this launch only)",

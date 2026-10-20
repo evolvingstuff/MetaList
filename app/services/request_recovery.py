@@ -5,6 +5,7 @@ from app.db.settings_sql import fetch_settings
 from app.models.database import SafeSession
 from app.security.encryption import get_encryption_service, set_encryption_required, set_session_dek, clear_encryption_key
 from app.services import auth_cache_state
+from app.process_memory import release_freed_memory
 from app.services.content_cache import clear_cache, populate_cache_from_db
 from app.services.file_registry import file_registry
 from app.services.file_storage import bootstrap_file_registry
@@ -97,6 +98,8 @@ def reload_runtime_from_database(*, was_loaded: bool, dek: bytes | None) -> None
                 rows = populate_cache_from_db(session)
                 store.load_from_db(None, prefetched_rows=rows)
                 auth_cache_state.mark_cache_ready()
+                del rows
+                release_freed_memory()
             else:
                 auth_cache_state.reset_cache_state()
     finally:

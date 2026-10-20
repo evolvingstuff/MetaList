@@ -13,8 +13,7 @@ from typing import Literal
 
 from app.services.agent.inference import InferenceAdapter
 from app.services.agent.openai_cost_tracking import openai_cost_tracker
-from app.services.agent.openai_inference import OPENAI_API_BASE_URL
-from app.services.agent.openai_inference import OpenAIInferenceAdapter
+from app.services.agent.openai_models import OPENAI_API_BASE_URL
 from app.services.openai_credentials import openai_credential_store
 from app.services.agent.privacy_guard import PrivacyGuardedInference, cloud_privacy_revision
 
@@ -70,6 +69,9 @@ def connect_to_ai(*, provider: AiProvider, token: str, session_key: str) -> AiCo
     if not describe_ai_setup(token=token, session_key=session_key).is_ready_for(provider):
         raise AiNotSetUp(f"{provider} is not set up")
     if provider == "openai":
+        # Imported on first use, not at the top: it loads the OpenAI SDK (about 250 ms),
+        # and every namespace server would pay for it at startup (openai_models.py).
+        from app.services.agent.openai_inference import OpenAIInferenceAdapter
         api_key = openai_credential_store.resolve(token=token, session_key=session_key)
         return AiConnection(
             provider="openai",

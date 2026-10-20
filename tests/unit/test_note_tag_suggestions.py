@@ -11,6 +11,7 @@ import pytest
 from fastapi import HTTPException, Response
 
 import app.api.routes.ai as ai_routes
+import app.services.agent.openai_inference as openai_inference_module
 import app.services.ai_setup as ai_setup_module
 import app.usecases.tag_proposals as proposal_module
 from app.services import undo_state
@@ -382,7 +383,7 @@ def test_the_suggestion_route_streams_tags_or_why_the_ai_failed(live_database, m
     _set_ai_ready(monkeypatch, is_ready=True)
 
     answers = _FakeInference([{"proposals": [{"note_id": "trip", "tags": ["kyoto", "temples"]}]}])
-    monkeypatch.setattr(ai_setup_module, "OpenAIInferenceAdapter", lambda **kwargs: answers)
+    monkeypatch.setattr(openai_inference_module, "OpenAIInferenceAdapter", lambda **kwargs: answers)
     assert _suggestion_lines("trip", include_children=False) == [
         {"type": "progress", "completed": 0, "total": 1},
         {"type": "progress", "completed": 1, "total": 1},
@@ -390,7 +391,7 @@ def test_the_suggestion_route_streams_tags_or_why_the_ai_failed(live_database, m
     ]
     assert store.get_note("trip").proposed_tags == "", "asking writes nothing"
 
-    monkeypatch.setattr(ai_setup_module, "OpenAIInferenceAdapter", lambda **kwargs: _FailingInference([]))
+    monkeypatch.setattr(openai_inference_module, "OpenAIInferenceAdapter", lambda **kwargs: _FailingInference([]))
     assert _suggestion_lines("trip", include_children=False) == [
         {"type": "progress", "completed": 0, "total": 1},
         {"type": "failed", "message": "OpenAI API request failed: connection reset"},
@@ -582,13 +583,13 @@ def test_suggesting_tags_after_a_chat_answer_records_its_own_trace_run(live_data
     agent_trace_store.start_run(session_key="session", model="gpt-5.6-luna", user_message="An earlier question")
     try:
         answers = _FakeInference([{"proposals": [{"note_id": "trip", "tags": ["temples"]}]}])
-        monkeypatch.setattr(ai_setup_module, "OpenAIInferenceAdapter", lambda **kwargs: answers)
+        monkeypatch.setattr(openai_inference_module, "OpenAIInferenceAdapter", lambda **kwargs: answers)
         assert _suggestion_lines("trip", include_children=False)[-1] == {"type": "proposals", "proposals": {"trip": ["temples"]}}
         run = agent_trace_store.snapshot(session_key="session")["run"]
         assert (run["user_message"], run["status"]) == ("Suggest Tags with AI", "complete")
         assert [event["type"] for event in run["events"]] == ["TAGGING_INFERENCE"]
 
-        monkeypatch.setattr(ai_setup_module, "OpenAIInferenceAdapter", lambda **kwargs: _FailingInference([]))
+        monkeypatch.setattr(openai_inference_module, "OpenAIInferenceAdapter", lambda **kwargs: _FailingInference([]))
         assert _suggestion_lines("trip", include_children=False)[-1]["type"] == "failed"
         run = agent_trace_store.snapshot(session_key="session")["run"]
         assert (run["status"], run["error"]) == ("error", "OpenAI API request failed: connection reset")

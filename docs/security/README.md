@@ -256,9 +256,16 @@ Stored note bodies use a strict shared allowlist in
 - The server independently sanitizes every create, update, restore, and legacy
   model write with nh3 before encryption/database persistence. Browser output
   is never trusted as the authoritative check.
-- Decrypted historical rows are sanitized again before entering the in-memory
-  content cache, preventing previously stored executable markup from reaching
-  note rendering even before that row is saved again.
+- Rows stored some other way (before sanitizing existed, under an earlier
+  sanitizer, by a restore, an import or `convert-from-legacy.py`) are sanitized
+  once, at the first unlock of a database without the record for the current
+  sanitizer: each row the sanitizer changes is stored sanitized (updated time
+  kept) in the same write that adds the record to `namespace_content_migrations`.
+  The record's id ends in the sanitizer's fingerprint (`note_html.py`, the policy
+  file and the nh3 release), so a changed sanitizer gets one more pass. Later
+  unlocks trust stored rows; `tests/unit/test_note_content_writers.py` lists every
+  content writer and why what it writes is sanitized. Text extraction at unlock
+  still refuses comments, scripts and styles, which the sanitizer never writes.
 - Scripts, event handlers, forms, frames, SVG/MathML, arbitrary classes/data
   attributes, unsafe URL schemes, and unsafe CSS are removed. Formatting tags,
   links, tables, indentation, and bounded embedded image markup remain supported.
@@ -357,7 +364,7 @@ Passwordless namespaces run pending migrations during startup. Encrypted namespa
 
 Database migration `0 → 1` adds ciphertext metadata for client preferences, command-palette usage, and tag-prefix settings. Existing non-empty payloads are encrypted during the next successful namespace login. Password creation/removal also rewrites client state in the same direction as the rest of the namespace data.
 
-Database migration `1 → 2` adds `namespace_content_migrations`, a namespace-local ledger for resumable content transformations. The ledger stores migration identity, status, timestamps, and aggregate counts only; it never stores note text or remote URLs.
+Database migration `1 → 2` adds `namespace_content_migrations`, a namespace-local ledger for resumable content transformations. The ledger stores migration identity, status, timestamps, and aggregate counts only; it never stores note text or remote URLs. The stored-note sanitizing record (`stored-note-html-cleaned:` and the sanitizer's SHA-256 fingerprint) is readable structural metadata: it says which public sanitizer cleaned the namespace and how many rows that changed.
 
 Database migration `2 → 3` removes the legacy search-history schema that exposed an unsalted deterministic query hash plus plaintext scores/timestamps and replaces it with an opaque payload table. Migration `3 → 4` intentionally deletes the incompatible query-score history and starts the tag-activity model empty. Tag activity is stored as at most one row with a random UUIDv4 and a versioned payload containing sparse per-day tag counts. In encrypted namespaces, the entire payload is protected with AES-256-GCM; its row UUID is authenticated as associated data, every rewrite uses a fresh nonce, and inspection reveals no dates, tag names, counts, or queries. Password transitions rewrite this aggregate payload with the rest of namespace state. After unlock, migration enables SQLite secure deletion, truncates the WAL, and vacuums only the live database. Historical backups and obsolete sidecars inside backup sets remain immutable; if restored, their database version is migrated only on the installed live copy.
 

@@ -10,6 +10,7 @@ import pytest
 from fastapi import HTTPException, Response
 
 import app.api.routes.ai as ai_routes
+import app.services.agent.openai_inference as openai_inference_module
 import app.services.ai_setup as ai_setup_module
 from app.models.database import SafeSession
 from app.security.encryption import clear_encryption_key, set_encryption_required
@@ -228,7 +229,7 @@ def test_the_routes_say_whether_the_ai_can_ask_and_stream_its_title(live_databas
     ]
     assert _availability("view", "") == "partial"
     answers = _Answers("Kyoto in Spring")
-    monkeypatch.setattr(ai_setup_module, "OpenAIInferenceAdapter", lambda **kwargs: answers)
+    monkeypatch.setattr(openai_inference_module, "OpenAIInferenceAdapter", lambda **kwargs: answers)
     assert _title_lines("trip") == [{"type": "title", "title": "Kyoto in Spring"}]
     assert "Dear diary" not in json.dumps(answers.requests) and "hunter22" not in json.dumps(answers.requests)
     with pytest.raises(InputRejected, match="private"):
@@ -238,7 +239,7 @@ def test_the_routes_say_whether_the_ai_can_ask_and_stream_its_title(live_databas
         async def infer_structured(self, **kwargs):
             raise InferenceProviderError("OpenAI API request failed: connection reset")
 
-    monkeypatch.setattr(ai_setup_module, "OpenAIInferenceAdapter", lambda **kwargs: _Failing(""))
+    monkeypatch.setattr(openai_inference_module, "OpenAIInferenceAdapter", lambda **kwargs: _Failing(""))
     assert _title_lines("trip") == [{"type": "failed", "message": "OpenAI API request failed: connection reset"}]
 
 
@@ -251,7 +252,7 @@ def test_a_title_after_a_chat_in_the_session_is_traced_as_its_own_run(live_datab
     monkeypatch.setattr(ai_routes, "load_client_preferences", lambda *, token: _policy("private"))
     monkeypatch.setattr(ai_routes.tab_state_store, "get_sort_mode", lambda *, tab_id: "normal")
     _set_ai_ready(monkeypatch, is_ready=True)
-    monkeypatch.setattr(ai_setup_module, "OpenAIInferenceAdapter", lambda **kwargs: _Answers("Kyoto in Spring"))
+    monkeypatch.setattr(openai_inference_module, "OpenAIInferenceAdapter", lambda **kwargs: _Answers("Kyoto in Spring"))
     agent_trace_store.clear_session(session_key="session")
     chat_run = agent_trace_store.start_run(session_key="session", model="gpt-5.6-luna", user_message="Hello")
     agent_trace_store.complete_run(session_key="session", run_id=chat_run)

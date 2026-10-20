@@ -69,9 +69,19 @@ def test_cache_hydration_sanitizes_and_extracts_text_once_per_note(
         strip_calls.append(content)
         return content.removeprefix("<div>").removesuffix("</div>")
 
-    monkeypatch.setattr(content_cache, "fetch_all_for_cache", lambda _connection: rows)
+    monkeypatch.setattr(content_cache, "iter_all_for_cache", lambda _connection: iter(rows))
+    monkeypatch.setattr(content_cache, "count_notes", lambda _connection: len(rows))
+    # The rows come from the stubs above; the fake connection is passed through as is.
+    monkeypatch.setattr(content_cache, "raw_sqlite_connection", lambda connection: connection)
+    # A database not yet recorded as cleaned: this unlock cleans every note once.
+    monkeypatch.setattr(content_cache, "is_content_migration_complete", lambda _connection, _migration_id: False)
+    stored_cleaned: list[dict[str, str]] = []
+    monkeypatch.setattr(
+        content_cache, "_store_cleaned_notes",
+        lambda cleaned_notes, *, migration_id: stored_cleaned.append(dict(cleaned_notes)),
+    )
     monkeypatch.setattr(content_cache, "sanitize_note_html", sanitize_once)
-    monkeypatch.setattr(content_cache, "strip_html", strip_once)
+    monkeypatch.setattr(content_cache, "strip_sanitized_html", strip_once)
     monkeypatch.setattr(content_cache, "_CACHE_TIMING_ENABLED", False)
     monkeypatch.setattr(content_cache, "_search_cache", {})
     monkeypatch.setattr(content_cache, "_tag_cache", {})
@@ -80,8 +90,15 @@ def test_cache_hydration_sanitizes_and_extracts_text_once_per_note(
 
     returned_rows = content_cache.populate_cache_from_db(_FakeDatabase())
 
-    assert returned_rows == rows
+    # Only each note's structure comes back: no content, tags or ciphertext stays held.
+    assert returned_rows == [
+        {"id": row["id"], "parent_id": None, "prev_id": None, "next_id": None,
+         "is_collapsed": False, "created_at": None, "updated_at": None}
+        for row in rows
+    ]
     assert sanitize_calls == ["<div>One</div>", "<div>Two</div>"]
+    # Cleaning changed neither, so nothing is stored again.
+    assert stored_cleaned == [{}]
     assert strip_calls == ["<div>One</div>", "<div>Two</div>"]
     assert content_cache.get_cached_content("one") == "<div>One</div>"
     assert content_cache.get_cached_tags("two") == "beta"

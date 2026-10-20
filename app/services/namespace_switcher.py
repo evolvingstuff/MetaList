@@ -47,8 +47,10 @@ _PLACEHOLDER_NEW_NAMESPACE = "new-namespace"
 _LAUNCH_READY_TIMEOUT_SECONDS = 120.0
 _LAUNCH_PROGRESS_INTERVAL_SECONDS = 5.0
 _PORT_PROBE_TIMEOUT_SECONDS = 0.75
-_READY_POLL_INTERVAL_SECONDS = 0.25
-_PROCESS_WAIT_POLL_INTERVAL_SECONDS = 0.25
+# Short polls: a launch waits on these, and a 0.25 s poll lost up to that much per
+# namespace each time it stopped one and started one.
+_READY_POLL_INTERVAL_SECONDS = 0.05
+_PROCESS_WAIT_POLL_INTERVAL_SECONDS = 0.05
 _TERMINATE_GRACE_SECONDS = 5.0
 _KILL_GRACE_SECONDS = 5.0
 _PROBE_TAB_ID = "namespace-switcher-probe"
@@ -90,6 +92,16 @@ class NamespaceLaunchProcess:
     process: subprocess.Popen[bytes]
     log_path: Path
     log_start_offset: int
+
+
+@dataclass(frozen=True)
+class _NamespaceStartPlan:
+    """A namespace that is not the current process: the ports it will run on, the port it
+    runs on now (or None when it is not running), and whether its ports were saved."""
+    namespace: str
+    chosen_profile: NamespaceLaunchProfile
+    running_port: int | None
+    saved_for_next_launch: bool
 
 
 @dataclass(frozen=True)
@@ -275,17 +287,15 @@ def open_or_launch_namespace(
             saved_for_next_launch=saved_for_next_launch,
             message=message,
         )
-    running_port = _find_running_namespace_port(
+    plan = _plan_namespace_start(
         environ=environ,
         namespace=normalized_namespace,
         chosen_profile=chosen_profile,
         saved_profile=saved_profile,
         current_profile=current_profile,
     )
-    saved_for_next_launch = _save_profile_if_needed(
-        chosen_profile=chosen_profile,
-        saved_profile=saved_profile,
-    )
+    running_port = plan.running_port
+    saved_for_next_launch = plan.saved_for_next_launch
     if running_port is not None:
         if not saved_for_next_launch and running_port == chosen_profile.port:
             running_url = _build_browser_url(environ=environ, port=running_port)
@@ -378,32 +388,122 @@ def open_or_launch_all_namespaces(
             flush=True,
         )
 
-    results: list[NamespaceOpenResult] = []
-    for profile in profiles:
-        result = open_or_launch_namespace(
+    # Every namespace starts at once, so launching all takes about as long as the
+    # slowest one rather than the sum: decide for each (one at a time, as deciding saves
+    # launch profiles), stop every running one, start every one, then wait for each.
+    plans = [
+        _plan_namespace_start_for_profile(environ=environ, profile=profile)
+        for profile in profiles
+    ]
+    running_plans = [plan for plan in plans if plan.running_port is not None]
+    for plan in running_plans:
+        assert plan.running_port is not None
+        _assert_ports_are_available_for_launch(
             environ=environ,
-            current_namespace=None,
-            namespace=profile.namespace,
-            port=profile.port,
-            https_port=profile.https_port,
+            namespace=plan.namespace,
+            chosen_profile=plan.chosen_profile,
+            allowed_listener_pids=frozenset(_find_listening_pids_for_port(port=plan.running_port)),
         )
-        if result.action == "opened-running":
-            _restart_running_namespace_process(
+    _stop_processes_listening_on_ports(ports=[plan.running_port for plan in running_plans if plan.running_port is not None])
+    for plan in plans:
+        if plan.running_port is None:
+            _assert_ports_are_available_for_launch(
                 environ=environ,
-                namespace=result.namespace,
-                chosen_profile=result.saved_profile,
-                running_port=result.saved_profile.port,
+                namespace=plan.namespace,
+                chosen_profile=plan.chosen_profile,
+                allowed_listener_pids=frozenset(),
             )
-            result = NamespaceOpenResult(
-                namespace=result.namespace,
-                action="restarted",
-                url=result.url,
-                saved_profile=result.saved_profile,
-                saved_for_next_launch=result.saved_for_next_launch,
-                message=f"Restarted namespace {result.namespace}.",
-            )
-        results.append(result)
+    launches = [
+        (plan, _launch_namespace_process(environ=environ, chosen_profile=plan.chosen_profile))
+        for plan in plans
+    ]
+    results: list[NamespaceOpenResult] = []
+    for plan, launched_process in launches:
+        assert plan.chosen_profile.port is not None, f"namespace {plan.namespace} launched without an HTTP port"
+        _wait_for_namespace_ready(
+            environ=environ,
+            namespace=plan.namespace,
+            port=plan.chosen_profile.port,
+            launched_process=launched_process,
+        )
+        url = _build_browser_url(environ=environ, port=plan.chosen_profile.port)
+        assert url is not None
+        if plan.running_port is None:
+            action, message = "launched", f"Started namespace {plan.namespace}."
+        else:
+            action, message = "restarted", f"Restarted namespace {plan.namespace}."
+        results.append(NamespaceOpenResult(
+            namespace=plan.namespace,
+            action=action,
+            url=url,
+            saved_profile=plan.chosen_profile,
+            saved_for_next_launch=plan.saved_for_next_launch,
+            message=message,
+        ))
     return results
+
+
+def _plan_namespace_start(
+    *,
+    environ: Mapping[str, str],
+    namespace: str,
+    chosen_profile: NamespaceLaunchProfile,
+    saved_profile: NamespaceLaunchProfile | None,
+    current_profile: NamespaceLaunchProfile | None,
+) -> _NamespaceStartPlan:
+    running_port = _find_running_namespace_port(
+        environ=environ,
+        namespace=namespace,
+        chosen_profile=chosen_profile,
+        saved_profile=saved_profile,
+        current_profile=current_profile,
+    )
+    saved_for_next_launch = _save_profile_if_needed(
+        chosen_profile=chosen_profile,
+        saved_profile=saved_profile,
+    )
+    return _NamespaceStartPlan(
+        namespace=namespace,
+        chosen_profile=chosen_profile,
+        running_port=running_port,
+        saved_for_next_launch=saved_for_next_launch,
+    )
+
+
+def _plan_namespace_start_for_profile(
+    *,
+    environ: Mapping[str, str],
+    profile: NamespaceLaunchProfile,
+) -> _NamespaceStartPlan:
+    """What open_or_launch_namespace decides for a namespace that is not this process.
+    Saved profiles are read again for each: deciding may save one, and the next decision
+    checks conflicts against it."""
+    normalized_namespace = validate_namespace(namespace=profile.namespace)
+    assert profile.port is not None, f"namespace {normalized_namespace} has no HTTP port to launch on"
+    saved_profiles = _load_saved_profiles_by_namespace()
+    saved_profile = _saved_profile_or_none(saved_profiles, normalized_namespace)
+    legacy_mcp_port = None
+    if saved_profile is not None:
+        legacy_mcp_port = saved_profile.mcp_port
+    chosen_profile = _build_requested_profile(
+        namespace=normalized_namespace,
+        port=profile.port,
+        https_port=profile.https_port,
+        legacy_mcp_port=legacy_mcp_port,
+        supports_https=_supports_https(environ=environ),
+    )
+    _assert_profile_is_conflict_free(
+        chosen_profile=chosen_profile,
+        saved_profiles=saved_profiles,
+        current_profile=None,
+    )
+    return _plan_namespace_start(
+        environ=environ,
+        namespace=normalized_namespace,
+        chosen_profile=chosen_profile,
+        saved_profile=saved_profile,
+        current_profile=None,
+    )
 
 
 def stop_namespace_for_restore(*, namespace: str) -> None:
@@ -1612,6 +1712,23 @@ def _launch_namespace_process(
         log_path=log_path,
         log_start_offset=log_start_offset,
     )
+
+
+def _stop_processes_listening_on_ports(*, ports: list[int]) -> None:
+    """Stop every process listening on these ports together: each is asked to stop
+    first, then each is waited for, so stopping several takes about as long as one."""
+    current_pid = os.getpid()
+    listener_pids: list[int] = []
+    for port in ports:
+        for pid in _find_listening_pids_for_port(port=port):
+            if pid == current_pid:
+                raise RuntimeError(f"Refusing to stop the current process on port {port}")
+            listener_pids.append(pid)
+    if sys.platform != "win32":
+        for pid in listener_pids:
+            _send_signal_if_running(pid=pid, signal_number=signal.SIGTERM)
+    for pid in listener_pids:
+        _stop_process(pid=pid)
 
 
 def _stop_processes_listening_on_port(*, port: int) -> None:

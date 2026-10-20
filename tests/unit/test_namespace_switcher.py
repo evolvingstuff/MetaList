@@ -494,59 +494,51 @@ def test_open_login_namespace_uses_catalog_default_profile(
     assert result.url == "http://127.0.0.1:8001"
 
 
+def _record_launch_phases(monkeypatch: pytest.MonkeyPatch, *, running_ports: dict[str, int | None]) -> list[tuple]:
+    """Stand-ins for the steps of launching every namespace, recording what each did:
+    which namespaces were running (and on which port), stopped, started and waited for."""
+    events: list[tuple] = []
+    monkeypatch.setattr(namespace_switcher, "_find_running_namespace_port",
+                        lambda **kwargs: running_ports[kwargs["namespace"]])
+    # A port is busy only when the test says its namespace runs there, never by what
+    # happens to listen on this machine (the user's own servers do).
+    busy_ports = {port for port in running_ports.values() if port is not None}
+    monkeypatch.setattr(namespace_switcher, "_find_listening_pids_for_port",
+                        lambda *, port: [port] if port in busy_ports else [])
+    monkeypatch.setattr(namespace_switcher, "_assert_ports_are_available_for_launch", lambda **kwargs: None)
+    monkeypatch.setattr(namespace_switcher, "_stop_processes_listening_on_ports",
+                        lambda *, ports: events.append(("stop", tuple(ports))))
+
+    def _start(*, environ, chosen_profile):
+        events.append(("start", chosen_profile.namespace, chosen_profile.port, chosen_profile.https_port))
+        return chosen_profile.namespace
+
+    monkeypatch.setattr(namespace_switcher, "_launch_namespace_process", _start)
+    monkeypatch.setattr(namespace_switcher, "_wait_for_namespace_ready",
+                        lambda *, environ, namespace, port, launched_process: events.append(("wait", launched_process)))
+    return events
+
+
 def test_open_or_launch_all_namespaces_uses_catalog_default_profiles(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(server_runtime, "_DEFAULT_DATABASE_DIRECTORY", tmp_path)
     _disable_default_tls(monkeypatch, tmp_path)
-    save_namespace_launch_profile(
-        namespace="default",
-        port=8000,
-        https_port=None,
-        mcp_port=8765,
-    )
-    save_namespace_launch_profile(
-        namespace="cla",
-        port=8001,
-        https_port=None,
-        mcp_port=8766,
-    )
-    opened: list[tuple[str | None, str, int, int | None]] = []
-
-    def _fake_open_or_launch_namespace(
-        *,
-        environ,
-        current_namespace,
-        namespace,
-        port,
-        https_port,
-    ) -> NamespaceOpenResult:
-        opened.append((current_namespace, namespace, port, https_port))
-        return NamespaceOpenResult(
-            namespace=namespace,
-            action="launched",
-            url=f"http://127.0.0.1:{port}",
-            saved_profile=NamespaceLaunchProfile(
-                namespace=namespace,
-                port=port,
-                https_port=https_port,
-                mcp_port=None,
-            ),
-            saved_for_next_launch=False,
-            message=f"Started namespace {namespace}.",
-        )
-
-    monkeypatch.setattr(namespace_switcher, "open_or_launch_namespace", _fake_open_or_launch_namespace)
+    save_namespace_launch_profile(namespace="default", port=8000, https_port=None, mcp_port=8765)
+    save_namespace_launch_profile(namespace="cla", port=8001, https_port=None, mcp_port=8766)
+    events = _record_launch_phases(monkeypatch, running_ports={"default": None, "cla": None})
 
     results = open_or_launch_all_namespaces(environ={})
 
-    assert opened == [
-        (None, "default", 8000, None),
-        (None, "cla", 8001, None),
+    assert events == [
+        ("stop", ()),
+        ("start", "default", 8000, None),
+        ("start", "cla", 8001, None),
+        ("wait", "default"),
+        ("wait", "cla"),
     ]
-    assert [result.namespace for result in results] == ["default", "cla"]
-
+    assert [(result.namespace, result.action) for result in results] == [("default", "launched"), ("cla", "launched")]
 
 def test_open_or_launch_all_namespaces_repairs_saved_port_conflicts(
     tmp_path: Path,
@@ -555,44 +547,15 @@ def test_open_or_launch_all_namespaces_repairs_saved_port_conflicts(
 ) -> None:
     monkeypatch.setattr(server_runtime, "_DEFAULT_DATABASE_DIRECTORY", tmp_path)
     monkeypatch.setattr(namespace_switcher, "_supports_https", lambda *, environ: True)
-    save_namespace_launch_profile(
-        namespace="default",
-        port=8000,
-        https_port=8443,
-        mcp_port=8765,
-    )
-    save_namespace_launch_profile(
-        namespace="henry",
-        port=8000,
-        https_port=8443,
-        mcp_port=8765,
-    )
-    opened: list[NamespaceLaunchProfile] = []
-
-    def _fake_open_or_launch_namespace(**kwargs) -> NamespaceOpenResult:
-        profile = NamespaceLaunchProfile(
-            namespace=kwargs["namespace"],
-            port=kwargs["port"],
-            https_port=kwargs["https_port"],
-            mcp_port=None,
-        )
-        opened.append(profile)
-        return NamespaceOpenResult(
-            namespace=profile.namespace,
-            action="launched",
-            url=f"http://127.0.0.1:{profile.port}",
-            saved_profile=profile,
-            saved_for_next_launch=False,
-            message=f"Started namespace {profile.namespace}.",
-        )
-
-    monkeypatch.setattr(namespace_switcher, "open_or_launch_namespace", _fake_open_or_launch_namespace)
+    save_namespace_launch_profile(namespace="default", port=8000, https_port=8443, mcp_port=8765)
+    save_namespace_launch_profile(namespace="henry", port=8000, https_port=8443, mcp_port=8765)
+    events = _record_launch_phases(monkeypatch, running_ports={"default": None, "henry": None})
 
     open_or_launch_all_namespaces(environ={})
 
-    assert opened == [
-        NamespaceLaunchProfile(namespace="default", port=8000, https_port=8443, mcp_port=None),
-        NamespaceLaunchProfile(namespace="henry", port=8001, https_port=8444, mcp_port=None),
+    assert [event for event in events if event[0] == "start"] == [
+        ("start", "default", 8000, 8443),
+        ("start", "henry", 8001, 8444),
     ]
     assert load_namespace_launch_profile(namespace="henry") == NamespaceLaunchProfile(
         namespace="henry",
@@ -697,46 +660,44 @@ def test_open_or_launch_all_namespaces_restarts_warm_running_processes(
 ) -> None:
     monkeypatch.setattr(server_runtime, "_DEFAULT_DATABASE_DIRECTORY", tmp_path)
     _disable_default_tls(monkeypatch, tmp_path)
-    save_namespace_launch_profile(
-        namespace="default",
-        port=8000,
-        https_port=None,
-        mcp_port=8765,
-    )
-
-    def _fake_open_or_launch_namespace(**kwargs) -> NamespaceOpenResult:
-        profile = NamespaceLaunchProfile(
-            namespace=kwargs["namespace"],
-            port=kwargs["port"],
-            https_port=kwargs["https_port"],
-            mcp_port=None,
-        )
-        return NamespaceOpenResult(
-            namespace=profile.namespace,
-            action="opened-running",
-            url=f"http://127.0.0.1:{profile.port}",
-            saved_profile=profile,
-            saved_for_next_launch=False,
-            message=f"Namespace {profile.namespace} is already running with a warm cache.",
-        )
-
-    restarted: list[tuple[str, int]] = []
-    monkeypatch.setattr(namespace_switcher, "open_or_launch_namespace", _fake_open_or_launch_namespace)
-    monkeypatch.setattr(
-        namespace_switcher,
-        "_restart_running_namespace_process",
-        lambda *, environ, namespace, chosen_profile, running_port: restarted.append(
-            (namespace, running_port)
-        ),
-    )
+    save_namespace_launch_profile(namespace="default", port=8000, https_port=None, mcp_port=8765)
+    events = _record_launch_phases(monkeypatch, running_ports={"default": 8000})
 
     results = open_or_launch_all_namespaces(environ={})
 
-    assert restarted == [("default", 8000)]
+    assert events == [("stop", (8000,)), ("start", "default", 8000, None), ("wait", "default")]
     assert len(results) == 1
     assert results[0].action == "restarted"
     assert results[0].message == "Restarted namespace default."
 
+
+def test_open_or_launch_all_namespaces_stops_all_then_starts_all_then_waits(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # One after another, three namespaces took three times as long (4.6 s, 2026-10-19):
+    # every running one stops together, every one starts together, then each is waited for.
+    monkeypatch.setattr(server_runtime, "_DEFAULT_DATABASE_DIRECTORY", tmp_path)
+    _disable_default_tls(monkeypatch, tmp_path)
+    save_namespace_launch_profile(namespace="default", port=8000, https_port=None, mcp_port=8765)
+    save_namespace_launch_profile(namespace="cla", port=8001, https_port=None, mcp_port=8766)
+    save_namespace_launch_profile(namespace="thomas", port=9000, https_port=None, mcp_port=8767)
+    events = _record_launch_phases(monkeypatch, running_ports={"default": 8000, "cla": None, "thomas": 9000})
+
+    results = open_or_launch_all_namespaces(environ={})
+
+    assert events == [
+        ("stop", (8000, 9000)),
+        ("start", "default", 8000, None),
+        ("start", "cla", 8001, None),
+        ("start", "thomas", 9000, None),
+        ("wait", "default"),
+        ("wait", "cla"),
+        ("wait", "thomas"),
+    ]
+    assert [(result.namespace, result.action) for result in results] == [
+        ("default", "restarted"), ("cla", "launched"), ("thomas", "restarted"),
+    ]
 
 def test_open_or_launch_all_namespaces_rejects_missing_launch_profile(
     tmp_path: Path,

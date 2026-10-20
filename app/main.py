@@ -27,6 +27,7 @@ from .db.notes_sql import clear_encryption_metadata_for_empty_notes
 from .db.settings_sql import fetch_settings, insert_default_settings
 from .api.deps import get_db
 from .services.content_cache import populate_cache_from_db
+from .process_memory import release_freed_memory
 from .services.file_storage import bootstrap_file_registry
 from .services.auth import AuthService
 from .services.note_store import store as note_store
@@ -349,6 +350,11 @@ else:
     store_start = time.perf_counter()
     note_store.load_from_db(None, prefetched_rows=prefetched_rows)
     _log_startup_step("note store hydration", time.perf_counter() - store_start)
+    # Loading made and dropped many short-lived objects: hand their memory back.
+    del prefetched_rows
+    release_start = time.perf_counter()
+    release_freed_memory()
+    _log_startup_step("freed memory release", time.perf_counter() - release_start)
     auth_cache_state.mark_cache_ready()
 
     guard_start = time.perf_counter()

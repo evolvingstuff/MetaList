@@ -6,6 +6,7 @@ from app.db.schema import APP_SETTINGS_TABLE, LINK_TITLES_TABLE, NOTES_TABLE, RE
 from app.db.raw_connection import raw_sqlite_connection
 from app.db.session import begin_writer
 from app.db.settings_sql import insert_default_settings
+from app.models.database import SafeSession
 from app.services.content_cache import populate_cache_from_db
 from app.services.note_store import store as note_store
 from app.services.sync import reset_state as reset_sync_state
@@ -41,5 +42,10 @@ def reset_state_for_tests() -> None:
     search_history_store.reset()
     token_service.reset()
 
-    prefetched_rows = populate_cache_from_db(None)
+    session = SafeSession()
+    try:
+        prefetched_rows = populate_cache_from_db(session)
+        session.commit()
+    finally:
+        session.close()
     note_store.load_from_db(None, prefetched_rows=prefetched_rows)

@@ -1,5 +1,7 @@
 """Text processing utilities for the application."""
 
+import html
+import re
 from html.parser import HTMLParser
 
 
@@ -156,3 +158,71 @@ def strip_html(html_content: str) -> str:
     # Collapse whitespace runs. str.split() uses the same Unicode whitespace
     # set as regex \s but runs several times faster on large notes.
     return " ".join(text.split())
+
+
+# A tag as the note sanitizer writes it: a quoted attribute value may hold ">".
+_SANITIZED_TAG_BODY = r"""(?:[^>"']|"[^"]*"|'[^']*')*>"""
+_SANITIZED_BLOCK_TAG_RE = re.compile(
+    r"</?(?:" + "|".join(sorted(_BLOCK_TAGS)) + r")(?=[\s/>])" + _SANITIZED_TAG_BODY
+)
+_SANITIZED_TAG_RE = re.compile(r"</?[a-zA-Z][^\s/>]*" + _SANITIZED_TAG_BODY)
+# Markup the sanitizer never writes: its presence means the input was not sanitized.
+_UNSANITIZED_MARKUP_RE = re.compile(r"<!--|<(?:" + "|".join(sorted(_IGNORE_TAGS)) + r")[\s/>]", re.IGNORECASE)
+
+
+def strip_sanitized_html(sanitized_html: str) -> str:
+    """strip_html's text for the note sanitizer's output (app/security/note_html.py),
+    without Python's HTML parser: tags are well formed and lowercase, text holds no raw
+    "<" and every "&" starts an entity, and there are no comments, scripts or styles.
+    Block tags become a space, other tags nothing, then entities are unescaped and
+    whitespace collapsed. Unlocking extracts every note's text with it."""
+    if not isinstance(sanitized_html, str):
+        raise TypeError(f"sanitized_html must be a string, got {type(sanitized_html)}")
+    if _UNSANITIZED_MARKUP_RE.search(sanitized_html):
+        raise ValueError("strip_sanitized_html needs the note sanitizer's output: found a comment, script or style")
+    text = _SANITIZED_TAG_RE.sub("", _SANITIZED_BLOCK_TAG_RE.sub(" ", sanitized_html))
+    return " ".join(html.unescape(text).split())
+
+
+# A token of the sanitizer's output: a tag (its name, and its body up to ">") or text.
+_SANITIZED_TOKEN_RE = re.compile(
+    r"<(?P<end>/?)(?P<name>[a-zA-Z][^\s/>]*)(?P<body>" + _SANITIZED_TAG_BODY + r")|[^<]+"
+)
+# The sanitizer writes every attribute value in double quotes.
+_SANITIZED_HREF_RE = re.compile(r'\shref="(?P<href>[^"]*)"')
+_WEB_LINK_PREFIXES = ("http://", "https://")
+
+
+def strip_sanitized_html_keeping_link_urls(sanitized_html: str) -> str:
+    """strip_html_keeping_link_urls's text for the note sanitizer's output, without
+    Python's HTML parser (see strip_sanitized_html): the visible text, and after each
+    web link's label its URL when the label does not show it. Unlocking reads every
+    note with a link through it."""
+    if not isinstance(sanitized_html, str):
+        raise TypeError(f"sanitized_html must be a string, got {type(sanitized_html)}")
+    if "href" not in sanitized_html:
+        return strip_sanitized_html(sanitized_html)
+    if _UNSANITIZED_MARKUP_RE.search(sanitized_html):
+        raise ValueError("strip_sanitized_html_keeping_link_urls needs the note sanitizer's output: found a comment, script or style")
+    pieces: list[str] = []
+    open_links: list[tuple[str, int]] = []
+    for token in _SANITIZED_TOKEN_RE.finditer(sanitized_html):
+        name = token.group("name")
+        if name is None:
+            pieces.append(html.unescape(token.group(0)))
+            continue
+        normalized = name.lower()
+        is_end_tag = token.group("end") == "/"
+        if normalized == "a" and not is_end_tag:
+            href_match = _SANITIZED_HREF_RE.search(token.group("body"))
+            href = ""
+            if href_match is not None:
+                href = html.unescape(href_match.group("href")).strip()
+            open_links.append((href, len(pieces)))
+        if normalized == "a" and is_end_tag and open_links:
+            href, label_start = open_links.pop()
+            if href.casefold().startswith(_WEB_LINK_PREFIXES) and href not in "".join(pieces[label_start:]):
+                pieces.append(f" ({href})")
+        if normalized in _BLOCK_TAGS:
+            pieces.append(" ")
+    return " ".join("".join(pieces).split())

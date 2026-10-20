@@ -161,6 +161,7 @@ from app.api.request_auth import require_request_auth_token
 from app.security.shell_execution import is_loopback_host
 from app.services.input_errors import InputRejected
 from app.services.editing_image_sizes import editing_image_size_factors
+from app.services.memory_breakdown import measure_memory_breakdown
 from app.services.memory_usage import describe_memory_usage
 
 
@@ -630,6 +631,15 @@ def get_memory_usage(request: Request) -> Dict[str, object]:
     """The Memory Usage dialog: this namespace server process's memory and the notes it holds."""
     _require_bearer_token(request)
     return describe_memory_usage()
+
+
+@router.get("/notes/memory-usage/breakdown")
+@serialized_read_route
+def get_memory_breakdown(request: Request) -> Dict[str, object]:
+    """What holds the server's memory, part by part (sizes only, never content). It takes
+    seconds, so the dialog asks for it on its own; no write lands while it measures."""
+    _require_bearer_token(request)
+    return measure_memory_breakdown()
 
 
 @router.delete("/notes/tag-interactions")

@@ -660,6 +660,12 @@ export const NotesAPI = {
         });
     },
 
+    async getMemoryBreakdown() {
+        return this._apiCall(CONFIG.API.NOTES.MEMORY_BREAKDOWN, {
+            method: 'GET',
+        });
+    },
+
     async getSearchSuggestionStatistics() {
         return this._apiCall(CONFIG.API.NOTES.TAG_INTERACTIONS, {
             method: 'GET',
