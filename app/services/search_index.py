@@ -8,6 +8,7 @@ from typing import Callable, Dict, FrozenSet, Iterable, List, Mapping, Optional,
 from loguru import logger
 
 from app.services.content_formatting import _tokenize_tag_bar, _unwrap_tag_token, list_known_meta_tag_terms
+from app.services.shared_sets import SharedSetColumn, SharedSets
 from app.services.search_query import SearchClause, parse_search_query
 from app.services.tag_term_matching import tag_term_matches_prefix
 from app.services.link_titles import link_title_store
@@ -62,67 +63,6 @@ def _carries_tag_family(tag_terms_casefold: FrozenSet[str], tag_casefold: str) -
     if prefix is None:
         return False
     return any(term.startswith(prefix) for term in tag_terms_casefold)
-
-
-class _SharedSets:
-    """One copy of each distinct frozenset the index's per-note columns hold, and how
-    many slots use it. Notes that inherit the same tags hold the same set, and a
-    lowercased set equal to its original is that set; a copy goes with its last use."""
-
-    def __init__(self) -> None:
-        self._copies: Dict[FrozenSet[str], FrozenSet[str]] = {}
-        self._uses: Dict[FrozenSet[str], int] = {}
-
-    def take(self, value: FrozenSet[str]) -> FrozenSet[str]:
-        assert isinstance(value, frozenset), "shared sets hold frozensets"
-        if value in self._copies:
-            copy = self._copies[value]
-            self._uses[copy] += 1
-            return copy
-        self._copies[value] = value
-        self._uses[value] = 1
-        return value
-
-    def give_back(self, copy: FrozenSet[str]) -> None:
-        assert self._copies[copy] is copy, "only a shared copy is given back"
-        remaining = self._uses[copy] - 1
-        if remaining == 0:
-            del self._uses[copy]
-            del self._copies[copy]
-            return
-        self._uses[copy] = remaining
-
-    def distinct_sets(self) -> Set[FrozenSet[str]]:
-        return set(self._copies)
-
-
-class _SharedSetColumn:
-    """A per-note list of frozensets whose every write takes a shared copy and gives the
-    replaced one back, so no write can skip the sharing."""
-
-    def __init__(self, shared: _SharedSets) -> None:
-        self._shared = shared
-        self._items: List[FrozenSet[str]] = []
-
-    def __getitem__(self, note_int_id: int) -> FrozenSet[str]:
-        return self._items[note_int_id]
-
-    def __setitem__(self, note_int_id: int, value: FrozenSet[str]) -> None:
-        replaced = self._items[note_int_id]
-        # Taken before the old one is given back: an equal value keeps its copy alive.
-        self._items[note_int_id] = self._shared.take(value)
-        self._shared.give_back(replaced)
-
-    def append(self, value: FrozenSet[str]) -> None:
-        self._items.append(self._shared.take(value))
-
-    def clear(self) -> None:
-        for value in self._items:
-            self._shared.give_back(value)
-        self._items.clear()
-
-    def __len__(self) -> int:
-        return len(self._items)
 
 
 def _posting_or_empty(postings: Mapping[str, Set[int]], key: str) -> Set[int]:
@@ -302,16 +242,16 @@ class SearchIndex:
         # Notes are also searchable by the cached titles of URLs written in them.
         # A title can arrive or disappear later, so keep each note's URLs (and,
         # for notes with URLs, its text without titles) to recompose its text.
-        # The per-note sets share one copy of each distinct set (_SharedSets). It comes
+        # The per-note sets share one copy of each distinct set (SharedSets). It comes
         # first, so the memory breakdown counts the sets under its own name.
-        self._shared_tag_sets = _SharedSets()
-        self._note_link_title_urls = _SharedSetColumn(self._shared_tag_sets)
+        self._shared_tag_sets = SharedSets()
+        self._note_link_title_urls = SharedSetColumn(self._shared_tag_sets)
         self._link_title_url_notes: Dict[str, Set[int]] = {}
         self._note_base_text_casefold: Dict[int, str] = {}
-        self._note_explicit_tag_terms = _SharedSetColumn(self._shared_tag_sets)
-        self._note_raw_tag_terms = _SharedSetColumn(self._shared_tag_sets)
-        self._note_tag_terms = _SharedSetColumn(self._shared_tag_sets)
-        self._note_tag_terms_casefold = _SharedSetColumn(self._shared_tag_sets)
+        self._note_explicit_tag_terms = SharedSetColumn(self._shared_tag_sets)
+        self._note_raw_tag_terms = SharedSetColumn(self._shared_tag_sets)
+        self._note_tag_terms = SharedSetColumn(self._shared_tag_sets)
+        self._note_tag_terms_casefold = SharedSetColumn(self._shared_tag_sets)
         self._explicit_tag_notes: Dict[str, Set[int]] = {}
         self._explicit_tag_notes_casefold: Dict[str, Set[int]] = {}
         self._raw_tag_notes_casefold: Dict[str, Set[int]] = {}

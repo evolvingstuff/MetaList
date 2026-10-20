@@ -1,3 +1,5 @@
+# First: the launch clock starts before every other import (app/launch_clock.py).
+from app.launch_clock import seconds_since_launch
 import uvicorn
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -36,6 +38,7 @@ from app.startup_console import print_audit_namespaces
 from app.startup_console import print_check_passed
 from app.startup_console import print_environment
 from app.startup_console import print_namespace_table
+from app.startup_console import print_ready_in
 from app.startup_console import print_report
 from app.startup_console import print_shell_enabled
 from app.startup_console import run_check
@@ -430,7 +433,9 @@ def _print_namespace_bootstrap_results(
         )
         for result in launch_results
     ]
-    print_namespace_table(make_startup_console(environ=os.environ), rows=rows)
+    console = make_startup_console(environ=os.environ)
+    print_namespace_table(console, rows=rows)
+    print_ready_in(console, seconds=seconds_since_launch())
 
 
 def _read_process_state(*, pid: int) -> str | None:

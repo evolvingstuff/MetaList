@@ -27,6 +27,7 @@ from app.services.content_cache import (
     get_cached_text,
 )
 from app.services.file_registry import file_registry
+from app.services.shared_sets import SharedSetMap, SharedSets
 from app.services.hydration_state import hydration_state
 from app.services.hierarchy import hierarchy_depths
 from app.services.note_ordering import NoteOrdering
@@ -211,10 +212,13 @@ class NoteStore:
         self._note_map: Dict[str, NoteRecord] = {}
         self._backlink_index = BacklinkIndex()
         self._ordering = NoteOrdering()
-        self._effective_non_meta_tag_terms: Dict[str, FrozenSet[str]] = {}
-        self._effective_proposed_non_meta_tag_terms: Dict[str, FrozenSet[str]] = {}
-        self._subtree_non_meta_tag_terms: Dict[str, FrozenSet[str]] = {}
-        self._subtree_proposed_non_meta_tag_terms: Dict[str, FrozenSet[str]] = {}
+        # Inherited tag sets share one copy of each distinct set (shared_sets.py); the
+        # copies come first, so the memory breakdown counts them under their own name.
+        self._shared_tag_sets = SharedSets()
+        self._effective_non_meta_tag_terms = SharedSetMap(self._shared_tag_sets)
+        self._effective_proposed_non_meta_tag_terms = SharedSetMap(self._shared_tag_sets)
+        self._subtree_non_meta_tag_terms = SharedSetMap(self._shared_tag_sets)
+        self._subtree_proposed_non_meta_tag_terms = SharedSetMap(self._shared_tag_sets)
         self._loaded = False
         self._revision = 0
         self._timing_enabled = True
@@ -229,7 +233,7 @@ class NoteStore:
         return self._backlink_index.get_counts(note_id).keys() & self._note_map.keys()
 
     def _inherited_tag_terms_locked(
-        self, note_id: str, effective: Dict[str, FrozenSet[str]], subtree: Dict[str, FrozenSet[str]],
+        self, note_id: str, effective: SharedSetMap, subtree: SharedSetMap,
     ) -> FrozenSet[str]:
         terms = frozenset().union(*(subtree[target] for target in self._reference_targets_locked(note_id)))
         parent_id = self._note_map[note_id].parent_id
@@ -344,7 +348,7 @@ class NoteStore:
     @staticmethod
     def _propagate_tag_dependencies_locked(
         dependencies: Dict[str, set[str]],
-        accepted_terms: Dict[str, FrozenSet[str]], proposed_terms: Dict[str, FrozenSet[str]],
+        accepted_terms: SharedSetMap, proposed_terms: SharedSetMap,
     ) -> None:
         # Callers reset the affected closure to direct contributions first, so
         # cycles converge to the least fixed point even when tags are removed.
