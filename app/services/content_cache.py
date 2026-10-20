@@ -16,7 +16,7 @@ from app.db.raw_connection import raw_sqlite_connection
 from ..models.database import SafeSession
 from ..utils.encryption import get_encryption_service
 from app.services.hydration_state import hydration_state
-from app.utils.text_utils import strip_html
+from app.utils.text_utils import strip_sanitized_html
 from app.security.note_html import sanitize_note_html
 
 logger = logging.getLogger(__name__)
@@ -144,6 +144,10 @@ def _populate_from_rows(note_count: int, notes: Iterator[dict]) -> Sequence[Mapp
     encryption_service = get_encryption_service()
 
     loop_started = time.perf_counter()
+    # Where unlocking spends its time, for the Memory Usage dialog's Last unlock.
+    decrypt_seconds = 0.0
+    sanitize_seconds = 0.0
+    text_seconds = 0.0
     processed = 0
     last_checkpoint = loop_started
     for note in notes:
@@ -212,7 +216,9 @@ def _populate_from_rows(note_count: int, notes: Iterator[dict]) -> Sequence[Mapp
                     "The ciphertext is not recoverable without the DEK. "
                     f"note_id={note_id}"
                 )
+            step_started = time.perf_counter()
             decrypted_content = encryption_service.decrypt_from_storage(content, nonce, tag)
+            decrypt_seconds += time.perf_counter() - step_started
         else:
             decrypted_content = content
 
@@ -243,11 +249,16 @@ def _populate_from_rows(note_count: int, notes: Iterator[dict]) -> Sequence[Mapp
         else:
             decrypted_proposed_tags = proposed_tags
 
+        step_started = time.perf_counter()
         sanitized_content = sanitize_note_html(decrypted_content)
+        sanitize_seconds += time.perf_counter() - step_started
         hydrated_content[note_id] = sanitized_content
         hydrated_tags[note_id] = decrypted_tags
         hydrated_proposed_tags[note_id] = decrypted_proposed_tags
-        hydrated_text[note_id] = strip_html(sanitized_content)
+        # The sanitizer's output: its text without Python's HTML parser, same result.
+        step_started = time.perf_counter()
+        hydrated_text[note_id] = strip_sanitized_html(sanitized_content)
+        text_seconds += time.perf_counter() - step_started
         structures.append({field: note[field] for field in _NOTE_STRUCTURE_FIELDS})
 
         processed += 1
@@ -271,6 +282,11 @@ def _populate_from_rows(note_count: int, notes: Iterator[dict]) -> Sequence[Mapp
 
     if hydration_state.is_running():
         hydration_state.update(processed)
+        hydration_state.record_steps({
+            "decrypt note text": decrypt_seconds,
+            "sanitize note HTML": sanitize_seconds,
+            "extract note text": text_seconds,
+        })
     if processed != note_count:
         raise RuntimeError(f"Cache population read {processed} notes but the database counted {note_count}")
 

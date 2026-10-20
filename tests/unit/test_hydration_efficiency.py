@@ -74,7 +74,7 @@ def test_cache_hydration_sanitizes_and_extracts_text_once_per_note(
     # The rows come from the stubs above; the fake connection is passed through as is.
     monkeypatch.setattr(content_cache, "raw_sqlite_connection", lambda connection: connection)
     monkeypatch.setattr(content_cache, "sanitize_note_html", sanitize_once)
-    monkeypatch.setattr(content_cache, "strip_html", strip_once)
+    monkeypatch.setattr(content_cache, "strip_sanitized_html", strip_once)
     monkeypatch.setattr(content_cache, "_CACHE_TIMING_ENABLED", False)
     monkeypatch.setattr(content_cache, "_search_cache", {})
     monkeypatch.setattr(content_cache, "_tag_cache", {})

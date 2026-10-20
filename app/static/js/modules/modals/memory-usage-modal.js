@@ -2,6 +2,7 @@ import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
 import { escapeHtml } from '../html-escape.js';
 import { copyTextToClipboard } from '../mode-manager/events/mouse-events.js';
+import { lastStartupTiming } from '../startup-timing.js';
 
 const BYTES_PER_MEGABYTE = 1024 * 1024;
 const SECONDS_PER_MINUTE = 60;
@@ -24,6 +25,13 @@ function validateMemoryUsage(usage) {
     if (typeof usage.notesLoaded !== 'boolean') {
         throw new Error('Memory usage response missing notesLoaded');
     }
+    const unlock = usage.lastUnlock;
+    const isTiming = (entry, key) => typeof entry[key] === 'string' && typeof entry.seconds === 'number' && entry.seconds >= 0;
+    if (unlock === null || typeof unlock !== 'object' || !Array.isArray(unlock.phases) || !Array.isArray(unlock.steps)
+        || !unlock.phases.every(entry => isTiming(entry, 'phase')) || !unlock.steps.every(entry => isTiming(entry, 'step'))
+        || typeof unlock.totalSeconds !== 'number') {
+        throw new Error('Memory usage response missing lastUnlock');
+    }
     return usage;
 }
 
@@ -43,6 +51,10 @@ function validateMemoryBreakdown(breakdown) {
         throw new Error('Memory breakdown response missing seconds');
     }
     return breakdown;
+}
+
+function seconds(value) {
+    return `${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} s`;
 }
 
 function megabytes(bytes) {
@@ -167,6 +179,41 @@ export class MemoryUsageModal extends BaseModal {
         ];
     }
 
+    // The last unlock: the server's phases (and, within decrypting, its steps), then the
+    // browser's stages from sending the password to the workspace being ready.
+    _unlockRows(usage) {
+        const browser = lastStartupTiming();
+        const rows = [];
+        if (usage.lastUnlock.phases.length > 0) {
+            rows.push({ label: 'Server, in all', value: seconds(usage.lastUnlock.totalSeconds), isField: false });
+            for (const phase of usage.lastUnlock.phases) {
+                rows.push({ label: phase.phase, value: seconds(phase.seconds), isField: true });
+            }
+            for (const step of usage.lastUnlock.steps) {
+                rows.push({ label: `  ${step.step}`, value: seconds(step.seconds), isField: true });
+            }
+        }
+        if (browser.stages.length > 0) {
+            rows.push({ label: 'This browser, in all', value: seconds(browser.totalSeconds), isField: false });
+            for (const stage of browser.stages) {
+                rows.push({ label: stage.stage, value: seconds(stage.seconds), isField: true });
+            }
+        }
+        return rows;
+    }
+
+    _unlockHtml(usage) {
+        const rows = this._unlockRows(usage);
+        if (rows.length === 0) {
+            return '<p class="note-layout-description">No unlock since this server or page started.</p>';
+        }
+        const rowsHtml = rows.map(row => {
+            const rowClass = row.isField ? ' class="memory-usage-field"' : '';
+            return `<tr${rowClass}><th scope="row">${escapeHtml(row.label)}</th><td>${escapeHtml(row.value)}</td></tr>`;
+        }).join('');
+        return `<table class="memory-usage-table memory-usage-unlock"><tbody>${rowsHtml}</tbody></table>`;
+    }
+
     _usageRows(usage) {
         const notesHeld = usage.notesLoaded
             ? `${usage.noteCount.toLocaleString()} notes, ${megabytes(usage.noteTextBytes)} of text`
@@ -187,9 +234,17 @@ export class MemoryUsageModal extends BaseModal {
     // when it has been measured, its fields indented.
     copyText(state) {
         const lines = ['MetaList memory usage', ...this._usageRows(state.usage).map(([label, value]) => `${label}: ${value}`)];
+        const unlockRows = this._unlockRows(state.usage);
+        if (unlockRows.length > 0) {
+            lines.push('', 'Last unlock');
+            for (const row of unlockRows) {
+                const indent = row.isField ? '    ' : '';
+                lines.push(`${indent}${row.label}: ${row.value}`);
+            }
+        }
         if (state.breakdown !== null) {
-            const seconds = state.breakdown.seconds.toLocaleString(undefined, { maximumFractionDigits: 1 });
-            lines.push('', `What holds it (measured in ${seconds} s)`);
+            const measuredSeconds = state.breakdown.seconds.toLocaleString(undefined, { maximumFractionDigits: 1 });
+            lines.push('', `What holds it (measured in ${measuredSeconds} s)`);
             for (const row of this._breakdownRows(state)) {
                 const indent = row.isField ? '    ' : '';
                 lines.push(`${indent}${row.label}: ${row.value}`);
@@ -221,6 +276,8 @@ export class MemoryUsageModal extends BaseModal {
                 <h2>Memory Usage</h2>
                 <p class="note-layout-description">For this namespace's server process, which holds the decrypted notes. The browser's own memory is not included.</p>
                 ${body}
+                <h3 class="memory-usage-subheading">Last unlock</h3>
+                ${state.usage === null ? '' : this._unlockHtml(state.usage)}
                 <h3 class="memory-usage-subheading">What holds it</h3>
                 ${this._breakdownHtml(state)}
                 <div class="form-actions">

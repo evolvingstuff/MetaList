@@ -519,7 +519,7 @@ try {
     if (method === 'openMemoryUsage') {
       // The server process's numbers, in MB, and the notes it holds; Refresh reads them again.
       await page.waitForSelector('#memory-usage-modal .memory-usage-table');
-      const memoryRows = await page.$$eval('#memory-usage-modal .memory-usage-table:not(.memory-usage-breakdown) tr',
+      const memoryRows = await page.$$eval('#memory-usage-modal .memory-usage-table:not(.memory-usage-breakdown):not(.memory-usage-unlock) tr',
         rows => rows.map(row => [row.querySelector('th').textContent.trim(), row.querySelector('td').textContent.trim()]));
       assert.deepEqual(memoryRows.map(([label]) => label), ['Server process memory now',
         'Server process memory at its peak', 'Notes held decrypted in memory', 'Server running for']);

@@ -4,6 +4,7 @@ notes it holds decrypted in memory."""
 from __future__ import annotations
 
 from app.process_memory import current_resident_bytes, peak_resident_bytes, seconds_since_start
+from app.services.hydration_state import hydration_state
 from app.services.note_store import store as note_store
 
 
@@ -25,4 +26,6 @@ def describe_memory_usage() -> dict[str, object]:
         "noteCount": note_count,
         "noteTextBytes": note_text_bytes,
         "uptimeSeconds": seconds_since_start(),
+        # The last unlock's phases and steps in seconds (none before the first unlock).
+        "lastUnlock": hydration_state.last_run_timings(),
     }

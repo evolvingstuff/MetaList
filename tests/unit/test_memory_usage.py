@@ -70,6 +70,7 @@ def test_the_route_requires_a_session(monkeypatch) -> None:
     usage = notes_routes.get_memory_usage(request="request")
     assert calls == ["request"] and set(usage) == {
         "residentBytes", "peakResidentBytes", "notesLoaded", "noteCount", "noteTextBytes", "uptimeSeconds",
+        "lastUnlock",
     }
 
 
