@@ -1309,6 +1309,11 @@ class SearchIndex:
 
     def _matching_note_int_ids_for_clause_locked(self, clause: SearchClause) -> Set[int]:
         candidate_ids = self._candidate_note_ids_locked(clause)
+        if not clause.required_text and not clause.forbidden_text:
+            # Tags alone: the postings answer exactly. They hold only live notes (removing
+            # a note discards it from each), and the forbidden tags' notes are removed
+            # already. Checking each note again took half of suggesting after a broad tag.
+            return candidate_ids
         return {
             note_int_id
             for note_int_id in candidate_ids

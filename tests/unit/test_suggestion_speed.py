@@ -95,3 +95,35 @@ def test_reasons_never_walk_shared_notes_one_by_one(monkeypatch) -> None:
     index.describe_search_suggestions(query="journal ", terms=suggestions[:12])
     # One anchor: each suggestion's reason is one intersection, found by groups.
     assert walked, "reasons come from anchor groups"
+
+
+_QUERY_SEED = 59
+_QUERIES = 300
+_QUERY_TAGS = ["tag1", "tag2", "tag3", "tag40", "@code", "@code=python", "journal", "missing"]
+
+
+def _carries(note_terms: frozenset[str], tag: str) -> bool:
+    if tag in note_terms:
+        return True
+    return "=" not in tag and any(term.startswith(f"{tag}=") for term in note_terms)
+
+
+def test_tag_only_searches_find_what_checking_each_note_finds() -> None:
+    # Tag-only clauses skip the per-note check: the postings must give the same notes.
+    index = _many_tag_index()
+    index.remove_many({f"n{number}" for number in range(0, _NOTE_COUNT, 7)})
+    generator = random.Random(_QUERY_SEED)
+    live = {note_id: index._note_tag_terms_casefold[index._uuid_to_id[note_id]]
+            for note_id in (f"n{number}" for number in range(_NOTE_COUNT)) if index._uuid_to_id[note_id] in index._alive}
+    for _ in range(_QUERIES):
+        required = generator.sample(_QUERY_TAGS, generator.randint(0, 2))
+        forbidden = [tag for tag in generator.sample(_QUERY_TAGS, generator.randint(0, 2)) if tag not in required]
+        if not required and not forbidden:
+            continue
+        query = " ".join([*required, *(f"-{tag}" for tag in forbidden)])
+        expected = {
+            note_id for note_id, terms in live.items()
+            if all(_carries(terms, tag) for tag in required) and not any(_carries(terms, tag) for tag in forbidden)
+        }
+        index._result_cache.clear()
+        assert index.query_note_ids(query) == expected, query
