@@ -56,7 +56,7 @@ Any change to the persistent schema of the notes database **or its sibling `*.fi
 - The migration step must be idempotent. It must accept a database that on-open schema helpers have already partly or fully upgraded, and it must verify the final shape.
 - Update `app/encryption_audit.py` in the same change. Key the expected schema on the database version: older versions may lack the new pieces or already have them; from the new version on, they are required. Classify every new column as an encrypted payload (with a `_PayloadSpec`) or as readable structural metadata. Add the new version to `_MIGRATION_DEFERRED_PLAINTEXT_FIELDS_BY_DATABASE_VERSION`.
 - Why: the startup encryption audit fails closed on unknown tables and columns. Without a version bump, an older MetaList opening the database reports a confusing audit failure instead of "database version N is newer than supported", and the audit cannot tell an unmigrated database from a half-migrated one.
-- Tests must cover: migrating a database created before the change; migrating one the app already upgraded on open; the audit before and after the new version; and updated `applied_versions` expectations.
+- Tests must cover: migrating a database from the previous version (each step is tested from the one before it, so a restored older backup is covered step by step), and the audit accepting both the previous version and the new one. MetaList has two live databases, both upgraded on install, so the step needs no test for databases at other versions or half-upgraded ones; it must still be written to accept a database that on-open schema helpers already upgraded.
 - Document readable structural metadata in `docs/security/README.md`.
 
 ## CRITICAL: On-screen Behavior Follows the Interaction Principles
