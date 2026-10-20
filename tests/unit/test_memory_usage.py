@@ -160,3 +160,15 @@ def test_an_object_two_containers_share_is_counted_once_whatever_they_are(holder
     del shared
     counted = memory_breakdown._PackedIdSet()
     assert memory_breakdown._deep_size(held, counted) < 2 * string_size
+
+
+class _OneSlot:
+    __slots__ = "value"
+
+    def __init__(self, value: object) -> None:
+        self.value = value
+
+
+def test_a_class_with_one_slot_named_alone_is_measured_by_that_slot() -> None:
+    held = "x" * SHARED_TEXT_LENGTH
+    assert held in memory_breakdown._children(_OneSlot(held))

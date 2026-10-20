@@ -90,7 +90,13 @@ def _children(obj: object) -> list[object]:
     if hasattr(obj, "__dict__"):
         attributes.append(vars(obj))
     for klass in type(obj).__mro__:
-        for slot in getattr(klass, "__slots__", ()):
+        if "__slots__" not in vars(klass):
+            continue
+        slots = vars(klass)["__slots__"]
+        # A single slot may be written as its name alone.
+        if isinstance(slots, str):
+            slots = (slots,)
+        for slot in slots:
             if hasattr(obj, slot):
                 attributes.append(getattr(obj, slot))
     return attributes
