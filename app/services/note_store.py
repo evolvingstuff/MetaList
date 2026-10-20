@@ -35,7 +35,7 @@ from app.services.tag_ontology import TagOntology
 from app.services.note_image_tags import infer_image_tag_terms
 from app.services.ontology_rules_store import get_ontology
 from app.services.search_index import SearchRecord, extract_tags_for_search, search_index
-from app.utils.text_utils import strip_html, strip_html_keeping_link_urls
+from app.utils.text_utils import strip_html, strip_sanitized_html_keeping_link_urls
 
 # Hydration reports its progress after every this many notes.
 _HYDRATION_PROGRESS_INTERVAL_NOTES = 1000
@@ -44,11 +44,13 @@ _STARTUP_TIMING_LOG_INTERVAL_NOTES = 1000
 
 def _search_text(content_html: str, visible_text: str) -> str:
     """The text search sees: the visible text plus the URLs that link labels hide
-    (docs/ui/search-semantics.md). Ontology text matchers keep the visible text."""
+    (docs/ui/search-semantics.md). Ontology text matchers keep the visible text.
+    Stored notes are the sanitizer's output (content_cache), read without Python's
+    HTML parser."""
     if "href" not in content_html:
         # No link: the visible text, already computed, is the same.
         return visible_text
-    return strip_html_keeping_link_urls(content_html)
+    return strip_sanitized_html_keeping_link_urls(content_html)
 
 
 def _derive_own_tag_terms(*, tags: str, content_html: str) -> tuple[FrozenSet[str], FrozenSet[str]]:

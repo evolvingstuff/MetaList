@@ -96,3 +96,47 @@ def test_frequencies_are_unchanged_for_ordinary_tags() -> None:
     )
     assert index.list_tag_frequencies() == {"trip": 2, "japan": 1}
     assert index.list_explicit_tag_frequencies() == {"trip": 2, "japan": 1}
+
+
+_EQUIVALENCE_NOTES = 200
+_EQUIVALENCE_SEED = 23
+
+
+def _index_state(index: SearchIndex) -> dict[str, object]:
+    return {
+        "tag_notes_casefold": {term: set(notes) for term, notes in index._tag_notes_casefold.items() if notes},
+        "tag_notes": dict(index._tag_notes.items()),
+        "raw_tag_notes_casefold": dict(index._raw_tag_notes_casefold.items()),
+        "explicit_tag_notes": dict(index._explicit_tag_notes.items()),
+        "explicit_tag_notes_casefold": dict(index._explicit_tag_notes_casefold.items()),
+        "columns": [
+            (index._note_explicit_tag_terms[note_int_id], index._note_raw_tag_terms[note_int_id],
+             index._note_tag_terms[note_int_id], index._note_tag_terms_casefold[note_int_id],
+             index._note_text_casefold[note_int_id])
+            for note_int_id in range(len(index._id_to_uuid))
+        ],
+    }
+
+
+def test_a_rebuild_indexes_exactly_what_adding_each_note_would() -> None:
+    # The rebuild indexes each distinct tag set once for all its notes.
+    generator = random.Random(_EQUIVALENCE_SEED)
+    shared_sets = [_random_terms(generator) for _ in range(8)]
+    records, raw_by_id = [], {}
+    for number in range(_EQUIVALENCE_NOTES):
+        explicit = _random_terms(generator)
+        tag_terms = explicit | generator.choice(shared_sets)
+        records.append(SearchRecord(
+            note_id=f"n{number}", content_text=f"text {number}", tags=" ".join(sorted(explicit)), tag_terms=tag_terms,
+        ))
+        raw_by_id[f"n{number}"] = explicit | generator.choice(shared_sets)
+    rebuilt = SearchIndex()
+    rebuilt.rebuild(records, raw_tag_terms_by_id=raw_by_id, progress_update=lambda _count: None,
+                    progress_interval=_PROGRESS_INTERVAL)
+    added = SearchIndex()
+    for record in records:
+        added.upsert(note_id=record.note_id, content_text=record.content_text, tags=record.tags,
+                     raw_tag_terms=raw_by_id[record.note_id], tag_terms=record.tag_terms)
+    assert _index_state(rebuilt) == _index_state(added)
+    for query in ("trip", "japan -work", "@code", "text 7"):
+        assert rebuilt.query_note_ids(query) == added.query_note_ids(query)
