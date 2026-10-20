@@ -1,6 +1,7 @@
 import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
 import { escapeHtml } from '../html-escape.js';
+import { copyTextToClipboard } from '../mode-manager/events/mouse-events.js';
 
 const BYTES_PER_MEGABYTE = 1024 * 1024;
 const SECONDS_PER_MINUTE = 60;
@@ -137,24 +138,7 @@ export class MemoryUsageModal extends BaseModal {
                 <p class="note-layout-description">Measures each part of the server by size (never its content). Takes a few seconds; saving waits meanwhile.</p>
                 <button type="button" class="secondary-btn" id="memory-usage-measure-btn"${measureDisabled}>Measure what holds it</button>`;
         }
-        const measured = state.breakdown.parts.reduce((sum, part) => sum + part.bytes, 0);
-        const unmeasured = state.usage.residentBytes - measured;
-        // The system can compress memory a part still holds: then the parts add up to
-        // more than is resident, and nothing is left over to name.
-        let everythingElse = 'none: the system has compressed some of the parts above';
-        if (unmeasured >= 0) {
-            everythingElse = megabytes(unmeasured);
-        }
-        // A part that lists its fields (the note store, the search index) shows each one
-        // under it, as the code names it, largest first.
-        const rows = [
-            ...state.breakdown.parts.flatMap(part => [
-                { label: part.label, value: megabytes(part.bytes), isField: false },
-                ...part.fields.map(field => ({ label: field.label, value: megabytes(field.bytes), isField: true })),
-            ]),
-            { label: 'Everything else (Python, libraries, free space)', value: everythingElse, isField: false },
-        ];
-        const rowsHtml = rows.map(row => {
+        const rowsHtml = this._breakdownRows(state).map(row => {
             const rowClass = row.isField ? ' class="memory-usage-field"' : '';
             return `<tr${rowClass}><th scope="row">${escapeHtml(row.label)}</th><td>${escapeHtml(row.value)}</td></tr>`;
         }).join('');
@@ -163,17 +147,61 @@ export class MemoryUsageModal extends BaseModal {
                 <p class="note-layout-description">Measured in ${escapeHtml(seconds)} s.</p>`;
     }
 
-    _rowsHtml(usage) {
+    // The measured parts, each with its fields under it (the note store's and the search
+    // index's, as the code names them, largest first), then what is left over.
+    _breakdownRows(state) {
+        const measured = state.breakdown.parts.reduce((sum, part) => sum + part.bytes, 0);
+        const unmeasured = state.usage.residentBytes - measured;
+        // The system can compress memory a part still holds: then the parts add up to
+        // more than is resident, and nothing is left over to name.
+        let everythingElse = 'none: the system has compressed some of the parts above';
+        if (unmeasured >= 0) {
+            everythingElse = megabytes(unmeasured);
+        }
+        return [
+            ...state.breakdown.parts.flatMap(part => [
+                { label: part.label, value: megabytes(part.bytes), isField: false },
+                ...part.fields.map(field => ({ label: field.label, value: megabytes(field.bytes), isField: true })),
+            ]),
+            { label: 'Everything else (Python, libraries, free space)', value: everythingElse, isField: false },
+        ];
+    }
+
+    _usageRows(usage) {
         const notesHeld = usage.notesLoaded
             ? `${usage.noteCount.toLocaleString()} notes, ${megabytes(usage.noteTextBytes)} of text`
             : 'Not loaded yet (the namespace is still unlocking)';
-        const rows = [
+        return [
             ['Server process memory now', megabytes(usage.residentBytes)],
             ['Server process memory at its peak', megabytes(usage.peakResidentBytes)],
             ['Notes held decrypted in memory', notesHeld],
             ['Server running for', duration(usage.uptimeSeconds)],
         ];
-        return rows.map(([label, value]) => `<tr><th scope="row">${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`).join('');
+    }
+
+    _rowsHtml(usage) {
+        return this._usageRows(usage).map(([label, value]) => `<tr><th scope="row">${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`).join('');
+    }
+
+    // What the dialog shows, as plain lines to paste: the numbers, then the breakdown
+    // when it has been measured, its fields indented.
+    copyText(state) {
+        const lines = ['MetaList memory usage', ...this._usageRows(state.usage).map(([label, value]) => `${label}: ${value}`)];
+        if (state.breakdown !== null) {
+            const seconds = state.breakdown.seconds.toLocaleString(undefined, { maximumFractionDigits: 1 });
+            lines.push('', `What holds it (measured in ${seconds} s)`);
+            for (const row of this._breakdownRows(state)) {
+                const indent = row.isField ? '    ' : '';
+                lines.push(`${indent}${row.label}: ${row.value}`);
+            }
+        }
+        return lines.join('\n');
+    }
+
+    // The Copy button: the text above on the clipboard, and the button glows as copyable
+    // values in notes do.
+    async _copy(copyButton) {
+        await copyTextToClipboard(this.copyText(this.getModalState()), copyButton, 'memory-usage-copied');
     }
 
     renderModalContent() {
@@ -187,6 +215,7 @@ export class MemoryUsageModal extends BaseModal {
             body = `<table class="memory-usage-table"><tbody>${this._rowsHtml(state.usage)}</tbody></table>`;
         }
         const refreshDisabled = state.loading || state.measuring ? ' disabled' : '';
+        const copyDisabled = state.usage === null || state.loading || state.measuring ? ' disabled' : '';
         modalElement.innerHTML = `
             <div class="modal-content memory-usage-modal-content">
                 <h2>Memory Usage</h2>
@@ -195,6 +224,7 @@ export class MemoryUsageModal extends BaseModal {
                 <h3 class="memory-usage-subheading">What holds it</h3>
                 ${this._breakdownHtml(state)}
                 <div class="form-actions">
+                    <button type="button" class="secondary-btn" id="memory-usage-copy-btn"${copyDisabled}>Copy</button>
                     <button type="button" class="secondary-btn" id="memory-usage-refresh-btn"${refreshDisabled}>Refresh</button>
                 </div>
             </div>
@@ -204,6 +234,11 @@ export class MemoryUsageModal extends BaseModal {
             throw new Error('Memory usage refresh button missing');
         }
         refreshButton.onclick = async () => this._refresh();
+        const copyButton = document.getElementById('memory-usage-copy-btn');
+        if (!(copyButton instanceof HTMLButtonElement)) {
+            throw new Error('Memory usage copy button missing');
+        }
+        copyButton.onclick = async () => this._copy(copyButton);
         const measureButton = document.getElementById('memory-usage-measure-btn');
         if (measureButton instanceof HTMLButtonElement) {
             measureButton.onclick = async () => this._measure();

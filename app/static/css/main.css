@@ -840,6 +840,11 @@ html[data-theme="dark"] .search-suggestion-statistics-day summary {
     content: "▾";
 }
 
+/* Memory Usage: Copy glows as copyable values in notes do. */
+.memory-usage-copied {
+    animation: meta-credential-copied 0.7s ease;
+}
+
 /* Memory Usage: a part's fields (the note store's, the search index's), named as in the code. */
 .memory-usage-field th,
 .memory-usage-field td {
