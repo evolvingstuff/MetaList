@@ -209,6 +209,23 @@ Optional groundwork, at any time: a thin accessor (`get_wrapper(kind)`,
 let `auth_service`, `settings_sql`, the audit and backup restore stop knowing
 where the columns live. The migration then changes only the accessor.
 
+### Also decided
+
+- **Hosted MetaList never stores plaintext at rest.** It has no passwordless
+  namespaces: its server refuses to serve a namespace with zero wrappers, and its
+  client never offers to remove the password.
+- **Recovery keys in the password flows.** Setting a password offers to create a
+  recovery key. Removing the password decrypts the corpus and deletes every
+  wrapper, recovery rows included, since nothing is left to unlock.
+- **DEK rotation** happens only on evidence that the key was compromised (setting
+  a password already creates a fresh DEK, because passwordless namespaces have
+  none). It rewrites the whole corpus, so it runs like a password transition:
+  make a new backup first, run under the live-recovery journal so an
+  interruption resumes or rolls back, then enable secure deletion, truncate the
+  WAL and vacuum the live database so the old key and ciphertext do not linger in
+  freed pages. Existing backups keep the old DEK and stay immutable; tell the
+  user they remain readable with the old password.
+
 ### Rejected: always encrypt, even without a password
 
 Proposed and withdrawn (2026-10-21): give every namespace a DEK and wrap it
