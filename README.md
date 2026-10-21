@@ -23,7 +23,8 @@ A minimalist single-user note-taking app focused on server-side rendering (SSR),
 - AI privacy: the text actually sent is checked against the privacy settings, private search terms are never sent, proposed tags never count toward a whitelist, and changing the privacy settings stops a request already under way.
 - Exported HTML is cleaned like the note view and carries its own security policy; code lines stay whole in full screen and in exports.
 - Fixed: right-clicking selected images (just pasted, for example) failed instead of opening the image menu; a refused chat Send now stays on screen with its reason; Enter and the arrow keys act only on a suggestion list made for what was typed; the banner and zoom work while editing; clicking a diagram edits it and pictures can be dragged; a move that changes nothing does nothing; reminder fixes.
-- Security: aiohttp 3.14.4 (GHSA-2g87-pp6c-29x5). The source repository moved to [metalist-app/metalist](https://github.com/metalist-app/metalist).
+- **MetaList now needs Python 3.11 or newer.** Python 3.10 reaches its end of life this month, and Pillow's fixes below no longer support it. An install on Python 3.10 needs a newer Python before it can update.
+- Security: Pillow 13.0.0 (eight advisories in decoding crafted TIFF, GIF, PPM, EPS and PDF files, which MetaList meets in remote images and attachments), pypdf 6.20.1 (crafted PDFs that loop or use too much memory), aiohttp 3.14.4 (GHSA-2g87-pp6c-29x5), certifi 2026.10.19 and uv 0.13.4. The source repository moved to [metalist-app/metalist](https://github.com/metalist-app/metalist).
 
 ## Changes in 0.20.0
 
@@ -435,11 +436,11 @@ uv tool install metalist
 metalist
 ```
 
-This repo now packages itself under the PyPI distribution name `metalist`. Current releases support Python 3.10 through 3.14.
+This repo now packages itself under the PyPI distribution name `metalist`. Current releases support Python 3.11 through 3.14.
 
 Recommended release path:
 1. In the existing PyPI project `metalist`, configure GitHub Trusted Publishing for `metalist-app/metalist` and the workflow file `.github/workflows/publish-pypi.yml`.
-2. Develop and review the candidate on a feature branch with focused checks. Merge it into `main` and push `main` once. This runs the full `Publish to PyPI` validation matrix for that exact commit. GitHub-hosted Windows, macOS, and Linux runners install the built wheel and test application startup outside the source checkout on the supported Python endpoints, 3.10 and 3.14. Every installed-package matrix job also exercises the real `metalist update` path with uv, backups, interpreter preservation, and two-namespace restart against a local release index. The old-version fixture carries the candidate updater so this validates the mechanism being shipped; it does not retroactively fix older installed updaters. You do not need those operating systems locally. Archive verification checks runtime files, including agent Markdown resources, against both the wheel and source distribution.
+2. Develop and review the candidate on a feature branch with focused checks. Merge it into `main` and push `main` once. This runs the full `Publish to PyPI` validation matrix for that exact commit. GitHub-hosted Windows, macOS, and Linux runners install the built wheel and test application startup outside the source checkout on the supported Python endpoints, 3.11 and 3.14. Every installed-package matrix job also exercises the real `metalist update` path with uv, backups, interpreter preservation, and two-namespace restart against a local release index. The old-version fixture carries the candidate updater so this validates the mechanism being shipped; it does not retroactively fix older installed updaters. You do not need those operating systems locally. Archive verification checks runtime files, including agent Markdown resources, against both the wheel and source distribution.
 3. Wait for the exact-commit main release matrix to pass, then run `.venv/bin/python scripts/release.py X.Y.Z` to create and push the tag. Any intervening change requires a new main validation run before tagging.
 4. The tag job independently verifies every main-job conclusion and reuses the wheel and source distribution from that run for GitHub Trusted Publishing; it does not repeat the matrix. Manual dispatch cannot publish. The release driver compares PyPI hashes with the tested artifact and checks a clean public install. Users can then run it with `uvx metalist`, install it persistently with `uv tool install metalist`, or install it with `pip install metalist`.
 

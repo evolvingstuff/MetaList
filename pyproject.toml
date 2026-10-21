@@ -7,7 +7,7 @@ name = "metalist"
 dynamic = ["version"]
 description = "A minimalist single-user note-taking app with SSR, fast in-memory tree operations, and efficient sync."
 readme = "README.md"
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.11,<3.15"
 dependencies = [
     "argon2-cffi==25.1.0",
     "cryptography==50.0.0",
@@ -20,10 +20,10 @@ dependencies = [
     "Mako==1.3.12",
     "nh3==0.3.6",
     "openai==2.54.0",
-    "pillow==12.3.0",
+    "pillow==13.0.0",
     "pydantic==2.13.4",
     "pygments==2.20.0",
-    "pypdf==6.19.0",
+    "pypdf==6.20.1",
     "python-dotenv==1.2.2",
     "python-multipart==0.0.32",
     "rich==14.3.4",
@@ -46,9 +46,8 @@ dev = [
     "hypothesis==6.164.0",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
-    # Static-analysis report at development startup (docs/testing/harness.md);
-    # the analyzer runs on 3.11+, so a 3.10 development install goes without it.
-    "shockharness==0.17.0; python_version >= '3.11'",
+    # Static-analysis report at development startup (docs/testing/harness.md).
+    "shockharness==0.17.0",
     # Type checking against a baseline of known errors (scripts/check_types.py).
     "mypy==2.4.0",
 ]
@@ -60,7 +59,7 @@ metalist-audit-encryption = "app.encryption_audit:cli"
 [tool.mypy]
 # The oldest supported Python, and one platform for every OS, so Windows, macOS and
 # Linux report the same errors against the one baseline (scripts/check_types.py).
-python_version = "3.10"
+python_version = "3.11"
 platform = "linux"
 plugins = ["pydantic.mypy"]
 show_error_codes = true
@@ -97,6 +96,6 @@ release = [
     "requests==2.34.2",
     "rich==14.3.4",
     "setuptools==83.0.0",
-    "uv==0.11.23",
+    "uv==0.13.4",
     "wheel==0.48.0",
 ]

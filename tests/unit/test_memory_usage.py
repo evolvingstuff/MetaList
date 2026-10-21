@@ -92,8 +92,8 @@ def test_the_breakdown_gives_no_dataclass_a_dict_it_did_not_have(live_database) 
     apply_insert_note("a", None, None, None, "", content="<p>One</p>", tags="trip", proposed_tags="")
     record = store.get_note("a")
     had_dict = _has_materialized_dict(record)
-    # Python 3.12 creates an instance's dict only when something asks for it; 3.10
-    # creates every instance with one. Either way, measuring must not change that.
+    # Python 3.12 creates an instance's dict only when something asks for it; older
+    # versions may create every instance with one. Either way, measuring must not change that.
     if sys.version_info >= _LAZY_INSTANCE_DICT_VERSION:
         assert not had_dict
     memory_breakdown.measure_memory_breakdown()

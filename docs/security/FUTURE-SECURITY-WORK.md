@@ -6,7 +6,7 @@ The intended deployment is a personal single-user application on a trusted compu
 
 ## Implemented release controls
 
-CI runs Python/Node tests, startup sanity, lock-export/checksum checks, and vulnerability audits before building. Runtime and CI dependencies install from hash-bearing lock exports. Builds use pinned release tools, GitHub Actions reference immutable commits, wheel/sdist resources are checked, and the same wheel passes clean installed startup checks on Windows/macOS/Linux × Python 3.10–3.13 before publication. Pending or failed platform checks block publication. Local testing does not establish that matrix for a future commit.
+CI runs Python/Node tests, startup sanity, lock-export/checksum checks, and vulnerability audits before building. Runtime and CI dependencies install from hash-bearing lock exports. Builds use pinned release tools, GitHub Actions reference immutable commits, wheel/sdist resources are checked, and the same wheel passes clean installed startup checks on Windows/macOS/Linux × the Python 3.11 and 3.14 endpoints before publication. Pending or failed platform checks block publication. Local testing does not establish that matrix for a future commit.
 
 The remaining process is maintenance: review audit results, update pins and manifests deliberately, and rerun validation for the exact release commit. A successful advisory lookup is not proof against undisclosed vulnerabilities, a compromised publisher, or malicious packages. The Node-only diagram/browser development tool graph is separate from the shipped vendored bundles and is not covered by the Python/vendor audit. See [the update procedure](supply-chain.md#updating-dependencies).
 

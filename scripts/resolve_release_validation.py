@@ -17,7 +17,7 @@ import urllib.request
 WORKFLOW = "publish-pypi.yml"
 WORKFLOW_NAME = "Publish to PyPI"
 SYSTEMS = ("ubuntu-latest", "macos-latest", "windows-latest")
-PYTHONS = ("3.10", "3.14")
+PYTHONS = ("3.11", "3.14")
 BROWSER_LABELS = (
     "Linux Chrome and Firefox",
     "macOS Chrome and Firefox",

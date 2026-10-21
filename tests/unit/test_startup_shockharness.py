@@ -19,12 +19,11 @@ from app.startup_shockharness import overview_lines
 from app.startup_shockharness import shockharness_report_lines
 
 
-# The analyzer runs on Python 3.11+ only (pyproject's dev extra carries that
-# marker), so a 3.10 interpreter cannot have it: the overview tests run where
-# the tool is installed, the "not installed" path everywhere.
+# The analyzer comes with pyproject's dev extra, which an installed copy lacks: the
+# overview tests run where the tool is installed, the "not installed" path everywhere.
 _NEEDS_THE_ANALYZER = pytest.mark.skipif(
     not is_shockharness_installed(),
-    reason="ShockHarness (the dev extra, Python 3.11+) is not installed",
+    reason="ShockHarness (the dev extra) is not installed",
 )
 
 

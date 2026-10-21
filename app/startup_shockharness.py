@@ -61,8 +61,8 @@ def is_shockharness_installed() -> bool:
 def collect_shockharness_overview(repo_root: Path) -> ShockHarnessOverview:
     """Analyze the repository and write the full JSON report; the counts for the console."""
     assert is_shockharness_installed(), "ShockHarness must be installed to collect its overview"
-    # A development tool for Python 3.11+: imported here, not at the top, so a
-    # checkout without it (Python 3.10, or not yet installed) still starts.
+    # A development tool (the dev extra): imported here, not at the top, so an
+    # installed copy or a checkout without it still starts.
     from shockharness import analyze_paths
     from shockharness.analysis import AnalysisOptions
     from shockharness.analysis import CACHE_CONFIGURED

@@ -30,10 +30,6 @@ from app.services.view_cache import view_cache
 # Objects the walk does not count: code and types belong to no structure, and small
 # numbers and flags are shared interpreter-wide.
 _UNCOUNTED_TYPES = (type, ModuleType, FunctionType, MethodType, BuiltinFunctionType, int, float, bool, type(None))
-# References an object reached by the walk has without being shared: its container's,
-# the walk's list of the container's children, the call's argument, and getrefcount's
-# own. Above this, another structure holds it too.
-_UNSHARED_REFERENCE_COUNT = 4
 _EMPTY_SLOT = 0
 # Object ids are 16-byte aligned: the low bits carry no information for the hash.
 _ID_ALIGNMENT_BITS = 4
@@ -102,10 +98,30 @@ def _children(obj: object) -> list[object]:
     return attributes
 
 
-def _size_and_children(obj: object, counted: _PackedIdSet) -> tuple[int, Sequence[object] | None]:
+def _child_reference_count(siblings: Sequence[object], index: int) -> int:
+    """The references a child has as the walk reads it: its container's, the walk's list of
+    the container's children, this function's local name, and getrefcount's own, as far
+    as the interpreter counts them (3.14 borrows some that 3.12 counted)."""
+    child = siblings[index]
+    return sys.getrefcount(child)
+
+
+def _measured_unshared_reference_count() -> int:
+    """The count _child_reference_count gives a child only its container holds, read the
+    same way the walk reads it, so it is right on any Python version: a fixed 4 (found on
+    3.12) made 3.14 count every shared object twice (2026-10-21)."""
+    held_once = [object()]
+    return _child_reference_count(_children(held_once), 0)
+
+
+# Above this, another structure holds the object too: it is counted only the first time.
+_UNSHARED_REFERENCE_COUNT = _measured_unshared_reference_count()
+
+
+def _size_and_children(obj: object, counted: _PackedIdSet, *, may_be_shared: bool) -> tuple[int, Sequence[object] | None]:
     if isinstance(obj, _UNCOUNTED_TYPES):
         return 0, None
-    if sys.getrefcount(obj) > _UNSHARED_REFERENCE_COUNT and not counted.add_if_new(id(obj)):
+    if may_be_shared and not counted.add_if_new(id(obj)):
         return 0, None
     size = sys.getsizeof(obj)
     if isinstance(obj, (str, bytes)):
@@ -117,7 +133,8 @@ def _deep_size(root: object, counted: _PackedIdSet) -> int:
     """The bytes reachable from root that were not counted before. The stack holds each
     open container's children and the next one to visit, so it is only as long as the
     data is deep."""
-    total, children = _size_and_children(root, counted)
+    # A root may be another part's too: it is always recorded.
+    total, children = _size_and_children(root, counted, may_be_shared=True)
     if children is None:
         return total
     stack: list[tuple[Sequence[object], int]] = [(children, 0)]
@@ -127,7 +144,8 @@ def _deep_size(root: object, counted: _PackedIdSet) -> int:
             stack.pop()
             continue
         stack[-1] = (siblings, index + 1)
-        size, grandchildren = _size_and_children(siblings[index], counted)
+        may_be_shared = _child_reference_count(siblings, index) > _UNSHARED_REFERENCE_COUNT
+        size, grandchildren = _size_and_children(siblings[index], counted, may_be_shared=may_be_shared)
         total += size
         if grandchildren is not None:
             stack.append((grandchildren, 0))
