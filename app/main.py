@@ -79,6 +79,7 @@ from app.api.transactions import transactional_route
 from app.config import API_PREFIX, TEST_MODE, V1_API_PREFIX
 from .models.database import SafeSession
 from loguru import logger
+import io
 import logging
 import time
 import sys
@@ -106,6 +107,12 @@ _CSP_NONCE_RANDOM_BYTES = 24
 # URL-safe base64 of the random bytes, without padding.
 _CSP_NONCE_TEXT_LENGTH = 32
 
+# The log is UTF-8 on every OS, as the launcher reads child logs: Windows writes a pipe
+# or a file in its code page (cp1252), which has no ⇒ or ⇐, and every request's line
+# failed to write there (2026-10-21). A character UTF-8 cannot carry is escaped.
+if not isinstance(sys.stdout, io.TextIOWrapper):
+    raise RuntimeError(f"MetaList logs to a text stream on stdout, not {type(sys.stdout).__name__}")
+sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
 logger.remove()
 logger.add(
     sys.stdout,
