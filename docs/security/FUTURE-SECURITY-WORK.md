@@ -31,7 +31,9 @@ These are maintenance exercises rather than new application features:
 
 The present security conclusion should be revisited before any of the following:
 
-- Hosting MetaList on the public internet or in a cloud environment.
+- Hosting MetaList on the public internet or in a cloud environment. Its
+  planned recovery key first needs the
+  [`key_wrappers` table](#deferred-multiple-unlock-methods-key_wrappers).
 - Supporting multiple users or users who do not fully trust one another.
 - Allowing third-party plugins, extensions, automation, or agent access.
 - Exposing `@shell` outside a loopback-only, explicitly enabled local workflow.
@@ -116,6 +118,116 @@ Limits of that design: passwordless namespaces have no secret key and cannot
 use it, and replacing the entire database with an older copy that was valid at
 the time is not detected unless the latest counter is also kept outside the
 stored database.
+
+## Deferred: Multiple Unlock Methods (`key_wrappers`)
+
+Status: decided, deliberately deferred (2026-10-21). **Do this in the same change
+that adds the first second way to unlock a namespace**: a recovery key (planned
+for the hosted version, issued at signup), a passkey, or a second password.
+Do not ship any of those on top of the current single-wrapper columns.
+
+### Today
+
+Each namespace is its own SQLite file with one `app_settings` row (`WHERE id = 1`),
+which holds exactly one way to unlock it:
+
+| Group | Columns | Belongs to |
+|---|---|---|
+| Password check | `auth_verifier`, `auth_salt`, `auth_iterations` | a passphrase |
+| Key wrapping | `kek_salt`, `kek_iterations`, `kdf_memory_cost_kib`, `kdf_parallelism`, `encrypted_dek`, `dek_nonce`, `dek_tag` | each wrapper |
+| Profile | `vault_version`, `encryption_algorithm` (namespace); `kdf_algorithm` (per wrapper) | |
+| Flag | `encryption_enabled` | derivable from the wrappers |
+
+About seventy references read these columns by name: `app/services/auth_service.py`
+(unlock, set, change, remove password), `app/db/settings_sql.py`,
+`app/encryption_audit.py` (fixed column set and sizes) and the backup-restore
+password check in `app/api/routes/backups.py`.
+
+### Design
+
+Move the wrapper columns into a `key_wrappers` table in the namespace database,
+one row per way to unlock. No namespace ID column is needed: the table lives in
+the namespace's own file.
+
+```
+key_wrappers
+  id           INTEGER PRIMARY KEY
+  kind         TEXT NOT NULL   -- 'passphrase' now; 'recovery', 'passkey' later
+  wrapped_dek, dek_nonce, dek_tag
+  kek_salt, kek_iterations, kdf_algorithm, kdf_memory_cost_kib, kdf_parallelism
+  auth_verifier, auth_salt, auth_iterations   -- passphrase rows only
+  created_at
+```
+
+Behaviour stays as it is today:
+
+- Passwordless namespace: zero rows, payloads plaintext at rest.
+- Set password: generate a DEK, encrypt the corpus, insert one `passphrase` row.
+- Unlock: verify against the row of the kind being used, derive its KEK, unwrap.
+- Change password: rewrap, update that row only. The corpus is untouched.
+- Remove password: decrypt the corpus, delete every row.
+
+Invariants:
+
+1. Zero rows (plaintext) or at least one (encrypted). Never an encrypted corpus
+   with zero rows.
+2. Every row wraps the same DEK. Adding a row never changes the DEK or touches
+   the corpus.
+3. Removing the last row requires decrypting the corpus first. Removing any
+   other row is a single delete.
+4. Changing the secret behind a row modifies only that row.
+
+Per-kind rules:
+
+- **Passphrase rows keep the two-key split**: the Argon2id verifier (`auth_*`)
+  and the KEK derive from separate salts, so the stored verifier never reveals
+  the unwrapping key. Passphrase rows must carry the verifier fields.
+- **Recovery and passkey rows carry no verifier** and rely on the authenticated
+  AES-GCM unwrap as the check. A recovery key is 128+ bits of randomness, so
+  there is nothing for Argon2 to stretch (at most a cheap HKDF), and the one
+  verifier-only check (backup restore into another namespace) is a password
+  flow that should not accept a recovery key.
+- The encryption audit checks the column set **per kind**, not one fixed set.
+- `encryption_enabled` becomes derived from the row count. It is read on hot
+  paths, so cache it in memory when the database opens; the rows stay the
+  source of truth.
+
+Migration checklist (per [AGENTS.md](../../AGENTS.md), "Database Schema Changes
+Require a Version Bump"):
+
+- Bump `CURRENT_DATABASE_VERSION`; the step inserts one `passphrase` row from a
+  non-empty wrapper in `app_settings`, then drops or retires the old columns.
+  It must be idempotent and verify the final shape.
+- Audit: an encrypted namespace has at least one row, a plaintext one has none;
+  classify every new column; accept the previous and the new version.
+- Restoring an older backup migrates only the installed live copy, as always.
+- `convert-from-legacy.py` (friend Joe's old MetaList) writes into the new table.
+- Update the two-key section of [README.md](README.md).
+
+Optional groundwork, at any time: a thin accessor (`get_wrapper(kind)`,
+`set_wrapper`, `delete_wrapper`) that reads the `app_settings` row today would
+let `auth_service`, `settings_sql`, the audit and backup restore stop knowing
+where the columns live. The migration then changes only the accessor.
+
+### Rejected: always encrypt, even without a password
+
+Proposed and withdrawn (2026-10-21): give every namespace a DEK and wrap it
+under a stored "none" key when there is no password, so the corpus is always
+ciphertext. Rejected because:
+
+- The none-wrapped DEK travels in the same file as the data, so passwordless
+  backups and exports are readable by whoever holds them.
+- Adding a password would still have to rotate the DEK and re-encrypt
+  everything. The none-wrapped DEK has sat readable in the database, WAL, freed
+  pages, backups and Time Machine; keeping it would let anyone holding an old
+  copy read every note written after the password was set. That is weaker than
+  today, where an old copy exposes only the old notes.
+- Every passwordless startup would pay a decryption pass for data anyone with
+  the file can read.
+
+Hosted import does not need it: importing into a hosted account encrypts on the
+way in with a fresh DEK, which is today's set-password path, whatever the local
+file's history.
 
 ## Low-Priority or Excessive Controls for the Current Deployment
 

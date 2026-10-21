@@ -47,6 +47,9 @@ _CREATE_NOTES_NEXT_INDEX = f"""
 CREATE INDEX IF NOT EXISTS idx_{NOTES_TABLE}_next ON {NOTES_TABLE}(next_id);
 """
 
+# The auth_*, kek_*, kdf_* and *dek* columns hold the one way to unlock a namespace.
+# A recovery key, passkey or second password moves them to a key_wrappers table first:
+# docs/security/FUTURE-SECURITY-WORK.md, "Deferred: Multiple Unlock Methods".
 _CREATE_APP_SETTINGS_TABLE = f"""
 CREATE TABLE IF NOT EXISTS {APP_SETTINGS_TABLE} (
     id INTEGER PRIMARY KEY,
