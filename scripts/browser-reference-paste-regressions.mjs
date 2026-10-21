@@ -551,6 +551,51 @@ async function pasteHereCases(page) {
   });
 }
 
+// A note of pasted images and no text, its images selected, right-clicked on
+// an image: the image's menu opens (a selection of images was remembered as text
+// positions, which images have none of, and the menu threw instead). Paste
+// Reference Into Note replaces the selected images.
+const PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAAQklEQVR4nO3OQQ0AIAwAsQlDBLKRhQuOR5MK6Jy9vjL5QEhISKgeCAkJCdUDISEhoXogJCQkVA+EhISE6oGQkNBjF21V9KbVaAsfAAAAAElFTkSuQmCC';
+const IMAGE = `<img src="data:image/png;base64,${PNG_BASE64}" alt="dot">`;
+const IMAGE_SIZE_ITEMS = ['Make Bigger', 'Make Smaller', 'Reset Size'];
+
+async function pasteHereOverImagesCase(page) {
+  const targetId = await createNote(page, `<p>${IMAGE}${IMAGE}</p>`);
+  const sourceId = await createNote(page, '<p>The referenced note</p>');
+  await reloadApp(page);
+  await copyNote(page, 'Meta', sourceId);
+  await startEditing(page, targetId);
+  const imagePoint = await page.evaluate(id => {
+    const content = document.querySelector(`.note[data-note-id="${id}"] > .note-content`);
+    const images = content.querySelectorAll('img');
+    if (images.length !== 2) throw new Error(`expected the two pasted images, found ${images.length}`);
+    const range = document.createRange();
+    range.setStartBefore(images[0]);
+    range.setEndAfter(images[1]);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    const box = images[0].getBoundingClientRect();
+    return {x: box.left + box.width / 2, y: box.top + box.height / 2};
+  }, targetId);
+  await openMenuAt(page, imagePoint);
+  const labels = await menuLabels(page);
+  for (const item of IMAGE_SIZE_ITEMS) {
+    assert(labels.top.some(label => label.startsWith(item)), `images selected, right-click on one: the image menu offers ${item} (${JSON.stringify(labels)})`);
+  }
+  assert(labels.paste.includes(HERE_LABEL), `images selected, right-click on one: ${HERE_LABEL} is offered (${JSON.stringify(labels)})`);
+  await chooseOpenMenuItem(page, HERE_LABEL);
+  const after = await page.evaluate(id => {
+    const content = document.querySelector(`.note[data-note-id="${id}"] > .note-content`);
+    return {images: content.querySelectorAll('img').length, text: content.textContent};
+  }, targetId);
+  assert.deepEqual(after, {images: 0, text: `[[${sourceId}]]`}, 'the selected images are replaced by the reference');
+  await editorHistory(page, 'undo');
+  const undone = await page.evaluate(id => document.querySelectorAll(`.note[data-note-id="${id}"] > .note-content img`).length, targetId);
+  assert.equal(undone, 2, 'one undo brings the images back');
+  await leaveEditing(page);
+  await deleteNotes(page, [targetId, sourceId]);
+}
+
 // M6: hidden where there is no spot in the edited note's text to paste at.
 async function pasteHereHiddenCases(page) {
   const editedId = await createNote(page, '<p>The edited note</p>');
@@ -605,6 +650,7 @@ export async function checkReferencePaste(page) {
   await siblingCase(page, {modifier: 'Meta', withCaret: true, viaMenu: true});
   await childCase(page, {modifier: 'Meta', withCaret: true, viaMenu: true});
   await pasteHereCases(page);
+  await pasteHereOverImagesCase(page);
   await pasteHereHiddenCases(page);
   await reloadApp(page);
 }
