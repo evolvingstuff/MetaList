@@ -284,7 +284,7 @@ def configure_preflight(
     configuration = {
         "status": "",
         "branch": "main",
-        "remote": "https://github.com/evolvingstuff/metalist.git",
+        "remote": "https://github.com/metalist-app/metalist.git",
         "origin_commit": "abc",
         "declared_version": "1.2.3",
         "local_tag": "",
@@ -328,6 +328,8 @@ def test_preflight_accepts_only_clean_synchronized_main(tmp_path: Path, monkeypa
         ({"status": "?? untracked"}, "clean"),
         ({"branch": "feature/work"}, "main branch"),
         ({"remote": "https://github.com/example/fork.git"}, "does not point"),
+        # The repository moved to the metalist-app organization (2026-10-20).
+        ({"remote": "https://github.com/evolvingstuff/metalist.git"}, "does not point"),
         ({"origin_commit": "different"}, "same commit"),
         ({"declared_version": "1.2.4"}, "does not declare"),
         ({"local_tag": "different"}, "Local v1.2.3 points"),

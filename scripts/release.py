@@ -25,7 +25,7 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
 
-REPOSITORY = "evolvingstuff/metalist"
+REPOSITORY = "metalist-app/metalist"
 WORKFLOW = "publish-pypi.yml"
 WORKFLOW_NAME = "Publish to PyPI"
 SUPPORTED_SYSTEMS = ("ubuntu-latest", "macos-latest", "windows-latest")
@@ -365,7 +365,7 @@ def preflight(root: Path, *, version: str, console: Console) -> tuple[str, str, 
     if git_output(root, "branch", "--show-current") != "main":
         raise ReleaseError("Releases must run from the main branch")
     remote = git_output(root, "remote", "get-url", "origin")
-    if not re.search(r"(?:github\.com[:/])evolvingstuff/metalist(?:\.git)?$", remote):
+    if not re.search(rf"(?:github\.com[:/]){re.escape(REPOSITORY)}(?:\.git)?$", remote):
         raise ReleaseError(f"origin does not point to {REPOSITORY}: {remote}")
     console.print("[cyan]Fetching current main and release tags…[/cyan]")
     run_command(
