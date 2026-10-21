@@ -33,7 +33,7 @@ def _create_namespace(root: Path, namespace: str, *, encrypted: bool) -> sqlite3
 def test_update_imports_do_not_initialize_namespace_runtime() -> None:
     completed = subprocess.run(
         [sys.executable, "-c", "import sys; import app.services.self_update; assert 'app.config' not in sys.modules; assert 'app.main' not in sys.modules"],
-        cwd=Path(__file__).resolve().parents[2], capture_output=True, text=True,
+        cwd=Path(__file__).resolve().parents[2], capture_output=True, encoding="utf-8",
     )
     assert completed.returncode == 0, completed.stderr
 

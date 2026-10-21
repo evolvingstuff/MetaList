@@ -234,7 +234,7 @@ def test_converter_creates_current_encrypted_database_with_launch_profile(tmp_pa
         input="y\ncorrect-horse\ncorrect-horse\n",
         capture_output=True,
         check=False,
-        text=True,
+        encoding="utf-8",
     )
 
     assert completed.returncode == 0, completed.stderr

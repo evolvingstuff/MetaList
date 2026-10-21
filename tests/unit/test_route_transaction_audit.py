@@ -62,7 +62,7 @@ def test_every_data_changing_route_of_the_real_app_runs_in_a_transaction(tmp_pat
         [sys.executable, "-c", script],
         env=environment,
         capture_output=True,
-        text=True,
+        encoding="utf-8",
         timeout=_REAL_APP_TIMEOUT_SECONDS,
     )
     assert result.returncode == 0, result.stderr[-3000:]

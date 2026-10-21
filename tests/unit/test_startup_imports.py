@@ -25,7 +25,7 @@ def test_starting_the_app_loads_no_ai_sdk(tmp_path) -> None:
         [sys.executable, "-c", script],
         env=environment,
         capture_output=True,
-        text=True,
+        encoding="utf-8",
         timeout=_IMPORT_TIMEOUT_SECONDS,
     )
     assert result.returncode == 0, result.stderr[-3000:]

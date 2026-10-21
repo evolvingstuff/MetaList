@@ -30,7 +30,7 @@ def test_importing_encryption_audit_does_not_initialize_runtime_config() -> None
         ],
         cwd=_PROJECT_ROOT,
         capture_output=True,
-        text=True,
+        encoding="utf-8",
         check=False,
     )
 
