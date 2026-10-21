@@ -699,6 +699,70 @@ def test_open_or_launch_all_namespaces_stops_all_then_starts_all_then_waits(
         ("default", "restarted"), ("cla", "launched"), ("thomas", "restarted"),
     ]
 
+def _late_listener(monkeypatch: pytest.MonkeyPatch, events: list[tuple], *, held_port: int, pid: int,
+                   answers_as: str | None) -> None:
+    """A server still listening on held_port that the first status probe missed (busy, or
+    a slow machine): the OS reports its process until it is stopped; asked again, it
+    answers as answers_as. Waiting advances a clock of its own."""
+    listeners = namespace_switcher._find_listening_pids_for_port
+
+    def find_listeners(*, port: int) -> list[int]:
+        if port == held_port and ("stop", (held_port,)) not in events:
+            return [pid]
+        return listeners(port=port)
+
+    monkeypatch.setattr(namespace_switcher, "_find_listening_pids_for_port", find_listeners)
+    status = None
+    if answers_as is not None:
+        status = {"namespace": answers_as}
+    monkeypatch.setattr(namespace_switcher, "_probe_namespace_status", lambda **kwargs: status)
+    clock = [0.0]
+
+    def sleep(seconds: float) -> None:
+        clock[0] += seconds
+
+    monkeypatch.setattr(namespace_switcher.time, "sleep", sleep)
+    monkeypatch.setattr(namespace_switcher.time, "monotonic", lambda: clock[0])
+
+
+def test_a_namespace_missed_by_the_first_probe_is_stopped_before_its_new_server_starts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The installed-package check failed on macOS 3.14 (2026-10-21): a server too busy to
+    # answer the first probe counted as not running, was not stopped, and the new one found
+    # its port taken. The OS says who listens; one that answers as the namespace is stopped.
+    monkeypatch.setattr(server_runtime, "_DEFAULT_DATABASE_DIRECTORY", tmp_path)
+    _disable_default_tls(monkeypatch, tmp_path)
+    save_namespace_launch_profile(namespace="default", port=8000, https_port=None, mcp_port=8765)
+    save_namespace_launch_profile(namespace="cla", port=8001, https_port=None, mcp_port=8766)
+    events = _record_launch_phases(monkeypatch, running_ports={"default": None, "cla": None})
+    _late_listener(monkeypatch, events, held_port=8001, pid=4321, answers_as="cla")
+
+    results = open_or_launch_all_namespaces(environ={})
+
+    assert events.index(("stop", (8001,))) < events.index(("start", "cla", 8001, None))
+    assert [(result.namespace, result.action) for result in results] == [("default", "launched"), ("cla", "launched")]
+
+
+def test_a_port_held_by_a_server_that_never_answers_as_the_namespace_stops_the_launch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Never stopped: it may be another program. The launch fails loudly instead of
+    # starting a server on a taken port.
+    monkeypatch.setattr(server_runtime, "_DEFAULT_DATABASE_DIRECTORY", tmp_path)
+    _disable_default_tls(monkeypatch, tmp_path)
+    save_namespace_launch_profile(namespace="cla", port=8001, https_port=None, mcp_port=8766)
+    events = _record_launch_phases(monkeypatch, running_ports={"cla": None})
+    _late_listener(monkeypatch, events, held_port=8001, pid=4321, answers_as=None)
+
+    with pytest.raises(RuntimeError, match="port 8001 is already in use by process 4321"):
+        open_or_launch_all_namespaces(environ={})
+    assert ("stop", (8001,)) not in events
+    assert not any(event[0] == "start" for event in events)
+
+
 def test_open_or_launch_all_namespaces_rejects_missing_launch_profile(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
