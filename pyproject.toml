@@ -23,7 +23,7 @@ dependencies = [
     "pillow==13.0.0",
     "pydantic==2.13.4",
     "pygments==2.20.0",
-    "pypdf==6.20.1",
+    "pypdf==6.21.1",
     "python-dotenv==1.2.2",
     "python-multipart==0.0.32",
     "rich==14.3.4",
