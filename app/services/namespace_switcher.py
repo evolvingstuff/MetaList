@@ -47,6 +47,10 @@ _PLACEHOLDER_NEW_NAMESPACE = "new-namespace"
 _LAUNCH_READY_TIMEOUT_SECONDS = 120.0
 _LAUNCH_PROGRESS_INTERVAL_SECONDS = 5.0
 _PORT_PROBE_TIMEOUT_SECONDS = 0.75
+# A server that holds its port but missed the first status probe is asked again for this
+# long, this often, before its port counts as another program's.
+_BUSY_SERVER_STATUS_WAIT_SECONDS = 5.0
+_BUSY_SERVER_STATUS_RETRY_SECONDS = 0.25
 # Short polls: a launch waits on these, and a 0.25 s poll lost up to that much per
 # namespace each time it stopped one and started one.
 _READY_POLL_INTERVAL_SECONDS = 0.05
@@ -405,6 +409,7 @@ def open_or_launch_all_namespaces(
             allowed_listener_pids=frozenset(_find_listening_pids_for_port(port=plan.running_port)),
         )
     _stop_processes_listening_on_ports(ports=[plan.running_port for plan in running_plans if plan.running_port is not None])
+    _stop_namespaces_the_first_probe_missed(environ=environ, plans=[plan for plan in plans if plan.running_port is None])
     for plan in plans:
         if plan.running_port is None:
             _assert_ports_are_available_for_launch(
@@ -468,6 +473,41 @@ def _plan_namespace_start(
         running_port=running_port,
         saved_for_next_launch=saved_for_next_launch,
     )
+
+
+def _stop_namespaces_the_first_probe_missed(*, environ: Mapping[str, str], plans: list[_NamespaceStartPlan]) -> None:
+    """For namespaces planned as not running: the OS says whether anything listens on the
+    port each will start on. A server too busy to answer the first status probe (or on a
+    slow machine) counted as not running, was not stopped, and its new server found the
+    port taken (the installed-package check, macOS 3.14, 2026-10-21). One that answers as
+    the namespace when asked again is its own server and is stopped; anything else is
+    never stopped (it may be another program): the launch fails, naming the process."""
+    for plan in plans:
+        port = plan.chosen_profile.port
+        assert port is not None, f"namespace {plan.namespace} has no HTTP port to launch on"
+        listener_pids = _find_listening_pids_for_port(port=port)
+        if not listener_pids:
+            continue
+        if not _listener_answers_as_namespace(environ=environ, namespace=plan.namespace, port=port):
+            listeners = ", ".join(str(pid) for pid in listener_pids)
+            raise RuntimeError(f"Namespace {plan.namespace}: port {port} is already in use by process {listeners}")
+        _stop_processes_listening_on_ports(ports=[port])
+
+
+def _listener_answers_as_namespace(*, environ: Mapping[str, str], namespace: str, port: int) -> bool:
+    """Whether the server on port answers as namespace, asking for up to
+    _BUSY_SERVER_STATUS_WAIT_SECONDS: a busy one still answers, later."""
+    main_server_config = resolve_main_server_config(environ=environ)
+    connect_host = resolve_backend_connect_host(host=main_server_config.host)
+    api_prefix = resolve_api_prefix(environ=environ)
+    deadline = time.monotonic() + _BUSY_SERVER_STATUS_WAIT_SECONDS
+    while True:
+        status = _probe_namespace_status(host=connect_host, port=port, api_prefix=api_prefix)
+        if _status_names_namespace(status, namespace):
+            return True
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(_BUSY_SERVER_STATUS_RETRY_SECONDS)
 
 
 def _plan_namespace_start_for_profile(
