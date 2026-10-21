@@ -139,12 +139,19 @@ with TestClient(app, base_url="http://localhost", raise_server_exceptions=False)
     # A mounted app (the static files) answers too: the page's stylesheet must load.
     assert client.get("/static/css/main.css").status_code == 200
 '''
-    environment = dict(os.environ, METALIST_DATA_DIRECTORY=str(tmp_path), METALIST_ENVIRONMENT="production")
-    result = subprocess.run(
-        [sys.executable, "-c", script], env=environment, capture_output=True, text=True, timeout=30,
+    # Windows writes a pipe or a file in its code page (cp1252), which has no ⇒ or ⇐:
+    # every line of the request log failed to write there (2026-10-21). The server
+    # writes UTF-8 whatever the platform's encoding, as the launcher reads it.
+    environment = dict(
+        os.environ, METALIST_DATA_DIRECTORY=str(tmp_path), METALIST_ENVIRONMENT="production",
+        PYTHONIOENCODING="cp1252",
     )
-    assert result.returncode == 0, result.stderr[-3000:]
-    output = result.stdout + result.stderr
+    result = subprocess.run(
+        [sys.executable, "-c", script], env=environment, capture_output=True, timeout=30,
+    )
+    output = result.stdout.decode("utf-8") + result.stderr.decode("utf-8")
+    assert result.returncode == 0, output[-3000:]
+    assert "Logging error" not in output, output[-3000:]
     answered = [line for line in output.splitlines() if "⇐ 200 GET" in line and "/request-log-fixture" in line]
     assert len(answered) == 1 and "handler=request_log_fixture_view " in answered[0], output[-3000:]
     missing = [line for line in output.splitlines() if "⇐ 404 GET" in line and "/request-log-missing" in line]
