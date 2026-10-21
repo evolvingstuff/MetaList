@@ -1,5 +1,7 @@
 """Authentication middleware for API requests."""
 
+import asyncio
+import time
 from http import HTTPStatus
 from fastapi import Request
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -9,6 +11,22 @@ from app.services.tokens import token_service
 from app.services.maintenance_mode import maintenance_service
 from app.security.encryption import is_encryption_required
 from app.config import API_PREFIX, TEST_MODE
+
+# An API request that arrives during maintenance waits this long for it to end, checking
+# this often. Setting a password re-encrypts every note, so the wait is generous.
+_MAINTENANCE_WAIT_SECONDS = 120.0
+_MAINTENANCE_POLL_SECONDS = 0.05
+_STATIC_PREFIX = "/static/"
+
+
+async def _maintenance_ended_within(*, seconds: float) -> bool:
+    assert seconds > 0, seconds
+    deadline = time.monotonic() + seconds
+    while maintenance_service.is_active():
+        if time.monotonic() >= deadline:
+            return False
+        await asyncio.sleep(_MAINTENANCE_POLL_SECONDS)
+    return True
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
@@ -34,7 +52,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         f"{API_PREFIX}/auth/app-update/jobs/",  # Opaque job capability survives restart/logout.
         f"{API_PREFIX}/auth/namespaces/delete-jobs/",
         f"{API_PREFIX}/auth/namespaces/rename-jobs/",
-        "/static/",  # CSS/JS files needed for login page
+        _STATIC_PREFIX,  # CSS/JS files needed for login page
     )
     assert all(path.endswith("/") for path in PUBLIC_PREFIX_PATHS)
     
@@ -63,15 +81,20 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if path.startswith('/api') and not (path.startswith(API_PREFIX) or path == API_PREFIX):
             return JSONResponse(status_code=HTTPStatus.GONE, content={"detail": "Use the current API version"})
         
-        # Check if maintenance mode is active first
+        # API callers read JSON and module imports need JavaScript, so neither may get the HTML
+        # maintenance page: an API request waits for maintenance to end, a static file is
+        # served (it never touches the database), and only a page load is redirected.
         if maintenance_service.is_active():
-            # Allow access to maintenance page itself
-            if path == "/maintenance":
+            if path == "/maintenance" or path.startswith(_STATIC_PREFIX):
                 return await call_next(request)
-            
-            # Redirect all other requests to maintenance page
-            return RedirectResponse(url="/maintenance", status_code=HTTPStatus.FOUND)
-        
+            if not path.startswith(API_PREFIX):
+                return RedirectResponse(url="/maintenance", status_code=HTTPStatus.FOUND)
+            if not await _maintenance_ended_within(seconds=_MAINTENANCE_WAIT_SECONDS):
+                return JSONResponse(
+                    status_code=HTTPStatus.SERVICE_UNAVAILABLE,
+                    content={"detail": "MetaList is busy finishing an operation on your notes. Try again once it is done."},
+                )
+
         if self.is_public_path(path=path):
             return await call_next(request)
         

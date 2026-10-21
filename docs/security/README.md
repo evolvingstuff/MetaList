@@ -396,6 +396,10 @@ on rollback. Successful cleanup removes the transaction images; the empty
 directory: resolve the disk/permission problem and restart so recovery can finish.
 If recovery cannot restore runtime state, the server revokes tokens and remains
 in maintenance mode instead of serving a partially rebuilt namespace.
+While maintenance is on, an API request waits for it to end (up to two minutes,
+then a JSON 503) and is then authenticated as usual, so a request that outlives a
+restore meets the ended session; static files are served; only page loads go to
+the HTML maintenance page.
 
 Restore checks archive checksums and stages both SQLite databases, checks their
 integrity and supported version, and only then copies into live destinations.
