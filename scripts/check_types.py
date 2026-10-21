@@ -7,7 +7,7 @@
 The baseline (scripts/mypy-baseline.txt) lists each known error once per occurrence,
 without line numbers, so editing a file does not move its entries. New errors fail the
 check; fixing one fails it too until the baseline is updated, so it only ever shrinks.
-mypy checks as Linux on Python 3.10 on every OS ([tool.mypy] in pyproject.toml), so all
+mypy checks as Linux on Python 3.11 on every OS ([tool.mypy] in pyproject.toml), so all
 platforms compare against the same list.
 """
 

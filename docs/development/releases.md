@@ -19,7 +19,7 @@ The command requires a clean `main` checkout exactly synchronized with
 available through `GITHUB_TOKEN` or the configured git credential helper. It:
 
 1. waits for the exact main commit's complete 25-job release matrix;
-2. requires Python 3.10 and 3.14 on Windows, macOS, and Linux, including all
+2. requires Python 3.11 and 3.14 on Windows, macOS, and Linux, including all
    browser smoke and soak jobs;
 3. creates and pushes the annotated version tag only after that matrix passes;
 4. waits for the tag's publication-only GitHub Trusted Publishing job; that job

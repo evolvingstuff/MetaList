@@ -76,7 +76,7 @@ Never answer an unwanted behavior with "you can turn it off": fix the behavior.
 
 ### CRITICAL: Test All Platforms Before a PyPI Release Tag
 
-- Before creating or pushing any PyPI release tag (including `v*` tags), the **exact commit being tagged** must have a successful full distribution build, clean package installation, dependency check, and installed-application startup test on **Windows, macOS, and Linux**, at the supported Python endpoints **3.10 and 3.14**.
+- Before creating or pushing any PyPI release tag (including `v*` tags), the **exact commit being tagged** must have a successful full distribution build, clean package installation, dependency check, and installed-application startup test on **Windows, macOS, and Linux**, at the supported Python endpoints **3.11 and 3.14**.
 - Verify the built wheel and source distribution contain required runtime resources. Run startup tests outside the source checkout so source files cannot hide packaging omissions.
 - Use the successful release-validation workflow run for that exact commit as evidence (MetaList: `Publish to PyPI`). Pending, skipped, canceled, failed, or unavailable platform results block release tagging; a local test run or a successful older commit is insufficient.
 - If code, dependencies, packaging, or release configuration changes after validation, rerun the full matrix for the new commit before tagging. Do not create the tag first and rely on its subsequent workflow to discover failures.
@@ -184,13 +184,13 @@ If the code works, suggest committing. There are two types:
 - Commit to the feature branch but stay on it.
 - Don't merge to main yet.
 - we should always run pytest before each checkpoint
-- A checkpoint runs only the quick unit suites (pytest, and the JS unit tests when JS changed), then commits right away. Do NOT run the full browser smoke, the Python 3.10 suite or the ShockHarness diff for a checkpoint: they take about 15 minutes and hold up the user, who usually has more to change.
+- A checkpoint runs only the quick unit suites (pytest, and the JS unit tests when JS changed), then commits right away. Do NOT run the full browser smoke, the Python 3.11 suite or the ShockHarness diff for a checkpoint: they take about 15 minutes and hold up the user, who usually has more to change.
 
 **COMMIT FEATURE**
 - The entire feature has been tested by the user and is working as expected.
 - Update any relevant Markdown in `docs/` to reflect the feature. If the right document does not exist yet, ask the user whether to create a new one (and create `docs/` or subfolders when necessary). Suggest renames to keep docs organized when appropriate.
 - Remove PLAN.md as part of this workflow.
-- Run the full checks once, here (not at checkpoints): the full browser smoke, the Python unit suite on 3.10 as well as the local version, the JS unit tests, the type check (`python scripts/check_types.py check`), and the ShockHarness diff. Fix any failure before merging.
+- Run the full checks once, here (not at checkpoints): the full browser smoke, the Python unit suite on 3.11 as well as the local version, the JS unit tests, the type check (`python scripts/check_types.py check`), and the ShockHarness diff. Fix any failure before merging.
 - Commit the changes to the feature branch.
 - Merge the branch into main.
 - Delete the feature branch.
@@ -554,7 +554,7 @@ DO NOT continue with other tasks until all error handling is removed.
 
 ## CRITICAL: Cross-Platform Regression Coverage Must Be Symmetric
 
-Core product behavior must receive the same regression coverage on every supported operating system. For MetaList, Windows, macOS, and Linux must each run the complete Python unit suite and installed-package/update validation at the supported Python endpoints **3.10 and 3.14**. Each operating system must also run the complete JavaScript unit suite and both startup sanity gates once; these checks do not vary by Python minor version.
+Core product behavior must receive the same regression coverage on every supported operating system. For MetaList, Windows, macOS, and Linux must each run the complete Python unit suite and installed-package/update validation at the supported Python endpoints **3.11 and 3.14**. Each operating system must also run the complete JavaScript unit suite and both startup sanity gates once; these checks do not vary by Python minor version.
 
 - A single-OS unit run plus narrower cross-platform smoke tests is not equivalent and is forbidden as release coverage.
 - Installed-package, updater, persistence, encryption, authentication, hydration, and startup checks must exercise the same core behavior on all supported operating systems. Do not assume code is platform-independent merely because it usually runs above an abstraction layer.

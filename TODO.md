@@ -42,7 +42,7 @@ The single-note "Suggest Tags with AI" (feature/ai-suggest-note-tags) instead se
 
 Renderer tags in the spirit of `@json`/`@csv` (server-side, view mode, an error badge when the text does not parse). All set aside for now as low priority:
 
-- `@yaml` and `@toml`: validate and pretty-print. YAML needs PyYAML; TOML has `tomllib` from Python 3.11, so 3.10 needs `tomli`.
+- `@yaml` and `@toml`: validate and pretty-print. YAML needs PyYAML; TOML has `tomllib` built in (Python 3.11, the oldest supported).
 - `@chart`: CSV with labels in the first column and series in the others, drawn as a bar or line chart (small library or hand-drawn SVG).
 - `@qr`: the note's text (a URL, Wi-Fi details) as a QR code to scan with a phone (small offline library).
 - ABC music notation: plain text drawn as sheet music (abcjs is sizeable; vendored files are pinned byte for byte). Could be auto-detected on paste: a tune starts with `X:` and has a `K:` line. ChordPro (lyrics with `[G]` chords, no library) is a lighter alternative.

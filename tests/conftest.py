@@ -2,6 +2,7 @@
 tests away from the user's running MetaList servers."""
 
 import os
+import sys
 import subprocess
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -21,7 +22,8 @@ _METALIST_SERVER_SCRIPTS = frozenset({'main.py', 'serve_namespace.py'})
 _EXISTENCE_PROBE = 0
 _REAL_POPEN = subprocess.Popen
 _REAL_KILL = os.kill
-_REAL_KILLPG = os.killpg
+# Process groups are POSIX only: Windows has no os.killpg to guard (or to call).
+_HAS_PROCESS_GROUPS = sys.platform != 'win32'
 
 
 def pytest_unconfigure(config):
@@ -36,6 +38,8 @@ def _no_real_metalist_servers(monkeypatch):
     signal only processes it started, and may not start a MetaList server. A test that
     stubs os.kill or subprocess.Popen itself replaces these guards."""
     started: set[int] = set()
+    if _HAS_PROCESS_GROUPS:
+        real_killpg = os.killpg
 
     class _GuardedPopen(_REAL_POPEN):
         def __init__(self, args, *popen_args, **popen_kwargs):
@@ -58,8 +62,9 @@ def _no_real_metalist_servers(monkeypatch):
     def _guarded_killpg(process_group, signal_number):
         if signal_number != _EXISTENCE_PROBE and process_group not in started:
             raise AssertionError(f'A unit test tried to signal process group {process_group}, which it did not start')
-        return _REAL_KILLPG(process_group, signal_number)
+        return real_killpg(process_group, signal_number)
 
     monkeypatch.setattr(subprocess, 'Popen', _GuardedPopen)
     monkeypatch.setattr(os, 'kill', _guarded_kill)
-    monkeypatch.setattr(os, 'killpg', _guarded_killpg)
+    if _HAS_PROCESS_GROUPS:
+        monkeypatch.setattr(os, 'killpg', _guarded_killpg)

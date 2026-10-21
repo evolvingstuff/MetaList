@@ -25,7 +25,7 @@ Paths in the table are repository-relative. Existing tests cover injected and de
 
 Python test filenames above live under `tests/unit/`; JavaScript tests share that directory. F18 reconciles these current references, setup commands, security text, historical review status, and operational guidance.
 
-Remaining conditional checks: Windows/Linux behavior and the supported Python endpoints, 3.10 and 3.14, must pass for the exact release commit. Live provider calls and physical power-loss simulation are separate from deterministic tests. The optional removal of the client `iterations` parameter remains a product/API decision, not a prerequisite for this remediation batch.
+Remaining conditional checks: Windows/Linux behavior and the supported Python endpoints, 3.11 and 3.14, must pass for the exact release commit. Live provider calls and physical power-loss simulation are separate from deterministic tests. The optional removal of the client `iterations` parameter remains a product/API decision, not a prerequisite for this remediation batch.
 
 
 ## In-app updates

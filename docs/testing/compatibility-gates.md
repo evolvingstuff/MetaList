@@ -31,9 +31,9 @@ Do not introduce arbitrary limits without documenting the supported workload and
 
 `Publish to PyPI` builds one wheel/source-distribution pair and reuses those exact artifacts in every downstream job. Publication requires every applicable job group:
 
-- `Python`: the complete Python unit suite on Windows, macOS, and Linux at the supported Python endpoints, 3.10 and 3.14.
+- `Python`: the complete Python unit suite on Windows, macOS, and Linux at the supported Python endpoints, 3.11 and 3.14.
 - `JavaScript and sanity`: the complete JavaScript suite and both startup sanity gates once on each operating system. These checks do not vary with the Python minor version, so they are not repeated five times per OS.
-- `Package and update`: every operating system at Python 3.10 and 3.14 installs the one verified wheel outside the checkout with hash-locked runtime dependencies, checks dependency consistency, launches two HTTP/HTTPS namespaces, and runs the real managed-uv update/restart.
+- `Package and update`: every operating system at Python 3.11 and 3.14 installs the one verified wheel outside the checkout with hash-locked runtime dependencies, checks dependency consistency, launches two HTTP/HTTPS namespaces, and runs the real managed-uv update/restart.
 - `Browser smoke`: Chrome and Firefox on every OS plus Edge over non-loopback verified HTTPS on Windows. Each performs one fresh browser context, two uncached loads per namespace, and the encrypted-login/session-storage-loss scenario.
 - `Browser soak`: the same browser/OS coverage performs three fresh contexts and three uncached loads per namespace on main pushes and explicit manual validation on main. It isolates repeated-load transport stability from login correctness while remaining release-blocking.
 
