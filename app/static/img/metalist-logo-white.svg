@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-30 -30 400 283" width="400" height="283">
+  <title>MetaList</title>
+  <rect x="-30" y="-30" width="400" height="283" fill="#000000"/>
+  <g fill="#ffffff">
+    <polygon points="30,0 99,0 169,50 240,0 309,0 309,136 225,136 225,87 169,128 113,87 113,136 30,136"/>
+    <rect x="0" y="159" width="340" height="16"/>
+    <rect x="0" y="197" width="340" height="26"/>
+  </g>
+</svg>
