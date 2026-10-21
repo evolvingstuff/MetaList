@@ -87,3 +87,13 @@ Also proposed during the same work (2026-10-19 and 20), for the maintainer to pa
 - A long-lived string made by casefold() / lower() in a new set while the same code keeps a memo for that conversion: the memo is bypassed and copies multiply (38 MB in MetaList's search index).
 - Server HTML handed to a browser sink that declares sanitized_html must carry sanitized_html on the Python side too (an image-resize response returned the input it had passed to the sanitizing save).
 - A function that builds a whole HTML document (<!DOCTYPE html>) from rendered parts must pass them through a declared sanitizer and include a Content-Security-Policy meta (MetaList's HTML export did neither).
+
+## Proposed 2026-10-21: a position from one view used in another
+
+```text
+RULE I: A position measured in a derived view used on the source (JavaScript, Python)
+Bug: MetaList remembered an editor's selection as text offsets (Range.toString().length) and found it again by walking only text nodes (createTreeWalker(..., NodeFilter.SHOW_TEXT)). A selection of two pasted images has no text, so the offsets pointed nowhere and right-clicking the images threw instead of opening the image menu. The fix remembers each end's place in the node tree (child indexes and offset).
+Shape (general): an offset or index computed on value P (indexOf, find, len, .length, a loop counter, Range.toString().length) is used to index, slice or locate a point in value S, where P was derived from S by an operation that can change length or drop elements: filter, strip/strip_html, textContent/innerText, normalize/casefold/lower, encode/decode, or a text-only tree walk. Classic instances: an index into a filtered list used to delete from the full list; an offset in tag-stripped or normalized text used to cut the original; UTF-16 (JavaScript) versus code-point (Python) versus byte offsets across an API boundary.
+Shape (narrow, easy to detect): a DOM point saved through Range.toString().length or textContent.length and resolved back through a SHOW_TEXT TreeWalker in content that can hold non-text nodes (img, embeds, widgets, line breaks).
+False positives: transforms known to keep lengths, or data that cannot hold what is dropped (a plain text input); allow a suppression with a reason. The general form needs data flow from S to P to the offset and back to S, like the sanitized_html property contracts.
+```

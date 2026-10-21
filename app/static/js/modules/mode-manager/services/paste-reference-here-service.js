@@ -1,6 +1,6 @@
 import { ApplicationState, stateValuesEqual } from '../../application-state.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
-import { caretPositionAt, textOffsetOfPoint, textPositionToNodePoint } from './viewport-hold-service.js';
+import { caretPositionAt } from './viewport-hold-service.js';
 
 // Paste Reference Into Note (docs/ui/references.md): the reference goes where the
 // right-click was in the text of the note being edited, or replaces the text
@@ -8,8 +8,11 @@ import { caretPositionAt, textOffsetOfPoint, textPositionToNodePoint } from './v
 // selects the word under the pointer as the right button goes down, and a word
 // selected that way is not the user's selection.
 
-// The edited note's selection when the right button went down, as text
-// positions in its content (a Range would not survive comparison by value).
+// The edited note's selection when the right button went down, as each end's
+// place in its content: the child positions from the content down to the node,
+// and the offset there (a Range would not survive comparison by value). Not as
+// text positions: a selection of images has no text, so it had none to find
+// again, and right-clicking selected images threw.
 const pressState = ApplicationState.createFields('paste-reference-here', { selection: null });
 
 // MouseEvent.button values.
@@ -30,14 +33,38 @@ function editedNoteContent(noteId) {
     return content;
 }
 
+function placeOfPoint(content, node, offset) {
+    const path = [];
+    let current = node;
+    while (current !== content) {
+        const parent = current.parentNode;
+        if (parent === null) {
+            throw new Error('A selection end is outside the edited note');
+        }
+        path.unshift(Array.prototype.indexOf.call(parent.childNodes, current));
+        current = parent;
+    }
+    return { path, offset };
+}
+
+// The node at a place's path, or null once the content no longer has it.
+function nodeAtPlace(content, place) {
+    let node = content;
+    for (const index of place.path) {
+        if (index >= node.childNodes.length) return null;
+        node = node.childNodes[index];
+    }
+    return node;
+}
+
 function selectionIn(content) {
     const selection = window.getSelection();
     if (selection === null || selection.rangeCount === 0 || selection.isCollapsed) return null;
     if (!content.contains(selection.anchorNode) || !content.contains(selection.focusNode)) return null;
     const range = selection.getRangeAt(0);
     return {
-        start: textOffsetOfPoint(content, range.startContainer, range.startOffset),
-        end: textOffsetOfPoint(content, range.endContainer, range.endOffset),
+        start: placeOfPoint(content, range.startContainer, range.startOffset),
+        end: placeOfPoint(content, range.endContainer, range.endOffset),
     };
 }
 
@@ -72,15 +99,15 @@ export function pasteReferenceHereRange(noteElement, target, x, y) {
     const range = document.createRange();
     const selection = pressState.selection;
     if (selection !== null && selection.noteId === noteId) {
-        const clicked = textOffsetOfPoint(content, point.node, point.offset);
-        if (clicked >= selection.start && clicked <= selection.end) {
-            const start = textPositionToNodePoint(content, selection.start, 'forward');
-            const end = textPositionToNodePoint(content, selection.end, 'backward');
-            if (start === null || end === null) {
-                throw new Error('The selection made before the right-click is no longer in the note');
-            }
-            range.setStart(start.node, start.offset);
-            range.setEnd(end.node, end.offset);
+        // The right-press and the menu are one gesture: nothing redraws the note between them.
+        const startNode = nodeAtPlace(content, selection.start);
+        const endNode = nodeAtPlace(content, selection.end);
+        if (startNode === null || endNode === null) {
+            throw new Error('The selection made before the right-click is no longer in the note');
+        }
+        range.setStart(startNode, selection.start.offset);
+        range.setEnd(endNode, selection.end.offset);
+        if (range.isPointInRange(point.node, point.offset)) {
             return range;
         }
     }
