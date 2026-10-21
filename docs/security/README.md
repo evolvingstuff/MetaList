@@ -88,6 +88,9 @@ the user's current password state or constitute a personal security audit.
    - Stored in database encrypted by the KEK
    - Used for all note encryption/decryption operations
    - Remains constant even when user changes their password
+   - Wrapped exactly once (the password). Adding a recovery key, passkey or
+     second password first requires the `key_wrappers` table described in
+     [deferred multiple unlock methods](FUTURE-SECURITY-WORK.md#deferred-multiple-unlock-methods-key_wrappers)
 
 4. **Vault Metadata**
    - `vault_version` defines the wrapped-key format (current: `3`)
