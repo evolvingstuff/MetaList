@@ -43,7 +43,7 @@ def test_runtime_paths_follow_data_directory_without_initializing_storage(tmp_pa
             "runtime.resolve_namespace_rename_jobs_directory(), runtime._DEFAULT_CERT_PATH, runtime._DEFAULT_KEY_PATH)]))"
         )],
         cwd=Path(__file__).resolve().parents[2], env=environment,
-        capture_output=True, text=True, check=True,
+        capture_output=True, encoding="utf-8", check=True,
     )
 
     assert json.loads(completed.stdout) == [

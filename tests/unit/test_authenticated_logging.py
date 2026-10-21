@@ -54,7 +54,7 @@ def test_encrypted_log_file_is_owner_only(tmp_path: Path) -> None:
             ["icacls", str(log_path)],
             capture_output=True,
             check=True,
-            text=True,
+            encoding="utf-8",
             timeout=30,
         ).stdout.casefold()
         assert "everyone:" not in acl

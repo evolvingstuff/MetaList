@@ -52,7 +52,7 @@ _SHOWN_SHARE = 0.5
 def _measured_growth() -> dict[str, dict[str, int]]:
     result = subprocess.run(
         [sys.executable, "-c", _GROWTH_SCRIPT, str(_HELD_MEGABYTES), str(_PAGE_BYTES)],
-        cwd=_REPOSITORY, capture_output=True, text=True, timeout=_GROWTH_TIMEOUT_SECONDS,
+        cwd=_REPOSITORY, capture_output=True, encoding="utf-8", timeout=_GROWTH_TIMEOUT_SECONDS,
     )
     assert result.returncode == 0, result.stderr[-3000:]
     return json.loads(result.stdout.strip().splitlines()[-1])

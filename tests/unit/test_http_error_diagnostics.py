@@ -72,7 +72,7 @@ assert "PRIVATE_NOTE_CONTENT" not in response.text
         [sys.executable, "-c", script],
         env=environment,
         capture_output=True,
-        text=True,
+        encoding="utf-8",
         timeout=30,
     )
     assert result.returncode == 0, result.stderr[-3000:]
@@ -112,7 +112,7 @@ assert response.json() == {
         [sys.executable, "-c", script],
         env=environment,
         capture_output=True,
-        text=True,
+        encoding="utf-8",
         timeout=30,
     )
     assert result.returncode == 0, result.stderr[-3000:]

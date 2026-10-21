@@ -9,7 +9,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 def _import_app(*, flags: list[str], environ: dict[str, str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, *flags, "-c", "import app"],
-        cwd=_REPO_ROOT, env=environ, capture_output=True, text=True, check=False,
+        cwd=_REPO_ROOT, env=environ, capture_output=True, encoding="utf-8", check=False,
     )
 
 

@@ -110,9 +110,11 @@ _CSP_NONCE_TEXT_LENGTH = 32
 # The log is UTF-8 on every OS, as the launcher reads child logs: Windows writes a pipe
 # or a file in its code page (cp1252), which has no ⇒ or ⇐, and every request's line
 # failed to write there (2026-10-21). A character UTF-8 cannot carry is escaped.
-if not isinstance(sys.stdout, io.TextIOWrapper):
-    raise RuntimeError(f"MetaList logs to a text stream on stdout, not {type(sys.stdout).__name__}")
-sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
+# stderr too: the launcher writes both into one log file.
+for _console_stream in (sys.stdout, sys.stderr):
+    if not isinstance(_console_stream, io.TextIOWrapper):
+        raise RuntimeError(f"MetaList logs to text streams, not {type(_console_stream).__name__}")
+    _console_stream.reconfigure(encoding="utf-8", errors="backslashreplace")
 logger.remove()
 logger.add(
     sys.stdout,

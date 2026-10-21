@@ -333,7 +333,7 @@ with TestClient(app, base_url="http://localhost", raise_server_exceptions=False)
 print("ROUTES OK")
 '''
     environment = dict(os.environ, METALIST_DATA_DIRECTORY=str(tmp_path), METALIST_ENVIRONMENT="production")
-    result = subprocess.run([sys.executable, "-c", script], env=environment, capture_output=True, text=True, timeout=60)
+    result = subprocess.run([sys.executable, "-c", script], env=environment, capture_output=True, encoding="utf-8", timeout=60)
     assert result.returncode == 0, (result.stdout[-2000:], result.stderr[-3000:])
     assert "ROUTES OK" in result.stdout
 
@@ -681,6 +681,6 @@ with TestClient(app, base_url="http://localhost", raise_server_exceptions=False)
 print("EDIT SESSION ROUTES OK")
 '''
     environment = dict(os.environ, METALIST_DATA_DIRECTORY=str(tmp_path), METALIST_ENVIRONMENT="production")
-    result = subprocess.run([sys.executable, "-c", script], env=environment, capture_output=True, text=True, timeout=60)
+    result = subprocess.run([sys.executable, "-c", script], env=environment, capture_output=True, encoding="utf-8", timeout=60)
     assert result.returncode == 0, (result.stdout[-2000:], result.stderr[-3000:])
     assert "EDIT SESSION ROUTES OK" in result.stdout

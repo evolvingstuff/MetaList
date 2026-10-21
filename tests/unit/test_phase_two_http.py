@@ -382,7 +382,7 @@ response = client.post(API_PREFIX + "/notes/view", headers=headers, json=view)
 assert response.status_code == 200, (response.status_code, response.text)
 '''
     environment = dict(os.environ, METALIST_DATA_DIRECTORY=str(tmp_path), METALIST_ENVIRONMENT='production')
-    result = subprocess.run([sys.executable, '-c', script], env=environment, capture_output=True, text=True, timeout=30)
+    result = subprocess.run([sys.executable, '-c', script], env=environment, capture_output=True, encoding="utf-8", timeout=30)
     assert result.returncode == 0, result.stdout + result.stderr
 
 
