@@ -1090,7 +1090,8 @@ def _render_file_body(
         f'title="{download_tooltip}">'
         f'<span class="note-file-reference-header">'
         f'<span class="note-file-reference-badge">{badge_text}</span>'
-        f'<span class="note-file-reference-title">{escaped_title}</span>'
+        # The name's own text, inline, so only its lines download (main.css, .note-file-reference-name).
+        f'<span class="note-file-reference-title"><span class="note-file-reference-name">{escaped_title}</span></span>'
         "</span>"
         "</button>"
     )

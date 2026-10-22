@@ -45,7 +45,7 @@ Sources: docs/ui/references.md
     - right-clicking the rendered image preview also offers image actions (`Copy Image`, `Save Image`, `Zoom Image`, `Open Image in New Tab`).
     - link-mode image files (`[[UUID]]`) keep the generic compact file card/link row.
     - embedded Excalidraw diagrams (`.excalidraw` files, badge `DRAW`) render their stored light or dark SVG preview; double-click or right-click **Edit Diagram** to open the full-screen editor. See `docs/ui/excalidraw.md`.
-    - clicking the rendered file reference downloads the decrypted file from the server; hovering it shows the tooltip "Click to download <file name>".
+    - clicking the rendered file reference's badge (`.MD`) or its underlined name downloads the decrypted file from the server; hovering them shows the tooltip "Click to download <file name>". Clicking beside the name edits the note, and dragging from there moves it, like anywhere else on a note.
     - when the host note is collapsed, non-image file references stay visible as a single compact row showing the badge and a truncated title.
     - when the host note is collapsed and the first visible line is an embedded image file or diagram, the note collapses to a compact thumbnail-only version of that preview.
   - Rendered references have no embed/link controls: a reference is an embed or a link by where it is (alone in its note, or with other content).
