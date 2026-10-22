@@ -110,17 +110,76 @@ export function textPositionToNodePoint(content, position, affinity) {
     return null;
 }
 
-// Character position of a DOM point within content's text.
-export function textOffsetOfPoint(content, node, offset) {
+// --- Content positions ----------------------------------------------------
+//
+// A text position cannot tell the two sides of an image apart (no text between
+// them), so a caret right after an image came back before it once a redraw had
+// replaced the nodes (ShockHarness DOM003). A content position counts each image
+// as one unit, written IMAGE_UNIT in the content's text.
+
+const IMAGE_UNIT = '\uFFFC';
+
+function isImage(node) {
+    return node.nodeType === Node.ELEMENT_NODE && node.tagName === 'IMG';
+}
+
+// Text nodes and images, in document order.
+function contentUnitWalker(content) {
+    return document.createTreeWalker(content, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, {
+        acceptNode: node => (node.nodeType === Node.TEXT_NODE || isImage(node)
+            ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP),
+    });
+}
+
+// The content's text with each image as IMAGE_UNIT.
+export function contentTextOf(content) {
+    const walker = contentUnitWalker(content);
+    let text = '';
+    for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+        text += isImage(node) ? IMAGE_UNIT : node.data;
+    }
+    return text;
+}
+
+// The content position of a DOM point: its text position plus the images before it.
+function contentOffsetOfPoint(content, node, offset) {
     const range = document.createRange();
     range.setStart(content, 0);
     range.setEnd(node, offset);
-    return range.toString().length;
+    const imagesBefore = [...content.querySelectorAll('img')].filter(image => range.intersectsNode(image)).length;
+    return range.toString().length + imagesBefore;
+}
+
+function pointBeside(image, side) {
+    const range = document.createRange();
+    if (side === 'before') range.setStartBefore(image);
+    else range.setStartAfter(image);
+    return { node: range.startContainer, offset: range.startOffset };
+}
+
+// The DOM point at content position `position`, or null past the end. At the end of
+// one text node and the start of the next it takes the earlier ('backward'), as a
+// caret left after typing does.
+function contentPositionToNodePoint(content, position) {
+    const walker = contentUnitWalker(content);
+    let consumed = 0;
+    for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+        if (isImage(node)) {
+            if (position === consumed) return pointBeside(node, 'before');
+            consumed += 1;
+            if (position === consumed) return pointBeside(node, 'after');
+            continue;
+        }
+        const end = consumed + node.data.length;
+        if (position <= end) return { node, offset: position - consumed };
+        consumed = end;
+    }
+    return null;
 }
 
 // Where the user is working in the note being edited, so a redraw puts it back
 // exactly (interaction principle 1): the tag bar's caret, or the caret or
-// selection in the text, by node (when the redraw keeps it) and by text
+// selection in the text, by node (when the redraw keeps it) and by content
 // position. null when focus is elsewhere.
 export function captureEditingFocus(noteElement) {
     if (!(noteElement instanceof HTMLElement)) {
@@ -140,18 +199,18 @@ export function captureEditingFocus(noteElement) {
         kind: 'content',
         anchorNode: selection.anchorNode, anchorOffset: selection.anchorOffset,
         focusNode: selection.focusNode, focusOffset: selection.focusOffset,
-        anchorPosition: textOffsetOfPoint(content, selection.anchorNode, selection.anchorOffset),
-        focusPosition: textOffsetOfPoint(content, selection.focusNode, selection.focusOffset),
+        anchorPosition: contentOffsetOfPoint(content, selection.anchorNode, selection.anchorOffset),
+        focusPosition: contentOffsetOfPoint(content, selection.focusNode, selection.focusOffset),
     };
 }
 
-// The node, while it is still in the content; else the text position (a focus
+// The node, while it is still in the content; else the content position (a focus
 // recorded as positions only has no node).
 function restoredPoint(content, node, offset, position) {
     if (node !== null && node.isConnected && content.contains(node)) {
         return { node, offset };
     }
-    const point = textPositionToNodePoint(content, position, 'backward');
+    const point = contentPositionToNodePoint(content, position);
     if (point !== null) {
         return point;
     }
