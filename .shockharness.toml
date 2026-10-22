@@ -115,6 +115,11 @@ legacy = "baseline"
 # "ignore" says nothing. A plain `check` never fails on complexity.
 complexity_regressions = "warn"
 
+# The skills are installed for Claude Code (.claude/skills), and AGENTS.md points every
+# agent at them, so `check` need not ask for a second copy for Codex (0.25.0).
+[tool.shockharness.skills]
+notify_missing = false
+
 # Per-file results keyed by content hash (0.3.0): a warm run skips unchanged
 # files. The directory is ignored by git.
 # Approved catch sites. Python: the except sites with a lint rationale and the capture
