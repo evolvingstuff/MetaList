@@ -112,10 +112,11 @@ This section defines the initial UI interaction model for exploring and editing 
 
 ### Columns
 
-- **Left column (incoming, direct-only)**
+- **Left column (incoming, direct-only)**, headed "Tags/rules that imply 'focus'"
   - Direct tag implications: tags `A` where `A => focusTag`, excluding tags already in the focus SCC (synonyms).
   - Direct derivation rules: rules with `RHS == focusTag` where the LHS is not a single tag.
     - Display only the LHS expression (RHS is redundant with the current focus).
+    - A condition of several parts (all must match) shows one part per line, held together by a `[` bracket on its left, so it reads as one condition rather than several; a long part wraps instead of being cut off.
 - **Center column (focus + editor)**
   - Default: focus tag view (including equal/SCC members).
   - When a rule is selected: show the full rule and editing controls.
@@ -156,6 +157,9 @@ Implementation note (DOM):
 - **To delete a tag everywhere:** open Edit Tag Relationships (command palette `Edit tag relationships`, or right-click a tag → Edit Tag Relationships), search for the tag, then click the 🗑 trash button beside it at the top (or its ✎ → **Delete tag…**), and confirm.
 - Editing the focused tag supports both rename and **Delete tag…**. Deletion requires a separate confirmation, removes the exact tag token from every note tag bar, and deletes every ontology rule that references the tag. Quoted text and regular-expression matchers with the same characters are not tag references and remain intact.
 - Suggestions open without an automatic selection; clicking a row selects it, and one `ArrowDown` selects the first row.
+- With no focus tag (nothing in the middle column), the three **+** buttons are dimmed and the condition and implied columns say "Pick a focus tag first: search for one above"; pressing a dimmed button does nothing.
+- The condition, implied-tag and synonym dialogs suggest tags linked to the focus tag first, then tags sharing a word with its name, then every other tag by use; typing narrows that list. For a condition (`X => focus`): tags whose notes mostly also carry the focus tag. For an implied tag (`focus => Y`): tags most of the focus tag's notes carry. For a synonym: tags linked both ways (the notes they share among the notes either is on). A tag counts as linked once it shares at least two notes with the focus tag; the focus tag, its synonyms and tags already on that side of it are left out (`GET /ontology/tags?focus=&relation=`, `app/api/routes/ontology.py`).
+- A paste into a condition (Add condition, Edit incoming rule) goes in exactly as copied: several tags, `"quoted text"`, `/regexes/` and tags not used yet all stay. Only the single-tag fields turn a dictated phrase into one tag.
 - Search and relationship-dialog inputs explicitly reset inherited modal margins, keeping suggestion panels directly below the field for incoming conditions, implications, synonyms, and edits.
 - While a dialog input is focused, `Enter` performs the same submit action as that button when the user has not explicitly navigated to a suggestion.
 - Arrow-key navigation marks the highlighted suggestion as explicit; the next `Enter` fills the input with that suggestion without submitting the relationship.

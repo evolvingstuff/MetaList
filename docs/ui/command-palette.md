@@ -46,6 +46,7 @@ Opening or dismissing the command palette does not clear undo/redo. Global actio
 
 ## Config
 - Tag mappings live in `app/static/config/command_palette_tags.json`.
+- Keyword policy for a new or renamed command: every word of its label (two letters or more) finds it on its own, added when the palette loads (`withLabelWords` in `tag-config-loader.js`; tests: `tests/unit/command_palette_tag_config.test.mjs`), so `edit` finds `Edit tag relationships`. The config lists only the other words someone would type for it: the topic (`ontology`), synonyms (`imply`, `graph`), and what it is about when the label does not say. Never remove a configured keyword because the label lacks it, and never repeat label words in the config. Every command needs at least one configured keyword (the loader requires the row).
 - Search `LLM` or `OpenAI` to find `AI Agent Settings` for API key and model configuration.
 - Endpoint definitions (behavior/labels) live in code.
 - Palette preferences (`pref.*`) and command usage history are persisted per namespace in the main SQLite DB via `/api2/auth/client-state*`, not in browser `localStorage`.

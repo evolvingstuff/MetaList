@@ -91,6 +91,31 @@ export async function loadCommandPaletteTagMap() {
     return tagMap;
 }
 
+// Words in a label that one letter is too short to search by.
+const MIN_LABEL_WORD_LENGTH = 2;
+
+// The tag map with every word of each endpoint's label added to its tags, so typing a
+// word of what the palette shows finds it ("edit" finds "Edit tag relationships"). The
+// configured tags all stay: some name a topic the label does not ("ontology").
+export function withLabelWords(tagMap, endpoints) {
+    if (!(tagMap instanceof Map) || !Array.isArray(endpoints)) {
+        throw new Error('withLabelWords requires the loaded tag map and the endpoints');
+    }
+    const merged = new Map();
+    for (const endpoint of endpoints) {
+        const tags = tagMap.get(endpoint.id);
+        if (!(tags instanceof Set)) {
+            throw new Error(`Command palette tags for ${endpoint.id} must be a Set`);
+        }
+        if (typeof endpoint.label !== 'string' || endpoint.label.length === 0) {
+            throw new Error(`Command palette endpoint ${endpoint.id} must have a label`);
+        }
+        const words = endpoint.label.toLowerCase().split(/[^a-z0-9]+/).filter((word) => word.length >= MIN_LABEL_WORD_LENGTH);
+        merged.set(endpoint.id, new Set([...tags, ...words]));
+    }
+    return merged;
+}
+
 // Every distinct tag from the loaded command palette tag map.
 export function collectCommandPaletteTags(tagMap) {
     if (!(tagMap instanceof Map)) {

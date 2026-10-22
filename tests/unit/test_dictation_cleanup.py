@@ -139,11 +139,6 @@ def _one(text: str, tags: dict[str, int]) -> str:
                                 quote_open="quote", quote_close="end quote", negate_phrase="minus")
 
 
-def _condition(text: str) -> str:
-    return clean_dictated_paste(text=text, target="condition", existing_tag_frequencies=TAGS, current_value="",
-                                quote_open="quote", quote_close="end quote", negate_phrase="minus")
-
-
 # Fields that take one tag (tag relationships, prioritize, tag filters): the
 # whole paste is one tag, an existing one when it matches.
 @pytest.mark.parametrize("pasted,tags,expected", [
@@ -159,17 +154,6 @@ def _condition(text: str) -> str:
 ])
 def test_one_tag_fields(pasted: str, tags: dict[str, int], expected: str) -> None:
     assert _one(pasted, tags) == expected
-
-
-# Incoming-rule conditions: existing tags and quoted text; no operators, no regex.
-@pytest.mark.parametrize("pasted,expected", [
-    ("Neural network and python", "neural-network python"),
-    ("Quote attention is all you need end quote, neural network", '"attention is all you need" neural-network'),
-    ("Neural network or python, minus GPT", "neural-network python GPT"),
-    ("Neural network transformers", "neural-network"),
-])
-def test_condition_fields(pasted: str, expected: str) -> None:
-    assert _condition(pasted) == expected
 
 
 def test_target_must_be_search_or_tags() -> None:

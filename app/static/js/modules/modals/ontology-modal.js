@@ -13,6 +13,8 @@ const ONTOLOGY_BASE = '/api2/ontology';
 const TAG_LIMIT = 20;
 const DIALOG_SUGGESTION_LIMIT = 8;
 const DIALOG_SUGGESTION_DEBOUNCE_MS = 50;
+// What a field adds next to its tag: a condition implying it, a tag it implies, a synonym.
+const SUGGESTION_RELATIONS = new Set(['incoming', 'implied', 'synonym']);
 const DIALOG_DELETE_TAG_RESULT = Object.freeze({ action: 'delete-tag' });
 const SEARCH_INPUT_FOCUS_DELAY_MS = 50;
 const DIALOG_FOCUS_DELAY_MS = 30;
@@ -84,7 +86,10 @@ function isValidTagPrefix(prefix) {
     return isValidTagToken(prefix);
 }
 
-function parseDialogSuggestionContext(rawValue, cursorIndex) {
+// Where a condition field may suggest a tag (only conditions mix tags, "quoted text" and
+// /regexes/): at a place a new word could start, or in a tag-like word being typed. Never
+// inside or right after a quote or a regex, which are not tags (null there).
+export function parseDialogSuggestionContext(rawValue, cursorIndex) {
     if (typeof rawValue !== 'string') {
         throw new Error('parseDialogSuggestionContext requires rawValue string');
     }
@@ -97,86 +102,52 @@ function parseDialogSuggestionContext(rawValue, cursorIndex) {
 
     let quoteChar = null;
     let inRegex = false;
-    let prevSeparator = true;
+    // The word the caret is in: where it starts, and whether it is a quote or a regex.
+    let wordStart = 0;
+    let wordIsQuoteOrRegex = false;
     let index = 0;
     while (index < cursorIndex) {
         const ch = rawValue[index];
 
-        if (quoteChar !== null) {
+        if (quoteChar !== null || inRegex) {
             if (ch === '\\' && index + 1 < cursorIndex) {
                 index += ESCAPE_SEQUENCE_LENGTH;
                 continue;
             }
-            if (ch === quoteChar) {
+            if ((quoteChar !== null && ch === quoteChar) || (inRegex && ch === '/')) {
                 quoteChar = null;
-            }
-            index += 1;
-            prevSeparator = false;
-            continue;
-        }
-
-        if (inRegex) {
-            if (ch === '\\' && index + 1 < cursorIndex) {
-                index += ESCAPE_SEQUENCE_LENGTH;
-                continue;
-            }
-            if (ch === '/') {
                 inRegex = false;
             }
             index += 1;
-            prevSeparator = false;
             continue;
         }
 
-        if (ch === '"' || ch === "'") {
-            quoteChar = ch;
-            index += 1;
-            prevSeparator = false;
-            continue;
-        }
-        if (ch === '/' && prevSeparator) {
-            inRegex = true;
-            index += 1;
-            prevSeparator = false;
-            continue;
-        }
         if (isSuggestionSeparator(ch)) {
-            prevSeparator = true;
+            wordStart = index + 1;
+            wordIsQuoteOrRegex = false;
             index += 1;
             continue;
         }
-
-        prevSeparator = false;
+        if (index === wordStart && (ch === '"' || ch === "'")) {
+            quoteChar = ch;
+            wordIsQuoteOrRegex = true;
+        } else if (index === wordStart && ch === '/') {
+            inRegex = true;
+            wordIsQuoteOrRegex = true;
+        }
         index += 1;
     }
 
-    if (quoteChar !== null || inRegex) {
+    if (quoteChar !== null || inRegex || wordIsQuoteOrRegex) {
         return null;
     }
-
-    let start = cursorIndex;
-    while (start > 0) {
-        const ch = rawValue[start - 1];
-        if (isSuggestionSeparator(ch)) {
-            break;
-        }
-        start -= 1;
-    }
-
-    const token = rawValue.slice(start, cursorIndex);
-    if (token === '') {
-        return {
-            partialPrefix: '',
-            replaceStart: cursorIndex,
-            replaceEnd: cursorIndex,
-        };
-    }
+    const token = rawValue.slice(wordStart, cursorIndex);
     if (!isValidTagPrefix(token)) {
         return null;
     }
     return {
         partialPrefix: token,
-        replaceStart: start,
+        replaceStart: wordStart,
         replaceEnd: cursorIndex,
     };
 }
@@ -335,7 +306,12 @@ function renderIncomingAtoms(atoms) {
         throw new Error(`Unknown incoming atom kind: ${kind}`);
     }
 
-    return parts.join('<span class="ontology-atom-sep"> </span>');
+    // One part per line inside a bracket, so the parts read as one condition (all must
+    // match), not as separate conditions.
+    if (parts.length === 1) {
+        return parts[0];
+    }
+    return `<span class="ontology-atom-group">${parts.join('')}</span>`;
 }
 
 function buildAuthHeaders() {
@@ -512,7 +488,7 @@ export class OntologyModal extends BaseModal {
 
                 <div class="ontology-columns">
                     <section class="ontology-column" data-column="left">
-                        <div class="ontology-column-title" id="ontology-left-title">Tags that imply</div>
+                        <div class="ontology-column-title" id="ontology-left-title">Tags/rules that imply</div>
                         <div class="ontology-list" id="ontology-left-list"></div>
                         <button class="ontology-add" data-action="add-left">+ Add more…</button>
                     </section>
@@ -841,7 +817,7 @@ export class OntologyModal extends BaseModal {
 
         const trimmed = query.trim();
         const limit = trimmed === '' ? 0 : TAG_LIMIT;
-        const url = `${ONTOLOGY_BASE}/tags?q=${encodeURIComponent(query)}&limit=${limit}`;
+        const url = `${ONTOLOGY_BASE}/tags?q=${encodeURIComponent(query)}&limit=${limit}&focus=&relation=none`;
 
         await (async () => {
             const response = await fetch(url, {
@@ -1090,6 +1066,18 @@ export class OntologyModal extends BaseModal {
         if (typeof showDeleteTag !== 'boolean') {
             throw new Error('Dialog showDeleteTag must be boolean');
         }
+        // What the field adds next to which tag, so its suggestions are tags linked to that
+        // tag (GET /ontology/tags); null ranks them by use alone.
+        const suggestFor = config.suggestFor;
+        if (suggestFor !== null) {
+            if (!suggestFor || !SUGGESTION_RELATIONS.has(suggestFor.relation)
+                || typeof suggestFor.tag !== 'string' || suggestFor.tag.trim() === '') {
+                throw new Error('Dialog suggestFor must be null or { relation, tag }');
+            }
+            if (!allowSuggestions) {
+                throw new Error('Dialog suggestFor needs allowSuggestions');
+            }
+        }
 
         const focusTag = config.focusTag;
         if (mode === 'incoming') {
@@ -1119,6 +1107,7 @@ export class OntologyModal extends BaseModal {
                 suggestOnEmpty,
                 autoSubmitOnSuggestion,
                 showDeleteTag,
+                suggestFor,
             };
             this._renderDialog();
         });
@@ -1155,6 +1144,7 @@ export class OntologyModal extends BaseModal {
             autoSubmitOnSuggestion: false,
             showInput: false,
             allowSuggestions: false,
+            suggestFor: null,
             showDeleteTag: false,
         });
         return result === true;
@@ -1484,8 +1474,8 @@ export class OntologyModal extends BaseModal {
         this._hideDialogSuggestions();
     }
 
-    // Dictated text: one tag in a tag field, tags and quoted text in a condition.
-    // Rule text is typed, so a paste there stays as it is.
+    // Dictated text in a tag field becomes one tag. A condition or rule takes a paste as
+    // copied: it may hold several tags, quoted text, /regexes/ and tags not used yet.
     _handleDialogPaste(event) {
         const state = this._dialogState;
         if (!state) {
@@ -1493,8 +1483,6 @@ export class OntologyModal extends BaseModal {
         }
         if (state.mode === 'single-tag') {
             handleDictationPasteEvent(event, 'tag');
-        } else if (state.mode === 'incoming') {
-            handleDictationPasteEvent(event, 'condition');
         }
     }
 
@@ -1732,7 +1720,18 @@ export class OntologyModal extends BaseModal {
         const controller = new AbortController();
         this._dialogAbortController = controller;
 
-        const url = `${ONTOLOGY_BASE}/tags?q=${encodeURIComponent(query)}&limit=${DIALOG_SUGGESTION_LIMIT}`;
+        if (!this._dialogState) {
+            throw new Error('fetchDialogSuggestions needs an open dialog');
+        }
+        const suggestFor = this._dialogState.suggestFor;
+        let relation = 'none';
+        let focus = '';
+        if (suggestFor !== null) {
+            relation = suggestFor.relation;
+            focus = suggestFor.tag;
+        }
+        const url = `${ONTOLOGY_BASE}/tags?q=${encodeURIComponent(query)}&limit=${DIALOG_SUGGESTION_LIMIT}`
+            + `&focus=${encodeURIComponent(focus)}&relation=${relation}`;
         const response = await fetch(url, {
             method: 'GET',
             headers: buildAuthHeaders(),
@@ -1928,19 +1927,25 @@ export class OntologyModal extends BaseModal {
         if (!leftList || !middleList || !rightList || !leftTitle || !middleTitle || !rightTitle) {
             return;
         }
+        // Each column's + button acts on the focus tag: without one it is dimmed, and its
+        // column says how to get one (a click on a disabled button reaches no handler).
+        const addButtons = modalElement.querySelectorAll('[data-action="add-left"], [data-action="add-middle"], [data-action="add-right"]');
+        for (const button of addButtons) {
+            if (button.disabled !== !view) button.disabled = !view;
+        }
 
         if (!view) {
-            leftTitle.textContent = 'Tags that imply';
+            leftTitle.textContent = 'Tags/rules that imply';
             middleTitle.textContent = 'Focus';
             rightTitle.textContent = 'Tags implied by';
-            leftList.innerHTML = '<div class="ontology-placeholder">Pick a focus tag…</div>';
-            middleList.innerHTML = '';
-            rightList.innerHTML = '';
+            leftList.innerHTML = '<div class="ontology-placeholder">Pick a focus tag first: search for one above</div>';
+            middleList.innerHTML = '<div class="ontology-placeholder">No focus tag yet</div>';
+            rightList.innerHTML = '<div class="ontology-placeholder">Pick a focus tag first: search for one above</div>';
             return;
         }
 
         const focusTag = view.focusTag;
-        leftTitle.textContent = `Tags that imply '${focusTag}'`;
+        leftTitle.textContent = `Tags/rules that imply '${focusTag}'`;
         middleTitle.textContent = `'${focusTag}' and synonyms`;
         rightTitle.textContent = `Tags that '${focusTag}' implies`;
 
@@ -2272,6 +2277,7 @@ export class OntologyModal extends BaseModal {
             helpText: [],
             focusTag: null,
             allowSuggestions: false,
+            suggestFor: null,
             suggestOnEmpty: false,
             autoSubmitOnSuggestion: false,
             showInput: true,
@@ -2352,6 +2358,7 @@ export class OntologyModal extends BaseModal {
             helpText: [],
             focusTag: rhs,
             allowSuggestions: true,
+            suggestFor: { relation: 'incoming', tag: rhs },
             suggestOnEmpty: true,
             autoSubmitOnSuggestion: false,
             showInput: true,
@@ -2399,6 +2406,7 @@ export class OntologyModal extends BaseModal {
             helpText: [],
             focusTag: null,
             allowSuggestions: false,
+            suggestFor: null,
             suggestOnEmpty: false,
             autoSubmitOnSuggestion: false,
             showInput: true,
@@ -2602,6 +2610,7 @@ export class OntologyModal extends BaseModal {
                     helpText: [],
                     focusTag: null,
                     allowSuggestions: false,
+                    suggestFor: null,
                     suggestOnEmpty: false,
                     autoSubmitOnSuggestion: false,
                     showInput: true,
@@ -2743,6 +2752,7 @@ export class OntologyModal extends BaseModal {
                     helpText: [],
                     focusTag: focusTag,
                     allowSuggestions: true,
+                    suggestFor: { relation: 'incoming', tag: focusTag },
                     suggestOnEmpty: true,
                     autoSubmitOnSuggestion: false,
                     showInput: true,
@@ -2767,6 +2777,7 @@ export class OntologyModal extends BaseModal {
                     helpText: [],
                     focusTag: null,
                     allowSuggestions: true,
+                    suggestFor: { relation: 'implied', tag: focusTag },
                     suggestOnEmpty: true,
                     autoSubmitOnSuggestion: false,
                     showInput: true,
@@ -2791,6 +2802,7 @@ export class OntologyModal extends BaseModal {
                     helpText: [],
                     focusTag: null,
                     allowSuggestions: true,
+                    suggestFor: { relation: 'synonym', tag: focusTag },
                     suggestOnEmpty: true,
                     autoSubmitOnSuggestion: false,
                     showInput: true,
