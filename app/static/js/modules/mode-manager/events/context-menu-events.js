@@ -34,7 +34,7 @@ import {
     actionPasteReferenceChild,
 } from '../actions/note-actions.js';
 import { CommandGate } from '../services/command-gate-service.js';
-import { captureEditingFocus, restoreEditingFocus } from '../services/viewport-hold-service.js';
+import { captureEditingFocus, contentTextOf, restoreEditingFocus } from '../services/viewport-hold-service.js';
 import { editingFocusAtRightPress, rememberEditingFocusAtRightPress } from '../services/right-press-focus-service.js';
 import { applyEditingImageSizes, refreshEditingImageSizes } from '../services/editing-image-size-service.js';
 import {
@@ -156,8 +156,9 @@ async function resizeImageFromContext(imageContext, action) {
             throw new Error(`Editing note content missing after image resize: ${hostNoteId}`);
         }
         // A size tag change alone leaves the text, and the caret in it, as it was;
-        // braces added or removed shift a caret after them by their length.
-        const textBefore = noteContent.textContent;
+        // braces added or removed shift a caret after them by their length. Images count
+        // as one unit each, as in the saved caret (viewport-hold-service.js).
+        const textBefore = contentTextOf(noteContent);
         if (noteContent.innerHTML !== response.content) {
             noteContent.innerHTML = serverRenderedHtml(response.content);
         }
@@ -166,7 +167,7 @@ async function resizeImageFromContext(imageContext, action) {
         setTagBarValue(noteElement, response.tags);
         let shiftedFocus = null;
         if (editingFocus !== null) {
-            shiftedFocus = shiftedEditingFocus(editingFocus, textBefore, noteContent.textContent);
+            shiftedFocus = shiftedEditingFocus(editingFocus, textBefore, contentTextOf(noteContent));
             restoreEditingFocus(noteElement, shiftedFocus);
         }
         markTagBarSaved(noteElement, response.tags);
@@ -202,16 +203,48 @@ async function resizeImageFromContext(imageContext, action) {
 
 // Captured editing focus moved through a text change: positions after the first
 // changed character shift by the change in length.
+// A resize adds or removes only the braces of an image's size scope.
+const SCOPE_BRACES = new Set(['{', '}']);
+const SCOPE_CLOSE = '}';
+
+// Where each content position before a resize is after it (index = position before).
+// The texts are walked side by side, and only braces may differ. A caret stays
+// outside a scope the resize adds or removes: an added `{` goes after it, an added
+// `}` before it, and a caret inside a removed scope lands beside its image.
+function contentPositionsAcrossResize(textBefore, textAfter) {
+    const positions = new Array(textBefore.length + 1);
+    let before = 0;
+    let after = 0;
+    while (before < textBefore.length || after < textAfter.length) {
+        if (before < textBefore.length && after < textAfter.length && textBefore[before] === textAfter[after]) {
+            if (positions[before] === undefined) positions[before] = after;
+            before += 1;
+            after += 1;
+        } else if (before < textBefore.length && SCOPE_BRACES.has(textBefore[before])) {
+            if (positions[before] === undefined) positions[before] = after;
+            before += 1;
+        } else if (after < textAfter.length && SCOPE_BRACES.has(textAfter[after])) {
+            if (positions[before] === undefined && textAfter[after] !== SCOPE_CLOSE) positions[before] = after;
+            after += 1;
+        } else {
+            throw new Error(`An image resize changed the note beyond its size braces at ${before}`);
+        }
+    }
+    if (positions[before] === undefined) positions[before] = after;
+    return positions;
+}
+
 function shiftedEditingFocus(focus, textBefore, textAfter) {
     if (focus.kind !== 'content' || textBefore === textAfter) {
         return focus;
     }
-    let common = 0;
-    while (common < textBefore.length && common < textAfter.length && textBefore[common] === textAfter[common]) {
-        common += 1;
-    }
-    const delta = textAfter.length - textBefore.length;
-    const shift = (position) => (position > common ? position + delta : position);
+    const positions = contentPositionsAcrossResize(textBefore, textAfter);
+    const shift = (position) => {
+        if (!Number.isInteger(position) || position < 0 || position >= positions.length) {
+            throw new Error(`Saved caret position ${position} is outside the note (${textBefore.length})`);
+        }
+        return positions[position];
+    };
     return { ...focus, anchorPosition: shift(focus.anchorPosition), focusPosition: shift(focus.focusPosition) };
 }
 

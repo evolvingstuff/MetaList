@@ -97,3 +97,23 @@ Shape (general): an offset or index computed on value P (indexOf, find, len, .le
 Shape (narrow, easy to detect): a DOM point saved through Range.toString().length or textContent.length and resolved back through a SHOW_TEXT TreeWalker in content that can hold non-text nodes (img, embeds, widgets, line breaks).
 False positives: transforms known to keep lengths, or data that cannot hold what is dropped (a plain text input); allow a suppression with a reason. The general form needs data flow from S to P to the offset and back to S, like the sanitized_html property contracts.
 ```
+
+## Reported 2026-10-21: VERIFY005 misses a patch reached through a function-local import
+
+Handed to ShockHarness on 2026-10-21; kept here until a release fixes it. ShockHarness 0.21.0 reports 8 VERIFY005 warnings on MetaList (in 5 tests) that are all false: a probe counting calls to each test's replacement found 1 to 3 calls in every test, and the tests pass.
+
+```text
+VERIFY005 false positive: a patch reached through a function-local import (ShockHarness 0.21.0)
+Code shape: production code imports the patched name inside a function body and calls it there:
+    def connect_to_ai(...):
+        from app.services.agent.openai_inference import OpenAIInferenceAdapter
+        ... OpenAIInferenceAdapter(api_key=...)
+  and the test replaces the module attribute:
+    monkeypatch.setattr(openai_inference_module, "OpenAIInferenceAdapter", fake)
+What VERIFY005 says: the stub replaces OpenAIInferenceAdapter, which the code the test calls no longer reaches.
+What happens: the local from-import runs on every call and reads the module attribute at that moment, so the patch is in effect whenever connect_to_ai runs. (MetaList imports it there on purpose: loading the OpenAI SDK at startup costs about 250 ms per server.)
+Suggested fix: treat a function-scope `from M import N` followed by a call of N as a call-time read of M.N; a patch of M.N is reached whenever that function is reachable from the test.
+Repro: MetaList at 0e6b708a, tests/unit/test_note_tag_suggestions.py:386, reaching app/services/ai_setup.py:74 through connect_to_ai. The other findings: test_ai_routes.py:916, test_export_title_suggestions.py:232, 242, 255, test_note_tag_suggestions.py:394, 586, 592.
+```
+
+MetaList keeps the 8 warnings rather than suppressing them: they do not gate, and they should disappear when the rule is fixed.
