@@ -190,7 +190,7 @@ If the code works, suggest committing. There are two types:
 - The entire feature has been tested by the user and is working as expected.
 - Update any relevant Markdown in `docs/` to reflect the feature. If the right document does not exist yet, ask the user whether to create a new one (and create `docs/` or subfolders when necessary). Suggest renames to keep docs organized when appropriate.
 - Remove PLAN.md as part of this workflow.
-- Run the full checks once, here (not at checkpoints): the full browser smoke, the Python unit suite on 3.11 as well as the local version, the JS unit tests, the type check (`python scripts/check_types.py check`), and the ShockHarness diff. Fix any failure before merging.
+- Run the full checks once, here (not at checkpoints), after committing to the feature branch: `.venv/bin/python scripts/full_checks.py`. It runs the full browser smoke alone, then at once the Python unit suite on the local version and on every supported version (3.11 and 3.14), the Windows-style clone, the JS unit tests, the type check, the supply-chain check, the startup sanity gates and the ShockHarness gate against `main`, and prints one line per check (logs in `logs/checks/`). Fix any failure before merging.
 - Commit the changes to the feature branch.
 - Merge the branch into main.
 - Delete the feature branch.
