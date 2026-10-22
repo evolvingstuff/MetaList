@@ -64,7 +64,6 @@ app/api/routes/notes.py: Argument 1 to "_robot_scope_note_ids" has incompatible 
 app/api/routes/notes.py: Argument 1 to "generate_diff_ops" has incompatible type "WarmView"; expected "ViewState"  [arg-type]
 app/api/routes/notes.py: Incompatible types in assignment (expression has type "None", variable has type "str")  [assignment]
 app/api/routes/notes.py: Incompatible types in assignment (expression has type "None", variable has type "str")  [assignment]
-app/api/routes/ontology.py: Name "rule_ids" already defined on line 392  [no-redef]
 app/api/routes/test.py: Argument 1 to "transactional_route" has incompatible type "Callable[[], Coroutine[Any, Any, dict[Any, Any]]]"; expected "def (*Never, **Never) -> Never | def (*Never, **Never) -> Awaitable[Never]"  [arg-type]
 app/api/transactions.py: "_Wrapped[P, Awaitable[R], P, Coroutine[Any, Any, R]]" has no attribute "__signature__"  [attr-defined]
 app/api/transactions.py: "_Wrapped[P, R, P, R]" has no attribute "__signature__"  [attr-defined]

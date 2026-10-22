@@ -10,6 +10,7 @@ import {
     findNearMissTags,
     loadCommandPaletteTagMap,
     validateCommandPaletteTagMappings,
+    withLabelWords,
 } from '../../app/static/js/modules/command-palette/tag-config-loader.js';
 
 const TEST_DIR = dirname(fileURLToPath(import.meta.url));
@@ -226,4 +227,23 @@ test('an unmatched palette word suggests tags that start with it', async (t) => 
 
     assert.deepEqual(findNearMissTags(allTags, 'shortc'), ['shortcuts']);
     assert.deepEqual(findNearMissTags(allTags, 'zzzz'), []);
+});
+
+
+test('every word of a label finds its command, and the configured topic words stay', async (t) => {
+    const endpoints = buildRealEndpoints();
+    const configured = await loadRealTagMap(t);
+    const merged = withLabelWords(configured, endpoints);
+    const relationships = merged.get('action.edit_tag_relationships');
+    assert.ok(relationships.has('edit'), 'typing "edit" finds Edit tag relationships');
+    assert.ok(relationships.has('ontology'), 'a topic word the label lacks stays');
+    for (const endpoint of endpoints) {
+        for (const word of endpoint.label.toLowerCase().split(/[^a-z0-9]+/).filter((part) => part.length >= 2)) {
+            assert.ok(merged.get(endpoint.id).has(word), `${endpoint.label}: "${word}" finds it`);
+        }
+        for (const tag of configured.get(endpoint.id)) {
+            assert.ok(merged.get(endpoint.id).has(tag), `${endpoint.label}: the configured "${tag}" stays`);
+        }
+    }
+    assert.ok(collectCommandPaletteTags(merged).has('generate'), 'label words reach the near-miss suggestions');
 });

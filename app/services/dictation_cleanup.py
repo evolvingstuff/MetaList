@@ -17,9 +17,9 @@ described case by case in docs/ui/dictation-paste.md:
   the field are not added again;
 - search: unknown words are dropped, "or" becomes OR and the exclusion phrase
   ("minus" by default) excludes the next term; tag bar: unknown words become new tags;
-- one-tag fields (`tag`): the whole paste is one tag, existing or new;
-- incoming-rule conditions (`condition`): existing tags and quoted text only.
-Quoting (quote phrases or quote marks) applies to search and conditions only.
+- one-tag fields (`tag`): the whole paste is one tag, existing or new.
+Quoting (quote phrases or quote marks) applies to search only. An incoming-rule
+condition takes a paste as copied: rule text holds regexes and tags not used yet.
 """
 
 from __future__ import annotations
@@ -112,7 +112,7 @@ def clean_dictated_paste(
     term ("minus" by default), all set in Dictation Settings."""
     _require_phrase_settings(quote_open, quote_close, negate_phrase)
     negate_words = tuple(negate_phrase.casefold().split(" "))
-    if target not in {"search", "tags", "tag", "condition"}:
+    if target not in {"search", "tags", "tag"}:
         raise ValueError(f"Unknown dictation paste target: {target!r}")
     if not isinstance(text, str) or not isinstance(current_value, str):
         raise TypeError("text and current_value must be strings")
@@ -124,11 +124,7 @@ def clean_dictated_paste(
                    open_re=re.compile(_spoken_pattern(quote_open), re.IGNORECASE),
                    close_re=re.compile(_spoken_pattern(quote_close), re.IGNORECASE))
     if target == "search":
-        return _search_text(items, tag_index=tag_index, current_value=current_value, operators=True,
-                            negate_words=negate_words)
-    if target == "condition":
-        return _search_text(items, tag_index=tag_index, current_value=current_value, operators=False,
-                            negate_words=negate_words)
+        return _search_text(items, tag_index=tag_index, current_value=current_value, negate_words=negate_words)
     if target == "tag":
         return _single_tag_text(items, tag_index=tag_index)
     return _tag_bar_text(items, tag_index=tag_index, current_value=current_value, negate_words=negate_words)
@@ -238,7 +234,7 @@ def _items(text: str, *, target: str, quoted_re: re.Pattern[str], open_re: re.Pa
         # phrases ('quote "Fat. end quote'): inside a phrase they are dropped.
         phrase = " ".join(phrase.replace('"', " ").strip(_SENTENCE_PUNCTUATION + " ").split())
         # Tags cannot hold quoted text: there the quote phrases only drop out.
-        if target in {"search", "condition"} and phrase:
+        if target == "search" and phrase:
             items.append(_Phrase(phrase))
         else:
             items.extend(_words(phrase, target=target))
@@ -357,9 +353,8 @@ def _quoted_search_text(phrase: str) -> str:
     return '"' + phrase.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
-def _search_text(items: list, *, tag_index: _TagIndex, current_value: str, operators: bool,
-                 negate_words: tuple[str, ...]) -> str:
-    """A search (with OR and exclusion when `operators`) or an incoming-rule condition."""
+def _search_text(items: list, *, tag_index: _TagIndex, current_value: str, negate_words: tuple[str, ...]) -> str:
+    """A search, with OR and exclusion."""
     # Elements: a term, "OR", "NOT" (exclude the next term) or "DROP" (an
     # unknown word, which also cancels a pending NOT).
     elements: list[str] = []
@@ -391,13 +386,11 @@ def _search_text(items: list, *, tag_index: _TagIndex, current_value: str, opera
         in_meta_run = False
         negate_length = _phrase_length_at(items, index, negate_words)
         if negate_length:
-            # Conditions cannot exclude: there the phrase is only dropped.
-            if operators:
-                elements.append("NOT")
+            elements.append("NOT")
             index += negate_length
             continue
         word = item.text.casefold()
-        if operators and word in _SEARCH_OR_WORDS:
+        if word in _SEARCH_OR_WORDS:
             elements.append("OR")
         elif word not in FILLER_WORDS and word not in _SEARCH_OR_WORDS:
             elements.append("DROP")

@@ -1308,16 +1308,49 @@ body.ontology-modal-open #ontology-modal {
     gap: 10px;
 }
 
+/* A condition's part wraps instead of being cut: all of it stays readable. */
 .ontology-atom {
     font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
     font-size: 0.95rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: left;
 }
 
-.ontology-atom-sep {
-    color: rgba(255, 255, 255, 0.25);
+/* Several parts that must all match: one per line, held together by a bracket on the left. */
+.ontology-atom-group {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    padding-left: 12px;
+}
+
+.ontology-atom-group::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    border-right: none;
+    border-radius: 3px 0 0 3px;
+}
+
+/* Every part's line is 24px tall, as tall as the row's buttons, so the parts are evenly
+   spaced and the buttons sit beside the first one. */
+.ontology-atom-group .ontology-atom {
+    padding: 2px 0;
+    line-height: 20px;
+    border: none;
+    background: transparent;
+}
+
+/* A grouped condition's buttons stay beside its first line. */
+.ontology-row:has(.ontology-atom-group) {
+    align-items: flex-start;
 }
 
 .ontology-atom-tag {
@@ -1458,9 +1491,15 @@ body.ontology-modal-open #ontology-modal {
     font-size: 0.9rem;
 }
 
-.ontology-add:hover {
+.ontology-add:hover:not(:disabled) {
     color: rgba(255, 255, 255, 0.82);
     border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Without a focus tag the column buttons cannot act (ontology-modal.js renderFocusView). */
+.ontology-add:disabled {
+    opacity: 0.4;
+    cursor: default;
 }
 
 .ontology-divider {

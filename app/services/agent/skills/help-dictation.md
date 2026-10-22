@@ -34,8 +34,7 @@ fixed rules, no AI, and it only reacts to pasting: typed text is never changed.
   `@green @bold` (Superwhisper drops a repeated "at" anyway), even if the user also
   has a plain tag such as `bold`.
 - "quote … end quote" (the default quote phrases) or quote marks mark a phrase, in
-  the search bar and tag relationship conditions only; in tag fields the quote
-  phrases are dropped.
+  the search bar only; in tag fields the quote phrases are dropped.
 - Filler words (a, an, and, at, the, tag, tags, comma, period, um, uh) are ignored,
   unless the word is itself one of the user's tags. A spoken word that is a tag
   always stays that tag.
@@ -55,8 +54,8 @@ fixed rules, no AI, and it only reacts to pasting: typed text is never changed.
 - **Other one-tag fields** (Edit Tag Relationships' search box, Add tag, Implied
   tag, Synonym tag, Rename tag; Prioritize Tag; Accept or reject AI-proposed tags' tag filter):
   the whole paste becomes one tag, "Machine learning" gives `machine-learning`.
-- **Tag relationship conditions:** existing tags and quoted text; no regular
-  expressions by voice.
+- **Tag relationship conditions:** no dictation cleanup: a paste goes in exactly as
+  copied, so several tags, quoted text, `/regexes/` and tags not used yet all stay.
 - **AI privacy tag lists:** tags, one per line.
 - **A note being edited:** say the tag phrase, **"start tags"** by default, then the
   tags. The text before the phrase goes into the note; the words after it are added

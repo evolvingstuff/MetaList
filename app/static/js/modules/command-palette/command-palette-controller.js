@@ -124,6 +124,7 @@ import { buildCommandPaletteEndpoints } from './endpoint-registry.js';
 import { PreferencesStore } from './preferences-store.js';
 import {
     collectCommandPaletteTags,
+    withLabelWords,
     findNearMissTags,
     loadCommandPaletteTagMap,
     validateCommandPaletteTagMappings,
@@ -487,6 +488,8 @@ class CommandPaletteController {
 
     _mergeAndValidateTags() {
         validateCommandPaletteTagMappings(this._endpoints, this._tagMap);
+        this._tagMap = withLabelWords(this._tagMap, this._endpoints);
+        this._allTags = collectCommandPaletteTags(this._tagMap);
         for (const endpoint of this._endpoints) {
             endpoint.tags = this._tagMap.get(endpoint.id);
         }

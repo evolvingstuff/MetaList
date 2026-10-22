@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from collections import Counter
+from dataclasses import dataclass
+
 from app.utils.byte_sizes import MIB
 from http import HTTPStatus
 from fastapi import APIRouter, HTTPException, Request
@@ -10,7 +13,12 @@ from pydantic import ConfigDict, Field, with_config
 
 from app.api.request_auth import get_request_auth_token
 from app.api.transactions import transactional_route
+from app.security.sensitive_cache import SensitiveMemo
+from app.services.resource_limits import SENSITIVE_MEMO_BYTES
 from app.services.search_index import search_index
+from app.services.tag_ontology import TagOntology
+from app.services.tag_term_matching import list_significant_content_match_segments
+from app.utils.not_found import NOT_FOUND
 from app.services.note_store import store as note_store
 from app.services.sync import generate_new_uuid
 from app.services.tag_ontology import RegexAtom, TagAtom, TextAtom, parse_rules_text
@@ -35,6 +43,15 @@ _EQUALITY_LINE_RULE_COUNT = 2
 _PREFIX_MATCH_RANK = 0
 _SUBSTRING_MATCH_RANK = 1
 _FUZZY_MATCH_RANK = 2
+# What a Tag Relationships field adds next to its focus tag; "none" ranks tags by use alone.
+_SUGGESTION_RELATIONS = frozenset({"none", "incoming", "implied", "synonym"})
+# A tag counts as linked to the focus tag once they share this many notes: one shared
+# note is chance.
+_MIN_SHARED_NOTES = 2
+# The focus tags whose related order is kept while their dialog is open (tag names
+# are private: the memo is cleared on lock).
+_RELATED_ORDER_MEMO_ENTRIES = 4
+_related_orders = SensitiveMemo(maxsize=_RELATED_ORDER_MEMO_ENTRIES, max_bytes=SENSITIVE_MEMO_BYTES)
 
 
 def _maybe_bearer_token(request: Request) -> str:
@@ -389,27 +406,27 @@ def focus_view(tag: str) -> dict:
     for candidate in sorted(left):
         if candidate in equals:
             continue
-        rule_ids: set[int] = set()
+        left_rule_ids: set[int] = set()
         for member in equals:
             key = (candidate, member)
             if key in edge_map:
-                rule_ids.add(edge_map[key])
-        if not rule_ids:
+                left_rule_ids.add(edge_map[key])
+        if not left_rule_ids:
             continue
-        direct_left.append({"tag": candidate, "ruleIds": sorted(rule_ids)})
+        direct_left.append({"tag": candidate, "ruleIds": sorted(left_rule_ids)})
 
     for candidate in sorted(right):
         if candidate in equals:
             continue
-        rule_ids: set[int] = set()
+        right_rule_ids: set[int] = set()
         for member in equals:
             key = (member, candidate)
             if key in edge_map:
-                rule_ids.add(edge_map[key])
-        if not rule_ids:
+                right_rule_ids.add(edge_map[key])
+        if not right_rule_ids:
             continue
         direct_right_tags.add(candidate)
-        direct_right.append({"tag": candidate, "ruleIds": sorted(rule_ids)})
+        direct_right.append({"tag": candidate, "ruleIds": sorted(right_rule_ids)})
 
     for candidate in sorted(equals):
         if candidate == tag:
@@ -442,53 +459,128 @@ def focus_view(tag: str) -> dict:
     }
 
 
+@dataclass(frozen=True)
+class _RelatedOrder:
+    """Tags in the order a Tag Relationships field suggests them for its focus tag: linked
+    tags first, then tags sharing a word with it, then the rest by use."""
+
+    index_revision: int
+    # Compared by identity: editing the rules compiles a new ontology.
+    ontology: TagOntology
+    linked: tuple[str, ...]
+    named_alike: tuple[str, ...]
+    by_use: tuple[str, ...]
+
+
+def _link_score(*, relation: str, shared: int, focus_notes: int, tag_notes: int) -> float:
+    """How strongly a tag is linked to the focus tag for `relation` (0 to 1)."""
+    assert 0 < shared <= tag_notes and shared <= focus_notes, (shared, tag_notes, focus_notes)
+    if relation == "incoming":
+        # tag => focus: how many of the tag's notes carry the focus tag.
+        return shared / tag_notes
+    if relation == "implied":
+        # focus => tag: how many of the focus tag's notes carry the tag.
+        return shared / focus_notes
+    assert relation == "synonym", relation
+    # Both ways: the notes they share among the notes either is on.
+    return shared / (focus_notes + tag_notes - shared)
+
+
+def _related_order(*, focus: str, relation: str, tag_counts: dict[str, int]) -> _RelatedOrder:
+    ontology = get_ontology()
+    key = (focus.casefold(), relation)
+    found, kept = _related_orders.lookup(key)
+    if found and kept.index_revision == search_index.revision and kept.ontology is ontology:
+        return kept
+    index_revision = search_index.revision
+    focus_notes, written_with_focus = search_index.count_written_tags_on_notes_with(focus)
+    left, equal, right = ontology.focus_view(tag=focus)
+    # The focus tag, its synonyms, and tags already on this side of it say nothing new.
+    excluded = {tag.casefold() for tag in equal} | {focus.casefold()}
+    if relation == "incoming":
+        excluded |= {tag.casefold() for tag in left}
+    elif relation == "implied":
+        excluded |= {tag.casefold() for tag in right}
+    candidates = [tag for tag in tag_counts if tag.casefold() not in excluded]
+    scored = []
+    for tag in candidates:
+        # A meta tag (@bold, @todo) is formatting or a state, not a topic linked to the
+        # focus tag; it is still listed by use, and when "@" is typed.
+        if tag.startswith("@") or tag.casefold() not in written_with_focus:
+            continue
+        tag_shared, tag_notes = written_with_focus[tag.casefold()]
+        if tag_shared >= _MIN_SHARED_NOTES:
+            score = _link_score(relation=relation, shared=tag_shared, focus_notes=focus_notes, tag_notes=tag_notes)
+            scored.append((-score, -tag_shared, tag.casefold(), tag))
+    linked = tuple(tag for *_ordering, tag in sorted(scored))
+    linked_set = set(linked)
+    focus_words = set(list_significant_content_match_segments(focus))
+    by_use_order = sorted((tag for tag in candidates if tag not in linked_set), key=lambda tag: (-tag_counts[tag], tag))
+    named_alike = tuple(tag for tag in by_use_order if focus_words & set(list_significant_content_match_segments(tag)))
+    named_alike_set = set(named_alike)
+    order = _RelatedOrder(
+        index_revision=index_revision, ontology=ontology, linked=linked, named_alike=named_alike,
+        by_use=tuple(tag for tag in by_use_order if tag not in named_alike_set),
+    )
+    _related_orders.store(key, order)
+    return order
+
+
+def _match_rank(*, needle: str, tag: str) -> int:
+    """How a typed text matches a tag (prefix, substring or fuzzy), NOT_FOUND if not at all."""
+    folded = tag.casefold()
+    if folded.startswith(needle):
+        return _PREFIX_MATCH_RANK
+    if needle in folded:
+        return _SUBSTRING_MATCH_RANK
+    if _fuzzy_match(needle, folded):
+        return _FUZZY_MATCH_RANK
+    return NOT_FOUND
+
+
 @router.get("/tags")
-def list_tags(q: str, limit: int) -> dict:
-    if not isinstance(q, str):
-        raise TypeError("q must be a string")
+def list_tags(q: str, limit: int, focus: str, relation: str) -> dict:
+    """Tags for a Tag Relationships field. With a `relation` to `focus`, tags linked to the
+    focus tag come first, then tags sharing a word with it, then the rest by use; typing
+    narrows that order (app/services/agent/skills/help-ontology.md, "Relationship dialogs"). Without one (`relation` "none",
+    `focus` ""), by match, then use."""
+    if not isinstance(q, str) or not isinstance(focus, str) or not isinstance(relation, str):
+        raise TypeError("q, focus and relation must be strings")
     if not isinstance(limit, int):
         raise TypeError("limit must be an int")
     if limit < 0:
         raise ValueError("limit must be >= 0")
+    if relation not in _SUGGESTION_RELATIONS:
+        raise ValueError(f"Unknown suggestion relation: {relation!r}")
+    if (relation == "none") != (focus == ""):
+        raise ValueError("A focus tag goes with a relation, and only with one")
 
     ontology = get_ontology()
     # A tag only the rules name is on no note yet.
     tag_counts = {tag: 0 for tag in extract_ontology_tags(ontology)}
     tag_counts.update(search_index.list_tag_frequencies())
-    tags = set(tag_counts.keys())
-
     needle = q.casefold().strip()
 
+    if relation != "none":
+        order = _related_order(focus=focus, relation=relation, tag_counts=tag_counts)
+        ordered: list[str] = []
+        for group in (order.linked, order.named_alike):
+            ordered.extend(tag for tag in group if needle == "" or _match_rank(needle=needle, tag=tag) != NOT_FOUND)
+        rest = [(_match_rank(needle=needle, tag=tag), index, tag) for index, tag in enumerate(order.by_use)]
+        ordered.extend(tag for rank, _index, tag in sorted(rest) if needle == "" or rank != NOT_FOUND)
+        payload = [{"tag": tag, "count": tag_counts[tag]} for tag in ordered[:limit]]
+        return {"totalCount": len(tag_counts), "tags": payload}
+
     if needle == "":
-        ordered = sorted(tags, key=lambda tag: (-tag_counts[tag], tag))
-        ordered = ordered[:limit]
-        payload = [
-            {"tag": tag, "count": tag_counts[tag]}
-            for tag in ordered
-        ]
-        return {"totalCount": len(tags), "tags": payload}
+        ordered = sorted(tag_counts, key=lambda tag: (-tag_counts[tag], tag))[:limit]
+        return {"totalCount": len(tag_counts), "tags": [{"tag": tag, "count": tag_counts[tag]} for tag in ordered]}
 
     matches: list[tuple[int, int, str]] = []
-    for tag in tags:
-        folded = tag.casefold()
-        if folded.startswith(needle):
-            rank = _PREFIX_MATCH_RANK
-        elif needle in folded:
-            rank = _SUBSTRING_MATCH_RANK
-        elif _fuzzy_match(needle, folded):
-            rank = _FUZZY_MATCH_RANK
-        else:
-            continue
-        count = tag_counts[tag]
-        matches.append((rank, -count, tag))
-
+    for tag in tag_counts:
+        rank = _match_rank(needle=needle, tag=tag)
+        if rank != NOT_FOUND:
+            matches.append((rank, -tag_counts[tag], tag))
     # By rank, then most used, then name.
     matches.sort()
-    results = [tag for _rank, _negative_count, tag in matches]
-    results = results[:limit]
-
-    payload = [
-        {"tag": tag, "count": tag_counts[tag]}
-        for tag in results
-    ]
-    return {"totalCount": len(tags), "tags": payload}
+    payload = [{"tag": tag, "count": tag_counts[tag]} for _rank, _negative_count, tag in matches[:limit]]
+    return {"totalCount": len(tag_counts), "tags": payload}

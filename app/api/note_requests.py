@@ -126,7 +126,7 @@ class TabSearchInteractionRequest(TypedDict):
 class DictationPasteRequest(TypedDict):
     """Text pasted into the search bar or the tag bar, and the field's current value."""
     text: Text
-    target: Literal["search", "tags", "tag", "condition"]
+    target: Literal["search", "tags", "tag"]
     current_value: Text
     # The spoken phrases around a quoted phrase (Dictation Settings).
     quote_open: Identifier
