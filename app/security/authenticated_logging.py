@@ -97,10 +97,12 @@ class EncryptedLogSink:
         return self._path
 
     def write(self, message: str) -> None:
-        if self._closed:
-            raise RuntimeError("Encrypted log sink is closed")
-        envelope = encrypt_log_record(plaintext=message, dek=self._dek)
+        # Under the lock from the check to the write: a close (at logout) waits for a
+        # write already under way, and a write after it finds the sink closed.
         with self._lock:
+            if self._closed:
+                raise RuntimeError("Encrypted log sink is closed")
+            envelope = encrypt_log_record(plaintext=message, dek=self._dek)
             self._file.write(envelope)
 
     def close(self) -> None:

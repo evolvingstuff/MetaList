@@ -115,3 +115,43 @@ def test_a_stream_closing_during_a_write_waits_for_it(monkeypatch):
     closer.join(join_seconds)
     assert not writer.is_alive() and not closer.is_alive()
     assert events == ["write", "flush", "flush"], "the write reached the stream after it was closed"
+
+
+def test_a_sink_closing_during_a_write_waits_for_it(tmp_path: Path, monkeypatch) -> None:
+    """Logout closes the encrypted log file while another thread may be writing to
+    it: the write either finishes before the close (its record is kept) or finds the
+    sink closed. It used to check and encrypt outside the lock, so a close in between
+    shut the file under it and the write failed on a closed file."""
+    join_seconds = 5
+    # How long the close is given to finish while the write is paused in encryption.
+    close_wait_seconds = 0.5
+    dek = bytes(range(32))
+    path = tmp_path / "server.log.enc"
+    writer_errors: list[BaseException] = []
+
+    real_encrypt = authenticated_logging.encrypt_log_record
+    encrypting = threading.Event()
+    may_finish = threading.Event()
+
+    def encrypt_then_pause(*, plaintext, dek):
+        encrypting.set()
+        assert may_finish.wait(join_seconds)
+        return real_encrypt(plaintext=plaintext, dek=dek)
+
+    monkeypatch.setattr(authenticated_logging, "encrypt_log_record", encrypt_then_pause)
+    # The writer thread's failure is the evidence: record it instead of printing it.
+    monkeypatch.setattr(threading, "excepthook", lambda hook_args: writer_errors.append(hook_args.exc_value))
+    sink = EncryptedLogSink(path=path, dek=dek)
+    writer = threading.Thread(target=sink.write, args=("a line\n",))
+    writer.start()
+    assert encrypting.wait(join_seconds)
+    closer = threading.Thread(target=sink.close)
+    closer.start()
+    closer.join(close_wait_seconds)
+    assert closer.is_alive(), "the close did not wait for the write under way"
+    may_finish.set()
+    writer.join(join_seconds)
+    closer.join(join_seconds)
+    assert not writer.is_alive() and not closer.is_alive()
+    assert writer_errors == [], f"the write failed because the sink closed under it: {writer_errors!r}"
+    assert decrypt_log_records(path=path, dek=dek) == ["a line\n"]
