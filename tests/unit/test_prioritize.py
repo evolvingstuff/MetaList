@@ -588,18 +588,12 @@ def test_note_tag_suggestions_route_uses_configured_tag_limit(
     captured: dict[str, object] = {}
     monkeypatch.setattr(notes_route, "MAX_TAG_SUGGESTIONS", 5)
     monkeypatch.setattr(notes_route, "_require_note_present", lambda note_id, *, context: None)
-    monkeypatch.setattr(
-        notes_route,
-        "suggest_tags_with_reasons_for_note",
-        lambda *, note_id, anchors, explicit_tags, prefix, content_html, limit: captured.update(  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
-            note_id=note_id,
-            anchors=anchors,
-            explicit_tags=explicit_tags,
-            prefix=prefix,
-            content_html=content_html,
-            limit=limit,
-        ) or [TagSuggestion(tag="foo", reasons=("Named in this note: \"foo\"", "You've tagged 3 notes with it"))],
-    )
+
+    def suggest(**arguments: object) -> list[TagSuggestion]:
+        captured.update(arguments)
+        return [TagSuggestion(tag="foo", reasons=("Named in this note: \"foo\"", "You've tagged 3 notes with it"))]
+
+    monkeypatch.setattr(notes_route, "suggest_tags_with_reasons_for_note", suggest)
 
     result = notes_route.tag_suggestions(
         {

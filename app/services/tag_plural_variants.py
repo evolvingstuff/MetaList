@@ -27,6 +27,16 @@ _VOWELS = frozenset("aeiou")
 # Tag names are private in an encrypted namespace: the memos are capped and cleared on lock.
 _SPELLINGS_MEMO_ENTRIES = 32768
 _ES_ENDINGS = ("s", "x", "z", "ch", "sh", "o")
+# A singular ending replaced by a plural one, for words at least this long.
+_REPLACED_ENDINGS = (
+    ("f", "ves", _MIN_REGULAR_WORD_LENGTH),  # leaf, leaves
+    ("fe", "ves", _MIN_REGULAR_WORD_LENGTH),  # knife, knives
+    ("sis", "ses", _MIN_REGULAR_WORD_LENGTH),  # analysis, analyses
+    ("man", "men", _MIN_REGULAR_WORD_LENGTH),  # fireman, firemen
+    ("us", "i", _MIN_LATIN_US_WORD_LENGTH),  # cactus, cacti
+)
+# A tag split at its connectors alternates a word and the connector run after it.
+_PARTS_PER_WORD = 2
 _IRREGULAR_PLURALS = {
     "child": "children",
     "person": "people",
@@ -56,18 +66,13 @@ def _plurals_of_word(word: str) -> frozenset[str]:
     plurals.add(word + "s")
     if word.endswith(_ES_ENDINGS):
         plurals.add(word + "es")
-    if word.endswith("y") and word[-2] not in _VOWELS:
-        plurals.add(word[:-1] + "ies")
-    if word.endswith("f"):
-        plurals.add(word[:-1] + "ves")
-    if word.endswith("fe"):
-        plurals.add(word[:-2] + "ves")
-    if word.endswith("sis"):
-        plurals.add(word[:-3] + "ses")
-    if word.endswith("man"):
-        plurals.add(word[:-3] + "men")
-    if word.endswith("us") and len(word) >= _MIN_LATIN_US_WORD_LENGTH:
-        plurals.add(word[:-2] + "i")
+    # A consonant then `y` (berry, berries); a vowel then `y` only adds `s` (day, days).
+    stem = word.removesuffix("y")
+    if stem != word and stem[-1] not in _VOWELS:
+        plurals.add(stem + "ies")
+    for singular, plural, min_length in _REPLACED_ENDINGS:
+        if word.endswith(singular) and len(word) >= min_length:
+            plurals.add(word.removesuffix(singular) + plural)
     plurals.discard(word)
     return frozenset(plurals)
 
@@ -77,10 +82,9 @@ def plural_spellings(term: str) -> frozenset[str]:
     """The term (casefolded) with one of its words made plural, connectors kept."""
     if not isinstance(term, str) or term == "":
         raise TypeError("term must be a non-empty string")
-    # Words sit at even positions, the connector runs between them at odd ones.
     parts = _CONNECTOR_RUN.split(term.casefold())
     spellings = set()
-    for index in range(0, len(parts), 2):
+    for index in range(0, len(parts), _PARTS_PER_WORD):
         for plural in _plurals_of_word(parts[index]):
             spellings.add("".join((*parts[:index], plural, *parts[index + 1:])))
     return frozenset(spellings)
