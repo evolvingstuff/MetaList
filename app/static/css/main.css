@@ -6701,6 +6701,88 @@ html[data-theme="dark"] ::highlight(metalist-search) {
     color: #ffffff;
 }
 
+/* Find in the list (find-in-list-service.js): every match, and the current one. */
+::highlight(metalist-find) {
+    background-color: #ffe082;
+    color: inherit;
+}
+
+::highlight(metalist-find-current) {
+    background-color: #ff9632;
+    color: #000000;
+}
+
+html[data-theme="dark"] ::highlight(metalist-find) {
+    background-color: #7a5b00;
+    color: #ffffff;
+}
+
+html[data-theme="dark"] ::highlight(metalist-find-current) {
+    background-color: #e07800;
+    color: #000000;
+}
+
+/* The find bar floats just under the search controls, at their right; it takes no space. */
+.find-in-list-bar {
+    position: fixed;
+    z-index: 12500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    max-width: calc(100vw - 16px);
+    padding: 4px 6px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-color);
+    color: var(--text-color);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+    font-size: 13px;
+}
+
+.find-in-list-bar[hidden] {
+    display: none;
+}
+
+.find-in-list-bar input {
+    width: 220px;
+    min-width: 0;
+    padding: 4px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+}
+
+.find-in-list-count {
+    min-width: 5.5em;
+    padding: 0 4px;
+    color: var(--note-tag-muted);
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.find-in-list-button {
+    width: 26px;
+    height: 26px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.find-in-list-button:hover:not(:disabled) {
+    background: rgba(127, 127, 127, 0.14);
+}
+
+.find-in-list-button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
 /* Meta tag formatting */
 .meta-global,
 .meta-scope {

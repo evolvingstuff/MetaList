@@ -48,6 +48,7 @@ import {
 } from '../services/history-shortcut-policy-service.js';
 import { actionEnterSearchMode, actionExitSearchMode } from '../actions/search-actions.js';
 import { HelpModal } from '../../modals/help-modal.js';
+import { closeFindBar, isFindBarOpen, isFindInput, moveToMatch, openFindBar } from '../services/find-in-list-service.js';
 import { DOMUtils } from '../../dom-utils.js';
 import { CONFIG } from '../../config.js';
 import { NotesAPI } from '../../api-client.js';
@@ -281,6 +282,51 @@ function syncClipboardTrackingFromPasteEventHtml(clipboardHtml) {
     return resolved.hasNoteClipboardHtml;
 }
 
+// Find in the list (docs/ui/find.md): Cmd/Ctrl+F opens the find bar anywhere but in a
+// dialog (there it stays the browser's); while it is open Cmd/Ctrl+G and Shift with it
+// move through the matches, and in its text box Enter, Shift+Enter and Escape do.
+// Returns whether the key was find's.
+function handleFindKey(event) {
+    let metaOrCtrl = false;
+    if (event.metaKey) {
+        metaOrCtrl = true;
+    } else if (event.ctrlKey) {
+        metaOrCtrl = true;
+    }
+    if (ModeContext.modalStack.length > 0) {
+        return false;
+    }
+    if (event.code === 'KeyF' && metaOrCtrl && !event.altKey && !event.shiftKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        void openFindBar();
+        return true;
+    }
+    if (!isFindBarOpen()) {
+        return false;
+    }
+    if (event.code === 'KeyG' && metaOrCtrl && !event.altKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        void moveToMatch(event.shiftKey ? 'previous' : 'next');
+        return true;
+    }
+    if (isFindInput(event.target) && event.key === 'Enter' && !metaOrCtrl && !event.altKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        void moveToMatch(event.shiftKey ? 'previous' : 'next');
+        return true;
+    }
+    const isInSearchBox = event.target instanceof HTMLElement && event.target.id === 'search-input';
+    if (event.key === 'Escape' && !ModeContext.isEditing && !isInSearchBox) {
+        event.preventDefault();
+        event.stopPropagation();
+        void closeFindBar();
+        return true;
+    }
+    return false;
+}
+
 // The key a shortcut is named by. With Shift held a letter arrives in upper
 // case (Control+Shift+R is 'R'); ⌘/Control shortcuts name the lower-case letter.
 function shortcutKeyOf(event) {
@@ -312,6 +358,10 @@ function handleKeyDown(event) {
             eventType: event.type,
             keyValue: event.key,
         });
+        return;
+    }
+
+    if (handleFindKey(event)) {
         return;
     }
 

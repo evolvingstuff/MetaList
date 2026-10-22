@@ -109,7 +109,7 @@ def test_build_view_state_uses_root_creation_timestamp_despite_newer_child(
     _patch_fake_store(monkeypatch, store)
 
     state = build_view_state(
-        editing_note_id=None,
+        editing_note_id=None, find_reveal_note_id=None,
         search=None,
         sort_mode="created",
         client_known_note_ids=set(), previous_root_ids=[],
@@ -173,7 +173,7 @@ def test_build_view_state_uses_newest_updated_timestamp_in_root_subtree(
     _patch_fake_store(monkeypatch, store)
 
     state = build_view_state(
-        editing_note_id=None,
+        editing_note_id=None, find_reveal_note_id=None,
         search=None,
         sort_mode="updated",
         client_known_note_ids=set(), previous_root_ids=[],
@@ -237,7 +237,7 @@ def test_build_view_state_sorts_roots_alphabetically_by_root_content(
     _patch_fake_store(monkeypatch, store)
 
     state = build_view_state(
-        editing_note_id=None,
+        editing_note_id=None, find_reveal_note_id=None,
         search=None,
         sort_mode="alphabetical",
         client_known_note_ids=set(), previous_root_ids=[],
@@ -312,7 +312,7 @@ def test_build_view_state_sorts_roots_by_plain_text_volume_across_subtree(
     _patch_fake_store(monkeypatch, store)
 
     state = build_view_state(
-        editing_note_id=None,
+        editing_note_id=None, find_reveal_note_id=None,
         search=None,
         sort_mode="content-volume",
         client_known_note_ids=set(), previous_root_ids=[],
@@ -380,7 +380,7 @@ def _updated_sort_store() -> _FakeNoteStore:
 
 def _updated_view(editing_note_id: Optional[str]):
     return build_view_state(
-        editing_note_id=editing_note_id,
+        editing_note_id=editing_note_id, find_reveal_note_id=None,
         search=None,
         sort_mode="updated",
         client_known_note_ids={"root-top", "root-edited", "child-edited", "root-bottom"},

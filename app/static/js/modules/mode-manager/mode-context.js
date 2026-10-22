@@ -57,6 +57,8 @@ class ModeContext {
         this._searchQuery = '';
         this._isInitialPageLoad = true;
         this._isUntaggedView = false;
+        // The note find opened to show a match folded away, for the view only (docs/ui/find.md).
+        this._findRevealNoteId = null;
         this._scrollRestoreVersion = 0;
         
         // Tab state management
@@ -1102,6 +1104,18 @@ class ModeContext {
         return this._tabRootWindows[this._activeTabId].start;
     }
 
+    // A loaded root's position among all the view's roots, or -1 when it is not loaded.
+    getLoadedRootIndex(rootId) {
+        if (typeof rootId !== 'string' || rootId.length === 0) {
+            throw new Error('getLoadedRootIndex requires a root id');
+        }
+        const index = this._tabRootOrder[this._activeTabId].indexOf(rootId);
+        if (index === -1) {
+            return -1;
+        }
+        return this._tabRootWindows[this._activeTabId].start + index;
+    }
+
     // Distance, in loaded roots, at which the browser asks the server to move a
     // band edge: the server keeps an edge until the viewport is this close.
     getRootBandRefetchDistance() {
@@ -1652,6 +1666,19 @@ class ModeContext {
 
     get isUntaggedView() {
         return this._isUntaggedView;
+    }
+
+    setFindRevealNoteId(noteId) {
+        if (noteId !== null && (typeof noteId !== 'string' || noteId.length === 0)) {
+            throw new Error('findRevealNoteId must be a note id or null');
+        }
+        this._assertStateChanged('findRevealNoteId', this._findRevealNoteId, noteId);
+        this._findRevealNoteId = noteId;
+        return this;
+    }
+
+    get findRevealNoteId() {
+        return this._findRevealNoteId;
     }
 
     get isInitialPageLoad() {

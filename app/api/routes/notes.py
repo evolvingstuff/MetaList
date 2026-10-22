@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from app.api.note_requests import (
     ViewDiffRequest,
+    FindInListRequest,
     UpdateTabStateRequest,
     UpdateTabSortModeRequest,
     CreateNewTabRequest,
@@ -63,6 +64,7 @@ from app.api.note_requests import (
 from app.api.transactions import serialized_read_route, transactional_route
 from app.services.sync import touch_client
 from app.services.snapshot import build_view_state
+from app.services.snapshot import find_in_view
 from app.services.snapshot import resolve_search_scope
 from app.services.snapshot import resolve_view_scope_membership
 from app.services.note_store import store as note_store
@@ -300,6 +302,7 @@ def view_diff(payload: ViewDiffRequest):
     client_id = payload["clientId"]
     touch_client(client_id)
     editing_note_id = payload["editingNoteId"]
+    find_reveal_note_id = payload["findRevealNoteId"]
     search = payload["search"]
     tab_id = payload["tabId"]
     undo_context = payload["undoContext"]
@@ -341,6 +344,10 @@ def view_diff(payload: ViewDiffRequest):
         if not note_store.has_note(normalized_editing_note_id):
             normalized_editing_note_id = None
 
+    # Like editingNoteId, the note find opened can be gone by now (deleted, undone).
+    if find_reveal_note_id is not None and not note_store.has_note(find_reveal_note_id):
+        find_reveal_note_id = None
+
     # The server keeps each tab's warm view (what that browser tab displays),
     # so the browser sends only where it is. A tab with no warm view, or one
     # whose browser shows nothing for it, gets its initial window.
@@ -357,6 +364,7 @@ def view_diff(payload: ViewDiffRequest):
 
     state = build_view_state(
         editing_note_id=normalized_editing_note_id,
+        find_reveal_note_id=find_reveal_note_id,
         search=normalized_search,
         sort_mode=sort_mode,
         client_known_note_ids=client_known_note_ids,
@@ -630,6 +638,39 @@ def get_memory_usage(request: Request) -> Dict[str, object]:
     """The Memory Usage dialog: this namespace server process's memory and the notes it holds."""
     _require_bearer_token(request)
     return describe_memory_usage()
+
+
+@router.post("/notes/find")
+@transactional_route
+def find_in_list(payload: FindInListRequest) -> Dict[str, object]:
+    """One step of find through the list a tab shows (docs/ui/find.md): the notes the
+    text occurs in, in list order, from a root position forward or before it backward."""
+    search = payload["search"]
+    if search is None or search.strip() == "":
+        search = ""
+    else:
+        # A search that does not parse is answered as rejected input, as the view does.
+        parse_search_query(search)
+    if payload["text"].strip() == "":
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="text must hold more than spaces")
+    window = find_in_view(
+        find_text=payload["text"], search=search, sort_mode=_resolve_tab_sort_mode(payload["tabId"]),
+        is_untagged_view=payload["isUntaggedView"], from_root_index=payload["fromRootIndex"],
+        direction=payload["direction"],
+    )
+    return {
+        "matches": [
+            {
+                "noteId": match.note_id, "rootId": match.root_id, "rootIndex": match.root_index,
+                "contentCount": match.content_count, "commentCount": match.comment_count,
+                "previewCount": match.preview_count, "isUnderFoldedNote": match.is_under_folded_note,
+            }
+            for match in window.matches
+        ],
+        "firstRootIndex": window.first_root_index,
+        "endRootIndex": window.end_root_index,
+        "rootCount": window.root_count,
+    }
 
 
 @router.get("/notes/memory-usage/breakdown")
