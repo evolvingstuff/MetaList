@@ -36,6 +36,7 @@ This document defines standardized workflows triggered by action commands in ALL
 
 ## Environment Notes
 - All Python work happens inside the `.venv` virtual environment; activate it (e.g. `source .venv/bin/activate`) or call `.venv/bin/python` directly when running tooling or scripts.
+- Before writing, fixing, refactoring or reviewing code, read the matching ShockHarness skill in .claude/skills/<name>/SKILL.md (write-compliant-code, fix-violations, refactor-complexity, pre-commit-review, verification-integrity, async-lifecycle, property-contracts, adopt-shockharness). After a ShockHarness upgrade, refresh them with `shockharness skills update --agent claude`.
 
 ## CRITICAL: Backup Immutability
 
