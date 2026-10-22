@@ -60,7 +60,6 @@ import { VersionInfoModal } from '../modals/version-info-modal.js';
 import { MemoryUsageModal } from '../modals/memory-usage-modal.js';
 import { NoteLayoutAppearanceModal } from '../modals/note-layout-appearance-modal.js';
 import { VisualCuesModal, VISUAL_CUE_OPTIONS } from '../modals/visual-cues-modal.js';
-import { TagSuggestionSettingsModal, TAG_SUGGESTION_OPTIONS } from '../modals/tag-suggestion-settings-modal.js';
 import { DictationSettingsModal } from '../modals/dictation-settings-modal.js';
 import {
     DEFAULT_DICTATION_NEGATE,
@@ -367,7 +366,6 @@ class CommandPaletteController {
         this._memoryUsageModal = null;
         this._noteLayoutAppearanceModal = null;
         this._visualCuesModal = null;
-        this._tagSuggestionSettingsModal = null;
         this._dictationSettingsModal = null;
         this._searchSuggestionStatisticsModal = null;
         this._confirmationModal = null;
@@ -446,7 +444,6 @@ class CommandPaletteController {
                 openMemoryUsage: this.openMemoryUsage.bind(this),
                 openNoteLayoutAppearance: this.openNoteLayoutAppearance.bind(this),
                 openVisualCues: this.openVisualCues.bind(this),
-                openTagSuggestionSettings: this.openTagSuggestionSettings.bind(this),
                 openDictationSettings: this.openDictationSettings.bind(this),
                 getSortMode: this.getSortMode.bind(this),
                 setSortMode: this.setSortMode.bind(this),
@@ -2419,20 +2416,6 @@ class CommandPaletteController {
             );
         }
         await this._visualCuesModal.open();
-    }
-
-    async openTagSuggestionSettings() {
-        const isReady = await this._prepareForModalOpen('commandPalette.openTagSuggestionSettings');
-        if (!isReady) {
-            return;
-        }
-        if (this._tagSuggestionSettingsModal === null) {
-            this._tagSuggestionSettingsModal = new TagSuggestionSettingsModal(
-                () => Object.fromEntries(TAG_SUGGESTION_OPTIONS.map((option) => [option.key, this._getBoolean(option.key, option.defaultValue)])),
-                (key, enabled) => this.applyPreference(key, enabled),
-            );
-        }
-        await this._tagSuggestionSettingsModal.open();
     }
 
     _dictationPhrase(key, defaultPhrase) {

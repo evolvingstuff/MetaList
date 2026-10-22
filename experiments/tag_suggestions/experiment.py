@@ -15,7 +15,9 @@ from dataclasses import dataclass, replace
 
 from app.services.tag_term_matching import tag_term_matches_prefix
 
-from experiments.tag_suggestions.cases import EMPTY_BAR, FIRST_LETTER, Split, TagCase, build_cases, make_split
+from experiments.tag_suggestions.cases import (
+    EMPTY_BAR, FIRST_LETTER, MOMENTS, TYPED_MOMENTS, Split, TagCase, build_cases, make_split,
+)
 from experiments.tag_suggestions.corpus import Corpus
 from experiments.tag_suggestions.features import (
     CaseCandidates,
@@ -25,9 +27,13 @@ from experiments.tag_suggestions.features import (
 )
 from experiments.tag_suggestions.metrics import per_target_hits, score_case, summarize
 from experiments.tag_suggestions.models import BoostedRanker, FormulaRanker, LogisticRanker, fuse_ranks, rank_by_column
-from experiments.tag_suggestions.world_store import baseline_kept_order, baseline_suggestions, load_world
+from experiments.tag_suggestions.world_store import (
+    baseline_kept_order, baseline_suggestions, load_world, narrowing_suggestions,
+)
 
-MODEL_NAMES = ("today", "today_kept_order", "today+neighbors", "formula", "neighbors", "naive_bayes", "logistic",
+# narrowing: the one-letter rule (typing narrows the empty-bar list) at every length; it is today's
+# ranking after one letter, so it differs from today only at two and three letters.
+MODEL_NAMES = ("today", "today_kept_order", "narrowing", "today+neighbors", "formula", "neighbors", "naive_bayes", "logistic",
                "trees_yes_no", "trees_ranking", "trees+today_slots", "trees+today_alternate")
 # Fixed-slot merge: the trees' top 3, then today's best 2 not already shown.
 MERGE_TREE_SLOTS = 3
@@ -98,7 +104,7 @@ PROGRESS_EVERY = 250
 def _baseline_for(corpus: Corpus, cases: list[TagCase]) -> tuple[dict[TagCase, list[str]], float]:
     started = time.perf_counter()
     lists: dict[TagCase, list[str]] = {}
-    seconds_by_moment: dict[str, list[float]] = {EMPTY_BAR: [], FIRST_LETTER: []}
+    seconds_by_moment: dict[str, list[float]] = {moment: [] for moment in MOMENTS}
     for done, case in enumerate(cases, start=1):
         call_started = time.perf_counter()
         lists[case] = baseline_suggestions(corpus=corpus, case=case)
@@ -108,12 +114,30 @@ def _baseline_for(corpus: Corpus, cases: list[TagCase]) -> tuple[dict[TagCase, l
             remaining = elapsed / done * (len(cases) - done)
             print(f"    {done}/{len(cases)} moments, {1000 * elapsed / done:.0f} ms each, "
                   f"about {remaining / 60:.1f} min left", flush=True)
+    _print_timings(label="today's ranking", seconds_by_moment=seconds_by_moment)
+    return lists, time.perf_counter() - started
+
+
+def _print_timings(*, label: str, seconds_by_moment: dict[str, list[float]]) -> None:
     for moment, seconds in seconds_by_moment.items():
         if seconds:
             ordered = sorted(seconds)
-            print(f"    today's ranking, {moment.replace('_', ' ')}: median {1000 * ordered[len(ordered) // 2]:.0f} ms, "
+            print(f"    {label}, {moment.replace('_', ' ')}: median {1000 * ordered[len(ordered) // 2]:.0f} ms, "
                   f"slowest 5% {1000 * ordered[int(len(ordered) * 0.95)]:.0f} ms", flush=True)
-    return lists, time.perf_counter() - started
+
+
+def _narrowing_for(corpus: Corpus, cases: list[TagCase]) -> dict[TagCase, list[str]]:
+    """The single rule at two and three letters (after one letter it is today's ranking)."""
+    lists: dict[TagCase, list[str]] = {}
+    seconds_by_moment: dict[str, list[float]] = {moment: [] for moment in TYPED_MOMENTS if moment != FIRST_LETTER}
+    for case in cases:
+        if case.moment not in seconds_by_moment:
+            continue
+        call_started = time.perf_counter()
+        lists[case] = narrowing_suggestions(corpus=corpus, case=case)
+        seconds_by_moment[case.moment].append(time.perf_counter() - call_started)
+    _print_timings(label="narrowing", seconds_by_moment=seconds_by_moment)
+    return lists
 
 
 def _run_split(*, corpus: Corpus, split: Split, options: Options) -> None:
@@ -150,6 +174,8 @@ def _run_split(*, corpus: Corpus, split: Split, options: Options) -> None:
     print("  running today's ranking with the empty-bar order kept after a letter...", flush=True)
     kept_order = {case: baseline_kept_order(corpus=corpus, case=case)
                   for case in test_cases if case.moment == FIRST_LETTER}
+    print("  running the narrowing rule at two and three letters...", flush=True)
+    narrowing = _narrowing_for(corpus, test_cases)
     test_stats = build_source_stats(corpus=corpus, world=test_world, vectorizers=vectorizers, source_ids=train_ids)
     feature_started = time.perf_counter()
     test_items = build_case_candidates(corpus=corpus, world=test_world, vectorizers=vectorizers, stats=test_stats,
@@ -169,7 +195,8 @@ def _run_split(*, corpus: Corpus, split: Split, options: Options) -> None:
 
     rankers = {
         "today": lambda item: test_baseline[item.case],
-        "today_kept_order": lambda item: _kept_or_today(item, kept_order, test_baseline),
+        "today_kept_order": lambda item: _variant_or_today(item, kept_order, test_baseline),
+        "narrowing": lambda item: _variant_or_today(item, narrowing, test_baseline),
         "today+neighbors": lambda item: fuse_ranks([test_baseline[item.case], rank_by_column(item, "knn_score")]),
         "formula": formula.rank,
         "neighbors": lambda item: rank_by_column(item, "knn_score"),
@@ -193,11 +220,11 @@ def _run_split(*, corpus: Corpus, split: Split, options: Options) -> None:
           f"today's ranking {1000 * baseline_seconds / max(len(test_cases), 1):.1f} ms per moment")
 
 
-def _kept_or_today(item: CaseCandidates, kept_order: dict[TagCase, list[str]],
-                   today: dict[TagCase, list[str]]) -> list[str]:
-    """The kept-order variant differs from today only after a letter is typed."""
-    if item.case in kept_order:
-        return kept_order[item.case]
+def _variant_or_today(item: CaseCandidates, variant: dict[TagCase, list[str]],
+                      today: dict[TagCase, list[str]]) -> list[str]:
+    """A variant ranks only the moments it differs from today on; the rest are today's."""
+    if item.case in variant:
+        return variant[item.case]
     return today[item.case]
 
 
@@ -264,7 +291,9 @@ def _report(*, items: list[CaseCandidates], rankers: dict, training_uses: Counte
                 groups[key] = []
             groups[key].append(item)
     rankings = {name: {item.case: ranker(item) for item in scored} for name, ranker in rankers.items()}
-    for moment in (EMPTY_BAR, FIRST_LETTER):
+    for moment in MOMENTS:
+        if (moment, "all") not in groups:
+            continue
         print(f"\n{moment.replace('_', ' ')}")
         print(f"  {'tags in bar':12s} {'model':22s} {'hit@5':>7s} {'recall@5':>9s} {'MRR':>6s} {'prec@1':>7s} {'n':>6s}")
         for label in ("all", "0", "1", "2+"):

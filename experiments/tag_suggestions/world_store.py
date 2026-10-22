@@ -77,10 +77,7 @@ def load_store(*, corpus: Corpus, hidden_note_ids: frozenset[str]) -> tuple[TagO
 def baseline_suggestions(*, corpus: Corpus, case: TagCase) -> list[str]:
     """Today's tag-bar ranking for this moment, casefolded, as the browser would ask for it."""
     note = corpus.notes[case.note_id]
-    bar = list(note.meta_tags) + list(case.present)
-    explicit = list(bar)
-    if case.moment == FIRST_LETTER:
-        explicit.append(case.prefix)
+    bar, explicit = _bar_as_sent(corpus=corpus, case=case)
     suggestions = tag_suggestions_module.suggest_tags_for_note(
         note_id=case.note_id,
         anchors=bar,
@@ -90,6 +87,31 @@ def baseline_suggestions(*, corpus: Corpus, case: TagCase) -> list[str]:
         limit=MAX_TAG_SUGGESTIONS,
     )
     return [suggestion.casefold() for suggestion in suggestions]
+
+
+def _bar_as_sent(*, corpus: Corpus, case: TagCase) -> tuple[list[str], list[str]]:
+    """The tag bar's tags (anchors) and, with what is typed as its last token, its explicit tags."""
+    bar = list(corpus.notes[case.note_id].meta_tags) + list(case.present)
+    explicit = list(bar)
+    if case.prefix != "":
+        explicit.append(case.prefix)
+    return bar, explicit
+
+
+def narrowing_suggestions(*, corpus: Corpus, case: TagCase) -> list[str]:
+    """The single rule: at any length, what is typed narrows the empty-bar list. MetaList's
+    ranking since October 21, 2026 (before, only after one letter)."""
+    assert case.prefix != "" and not case.prefix.startswith("@")
+    bar, explicit = _bar_as_sent(corpus=corpus, case=case)
+    ranked = tag_suggestions_module._suggest_while_typing(
+        note_id=case.note_id,
+        anchors=bar,
+        explicit_tags=explicit,
+        prefix=case.prefix,
+        content_html=corpus.notes[case.note_id].content_html,
+        limit=MAX_TAG_SUGGESTIONS,
+    )
+    return [suggestion.casefold() for suggestion in ranked.tags]
 
 
 # How deep the empty-bar list goes before the prefix filter (kept-order variant).

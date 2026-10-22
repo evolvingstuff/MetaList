@@ -12,7 +12,7 @@ from app.services.note_store import store
 from app.services.search_history import current_local_date, record_explicit_tag_addition_batch
 from app.services.sync import generate_new_uuid, get_current_sync_uuid
 from app.services.undo_state import reset_all_undo_state
-from app.usecases.tag_proposals import _effective_accepted_tag_keys, _proposal_tokens
+from app.usecases.tag_proposals import _effective_accepted_tag_keys, _proposal_tokens, is_new_proposal
 
 
 def prepare_proposal_changes(note_ids, action, tag_filter, proposals):
@@ -32,7 +32,7 @@ def prepare_proposal_changes(note_ids, action, tag_filter, proposals):
             if note_id in proposals:
                 note_proposals = proposals[note_id]
             for tag in note_proposals:
-                if tag.casefold() not in seen:
+                if is_new_proposal(tag=tag, seen=seen):
                     pending.append(tag)
                     seen.add(tag.casefold())
                     additions.append(tag)

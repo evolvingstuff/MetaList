@@ -48,11 +48,13 @@ The script checks for them before asking for a password.
 
 - Two time splits: test on tagged notes created in the latest 20% and in the
   60–80% window. Tags of every note created at or after the cutoff are hidden.
-- Moments: empty tag bar (every remaining tag counts) and the first letter of
-  the next tag typed, with 0, 1, 2+ tags already in the bar (in written order).
+- Moments: empty tag bar (every remaining tag counts) and the first one, two
+  and three letters of the next tag typed (two and three only for tags longer
+  than that), with 0, 1, 2+ tags already in the bar (in written order).
 - Targets are explicit non-meta tags not already implied by the bar, inherited
   tags or tag rules.
-- Models: `today` (MetaList's ranking), `neighbors` (similar notes by text and
+- Models: `today` (MetaList's ranking), `narrowing` (the one-letter rule at every
+  length; MetaList's ranking since October 21, 2026, so equal to `today` once that is in), `neighbors` (similar notes by text and
   context tags), `naive_bayes`, `logistic` (logistic regression on all inputs),
   `trees_yes_no` and `trees_ranking` (LightGBM, binary and lambdarank), and two
   merges of the trees with today's list (`trees+today_slots`: trees' top 3 then

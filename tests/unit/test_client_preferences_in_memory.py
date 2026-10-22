@@ -1,7 +1,7 @@
 """The server keeps the session's decrypted preferences in memory.
 
-Tag suggestions read a preference on every keystroke; decrypting the stored
-preferences each time would be wasteful. The copy belongs to the session that
+Requests read preferences often; decrypting the stored preferences each time
+would be wasteful. The copy belongs to the session that
 read it, follows every save, and goes with the other sensitive caches.
 """
 
@@ -60,8 +60,8 @@ def test_a_session_decrypts_its_preferences_once(stored: dict) -> None:
 
 def test_a_save_replaces_the_copy_in_memory(stored: dict) -> None:
     client_state.load_client_preferences(token="session-a")
-    _save(stored, {"pref.suggest_already_applying_tags": "true"}, "session-a")
-    assert client_state.load_client_preferences(token="session-a") == {"pref.suggest_already_applying_tags": "true"}
+    _save(stored, {"pref.show_note_tags": "false"}, "session-a")
+    assert client_state.load_client_preferences(token="session-a") == {"pref.show_note_tags": "false"}
     assert stored["reads"] == 1
 
 
@@ -85,9 +85,7 @@ def test_nothing_is_kept_while_the_namespace_is_locked(stored: dict) -> None:
     assert stored["reads"] == 2
 
 
-def test_the_tag_suggestions_setting_is_off_unless_turned_on(stored: dict) -> None:
-    assert client_state.suggests_already_applying_tags(token="session-a") is False
-    _save(stored, {"pref.suggest_already_applying_tags": "true"}, "session-a")
-    assert client_state.suggests_already_applying_tags(token="session-a") is True
-    _save(stored, {"pref.suggest_already_applying_tags": "false"}, "session-a")
-    assert client_state.suggests_already_applying_tags(token="session-a") is False
+def test_the_removed_tag_suggestions_setting_is_dropped_when_read() -> None:
+    # "Allow suggesting tags that already apply" was removed (2026-10-21); namespaces that saved it still open.
+    saved = {"pref.show_note_tags": "true", "pref.suggest_already_applying_tags": "true"}
+    assert client_state._validate_client_preferences(saved) == {"pref.show_note_tags": "true"}

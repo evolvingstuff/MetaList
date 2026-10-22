@@ -13,7 +13,11 @@ from pathlib import Path
 
 import pytest
 
-from experiments.tag_suggestions.cases import EMPTY_BAR, FIRST_LETTER, build_cases, make_split
+from app.services.tag_term_matching import tag_term_matches_prefix
+
+from experiments.tag_suggestions.cases import (
+    EMPTY_BAR, FIRST_LETTER, THREE_LETTERS, TWO_LETTERS, build_cases, make_split,
+)
 from experiments.tag_suggestions.features import (
     FEATURE_NAMES,
     build_case_candidates,
@@ -23,7 +27,7 @@ from experiments.tag_suggestions.features import (
 from experiments.tag_suggestions.metrics import score_case
 from experiments.tag_suggestions.snapshot import copy_database
 from experiments.tag_suggestions.synthetic import build_synthetic_corpus
-from experiments.tag_suggestions.world_store import baseline_suggestions, load_world
+from experiments.tag_suggestions.world_store import baseline_suggestions, load_world, narrowing_suggestions
 
 
 def test_the_copy_reads_the_live_database_without_changing_it(tmp_path: Path) -> None:
@@ -61,11 +65,16 @@ def test_each_note_gives_moments_in_the_order_its_tags_were_written() -> None:
     note = next(note for note in corpus.notes.values() if len(note.explicit_tags) == 3)
     cases = build_cases(corpus=corpus, note_ids=(note.note_id,), max_stage=1)
     first, second, third = note.explicit_tags
+    assert len(first) > 3 and len(second) > 3, "the synthetic tags are longer than the typed moments"
     assert [(case.moment, case.stage, case.present, case.targets, case.prefix) for case in cases] == [
         (EMPTY_BAR, 0, (), frozenset({first, second, third}), ""),
         (FIRST_LETTER, 0, (), frozenset({first}), first[0]),
+        (TWO_LETTERS, 0, (), frozenset({first}), first[:2]),
+        (THREE_LETTERS, 0, (), frozenset({first}), first[:3]),
         (EMPTY_BAR, 1, (first,), frozenset({second, third}), ""),
         (FIRST_LETTER, 1, (first,), frozenset({second}), second[0]),
+        (TWO_LETTERS, 1, (first,), frozenset({second}), second[:2]),
+        (THREE_LETTERS, 1, (first,), frozenset({second}), second[:3]),
     ]
 
 
@@ -108,3 +117,20 @@ def test_the_baseline_runs_on_the_world_without_suggesting_tags_in_the_bar() -> 
     for case in build_cases(corpus=corpus, note_ids=split.test_note_ids[:20], max_stage=2):
         suggestions = baseline_suggestions(corpus=corpus, case=case)
         assert not {tag.casefold() for tag in case.present} & set(suggestions[:5])
+
+
+def test_the_narrowing_rule_is_todays_ranking_after_one_letter_and_only_narrows() -> None:
+    corpus = build_synthetic_corpus(seed=3, note_count=200)
+    split = make_split(corpus=corpus, name="t", window_start_fraction=0.8, window_end_fraction=1.0)
+    load_world(corpus=corpus, split=split, hidden_note_ids=split.hidden_note_ids)
+    cases = build_cases(corpus=corpus, note_ids=split.test_note_ids[:20], max_stage=2)
+    assert {case.moment for case in cases} == {EMPTY_BAR, FIRST_LETTER, TWO_LETTERS, THREE_LETTERS}
+    for case in cases:
+        if case.moment == EMPTY_BAR:
+            continue
+        narrowed = narrowing_suggestions(corpus=corpus, case=case)
+        if case.moment == FIRST_LETTER:
+            assert narrowed == baseline_suggestions(corpus=corpus, case=case)
+        present = {tag.casefold() for tag in case.present}
+        assert not present & set(narrowed)
+        assert all(tag_term_matches_prefix(term=tag, prefix=case.prefix) for tag in narrowed)

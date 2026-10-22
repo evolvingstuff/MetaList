@@ -153,7 +153,6 @@ from app.services.tag_details import describe_search_tag
 from app.services.tag_details import describe_tag_bar_tag
 from app.services.tag_suggestion_reasons import search_suggestion_reasons
 from app.services.tag_suggestions import suggest_tags_with_reasons_for_note
-from app.services.client_state_service import suggests_already_applying_tags
 from app.services.undo_state import reset_undo_stack
 from app.usecases.prioritize import list_prioritize_tag_suggestions
 from app.services.selected_text_tag import SelectedTextTagValidationError
@@ -668,7 +667,7 @@ def dictation_paste(payload: DictationPasteRequest) -> Dict[str, object]:
 
 @router.post("/notes/tag-suggestions")
 @transactional_route
-def tag_suggestions(request: Request, payload: TagSuggestionsRequest) -> Dict[str, object]:
+def tag_suggestions(payload: TagSuggestionsRequest) -> Dict[str, object]:
     note_id = payload["note_id"]
     anchors = payload["anchors"]
     explicit_tags = payload["explicit_tags"]
@@ -695,7 +694,6 @@ def tag_suggestions(request: Request, payload: TagSuggestionsRequest) -> Dict[st
         prefix=prefix,
         content_html=content_html,
         limit=MAX_TAG_SUGGESTIONS,
-        include_already_applying=suggests_already_applying_tags(token=_require_bearer_token(request)),
     )
     # Why each is suggested, shown when it is right-clicked (docs/ui/tag-bar.md).
     return {

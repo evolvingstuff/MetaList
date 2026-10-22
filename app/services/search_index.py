@@ -935,6 +935,12 @@ class SearchIndex:
                 if has_matches:
                     completions.append(term)
             return completions
+    @property
+    def revision(self) -> int:
+        """Counts every change to the index, so a result kept from it can tell it is stale."""
+        with self._lock:
+            return self._revision
+
     def query_note_ids(self, search: str) -> Set[str]:
         t0 = time.perf_counter()
         if not isinstance(search, str):

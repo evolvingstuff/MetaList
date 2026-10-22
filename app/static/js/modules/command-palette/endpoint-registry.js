@@ -94,7 +94,6 @@ export function buildCommandPaletteEndpoints(deps) {
     const openMemoryUsage = requireAction(actions, 'openMemoryUsage');
     const openNoteLayoutAppearance = requireAction(actions, 'openNoteLayoutAppearance');
     const openVisualCues = requireAction(actions, 'openVisualCues');
-    const openTagSuggestionSettings = requireAction(actions, 'openTagSuggestionSettings');
     const openDictationSettings = requireAction(actions, 'openDictationSettings');
     const getSortMode = requireAction(actions, 'getSortMode');
     const setSortMode = requireAction(actions, 'setSortMode');
@@ -377,12 +376,6 @@ export function buildCommandPaletteEndpoints(deps) {
             kind: 'form',
             label: 'Visual Cues',
             execute: async () => openVisualCues(),
-        },
-        {
-            id: 'form.tag_suggestion_settings',
-            kind: 'form',
-            label: 'Tag Suggestions',
-            execute: async () => openTagSuggestionSettings(),
         },
         {
             id: 'form.dictation_settings',

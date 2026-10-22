@@ -24,7 +24,6 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
             openMemoryUsage: noop,
             openNoteLayoutAppearance: noop,
             openVisualCues: noop,
-            openTagSuggestionSettings: noop,
             openDictationSettings: noop,
             openAiAgentSettings: noop,
             openCloudPrivacySettings: noop,

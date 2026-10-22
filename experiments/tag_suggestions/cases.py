@@ -9,7 +9,9 @@ Test notes: tagged notes created inside the test window, ordered by creation.
 Each gives one case per moment and stage:
   - stage i: the first i of its tags (in the order written) are in the bar;
   - empty bar: every remaining tag is a target;
-  - first letter: the next tag is the target, with its first character typed.
+  - first letter: the next tag is the target, with its first character typed;
+  - two and three letters: the same with its first two or three characters typed,
+    for targets longer than that (a tag typed in full is no longer a suggestion).
 """
 
 from __future__ import annotations
@@ -21,6 +23,11 @@ from experiments.tag_suggestions.corpus import Corpus
 
 EMPTY_BAR = "empty_bar"
 FIRST_LETTER = "first_letter"
+TWO_LETTERS = "two_letters"
+THREE_LETTERS = "three_letters"
+# Each typed moment and how many characters of the target it has typed.
+TYPED_MOMENTS = {FIRST_LETTER: 1, TWO_LETTERS: 2, THREE_LETTERS: 3}
+MOMENTS = (EMPTY_BAR, *TYPED_MOMENTS)
 
 
 @dataclass(frozen=True)
@@ -84,6 +91,12 @@ def build_cases(*, corpus: Corpus, note_ids: tuple[str, ...], max_stage: int) ->
                 continue
             cases.append(TagCase(note_id=note_id, moment=EMPTY_BAR, stage=stage, present=present,
                                  targets=frozenset(tag.casefold() for tag in remaining), prefix=""))
-            cases.append(TagCase(note_id=note_id, moment=FIRST_LETTER, stage=stage, present=present,
-                                 targets=frozenset({remaining[0].casefold()}), prefix=remaining[0][0]))
+            target = remaining[0]
+            for moment, typed in TYPED_MOMENTS.items():
+                # The first letter is always a moment (as in the earlier runs); longer prefixes only
+                # while the tag is not yet typed in full.
+                if moment != FIRST_LETTER and len(target) <= typed:
+                    continue
+                cases.append(TagCase(note_id=note_id, moment=moment, stage=stage, present=present,
+                                     targets=frozenset({target.casefold()}), prefix=target[:typed]))
     return cases

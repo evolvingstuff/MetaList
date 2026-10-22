@@ -1,4 +1,5 @@
-"""Typing one letter narrows the empty-bar suggestions instead of reordering them.
+"""Typing one letter narrows the empty-bar suggestions instead of reordering them
+(and so does every further letter).
 
 docs/ui/tag-bar.md, "Tag Suggestions". The offline experiment
 (experiments/tag_suggestions) found the old one-letter reordering kept the
@@ -25,6 +26,8 @@ class _EmptyOntology:
 
 class _IndexOnlyNoteStore:
     loaded = True
+    # Never changes, so a kept typing ranking stays valid within a test.
+    revision = 0
 
     def __init__(self, *, inherited: frozenset[str]) -> None:
         self._inherited = inherited
@@ -73,7 +76,7 @@ def _suggest(*, bar: list[str], prefix: str) -> list[str]:
     explicit = list(bar)
     if prefix != "":
         explicit.append(prefix)
-    return tag_suggestions_module.suggest_tags_for_note(include_already_applying=False, 
+    return tag_suggestions_module.suggest_tags_for_note(
         note_id="note", anchors=bar, explicit_tags=explicit, prefix=prefix, content_html=_CONTENT, limit=20)
 
 
@@ -114,6 +117,8 @@ def test_one_letter_never_suggests_a_tag_already_in_the_bar(monkeypatch: pytest.
     assert typed[0] == "mango"
 
 
-def test_two_letters_are_unchanged(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_second_letter_narrows_the_one_letter_list(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Every further letter follows the same rule (tests/unit/test_typing_narrows_tag_suggestions.py).
     _use_index(monkeypatch, inherited=frozenset())
-    assert _suggest(bar=["fruit"], prefix="ma") == ["mango", "maple"]
+    one_letter = _suggest(bar=["fruit"], prefix="m")
+    assert _suggest(bar=["fruit"], prefix="ma") == [tag for tag in one_letter if tag.startswith("ma")] == ["mango", "maple"]

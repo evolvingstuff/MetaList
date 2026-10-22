@@ -57,6 +57,30 @@ Hit@5, empty bar with no tags yet / all empty-bar moments / first letter:
   earlier one-letter time was not measured separately, and run-to-run machine
   load varied too much to compare across runs.
 
+- Typing narrows the empty-bar list at every length (October 21, 2026), not only
+  after one letter: two and more letters used to rank the prefix afresh, with
+  tags that already apply moved to the bottom and the no-evidence tail in
+  alphabetical order, so `question` (inherited) led after `q` and was last after
+  `qu`. Measured on the namespace (latest 20%, 500 test notes, with the
+  experiment's new two- and three-letter moments):
+
+  | Typed | Ranking | hit@5 | first right | MRR | n |
+  |---|---|---|---|---|---|
+  | 2 letters | afresh (before) | 88.0% | 72.0% | 0.788 | 760 |
+  | 2 letters | narrowing | 90.1% | 77.2% | 0.834 | 760 |
+  | 3 letters | afresh (before) | 93.4% | 80.4% | 0.858 | 723 |
+  | 3 letters | narrowing | 95.9% | 81.5% | 0.878 | 723 |
+
+  Narrowing won in five of six groups by tags already in the bar; with one tag
+  in the bar at two letters, hit@5 was 1.6 points lower (83.9% vs 85.5%, about
+  3 of 186) but MRR higher (0.766 vs 0.727). The afresh ranking's typed-only
+  evidence (the rest of the tag after the prefix named in the note) did not pay
+  for itself. Speed: afresh took a median 56 ms (slowest 5% about 205 ms) per
+  letter after the first; narrowing ranks the empty bar once per tag being
+  typed (as one letter did: median 192 ms) and then only filters it, about 1–3
+  ms per further letter on a 3,000-tag test namespace. Trees and the formula
+  stay ahead at every length (two letters: trees about 95% hit@5).
+
 - The tree no longer boosts suggestions (October 2026, at the user's request):
   tags used on a note's children, siblings or anywhere under its parent, and
   tag names in those notes' or its ancestors' text, compete like any other tag.
@@ -93,9 +117,10 @@ In rough order of value for effort:
 6. **Feedback logging**: suggestions shown, picked, skipped,
    and tags typed in full without being offered. Would let weights adapt to
    actual use; needs a schema change and a privacy decision.
-7. **More moments in the experiment:** two- and three-letter prefixes, and
-   tags that already apply (6.5% of moments were skipped because the tag
-   written already applied through inheritance or rules).
+7. **More moments in the experiment:** tags that already apply (6.5% of
+   moments were skipped because the tag written already applied through
+   inheritance or rules). Two- and three-letter prefixes are measured now
+   (see Done).
 
 ## Caveats
 

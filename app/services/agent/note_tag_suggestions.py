@@ -109,7 +109,7 @@ def ranked_vocabulary(*, note_id: str, boundary: CloudPrivacyBoundary) -> tuple[
     own_keys = {term.casefold() for term in own_tags}
     ranked_for_note = suggest_tags_for_note(
         note_id=note_id, anchors=own_tags, explicit_tags=own_tags, prefix="",
-        content_html=record.content, limit=RANKED_FOR_NOTE_LIMIT, include_already_applying=False,
+        content_html=record.content, limit=RANKED_FOR_NOTE_LIMIT,
     )
     most_used = sorted(counts, key=lambda key: (-counts[key], key))[:MOST_USED_LIMIT]
     vocabulary: dict[str, tuple[str, int]] = {}
