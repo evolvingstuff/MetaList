@@ -84,7 +84,8 @@ function readVisibleText(root) {
     return reading;
 }
 
-function rangesIn(root, phrases) {
+// The ranges where phrases occur in an element's text, in text order (find uses them too).
+export function phraseRangesIn(root, phrases) {
     const reading = readVisibleText(root);
     return findPhraseMatches(reading.text, phrases).map(([start, end]) => {
         // A phrase is trimmed before matching, so it starts and ends on real text.
@@ -131,7 +132,7 @@ function paint() {
         CSS.highlights.delete(HIGHLIGHT_NAME);
         return;
     }
-    const ranges = highlightedElements(notesContainer()).flatMap(element => rangesIn(element, moduleState.phrases));
+    const ranges = highlightedElements(notesContainer()).flatMap(element => phraseRangesIn(element, moduleState.phrases));
     CSS.highlights.set(HIGHLIGHT_NAME, new Highlight(...ranges));
 }
 

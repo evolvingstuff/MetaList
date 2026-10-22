@@ -68,6 +68,8 @@ class Tab(TypedDict):
 class ViewDiffRequest(TypedDict):
     clientId: Identifier
     editingNoteId: Text | None
+    # The note find opened to show a match folded away, for this view only (docs/ui/find.md).
+    findRevealNoteId: Text | None
     search: Text | None
     tabId: Identifier
     undoContext: UndoContext
@@ -76,6 +78,16 @@ class ViewDiffRequest(TypedDict):
     visibleBottomRootId: Text | None
     isUntaggedView: bool
     startAtListEnd: bool
+
+# Find in the list (docs/ui/find.md): one step from a root position of the view.
+@with_config(ConfigDict(strict=True))
+class FindInListRequest(TypedDict):
+    tabId: Identifier
+    search: Text | None
+    isUntaggedView: bool
+    text: Annotated[str, Field(min_length=1, max_length=KIB)]
+    fromRootIndex: Nonnegative
+    direction: Literal['forward', 'backward']
 
 @with_config(ConfigDict(strict=True))
 class UpdateTabStateRequest(TypedDict):

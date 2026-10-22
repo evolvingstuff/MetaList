@@ -46,7 +46,7 @@ def _state_for(
     monkeypatch.setattr(snapshot_module, "note_store", store)
     monkeypatch.setattr(snapshot_module, "get_all_locks", lambda: {})
     return build_view_state(
-        editing_note_id=editing_note_id,
+        editing_note_id=editing_note_id, find_reveal_note_id=None,
         search=None,
         sort_mode="normal",
         client_known_note_ids=set(), previous_root_ids=[],

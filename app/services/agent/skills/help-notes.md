@@ -8,7 +8,7 @@ claim that you inspected current notes or settings: none are supplied here.
 Prefer user-facing steps over implementation details. If the reference does not
 answer a question, say what is unknown; do not invent syntax or controls.
 
-Sources: docs/ui/controls.md
+Sources: docs/ui/controls.md, docs/ui/find.md
 
 # Note App Controls
 
@@ -62,6 +62,7 @@ Sources: docs/ui/controls.md
 |----------|--------|
 | `Enter` | Add new note at top (when not editing) |
 | `⌘ + /` | Open command palette |
+| `⌘ + F` | Find in the list: the find bar finds text in the notes the list shows, also far below what is loaded and inside folded notes, and marks each match. `Enter` / `⌘ + G` goes to the next match, `⇧ + Enter` / `⇧ + ⌘ + G` to the previous one, `Esc` closes it. While editing, it saves and leaves the note first; in a dialog it stays the browser's find. See `docs/ui/find.md`. |
 | `Tab` | Focus the search input and select its full query (view mode only) |
 | `?` | Open keyboard shortcuts / cheatsheet (idle mode) |
 | `⌘ + Z` | Undo |
@@ -74,6 +75,13 @@ On macOS, `⌘ + Y` normally opens Safari History rather than performing native 
 - Scroll restoration preserves an exact top position without delayed anchor alignment. Resetting a view cancels pending scroll restores from its previous content.
 - When tabs are enabled, a white outline stacked-folder icon marks the black trigger region left of the search field. Its left inset matches the results count's right inset. Hovering that region or icon opens the tab/search-context overlay, which remains available while hovering over the dropdown itself. Creating a blank tab with `Enter` does not dismiss the overlay. Open search suggestions render above the tabs.
 - Left/right side lanes hide at narrower desktop widths before they can overlap the centered notes column.
+
+### Find in the List
+- `⌘ + F` (`Ctrl + F` on Windows and Linux) opens MetaList's find bar, under the search controls at the right. Unlike the browser's own find, it also finds text far below the loaded notes and inside folded notes.
+- It finds what notes show (their text, the text of expanded embeds, tag-bar comments), in any case and inside words, in the current tab's notes in list order. It does not find tag names (search does) or the grey placeholder lines a search leaves.
+- The count reads like `3 of 12`; `3 of 50+` means more may lie beyond what has been read, since find reads 50 matching notes at a time. `No matches` dims the arrows.
+- `Enter` / `⌘ + G`: next match; `⇧ + Enter` / `⇧ + ⌘ + G`: previous; both wrap. A match in view does not scroll; one out of view moves just into view. A match inside a folded note opens that note for the moment only (its saved collapse stays) and folds back when find moves on or closes.
+- `Esc`, the `×`, or clicking into a note closes find and clears its marks. The palette command `Find in list` opens it too.
 
 ### Tag Suggestions
 - Suggestions appear only when the tag bar is focused.

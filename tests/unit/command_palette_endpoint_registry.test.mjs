@@ -31,6 +31,7 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
             removeAllTagSuggestionsFromCurrentContext: () => { removeAllTagSuggestionsCalls += 1; },
             openTaggingVocabulary: noop,
             openOntologyEditor: noop,
+            openFindBar: noop,
             createBackup: noop,
             openBackupRestore: noop,
             logout: noop,

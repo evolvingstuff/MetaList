@@ -965,6 +965,21 @@ class SearchIndex:
         with self._lock:
             return self._revision
 
+    def note_ids_containing_words(self, words: Tuple[str, ...]) -> FrozenSet[str]:
+        """The notes whose searchable text holds every word, anywhere (find's first pass,
+        docs/ui/find.md): a superset of the notes whose visible text holds them, read
+        without rendering anything."""
+        if not isinstance(words, tuple) or len(words) == 0:
+            raise ValueError("note_ids_containing_words requires a non-empty tuple of words")
+        assert all(isinstance(word, str) and word.strip() == word and word != "" for word in words)
+        clause = SearchClause(
+            required_tags=frozenset(), forbidden_tags=frozenset(), required_text=words, forbidden_text=(),
+        )
+        with self._lock:
+            return frozenset(
+                self._id_to_uuid[note_int_id] for note_int_id in self._matching_note_int_ids_for_clause_locked(clause)
+            )
+
     def query_note_ids(self, search: str) -> Set[str]:
         t0 = time.perf_counter()
         if not isinstance(search, str):

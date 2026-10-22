@@ -65,6 +65,7 @@ export const CONFIG = {
             UNDO: `${API_NOTES_BASE}/undo`,
             REDO: `${API_NOTES_BASE}/redo`,
             VIEW: `${API_NOTES_BASE}/view`,
+            FIND: `${API_NOTES_BASE}/find`,
             TAB_STATE: `${API_NOTES_BASE}/tab-state`,
             TAB_STATE_NEW_TAB: `${API_NOTES_BASE}/tab-state/new-tab`,
             TAB_STATE_DELETE_TAB: `${API_NOTES_BASE}/tab-state/delete-tab`,

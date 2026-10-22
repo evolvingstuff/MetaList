@@ -1158,6 +1158,13 @@ class NoteStore:
         with self._lock:
             return note_id in self._note_map and self._backlink_index.has_backlinks(note_id)
 
+    def get_referrer_ids(self, note_id: str) -> FrozenSet[str]:
+        """The notes that reference or embed note_id."""
+        with self._lock:
+            if note_id not in self._note_map:
+                raise KeyError(f"Note {note_id} not present in NoteStore")
+            return frozenset(self._referrers_locked(note_id))
+
     def get_backlink_counts(self, note_id: str) -> Dict[str, int]:
         with self._lock:
             if note_id not in self._note_map:

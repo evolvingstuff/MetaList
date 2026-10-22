@@ -67,6 +67,9 @@ export class HelpModal extends BaseModal {
                 columnCount: LONG_SECTION_COLUMNS,
                 items: [
                     { keys: `${modKey}+/`, description: 'Open command palette' },
+                    { keys: `${modKey}+F`, description: 'Find in the list (also far below and folded away)' },
+                    { keys: `${enterKey} / ${modKey}+G`, description: 'Next match (in the find bar)' },
+                    { keys: `${shiftKey}+${enterKey} / ${shiftKey}+${modKey}+G`, description: 'Previous match (in the find bar)' },
                     { keys: '?', description: 'Open keyboard shortcuts / cheatsheet (idle only)' },
                     { keys: 'Esc', description: 'Defocus search, exit edit mode, or close top modal' },
                     { keys: 'Enter', description: 'Create new root note (idle or from search)' },

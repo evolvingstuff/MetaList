@@ -62,7 +62,7 @@ def test_search_with_uuid_target_includes_direct_note_and_descendants(
     monkeypatch.setattr(snapshot, "get_all_locks", lambda: {})
 
     state = build_view_state(
-        editing_note_id=None,
+        editing_note_id=None, find_reveal_note_id=None,
         search=f"[[{target_id}]]",
         sort_mode="normal",
         client_known_note_ids=set(), previous_root_ids=[],

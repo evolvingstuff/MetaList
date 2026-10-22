@@ -169,6 +169,10 @@
       "tags": ["password", "random", "generator", "security", "credential", "utility"]
     },
     {
+      "id": "action.find_in_list",
+      "tags": ["find", "search", "text", "word", "highlight", "locate", "look", "ctrl+f"]
+    },
+    {
       "id": "action.edit_tag_relationships",
       "tags": ["tag", "ontology", "relationships", "synonym", "imply", "graph"]
     },

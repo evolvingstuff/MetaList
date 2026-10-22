@@ -169,7 +169,7 @@ def test_deep_chain_hydrates_views_copies_exports_and_serializes(monkeypatch, de
     monkeypatch.setattr(root_sorting, 'note_store', store)
     monkeypatch.setattr(html_export, 'note_store', store)
     monkeypatch.setattr(copy_note, 'store', SimpleNamespace(get=store.get_note, children=store.get_children))
-    state = snapshot.build_view_state(editing_note_id=None, search=None, sort_mode='normal', client_known_note_ids=set(), previous_root_ids=[], visible_top_root_id=None, visible_bottom_root_id=None, is_untagged_view=False, start_at_list_end=False)
+    state = snapshot.build_view_state(editing_note_id=None, find_reveal_note_id=None, search=None, sort_mode='normal', client_known_note_ids=set(), previous_root_ids=[], visible_top_root_id=None, visible_bottom_root_id=None, is_untagged_view=False, start_at_list_end=False)
     assert len(state.structure) == 256
     assert len(copy_note.snapshot_subtree_preorder('0')) == 256
     assert 'level-255' in json.dumps(copy_note._build_serialized_tree('0'))
@@ -267,7 +267,7 @@ def test_cycles_fail_in_view_copy_and_export(monkeypatch, deep_store):
     monkeypatch.setattr(html_export, 'note_store', store)
     monkeypatch.setattr(copy_note, 'store', SimpleNamespace(get=store.get_note, children=store.get_children))
     with pytest.raises(RuntimeError, match='[Cc]ycle'):
-        snapshot.build_view_state(editing_note_id=None,search=None,sort_mode='normal',client_known_note_ids=set(), previous_root_ids=[],visible_top_root_id=None,visible_bottom_root_id=None,is_untagged_view=False, start_at_list_end=False)
+        snapshot.build_view_state(editing_note_id=None, find_reveal_note_id=None,search=None,sort_mode='normal',client_known_note_ids=set(), previous_root_ids=[],visible_top_root_id=None,visible_bottom_root_id=None,is_untagged_view=False, start_at_list_end=False)
     with pytest.raises(RuntimeError, match='[Cc]ycle'):
         copy_note.snapshot_subtree_preorder('0')
     with pytest.raises(RuntimeError, match='[Cc]ycle'):
