@@ -55,7 +55,6 @@ _ALLOWED_CLIENT_PREFERENCES = {
     "pref.drag_ghost": {"true", "false"},
     "pref.drop_indicator": {"true", "false"},
     "pref.drag_direction_icon": {"true", "false"},
-    "pref.suggest_already_applying_tags": {"true", "false"},
     # In dictated text pasted into a note, this phrase starts the tags.
     "pref.dictation.tag_phrase": "dictation_phrase",
     # The spoken phrases around a quoted phrase when dictating.
@@ -140,6 +139,8 @@ _OBSOLETE_CLIENT_PREFERENCES = frozenset(
         "pref.ai.openai.retrieval.max_working_summary_characters",
         "pref.ai.openai.retrieval.ideal_narrowed_scope_approximate_tokens",
         "pref.position_cue",
+        # The Tag Suggestions setting for tags that already apply, removed 2026-10-21.
+        "pref.suggest_already_applying_tags",
         *RETIRED_PROMPT_PREFERENCE_KEYS,
         *RETIRED_SKILL_PREFERENCE_KEYS,
     }
@@ -488,18 +489,6 @@ def save_command_palette_usage(
             command_palette_usage_encryption_tag=tag,
         )
     return normalized
-
-
-# Tag suggestions setting: also suggest tags that already apply through a parent
-# or the rules (off by default: they are left out until typed).
-SUGGEST_ALREADY_APPLYING_TAGS_PREFERENCE_KEY = "pref.suggest_already_applying_tags"
-
-
-def suggests_already_applying_tags(*, token: str) -> bool:
-    saved = load_client_preferences(token=token)
-    if SUGGEST_ALREADY_APPLYING_TAGS_PREFERENCE_KEY not in saved:
-        return False
-    return saved[SUGGEST_ALREADY_APPLYING_TAGS_PREFERENCE_KEY] == "true"
 
 
 def load_client_state(*, token: str) -> dict[str, object]:

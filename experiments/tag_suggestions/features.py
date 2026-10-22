@@ -23,7 +23,7 @@ from sklearn.preprocessing import normalize
 from app.services.ontology_rules_store import extract_ontology_tags
 from app.services.tag_term_matching import tag_term_matches_prefix
 
-from experiments.tag_suggestions.cases import FIRST_LETTER, TagCase
+from experiments.tag_suggestions.cases import TagCase
 from experiments.tag_suggestions.corpus import Corpus
 from experiments.tag_suggestions.world_store import World
 
@@ -42,7 +42,7 @@ FEATURE_NAMES = (
     "present_cooc_max", "present_cooc_mean", "inherited_cooc_max", "inherited_cooc_mean",
     "parent_has", "nearest_ancestor_distance", "sibling_fraction", "sibling_count", "descendant_fraction",
     "depth", "log_tag_count", "uses_30d", "uses_365d", "days_since_last_use",
-    "name_in_text", "stage", "first_letter", "log_text_words",
+    "name_in_text", "stage", "letters_typed", "log_text_words",
     "joint_fraction", "joint_support", "in_rules",
 )
 
@@ -325,7 +325,7 @@ def _one_case(*, corpus: Corpus, world: World, stats: SourceStats, case: TagCase
             if tag not in seen:
                 seen.add(tag)
                 candidates.append(tag)
-    if case.moment == FIRST_LETTER:
+    if case.prefix != "":
         for tag in _first_allowed(stats.tags_by_use, allowed, GENERATOR_DEPTH):
             if tag not in seen:
                 seen.add(tag)
@@ -465,7 +465,7 @@ def _candidate_features(*, tree: _TreeContext, stats: SourceStats, case: TagCase
         tree.descendant_tags[tag] / max(tree.descendant_count, 1),
         float(len(tree.ancestor_tags)), math.log1p(stats.tag_count[tag]), uses_30, uses_365, since_last,
         name_in_text, float(case.stage),
-        float(case.moment == FIRST_LETTER), math.log1p(word_count),
+        float(len(case.prefix)), math.log1p(word_count),
     ]
 
 

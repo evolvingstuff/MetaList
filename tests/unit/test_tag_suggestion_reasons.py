@@ -39,7 +39,7 @@ def _reasons(*, anchors, prefix, content):
         explicit_tags.append(prefix)
     arguments = dict(
         note_id="current", anchors=list(anchors), explicit_tags=explicit_tags, prefix=prefix,
-        content_html=f"<p>{content}</p>", limit=20, include_already_applying=False,
+        content_html=f"<p>{content}</p>", limit=20,
     )
     with_reasons = tag_suggestions_module.suggest_tags_with_reasons_for_note(**arguments)
     # Explaining never changes what is suggested or its order.
@@ -66,13 +66,16 @@ def test_a_tag_whose_number_is_not_in_the_note_is_only_partly_named(monkeypatch:
     assert reasons["topic-41"] == ('Partly named in this note: "topic"', "You've tagged 1 note with it")
 
 
-def test_the_rest_of_a_tag_after_what_was_typed(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_typing_keeps_the_empty_bar_reason_of_a_partly_named_tag(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Typing narrows the empty-bar list, so its evidence is the reason given while typing.
     _use(monkeypatch, rows=[("g4", "GPT-4"), ("g56", "GPT-5.6-sol")], ontology=_EmptyOntology())
-    reasons = _reasons(anchors=[], prefix="GPT", content="Trying 5.6 sol on the benchmark")
-    assert reasons["GPT-5.6-sol"] == (
-        'The rest of it after "GPT" is in this note: "5.6 sol"', "You've tagged 1 note with it",
+    empty_bar = _reasons(anchors=[], prefix="", content="Trying 5.6 sol on the benchmark")
+    typed = _reasons(anchors=[], prefix="GPT", content="Trying 5.6 sol on the benchmark")
+    assert list(typed) == ["GPT-5.6-sol", "GPT-4"]
+    assert empty_bar["GPT-5.6-sol"] == typed["GPT-5.6-sol"] == (
+        'Partly named in this note: "5.6 sol"', "You've tagged 1 note with it",
     )
-    assert reasons["GPT-4"] == ('Matches what you typed: "GPT"', "Listed by use: you've tagged 1 note with it")
+    assert typed["GPT-4"] == ('Matches what you typed: "GPT"', "Listed by use: you've tagged 1 note with it")
 
 
 def test_a_tag_that_goes_with_the_notes_tags(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -141,7 +144,7 @@ def test_a_tag_whose_words_appear_too_sparsely_to_count(monkeypatch: pytest.Monk
 
 def test_tags_that_already_apply_say_how(monkeypatch: pytest.MonkeyPatch) -> None:
     _use_parent_tagged_maple(monkeypatch)
-    explicit = dict(note_id="current", anchors=[], content_html="<p>a walk</p>", limit=20, include_already_applying=False)
+    explicit = dict(note_id="current", anchors=[], content_html="<p>a walk</p>", limit=20)
     # Typed: listed after the rest, saying why they are there at all.
     by_tag = {
         suggestion.tag: suggestion.reasons

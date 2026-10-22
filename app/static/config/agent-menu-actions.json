@@ -42,12 +42,6 @@
     "presentation": "dialog"
   },
   {
-    "id": "form.tag_suggestion_settings",
-    "label": "Tag Suggestions",
-    "selector": "#tag-suggestion-settings-modal",
-    "presentation": "dialog"
-  },
-  {
     "id": "form.dictation_settings",
     "label": "Dictation Settings",
     "selector": "#dictation-settings-modal",

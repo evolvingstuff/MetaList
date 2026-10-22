@@ -9,6 +9,7 @@ from app.services.ontology_rules_store import get_ontology
 from app.services.search_history import current_local_date, record_explicit_tag_additions
 from app.services.sync import generate_new_uuid
 from app.services.tag_ontology import is_valid_tag_token
+from app.services.tag_plural_variants import PluralSpellings
 from app.services.undo_state import record_collapse_batch
 from app.services.undo_state import record_tag_sources
 from app.services.undo_state import record_tag_sources_batch
@@ -46,6 +47,13 @@ def _effective_accepted_tag_keys(note_id: str) -> frozenset[str]:
         plaintext=plaintext,
     )
     return frozenset(term.casefold() for term in effective_terms)
+
+
+def is_new_proposal(*, tag: str, seen: set[str]) -> bool:
+    """A proposal says something new unless the note has it or proposes it already,
+    in any case or as its singular or plural (`eggs` beside `egg`)."""
+    assert all(key == key.casefold() for key in seen)
+    return tag.casefold() not in seen and not PluralSpellings(seen).covers(tag)
 
 
 def _find_proposal_token(*, proposed_tags: str, requested_proposal: str) -> str:
@@ -176,7 +184,7 @@ class CmdAddTagProposals(QueryCommand):
     AI), one undo step.
 
     Tags a note already has, through its tag bar, a parent or a rule, and tags
-    already proposed are left out.
+    already proposed are left out, also as their singular or plural.
     """
     note_id: str
     # note id -> the AI's tags for it, in its order.
@@ -203,7 +211,7 @@ class CmdAddTagProposals(QueryCommand):
             seen = {token.casefold() for token in pending} | _effective_accepted_tag_keys(target_id)
             new_tags = []
             for tag in tags:
-                if tag.casefold() not in seen:
+                if is_new_proposal(tag=tag, seen=seen):
                     new_tags.append(tag)
                     seen.add(tag.casefold())
             if not new_tags:

@@ -253,10 +253,7 @@ class SuggestionEvidence:
     # The index the ranking used, for the co-occurring notes behind a reason.
     index: SearchIndex
     writer: ReasonWriter
-    prefix: str
     content_matches: Mapping[str, TagContentMatch]
-    # Terms whose content match is the rest of the tag after the typed prefix.
-    prefix_remainder_terms: FrozenSet[str]
     # Synonym named exactly in the content -> (the tag it is a synonym of, its match).
     synonym_matches: Mapping[str, Tuple[str, TagContentMatch]]
     cooccurrence_terms: FrozenSet[str]
@@ -288,32 +285,22 @@ class SuggestionEvidence:
         lines: List[str] = []
         if subject in self.synonym_matches:
             representative, match = self.synonym_matches[subject]
-            lines.append(self._named(match=match, shown=shown, where="this note", is_remainder=False))
+            lines.append(named_line(match=match, shown=shown, where="this note"))
             lines.append(f"A synonym of {quoted(representative)}")
         elif subject in self.content_matches:
-            lines.append(self._named(
-                match=self.content_matches[subject], shown=shown, where="this note",
-                is_remainder=subject in self.prefix_remainder_terms,
-            ))
+            lines.append(named_line(match=self.content_matches[subject], shown=shown, where="this note"))
         if subject in self.cooccurrence_terms:
             assert subject in cooccurrences, f"{subject!r} was ranked as co-occurring"
             lines.append(self._about(subject, shown, self._cooccurrence(cooccurrences[subject])))
         if subject in self.saved_text_matches and subject not in self.content_matches:
-            lines.append(self._named(
+            lines.append(named_line(
                 match=self.saved_text_matches[subject], shown=shown, where="this note as last saved",
-                is_remainder=False,
             ))
         if subject in self.overlaps and subject not in self.cooccurrence_terms:
             overlap = self._overlap(subject=subject, overlap=self.overlaps[subject])
             if overlap != "":
                 lines.append(self._about(subject, shown, overlap))
         return lines
-
-    def _named(self, *, match: TagContentMatch, shown: str, where: str, is_remainder: bool) -> str:
-        if is_remainder:
-            words = ", ".join(quoted(phrase) for phrase in quote_content_match(match))
-            return f"The rest of it after {quoted(self.prefix)} is in {where}: {words}"
-        return named_line(match=match, shown=shown, where=where)
 
     def _cooccurrence(self, cooccurrence: TagCooccurrence) -> str:
         return cooccurrence_phrase(cooccurrence, self.cooccurrence_anchors, "this note's tags", is_other_notes=False)

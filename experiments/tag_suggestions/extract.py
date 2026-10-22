@@ -43,7 +43,13 @@ def load_snapshot_corpus(*, password: str) -> Corpus:
             set_session_dek(auth.unwrap_dek_for_password(password))
         bootstrap_ontology_rules_store(connection=session.connection())
     ensure_rules_decrypted_and_compiled(token="")
-    rows = populate_cache_from_db(None)
+    # As unlocking does. An older copy has its notes cleaned once here, written to the copy only.
+    cache_session = SafeSession()
+    try:
+        rows = populate_cache_from_db(cache_session)
+        cache_session.commit()
+    finally:
+        cache_session.close()
     store.load_from_db(None, prefetched_rows=rows)
     return corpus_from_store()
 
