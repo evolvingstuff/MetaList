@@ -46,6 +46,7 @@ import {checkTagBarSuggestions} from './browser-tag-bar-suggestion-regressions.m
 import {checkInputTarget} from './browser-input-target-regressions.mjs';
 import {checkOntologySearch} from './browser-ontology-search-regressions.mjs';
 import {checkDiagramClicks} from './browser-diagram-click-regressions.mjs';
+import {checkFileLinkClicks} from './browser-file-link-click-regressions.mjs';
 import {checkPictureDrag} from './browser-picture-drag-regressions.mjs';
 import {checkBackupReminder} from './browser-backup-reminder-regressions.mjs';
 import {checkReminderSurfaceWhileEditing} from './browser-reminder-surface-regressions.mjs';
@@ -227,6 +228,10 @@ try {
     await checkDiagramClicks(page);
     assert.deepEqual(errors, []);
     console.log(`PASS diagram click regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'file-link-clicks') {
+    await checkFileLinkClicks(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS file link click regressions in ${await browser.version()}`);
   } else if (process.env.BROWSER_TEST_SUITE === 'ontology-search') {
     await checkOntologySearch(page);
     assert.deepEqual(errors, []);

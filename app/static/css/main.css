@@ -4269,8 +4269,17 @@ body[data-tag-style="text"],
     background: transparent;
     color: #1f2937;
     text-align: left;
-    cursor: pointer;
     font: inherit;
+    /* Only the badge and the name's text download: a click beside the name, also after a
+       wrapped name's shorter last line, reaches the note, to edit or drag it
+       (scripts/browser-file-link-click-regressions.mjs). The keyboard still reaches the button. */
+    pointer-events: none;
+}
+
+.note-file-reference-badge,
+.note-file-reference-name {
+    pointer-events: auto;
+    cursor: pointer;
 }
 
 .note-file-reference-link-embed {
