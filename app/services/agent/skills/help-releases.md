@@ -5,6 +5,13 @@ README. Changes made after the newest listed version are not described here.
 Compare with installed_version from the help lookup to tell the user whether
 they already have a release. Version info offers updates (see the data topic).
 
+## 0.22.0
+
+- Tag suggestions only narrow as you type, however many letters: `q`, `qu`, `que` keep their order, and a tag that already applies (a parent's, or implied by a rule) stays right after the tags with evidence instead of dropping to the bottom. Each letter after the first answers in a few milliseconds. Measured on a 107,000-note namespace, the wanted tag is in the top five more often after two and three letters (90% and 96%, up from 88% and 93%).
+- With nothing typed, the tag bar and Suggest Tags with AI no longer offer another spelling of a tag the note has: no `eggs` beside `egg`, no `easter-eggs` beside `easter-egg`. Typing still offers every spelling that matches.
+- Synonyms of the tags in the bar are never suggested (no `avocados` once `avocado` is there), and a tag a parent already has is not suggested until you type it, whatever else goes with it.
+- The Tag Suggestions setting "Allow suggesting tags that already apply" is removed; a saved choice is dropped.
+
 ## 0.21.0
 
 - **Memory usage** (command palette): the server's memory now and at its peak (on a Mac as Activity Monitor counts it), the notes it holds decrypted, how long the last unlock took and where, and *Measure what holds it*, a breakdown of each part; Copy puts it all on the clipboard.
