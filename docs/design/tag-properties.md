@@ -272,3 +272,39 @@ Each step usable on its own, tried before the next.
 - Value suggestions.
 - Unit conversions the user defines (`1mile = 1.609km`), so a comparison can include
   values in related units. Much later.
+
+## Where this could lead (ideas, not planned)
+
+Properties make many features views of the same triples instead of separate systems.
+None of this is planned; real use of properties decides what, if anything, comes
+next. Recorded so the first build does not close these doors.
+
+- **Boards (Kanban).** A search grouped by a property: `project-x task` grouped by
+  `status` gives a column per value used (`todo`, `doing`, `done`). Dragging a card to
+  another column rewrites that note's `status=`.
+- **Calendar and scheduling.** A search laid out by a date property:
+  `meeting:at=2026-10-24T10:00`, `task:due=2026-11-01`. Unlike the calendar removed
+  in September 2026, which used created and updated dates, it would show dates the
+  user chose.
+- **Reminders as properties.** `remind=2026-10-24T09:00` could become the same thing
+  as today's separate reminders (`docs/ui/reminders.md`), so reminders are
+  searchable, inferred by rules and shown on a calendar.
+- **Rules as automation.** `task:status=done => archived`,
+  `(task:due<today -done) => overdue`, `bug:severity=high => urgent`. The inferred
+  tags feed searches, boards and chips with no further code.
+- **Tables.** A search shown with a column per property: a spreadsheet of notes,
+  where totals would live.
+- **Date range on any date property.** The Date range filter
+  (`docs/ui/command-palette.md`) could offer a property's dates beside Created and
+  Last updated.
+
+What the first build should leave room for:
+
+- **Relative dates** in search and rules: `today`, `+7d`, `-1w` (`due<today`,
+  `due<=+7d`). The search parser should not claim these words as plain text.
+- **Not equal:** `status!=done`. It differs from `-task:status=done`, which also drops
+  notes with no `status` at all.
+- **Grouping and sorting by a property** (Sort by `due`, group by `status`): boards
+  and calendars rest on it.
+- **Values set by rules** (a new `task` with no `status` gets `status=todo`), already
+  under Later above.
