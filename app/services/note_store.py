@@ -35,6 +35,8 @@ from app.services.tag_ontology import TagOntology
 from app.services.note_image_tags import infer_image_tag_terms
 from app.services.ontology_rules_store import get_ontology, get_ontology_if_ready
 from app.services.search_index import SearchRecord, extract_tags_for_search, search_index, tag_bar_values
+from app.services.tag_ontology import rule_text_conditions
+from app.services.tag_properties import PROPERTY_ASSIGNMENT
 from app.utils.text_utils import strip_html, strip_sanitized_html_keeping_link_urls
 
 # Hydration reports its progress after every this many notes.
@@ -290,6 +292,11 @@ class NoteStore:
         its tags read as base_terms; none while the rules cannot be read."""
         ontology = get_ontology_if_ready()
         if ontology is None or not ontology.value_rules:
+            return frozenset()
+        # Most notes have no value and no tag a value rule tests: nothing to read.
+        if PROPERTY_ASSIGNMENT not in record.tags and not ontology.missing_rule_tags_casefold.intersection(
+            term.casefold() for term in record.non_meta_tag_terms
+        ):
             return frozenset()
         own_tag_names, values = tag_bar_values(record.tags)
         plaintext = ""
@@ -1340,6 +1347,24 @@ class NoteStore:
             effective = ontology.infer_effective_tags(base_tags=raw, plaintext=inferred_plaintext)
             search_index.upsert(note_id=note_id, content_text=_search_text(record.content, plaintext),
                                 tags=record.tags, raw_tag_terms=raw, tag_terms=effective)
+
+    def refresh_tags_for_value_rules(self, *, rule_texts: list[str]) -> int:
+        """After a rule testing values changed: the tags of the notes it can concern (with a
+        value of a property it tests, or carrying a tag a `?` term tests, on the tag or a tag
+        implying it), and through them their children and the notes referencing them; not
+        the whole vault. rule_texts: the rule as it was and as it is."""
+        if not self._loaded:
+            return 0
+        conditions = [condition for text in rule_texts for condition in rule_text_conditions(text)]
+        assert conditions, "Only a rule testing values is refreshed here"
+        candidate_ids = set().union(*(search_index.note_ids_for_property_term(condition) for condition in conditions))
+        with self._lock:
+            candidate_ids &= self._note_map.keys()
+            if not candidate_ids:
+                return 0
+            tag_updates = self._recompute_effective_tag_terms_locked(candidate_ids, subtree_root_ids=candidate_ids)
+        self._publish_tag_updates(tag_updates)
+        return len(tag_updates)
 
     def rebuild_search_index_tag_terms(self) -> None:
         """Recompute search-index tag terms for all notes.

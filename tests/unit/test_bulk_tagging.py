@@ -35,6 +35,7 @@ def namespace_contains_test_scope(monkeypatch):
     monkeypatch.setattr(runs, "shuffle_trees_for_batches", lambda trees: trees)
     # No tag outside the scope is visible to the AI.
     monkeypatch.setattr(runs, "visible_tag_counts", lambda boundary: ({}, Counter()))
+    monkeypatch.setattr(runs, "visible_super_tag_examples", lambda boundary: ())
 
 
 def validate(result, batch, policy):

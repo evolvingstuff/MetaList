@@ -193,6 +193,7 @@ Unclosed comments behave like unclosed wrappers:
 
 ## AI Tag Proposals
 
+- The AI can propose super tags with values a note states: `jogging:miles=3` for "ran 3 miles", reusing the property names and units already in use on notes it may see (`miles`, `10mg`). Accepting one merges its values into the note's token for that tag: `jogging` becomes `jogging:miles=3`; values the note already has stay as they are. Accepting a plain tag the note already carries as a super tag changes nothing. A super tag on an existing tag carries no **new** badge.
 - Unresolved proposals are stored separately from accepted tags. They affect inheritance, ontology-aware search/autocomplete, and Untagged Notes immediately, but do not activate formatting or tag commands.
 - Direct proposals appear beneath the tag bar only while their note is edited. `+` accepts a proposal into the ordinary tag bar; `−` rejects it.
 - A **new** badge marks a proposal for a tag no note has yet; new ones sit after the tags already in use. Accepting one creates the tag.

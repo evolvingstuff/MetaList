@@ -73,6 +73,8 @@ def test_a_notes_values_infer_tags(tags: str, carried: set[str], inferred: set[s
     ) == inferred
 
 
+# The store the last _load built, for tests that act on it.
+_STORE: dict[str, NoteStore] = {}
 PARENT = "11111111-1111-4111-8111-111111111111"
 RUN = "22222222-2222-4222-8222-222222222222"
 CHILD = "33333333-3333-4333-8333-333333333333"
@@ -112,6 +114,7 @@ def _load(monkeypatch: pytest.MonkeyPatch, specs: dict[str, tuple[str | None, st
     store = NoteStore()
     store._timing_enabled = False
     store.load_from_db(None, prefetched_rows=rows)
+    _STORE["store"] = store
     return index
 
 
@@ -147,3 +150,26 @@ def test_saving_a_rule_warns_about_a_term_no_note_can_match(monkeypatch) -> None
     assert ontology_route._rule_warnings("(jogging:mile>10 race) => long-run") == [
         "No note has jogging:mile yet; check the spelling.",
     ]
+
+
+def test_saving_a_value_rule_refreshes_only_the_notes_it_concerns(monkeypatch) -> None:
+    rules_without = "jogging => exercise\n"
+    rule = "jogging:miles>10 => long-run"
+    # The store loads under the rules without it (_load reads ONTOLOGY when asked).
+    monkeypatch.setitem(globals(), "ONTOLOGY", compile_rules(
+        rules=parse_rules_text(text=rules_without, filename="test"), filename="test",
+    ))
+    index = _load(monkeypatch, {
+        PARENT: (None, "Races", "race"),
+        RUN: (PARENT, "Marathon day", "jogging:miles=26.2"),
+        CHILD: (RUN, "Splits", ""),
+        HOST: (None, f"[[{RUN}]]", ""),
+    })
+    assert index.query_note_ids("long-run") == set()
+    monkeypatch.setitem(globals(), "ONTOLOGY", compile_rules(
+        rules=parse_rules_text(text=rules_without + rule + "\n", filename="test"), filename="test",
+    ))
+    refreshed = _STORE["store"].refresh_tags_for_value_rules(rule_texts=[rule])
+    # The run, its child and the note referencing it; not the parent.
+    assert refreshed == 3
+    assert index.query_note_ids("long-run") == {RUN, CHILD, HOST}

@@ -7,10 +7,15 @@ from typing import Dict, FrozenSet, Iterable, List, Mapping, Optional, Sequence,
 from app.services.exception_capture import CapturedExceptionContext
 from app.services.input_errors import InputRejected
 from app.services.tag_properties import (
+    MISSING_OPERATOR,
     PropertyCondition,
     PropertyValue,
     condition_holds,
+    has_property_syntax,
+    is_property_name,
     is_property_term,
+    split_property_segments,
+    tag_part_of_token,
     parse_property_term,
 )
 
@@ -155,6 +160,30 @@ def is_valid_tag_token(token: str) -> bool:
     if not isinstance(token, str):
         raise TypeError(f"token must be a string, got {type(token)}")
     return _is_valid_tag_token(token)
+
+
+def is_valid_proposal_token(token: str) -> bool:
+    """A tag the AI may propose: a plain tag, or a super tag whose properties are all
+    complete, once each (jogging:miles=3:duration=30; docs/design/tag-properties.md).
+    Never a meta tag."""
+    if not isinstance(token, str):
+        raise TypeError(f"token must be a string, got {type(token)}")
+    if token.startswith("@"):
+        return False
+    if not has_property_syntax(token):
+        return _is_valid_tag_token(token)
+    tag_part = tag_part_of_token(token)
+    if not _is_valid_tag_token(tag_part.split("=", 1)[0]):
+        return False
+    names: Set[str] = set()
+    for segment in split_property_segments(token[len(tag_part) + 1:]):
+        name, has_value, value = segment.partition("=")
+        if not has_value or value == "" or not is_property_name(name) or name.casefold() in names:
+            return False
+        if any(ch.isspace() or (ch in _DISALLOWED_TAG_CHARS and ch != ":") for ch in value):
+            return False
+        names.add(name.casefold())
+    return True
 
 
 def parse_rules_text(*, text: str, filename: str) -> List[Rule]:
@@ -459,6 +488,10 @@ class TagOntology:
     value_rules: Tuple[ValueRule, ...]
     # For super tag terms: each tag (casefolded) and the tags implying it, casefolded.
     implying_casefold: Mapping[str, FrozenSet[str]]
+    # The tags (casefolded) whose written presence a value rule can test without a value
+    # (task:due? => needs-date, through implications): only a note with values or one of
+    # these can make a value rule hold.
+    missing_rule_tags_casefold: FrozenSet[str]
 
     @staticmethod
     def empty() -> TagOntology:
@@ -470,6 +503,7 @@ class TagOntology:
             matcher_rules=(),
             value_rules=(),
             implying_casefold={},
+            missing_rule_tags_casefold=frozenset(),
         )
 
     @property
@@ -581,7 +615,9 @@ class TagOntology:
         if not rule.required_tags <= tags:
             return False
         for condition in rule.conditions:
-            tag_names = self.implying_casefold.get(condition.key[0], frozenset()) | {condition.key[0]}
+            tag_names = frozenset({condition.key[0]})
+            if condition.key[0] in self.implying_casefold:
+                tag_names = tag_names | self.implying_casefold[condition.key[0]]
             if not condition_holds(condition, values=values, own_tag_names=own_tag_names, tag_names=tag_names):
                 return False
         if any(pattern.search(plaintext) is None for pattern in rule.required_text_patterns):
@@ -623,6 +659,15 @@ def _compile_value_rule(rule: Rule) -> ValueRule:
     return ValueRule(
         conditions=tuple(conditions), required_tags=frozenset(required_tags),
         required_text_patterns=tuple(text_patterns), required_regexes=tuple(regexes), rhs=rule.rhs,
+    )
+
+
+def rule_text_conditions(text: str) -> Tuple[PropertyCondition, ...]:
+    """The super tag terms in rule text (jogging:miles>10 in jogging:miles>10 => long-run)."""
+    return tuple(
+        atom.condition
+        for rule in parse_rules_text(text=f"{text}\n", filename="ontology_rules:check")
+        for atom in rule.lhs if isinstance(atom, PropertyAtom)
     )
 
 
@@ -701,9 +746,17 @@ def compile_rules(*, rules: Sequence[Rule], filename: str) -> TagOntology:
         if tag.casefold() not in implying_casefold:
             implying_casefold[tag.casefold()] = set()
         implying_casefold[tag.casefold()].update(other.casefold() for other in implying)
+    missing_rule_tags: Set[str] = set()
+    for value_rule in value_rules:
+        for condition in value_rule.conditions:
+            if condition.operator == MISSING_OPERATOR:
+                missing_rule_tags.add(condition.key[0])
+                if condition.key[0] in implying_casefold:
+                    missing_rule_tags.update(implying_casefold[condition.key[0]])
     return TagOntology(
         value_rules=tuple(value_rules),
         implying_casefold={tag: frozenset(implying) for tag, implying in implying_casefold.items()},
+        missing_rule_tags_casefold=frozenset(missing_rule_tags),
         implication_out_edges=frozen_out,
         implication_closure=closure,
         implied_by_closure=implied_by,

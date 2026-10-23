@@ -364,6 +364,23 @@ def tag_bar_values(tags: str) -> Tuple[FrozenSet[str], Dict[Tuple[str, str], Pro
     return frozenset(own_tag_names), values
 
 
+def extract_ordered_tags_for_agent(tags: str) -> tuple[str, ...]:
+    """The tags the AI is shown for a note: as for search, but a super tag whole with its
+    values (jogging:miles=3), so the AI sees them and can propose its own."""
+    if not isinstance(tags, str):
+        raise TypeError(f"tags must be a string, got {type(tags)}")
+    ordered: list[str] = []
+    for token in _tokenize_tag_bar(tags):
+        base, wrapper = _unwrap_tag_token(token)
+        if wrapper is None and base != "OR" and base not in ordered:
+            ordered.append(base)
+            continue
+        for inner in base.split():
+            if inner and inner != "OR" and inner not in ordered:
+                ordered.append(inner)
+    return tuple(ordered)
+
+
 def extract_tags_for_search(tags: str) -> FrozenSet[str]:
     return frozenset(extract_ordered_tags_for_search(tags))
 
@@ -1424,6 +1441,18 @@ class SearchIndex:
         return [
             completion.suggestion(name, by_tag) for name, by_tag in ranked[:limit]
         ]
+
+    def note_ids_for_property_term(self, condition: PropertyCondition) -> Set[str]:
+        """The notes a super tag term can hold for: those with a value of its property on its
+        tag or a tag implying it, or, for a missing one (task:due?), those carrying such a tag."""
+        with self._lock:
+            notes: Set[int] = set()
+            for tag_name in self._tags_implying_locked(condition.key[0]):
+                if condition.operator == MISSING_OPERATOR:
+                    notes |= self._tag_family_posting_locked(tag_name)
+                else:
+                    notes |= _posting_or_empty(self._property_notes, (tag_name, condition.key[1]))
+            return {self._id_to_uuid[note_int_id] for note_int_id in notes if note_int_id in self._alive}
 
     def uses_property(self, *, tag: str, property_name: str) -> bool:
         """Whether some note gives this property a value on the tag or a tag implying it."""

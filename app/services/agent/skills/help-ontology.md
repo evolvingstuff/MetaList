@@ -110,7 +110,7 @@ Super tag atom notes:
   that property on that tag ("No note has jogging:mile yet; check the spelling.").
 - Renaming a tag rewrites its terms in rules (`jogging:miles>10` becomes
   `running:miles>10`); deleting a tag deletes the rules testing its values.
-- Saving such a rule recomputes every note's tags (they pass to children).
+- Saving such a rule recomputes the tags of the notes it can concern (with a value of a property it tests, or carrying a tag a `?` term tests), their children and the notes referencing them; not the whole vault.
 
 ## Semantics
 

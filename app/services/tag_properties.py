@@ -172,6 +172,11 @@ def parse_property_value(text: str) -> PropertyValue:
     return PropertyValue(kind=VALUE_TEXT, sort_key=text.casefold(), unit="")
 
 
+def is_property_name(name: str) -> bool:
+    """A property's name: a letter first, then no : = < > ?."""
+    return _PROPERTY_NAME_RE.match(name) is not None
+
+
 def split_property_segments(text: str) -> List[str]:
     """The text after a tag, split where a colon is followed by a letter (or ends it)."""
     segments: List[str] = []

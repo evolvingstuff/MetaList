@@ -154,11 +154,13 @@ def _rule_warnings(text: str) -> list[str]:
 
 
 def _refresh_note_tags(candidate_note_ids: set[str], *, rule_texts: list[str]) -> None:
-    """After a rule changed: the candidate notes' tags, or every note's when the rule
-    tests super tag values (their inferred tags pass to children and referencing notes)."""
+    """After a rule changed: the candidate notes' tags. A rule testing super tag values
+    refreshes the notes it can concern, with their children and the notes referencing
+    them, since the tags it gives pass to those (NoteStore.refresh_tags_for_value_rules)."""
     if any(rule_text_tests_values(text) for text in rule_texts):
-        note_store.rebuild_search_index_tag_terms()
-        return
+        note_store.refresh_tags_for_value_rules(rule_texts=[text for text in rule_texts if rule_text_tests_values(text)])
+        if all(rule_text_tests_values(text) for text in rule_texts):
+            return
     note_store.rebuild_search_index_tag_terms_for_notes(candidate_note_ids)
 
 
