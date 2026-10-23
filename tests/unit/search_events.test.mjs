@@ -344,3 +344,79 @@ test('fresh search input clears same-query render cache and active DOM', async (
     assert.equal(ModeContext.getTabNoteHashCount(tabId), 0);
     assert.equal(restoreDom.notesContainer.childNodes.length, 0);
 });
+
+// Browser suites wait for an idle MetaList (scripts/browser-app-idle.mjs); a search
+// still in its typing delay is not idle.
+test('a search waiting for its typing delay is pending until it is cancelled', async (t) => {
+    const restoreDom = installSearchEventsDom(t);
+
+    const [{ handleSearchInput }, { cancelDebouncedSearchExecution, isDebouncedSearchPending }, { ModeContextInstance: ModeContext }] = await Promise.all([
+        import('../../app/static/js/modules/mode-manager/events/search-events.js'),
+        import('../../app/static/js/modules/mode-manager/services/search-debounce-service.js'),
+        import('../../app/static/js/modules/mode-manager/mode-context.js'),
+    ]);
+
+    t.after(() => {
+        cancelDebouncedSearchExecution();
+        ModeContext.setSearchQuery('');
+        restoreDom();
+    });
+
+    assert.equal(isDebouncedSearchPending(), false);
+    handleSearchInput({
+        target: createSearchInput('journal'),
+    });
+    assert.equal(isDebouncedSearchPending(), true);
+    cancelDebouncedSearchExecution();
+    assert.equal(isDebouncedSearchPending(), false);
+});
+
+// Event-loop turns for the answered cleanup to insert its text (it needs a few).
+const CLEANUP_SETTLE_TICKS = 20;
+
+// The dictation cleanup runs outside CommandGate, so the idle wait asks for it:
+// in progress from the paste until the cleaned text is in the field.
+test('a dictation paste is in progress until its cleaned text is inserted', async (t) => {
+    const restoreDom = installSearchEventsDom(t);
+    const originalFetch = globalThis.fetch;
+    const originalHTMLInputElement = globalThis.HTMLInputElement;
+    const originalHTMLTextAreaElement = globalThis.HTMLTextAreaElement;
+    initializeSessionIdentity();
+    class FakeHTMLInputElement extends globalThis.HTMLElement {}
+    globalThis.HTMLInputElement = FakeHTMLInputElement;
+    globalThis.HTMLTextAreaElement = class FakeHTMLTextAreaElement extends globalThis.HTMLElement {};
+    const input = Object.assign(new FakeHTMLInputElement(), createSearchInput(''), { focus() {} });
+    globalThis.document.execCommand = (command, showUi, text) => {
+        assert.equal(command, 'insertText');
+        input.value = input.value.slice(0, input.selectionStart) + text + input.value.slice(input.selectionEnd);
+        input.selectionStart = input.selectionStart + text.length;
+        input.selectionEnd = input.selectionStart;
+        return true;
+    };
+    let answerCleanup;
+    globalThis.fetch = () => new Promise((resolve) => {
+        answerCleanup = () => resolve({ ok: true, json: async () => ({ text: 'neural-network' }) });
+    });
+    t.after(() => {
+        globalThis.fetch = originalFetch;
+        globalThis.HTMLInputElement = originalHTMLInputElement;
+        globalThis.HTMLTextAreaElement = originalHTMLTextAreaElement;
+        restoreDom();
+    });
+
+    const { handleDictationPasteEvent, isDictationCleanupInProgress } = await import(
+        '../../app/static/js/modules/mode-manager/services/dictation-paste-service.js');
+    assert.equal(isDictationCleanupInProgress(), false);
+    handleDictationPasteEvent({
+        clipboardData: { getData: () => 'Neural network.' },
+        target: input,
+        preventDefault() {},
+    }, 'tags');
+    assert.equal(isDictationCleanupInProgress(), true);
+    answerCleanup();
+    for (let tick = 0; tick < CLEANUP_SETTLE_TICKS && isDictationCleanupInProgress(); tick += 1) {
+        await new Promise((resolve) => setImmediate(resolve));
+    }
+    assert.equal(input.value, 'neural-network');
+    assert.equal(isDictationCleanupInProgress(), false);
+});

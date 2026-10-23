@@ -25,6 +25,8 @@ import { ModeContextInstance as ModeContext } from '../mode-context.js';
 // as two native edits: one Cmd+Z brings back exactly what was pasted.
 const moduleState = ApplicationState.createFields('dictation-paste-service', {
     rawInsertInProgress: false,
+    // Pastes whose cleanup has been asked for and whose text is not yet inserted.
+    cleanupsInProgress: 0,
     // In a paste into a note, this phrase starts the tags (Dictation settings).
     tagPhrase: DEFAULT_DICTATION_TAG_PHRASE,
     // Spoken around a quoted phrase (Dictation settings).
@@ -54,6 +56,20 @@ export function receiveDictationPhrases({ tagPhrase, quoteOpen, quoteClose, nega
     if (moduleState.quoteOpen !== quoteOpen) moduleState.quoteOpen = quoteOpen;
     if (moduleState.quoteClose !== quoteClose) moduleState.quoteClose = quoteClose;
     if (moduleState.negate !== negate) moduleState.negate = negate;
+}
+
+// A paste is still being cleaned up: its text is not in the field yet. The cleanup
+// runs outside CommandGate, so this is how waiting for an idle app sees it.
+export function isDictationCleanupInProgress() {
+    return moduleState.cleanupsInProgress > 0;
+}
+
+// Counts the paste as in progress from the cleanup request until its text is inserted.
+function whileCleaningUp(insertCleanedText) {
+    moduleState.cleanupsInProgress += 1;
+    return insertCleanedText().finally(() => {
+        moduleState.cleanupsInProgress -= 1;
+    });
 }
 
 // The server holds the tag list, so it cleans the text. Called with fetch, not
@@ -163,7 +179,7 @@ export function handleDictationPasteEvent(event, target) {
             return;
         }
     }
-    void pasteDictatedText(event.target, target, pastedText);
+    void whileCleaningUp(() => pasteDictatedText(event.target, target, pastedText));
 }
 
 // Any edit in a note or its tag bar: an undo is no longer about the last paste.
@@ -191,7 +207,7 @@ export function handleDictatedNotePaste(event, noteElement, plainText) {
     if (moduleState.editedSinceNotePaste) moduleState.editedSinceNotePaste = false;
     if (moduleState.notePasteUndo !== null) moduleState.notePasteUndo = null;
     if (split.tagText !== '') {
-        void addDictatedTags(noteElement, split.tagText, contentInserted);
+        void whileCleaningUp(() => addDictatedTags(noteElement, split.tagText, contentInserted));
     }
     return true;
 }
