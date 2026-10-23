@@ -90,9 +90,37 @@ A value is read as the first type it parses as:
 - **Mixed types are skipped, not errors.** A comparison applies only to values of its
   own type: `jogging:miles>2` ignores a note with `miles=far`. Keeping one property
   to one type is the user's convention.
-- **Units are the user's convention.** The name says the unit:
-  `swimming:meters=1500`, `jogging:miles=3`. A vague name like `distance` is
-  allowed; MetaList does not stop anyone from mixing meters and miles in it.
+- **Units are the user's convention.** Either the name says the unit
+  (`swimming:meters=1500`, `jogging:miles=3`) or the value does (below).
+
+### Units
+
+A number can carry a unit, written right after it with no space:
+
+```
+journey:distance=10miles
+drug:dosage=10mg
+swimming:distance=1500m
+```
+
+- **A unit is a label, never converted.** `10miles` is the number 10 with the label
+  `miles`. A comparison applies only to values with the same label:
+  `drug:dosage>5mg` finds `dosage=10mg`, and skips `dosage=0.01g` just as it skips
+  text. Unknown or invented units work the same way: there is no unit table.
+- **A query with a unit compares only that unit:** `drug:dosage>5mg` compares only
+  `mg` values.
+- **A query without a unit compares every unit.** `drug:dosage>5` finds `10mg`,
+  `10kg` and a plain `10` alike. Seeing mixed units in the results shows that the
+  query should name one; it also finds data whose unit you forgot.
+- **The search box suggests the unit.** After `drug:dosage>5`, it suggests the units
+  used with that property (`mg`), so nobody has to remember which unit they wrote.
+- `am` and `pm` are not units: `10am` is a time of day.
+- Picking one spelling per property (`miles`, not sometimes `mi`) is the user's
+  convention, as with property names. Suggestions help: after the number, the tag bar
+  and the search box both suggest the units already used with that property.
+- **Proposed:** a unit is letters, optionally followed by `/` and more letters
+  (`mg`, `miles`, `mg/kg`); `%` also counts as a unit (`humidity=40%`). Labels
+  compare case-insensitively (`mL` = `ml`).
 
 ## Search
 
@@ -139,7 +167,8 @@ holds for `w`'s type.
 - **Names drift.** In March `jogging:miles=3`, in June `cycling:distance=12`:
   `exercise:miles>2` misses the ride. Suggestions are the defence (below); renaming
   properties and property synonyms come later.
-- **Units clash** in a vaguely named property, as above.
+- **Spellings of one unit differ** (`10mi` and `10miles`): they are different labels
+  and never compare. Suggestions are the defence.
 
 ## Suggestions
 
@@ -154,8 +183,12 @@ before, so you write `miles` again rather than `distance`.
 - **Search box:** after `exercise:`, also suggest property names used with tags that
   imply `exercise` (`jogging`'s `miles`), since upward search finds those.
 - Never suggest the `jogging=3:miles=3` form.
-- **Proposed:** after `miles=`, suggest nothing at first. Value suggestions can come
-  later if they turn out to help.
+- **Units:** after a number (`dosage=10` in the tag bar, `dosage>5` in the search
+  box), suggest the units used with that property, most used first. In the search
+  box this counts the property on the tag and on the tags implying it, as upward
+  search does.
+- **Proposed:** otherwise, after `miles=`, suggest no values at first. Value
+  suggestions can come later if they turn out to help.
 - Activity credit (search suggestion statistics) goes to the tag, as today, never to
   properties.
 
@@ -237,3 +270,5 @@ Each step usable on its own, tried before the next.
   the result count, or Sort by `jogging:miles`).
 - Values set by rules.
 - Value suggestions.
+- Unit conversions the user defines (`1mile = 1.609km`), so a comparison can include
+  values in related units. Much later.
