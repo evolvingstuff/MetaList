@@ -73,16 +73,25 @@ def make_root_date_filter(*, field: str, range_kind: str, from_date: str, to_dat
         if from_date != OPEN_DATE or to_date != OPEN_DATE:
             raise InputRejected("Only a custom date range has dates of its own")
         return RootDateFilter(field=field, range_kind=range_kind, from_date=OPEN_DATE, to_date=OPEN_DATE)
-    if from_date == OPEN_DATE and to_date == OPEN_DATE:
-        raise InputRejected("A custom date range needs a start or an end date")
-    if from_date != OPEN_DATE and to_date != OPEN_DATE:
-        if _parse_iso_date(from_date, "From") > _parse_iso_date(to_date, "To"):
-            raise InputRejected("The start of a date range must not be after its end")
-    elif from_date != OPEN_DATE:
-        _parse_iso_date(from_date, "From")
-    else:
-        _parse_iso_date(to_date, "To")
+    _require_custom_range(from_date, to_date)
     return RootDateFilter(field=field, range_kind=range_kind, from_date=from_date, to_date=to_date)
+
+
+def _require_custom_range(from_date: str, to_date: str) -> None:
+    """A custom range has real days, at least one end, and does not end before it starts."""
+    first = _custom_end_date(from_date, "From")
+    last = _custom_end_date(to_date, "To")
+    if first is None and last is None:
+        raise InputRejected("A custom date range needs a start or an end date")
+    if first is not None and last is not None and first > last:
+        raise InputRejected("The start of a date range must not be after its end")
+
+
+def _custom_end_date(value: str, name: str) -> date | None:
+    """A custom range's end as a request or saved state gives it; None for an open end."""
+    if value == OPEN_DATE:
+        return None
+    return _parse_iso_date(value, name)
 
 
 def root_date_filter_from_payload(payload: object) -> RootDateFilter:

@@ -597,11 +597,14 @@ def _ancestor_ids(note_id: str, traversal_cache: _SnapshotTraversalCache) -> Set
 
 
 def _roots_in_date_range(
-    ordered_root_ids: List[str], date_filter: RootDateFilter, *, editing_note_id: str | None,
+    ordered_root_ids: List[str], date_filter: RootDateFilter | None, *, editing_note_id: str | None,
     traversal_cache: "_SnapshotTraversalCache",
 ) -> List[str]:
-    """The roots the date range keeps, in order. The note being edited stays while it is
-    edited, also when saving it (or adding it, today) put its date outside the range."""
+    """The roots the date range keeps (all of them without one), in order. The note being
+    edited stays while it is edited, also when saving it (or adding it, today) put its
+    date outside the range."""
+    if date_filter is None:
+        return ordered_root_ids
     kept_root_ids = set(filter_root_ids_by_date(ordered_root_ids, date_filter, today=local_today()))
     if editing_note_id is not None:
         edited_root_id = _root_id_of_note(editing_note_id, traversal_cache)
@@ -626,10 +629,9 @@ def _select_view(
             normalized_sort_mode,
             root_timestamps=root_sort_timestamps,
         )
-    if date_filter is not None:
-        ordered_root_ids = _roots_in_date_range(
-            ordered_root_ids, date_filter, editing_note_id=editing_note_id, traversal_cache=traversal_cache,
-        )
+    ordered_root_ids = _roots_in_date_range(
+        ordered_root_ids, date_filter, editing_note_id=editing_note_id, traversal_cache=traversal_cache,
+    )
     root_count_total = len(ordered_root_ids)
     if is_untagged_view:
         search_scope = _apply_untagged_view(
