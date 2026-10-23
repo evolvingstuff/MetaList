@@ -491,7 +491,7 @@ async function noArrowCases(page) {
 // inside an embed (to the third). A holder's own children take the tint of the level around it.
 
 const TINTS = {
-  light: ['rgb(241, 243, 245)', 'rgb(229, 232, 235)', 'rgb(216, 220, 224)'],
+  light: ['rgb(228, 231, 235)', 'rgb(213, 218, 222)', 'rgb(198, 204, 210)'],
   dark: ['rgb(32, 34, 36)', 'rgb(42, 45, 48)', 'rgb(53, 57, 61)'],
 };
 
