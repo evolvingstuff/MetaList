@@ -2439,22 +2439,6 @@ html[data-theme="dark"] .prioritize-modal-content input.prioritize-modal-tag-inp
     .random-password-modal-actions button {
         width: 100%;
     }
-
-    .controls .view-indicators {
-        top: -12px;
-        max-width: calc(100% - 16px);
-    }
-
-    .controls .root-sort-indicator,
-    .controls .untagged-view-indicator {
-        padding-left: 10px;
-        padding-right: 6px;
-    }
-
-    .controls .root-sort-indicator-label,
-    .controls .untagged-view-indicator-label {
-        font-size: 11px;
-    }
 }
 
 body {
@@ -6152,84 +6136,6 @@ body:not(.pref-show-search-results-count) .controls .search-results-count {
     display: none;
 }
 
-.controls .view-indicators {
-    position: absolute;
-    top: -14px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 14;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    width: max-content;
-    max-width: calc(100% - 24px);
-}
-
-.controls .root-sort-indicator,
-.controls .untagged-view-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    max-width: 100%;
-    padding: 6px 8px 6px 12px;
-    border: 1px solid rgba(130, 73, 0, 0.22);
-    border-radius: 999px;
-    background: linear-gradient(135deg, #f5d57a, #ebb75d);
-    color: #2d1b00;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
-}
-
-.controls .untagged-view-indicator {
-    background: linear-gradient(135deg, #b7d7ff, #74a9f5);
-    color: #06172f;
-    border-color: rgba(6, 23, 47, 0.2);
-}
-
-.controls .root-sort-indicator[hidden],
-.controls .untagged-view-indicator[hidden] {
-    display: none;
-}
-
-.controls .root-sort-indicator-label,
-.controls .untagged-view-indicator-label {
-    display: block;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-}
-
-.controls .root-sort-indicator-clear,
-.controls .untagged-view-indicator-clear {
-    width: 22px;
-    height: 22px;
-    border: none;
-    border-radius: 999px;
-    padding: 0;
-    background: rgba(45, 27, 0, 0.14);
-    color: inherit;
-    font-size: 15px;
-    font-weight: 700;
-    line-height: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-}
-
-.controls .root-sort-indicator-clear:hover,
-.controls .root-sort-indicator-clear:focus-visible,
-.controls .untagged-view-indicator-clear:hover,
-.controls .untagged-view-indicator-clear:focus-visible {
-    background: rgba(45, 27, 0, 0.24);
-    outline: none;
-}
-
 .root-date-separator {
     margin: 18px 0 10px;
     padding: 8px 12px;
@@ -6291,6 +6197,119 @@ body:not(.pref-show-search-results-count) .controls .search-results-count {
     width: 16px;
     height: 16px;
     transform: translateY(-50%);
+}
+
+/* Sort order and Untagged: gray chips at the right end inside the search input,
+   Untagged first. The typed text stops before them (--search-input-chips-width,
+   search-input-chip-service.js). They grow in and shrink out only when the user
+   changes them, never on a reload or a tab switch. */
+.controls .search-input-row {
+    --search-input-chips-width: 0px;
+}
+
+.controls .search-input {
+    padding-right: calc(12px + var(--search-input-chips-width));
+}
+
+.controls .search-input-chips {
+    position: absolute;
+    top: 50%;
+    right: calc(50% - var(--search-input-half-width) + 4px);
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    max-width: calc(var(--search-input-width) - 48px);
+    transform: translateY(-50%);
+}
+
+.controls .search-input-chip {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    box-sizing: border-box;
+    min-width: 0;
+    height: 22px;
+    padding: 0 2px 0 8px;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    border-radius: 999px;
+    background: linear-gradient(135deg, #e4e6e9, #c3c8ce);
+    color: #1d2125;
+}
+
+.controls .search-input-chip.is-shown,
+.controls .search-input-chip.is-leaving {
+    display: inline-flex;
+}
+
+.controls .search-input-chip.is-growing {
+    animation: search-input-chip-grow 200ms ease-out;
+}
+
+.controls .search-input-chip.is-leaving {
+    animation: search-input-chip-shrink 200ms ease-in forwards;
+}
+
+@keyframes search-input-chip-grow {
+    from {
+        transform: scale(0.6);
+        opacity: 0;
+    }
+}
+
+@keyframes search-input-chip-shrink {
+    to {
+        transform: scale(0.6);
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    @keyframes search-input-chip-grow {
+        from {
+            opacity: 0;
+        }
+    }
+
+    @keyframes search-input-chip-shrink {
+        to {
+            opacity: 0;
+        }
+    }
+}
+
+.controls .search-input-chip-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.controls .search-input-chip-clear {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    border: none;
+    border-radius: 999px;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.1);
+    color: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.controls .search-input-chip-clear:hover,
+.controls .search-input-chip-clear:focus-visible {
+    background: rgba(0, 0, 0, 0.22);
+    outline: none;
 }
 
 /* Reference views (docs/ui/references.md): a chip, centered in the bar, takes the
@@ -6401,7 +6420,8 @@ body:not(.pref-show-search-results-count) .controls .search-results-count {
 }
 
 .controls .search-input-row:has(> .reference-view-chip.is-shown) .search-input,
-.controls .search-input-row:has(> .reference-view-chip.is-shown) .search-input-empty-icon {
+.controls .search-input-row:has(> .reference-view-chip.is-shown) .search-input-empty-icon,
+.controls .search-input-row:has(> .reference-view-chip.is-shown) .search-input-chips {
     opacity: 0;
     visibility: hidden;
 }
@@ -6411,14 +6431,16 @@ body:not(.pref-show-search-results-count) .controls .search-results-count {
 .controls .search-input-row.is-chip-animating .reference-view-chip,
 .controls .search-input-row.is-chip-animating .reference-view-new-search,
 .controls .search-input-row.is-chip-animating .search-input,
-.controls .search-input-row.is-chip-animating .search-input-empty-icon {
+.controls .search-input-row.is-chip-animating .search-input-empty-icon,
+.controls .search-input-row.is-chip-animating .search-input-chips {
     transition: opacity 200ms ease-out, transform 200ms ease-out, visibility 0s linear 200ms;
 }
 
 .controls .search-input-row.is-chip-animating:has(> .reference-view-chip.is-shown) .reference-view-chip,
 .controls .search-input-row.is-chip-animating:has(> .reference-view-chip.is-shown) .reference-view-new-search,
 .controls .search-input-row.is-chip-animating:not(:has(> .reference-view-chip.is-shown)) .search-input,
-.controls .search-input-row.is-chip-animating:not(:has(> .reference-view-chip.is-shown)) .search-input-empty-icon {
+.controls .search-input-row.is-chip-animating:not(:has(> .reference-view-chip.is-shown)) .search-input-empty-icon,
+.controls .search-input-row.is-chip-animating:not(:has(> .reference-view-chip.is-shown)) .search-input-chips {
     transition: opacity 200ms ease-out, transform 200ms ease-out, visibility 0s;
 }
 
@@ -8489,21 +8511,6 @@ html[data-theme="dark"] body.pref-show-ai-chat .chat-toggle-button {
     border-color: rgba(90, 169, 255, 0.5);
     background: rgba(90, 169, 255, 0.16);
     color: var(--app-accent);
-}
-
-html[data-theme="dark"] .controls .root-sort-indicator {
-    border-color: rgba(255, 211, 122, 0.22);
-    background: linear-gradient(135deg, #f1c86d, #d99f43);
-    color: #241500;
-}
-
-html[data-theme="dark"] .controls .root-sort-indicator-clear {
-    background: rgba(36, 21, 0, 0.14);
-}
-
-html[data-theme="dark"] .controls .root-sort-indicator-clear:hover,
-html[data-theme="dark"] .controls .root-sort-indicator-clear:focus-visible {
-    background: rgba(36, 21, 0, 0.24);
 }
 
 html[data-theme="dark"] .namespace-modal-radio-row,

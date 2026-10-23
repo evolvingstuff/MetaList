@@ -16,7 +16,7 @@ SORT_MODE_CREATED = "created"
 SORT_MODE_UPDATED = "updated"
 SORT_MODE_ALPHABETICAL = "alphabetical"
 SORT_MODE_CONTENT_VOLUME = "content-volume"
-SORT_MODES = frozenset(
+BASE_SORT_MODES = frozenset(
     {
         SORT_MODE_NORMAL,
         SORT_MODE_CREATED,
@@ -25,6 +25,10 @@ SORT_MODES = frozenset(
         SORT_MODE_CONTENT_VOLUME,
     }
 )
+# Reverse Order: any order, the manual one too, read bottom to top ("alphabetical-reversed"
+# is Z to A). An older MetaList reads a mode it does not know as normal.
+SORT_MODE_REVERSED_SUFFIX = "-reversed"
+SORT_MODES = BASE_SORT_MODES | frozenset(mode + SORT_MODE_REVERSED_SUFFIX for mode in BASE_SORT_MODES)
 TIMESTAMP_SORT_MODES = frozenset({SORT_MODE_CREATED, SORT_MODE_UPDATED})
 # An index not yet built for any store revision.
 _NO_REVISION = -1
@@ -39,6 +43,20 @@ def normalize_sort_mode(sort_mode: object) -> str:
     normalized = sort_mode.strip().lower()
     if normalized not in SORT_MODES:
         raise ValueError(f"Unsupported sort mode: {sort_mode!r}")
+    return normalized
+
+
+def is_sort_mode_reversed(sort_mode: object) -> bool:
+    return normalize_sort_mode(sort_mode).endswith(SORT_MODE_REVERSED_SUFFIX)
+
+
+def base_sort_mode(sort_mode: object) -> str:
+    """The order a mode sorts by, without its direction."""
+    normalized = normalize_sort_mode(sort_mode)
+    if is_sort_mode_reversed(normalized):
+        base = normalized.removesuffix(SORT_MODE_REVERSED_SUFFIX)
+        assert base in BASE_SORT_MODES
+        return base
     return normalized
 
 
@@ -227,7 +245,7 @@ def _get_root_subtree_content_volume(root_id: str) -> int:
 
 
 def get_root_sort_timestamps(sort_mode: object) -> Dict[str, datetime]:
-    normalized = normalize_sort_mode(sort_mode)
+    normalized = base_sort_mode(sort_mode)
     canonical_root_ids = note_store.get_children(None)
     if normalized not in TIMESTAMP_SORT_MODES:
         return {}
@@ -261,7 +279,17 @@ def get_root_ids_for_sort_mode(
     *,
     root_timestamps: Dict[str, datetime],
 ) -> List[str]:
-    normalized = normalize_sort_mode(sort_mode)
+    ordered = _root_ids_in_base_order(base_sort_mode(sort_mode), root_timestamps=root_timestamps)
+    if is_sort_mode_reversed(sort_mode):
+        return ordered[::-1]
+    return ordered
+
+
+def _root_ids_in_base_order(
+    normalized: str,
+    *,
+    root_timestamps: Dict[str, datetime],
+) -> List[str]:
     canonical_root_ids = note_store.get_children(None)
     if normalized == SORT_MODE_NORMAL:
         return canonical_root_ids
@@ -297,7 +325,7 @@ def build_root_sort_buckets(
     *,
     root_timestamps: Dict[str, datetime],
 ) -> Dict[str, Dict[str, str]]:
-    normalized = normalize_sort_mode(sort_mode)
+    normalized = base_sort_mode(sort_mode)
     if normalized not in TIMESTAMP_SORT_MODES:
         return {}
 

@@ -3,19 +3,23 @@ import { ApplicationState } from '../../application-state.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import { isReferenceViewTransitionPending } from './reference-view-transition-service.js';
 
-// The kinds of temporary view: a note's source, the notes referencing it, or the
-// notes an AI answer cites.
-const REFERENCE_VIEW_KINDS = new Set(['source', 'backlinks', 'references']);
+// The kinds of temporary view: a note's source, the notes referencing it, or an AI
+// answer's references (one of them, or all of them).
+const REFERENCE_VIEW_KINDS = new Set(['source', 'backlinks', 'reference', 'references']);
+// The views an AI answer opens; a later AI reference replaces any of them.
+export const AI_REFERENCE_VIEW_KINDS = new Set(['reference', 'references']);
 // What the tab list calls each kind of view.
 const TAB_LABEL_BY_VIEW_KIND = Object.freeze({
     source: 'Reference source',
     backlinks: 'Referenced by',
-    references: 'References',
+    reference: 'Reference',
+    references: 'All references',
 });
 // What the chip in the search bar says for the views that are not one note's source.
 const CHIP_LABEL_BY_VIEW_KIND = Object.freeze({
     backlinks: 'Referenced by',
-    references: 'References',
+    reference: 'Reference',
+    references: 'All references',
 });
 // A source view's chip: this arrow, then the source note's first line.
 const SOURCE_CHIP_ARROW = '\u2196';

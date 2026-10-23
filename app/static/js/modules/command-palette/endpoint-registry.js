@@ -1,4 +1,9 @@
 import {
+    baseRootSortMode,
+    isRootSortModeReversed,
+    rootSortModeWithDirection,
+} from '../mode-manager/services/root-sort-service.js';
+import {
     BACKUP_REMINDER_DEFAULT,
     BACKUP_REMINDER_OPTIONS,
     BACKUP_REMINDER_PREFERENCE,
@@ -117,7 +122,11 @@ export function buildCommandPaletteEndpoints(deps) {
         animatedTransitions: true,
         theme: 'system',
     };
-    const sortModeActionValue = (sortMode) => (getSortMode() === sortMode ? 'Current' : '↵');
+    // An order and its direction are chosen apart: picking an order keeps Reverse Order.
+    const sortModeActionValue = (sortMode) => (baseRootSortMode(getSortMode()) === sortMode ? 'Current' : '↵');
+    const setSortOrderKeepingDirection = (sortMode) => setSortMode(
+        rootSortModeWithDirection(sortMode, isRootSortModeReversed(getSortMode())),
+    );
 
     return [
         {
@@ -186,7 +195,7 @@ export function buildCommandPaletteEndpoints(deps) {
             label: 'Sort order: Normal',
             getValue: () => sortModeActionValue('normal'),
             closeOnExecute: true,
-            execute: async () => setSortMode('normal'),
+            execute: async () => setSortOrderKeepingDirection('normal'),
         },
         {
             id: 'view.sort_mode.created',
@@ -194,7 +203,7 @@ export function buildCommandPaletteEndpoints(deps) {
             label: 'Sort order: Datetime created',
             getValue: () => sortModeActionValue('created'),
             closeOnExecute: true,
-            execute: async () => setSortMode('created'),
+            execute: async () => setSortOrderKeepingDirection('created'),
         },
         {
             id: 'view.sort_mode.updated',
@@ -202,7 +211,7 @@ export function buildCommandPaletteEndpoints(deps) {
             label: 'Sort order: Datetime last updated',
             getValue: () => sortModeActionValue('updated'),
             closeOnExecute: true,
-            execute: async () => setSortMode('updated'),
+            execute: async () => setSortOrderKeepingDirection('updated'),
         },
         {
             id: 'view.sort_mode.alphabetical',
@@ -210,15 +219,26 @@ export function buildCommandPaletteEndpoints(deps) {
             label: 'Sort order: Alphabetical',
             getValue: () => sortModeActionValue('alphabetical'),
             closeOnExecute: true,
-            execute: async () => setSortMode('alphabetical'),
+            execute: async () => setSortOrderKeepingDirection('alphabetical'),
         },
         {
             id: 'view.sort_mode.content_volume',
             kind: 'action',
-            label: 'Sort order: Content volume (largest first)',
+            label: 'Sort order: Content volume',
             getValue: () => sortModeActionValue('content-volume'),
             closeOnExecute: true,
-            execute: async () => setSortMode('content-volume'),
+            execute: async () => setSortOrderKeepingDirection('content-volume'),
+        },
+        {
+            id: 'view.sort_mode.reverse',
+            kind: 'action',
+            label: 'Sort order: Reverse',
+            getValue: () => (isRootSortModeReversed(getSortMode()) ? 'On' : 'Off'),
+            closeOnExecute: true,
+            execute: async () => setSortMode(rootSortModeWithDirection(
+                getSortMode(),
+                !isRootSortModeReversed(getSortMode()),
+            )),
         },
         {
             id: 'view.all_notes',

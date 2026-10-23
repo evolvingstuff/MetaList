@@ -45,16 +45,16 @@ test('AI reference collections use a temporary labeled view without entering sea
     ]);
 
     assert.match(mouseEvents, /\.ai-chat-open-all-references/);
-    assert.match(mouseEvents, /openReferenceQueryInNewTab\(referenceQuery\)/);
+    assert.match(mouseEvents, /openReferenceQueryInNewTab\(referenceQuery, 'references'\)/);
     assert.match(keyboardEvents, /export async function openReferenceQueryInNewTab/);
     assert.match(keyboardEvents, /runReferenceSearchInActiveTab\(referenceQuery/);
     assert.match(
         keyboardEvents,
-        /'reference\.collection_open_tab',\s*true,\s*'references',/,
+        /'reference\.collection_open_tab',\s*true,\s*viewKind,/,
     );
     assert.match(
         keyboardEvents,
-        /replaceActiveReference\s*&& isViewingReferenceSource\(\)\s*&& getActiveReferenceViewKind\(\) === 'references'/,
+        /replaceActiveReference\s*&& isViewingReferenceSource\(\)\s*&& AI_REFERENCE_VIEW_KINDS\.has\(getActiveReferenceViewKind\(\)\)/,
     );
     assert.match(
         keyboardEvents,
@@ -76,7 +76,7 @@ test('AI reference links prefer their exact evidence query over the displayed ro
     const mouseEvents = await readFile(MOUSE_EVENTS_URL, 'utf8');
 
     assert.match(mouseEvents, /closest\('\[data-ref-query\]'\)/);
-    assert.match(mouseEvents, /openReferenceQueryInNewTab\(referenceQuery\)/);
+    assert.match(mouseEvents, /openReferenceQueryInNewTab\(referenceQuery, 'reference'\)/);
 });
 
 test('copied AI response references save and exit editing before navigation', async () => {
@@ -96,7 +96,7 @@ test('copied AI response references save and exit editing before navigation', as
             /\.ai-chat-message-content\[data-markdown-rendered="true"\]/,
         );
         const deselectIndex = handler.indexOf('await actionDeselectNote();');
-        const navigateIndex = handler.indexOf('await openReferenceQueryInNewTab(referenceQuery);');
+        const navigateIndex = handler.indexOf('await openReferenceQueryInNewTab(referenceQuery, ');
         assert.ok(deselectIndex >= 0);
         assert.ok(navigateIndex > deselectIndex);
     }

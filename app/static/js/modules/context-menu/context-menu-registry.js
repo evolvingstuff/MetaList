@@ -1,4 +1,10 @@
-import { normalizeRootSortMode, ROOT_SORT_MODES } from '../mode-manager/services/root-sort-service.js';
+import {
+    baseRootSortMode,
+    isRootSortModeReversed,
+    normalizeRootSortMode,
+    ROOT_SORT_MODES,
+    rootSortModeWithDirection,
+} from '../mode-manager/services/root-sort-service.js';
 
 function buildTagContextItems(context, handlers) {
     if (!context || typeof context !== 'object') {
@@ -632,7 +638,9 @@ function buildLinkContextItems(context, handlers) {
 }
 
 function buildSortModeItem(sortMode, onSetSortMode) {
-    const currentMode = normalizeRootSortMode(sortMode);
+    // An order and its direction are chosen apart: picking an order keeps Reverse Order.
+    const currentMode = baseRootSortMode(normalizeRootSortMode(sortMode));
+    const isReversed = isRootSortModeReversed(sortMode);
     if (typeof onSetSortMode !== 'function') {
         throw new Error('View context missing onSetSortMode handler');
     }
@@ -641,21 +649,32 @@ function buildSortModeItem(sortMode, onSetSortMode) {
         [ROOT_SORT_MODES.CREATED, 'Datetime created', 'calendar'],
         [ROOT_SORT_MODES.UPDATED, 'Datetime last updated', 'clock'],
         [ROOT_SORT_MODES.ALPHABETICAL, 'Alphabetical', 'alphabetical'],
-        [ROOT_SORT_MODES.CONTENT_VOLUME, 'Content volume (largest first)', 'volume'],
+        [ROOT_SORT_MODES.CONTENT_VOLUME, 'Content volume', 'volume'],
     ];
     return {
         id: 'sort-by',
         label: 'Sort by',
         icon: 'sort',
         enabled: true,
-        submenu: options.map(([mode, label, icon]) => ({
-            id: `sort-by-${mode}`,
-            label,
-            icon,
-            checked: mode === currentMode,
-            enabled: mode !== currentMode,
-            onSelect: () => onSetSortMode(mode),
-        })),
+        submenu: [
+            ...options.map(([mode, label, icon]) => ({
+                id: `sort-by-${mode}`,
+                label,
+                icon,
+                checked: mode === currentMode,
+                enabled: mode !== currentMode,
+                onSelect: () => onSetSortMode(rootSortModeWithDirection(mode, isReversed)),
+            })),
+            {
+                id: 'sort-by-reverse',
+                label: 'Reverse Order',
+                icon: 'reverse_order',
+                separated: true,
+                checked: isReversed,
+                enabled: true,
+                onSelect: () => onSetSortMode(rootSortModeWithDirection(currentMode, !isReversed)),
+            },
+        ],
     };
 }
 

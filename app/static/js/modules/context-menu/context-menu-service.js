@@ -73,6 +73,8 @@ const CONTEXT_MENU_ICONS = {
         'M4 12h11',
         'M4 18h6',
     ],
+    // Two arrows, up and down: the order turned around.
+    reverse_order: ['M8 20V4', 'M4 8l4-4 4 4', 'M16 4v16', 'M12 16l4 4 4-4'],
     manual_order: [
         'M9 5h11',
         'M9 12h11',

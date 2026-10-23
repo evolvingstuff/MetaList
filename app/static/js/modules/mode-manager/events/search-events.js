@@ -89,6 +89,7 @@ export function handleSearchInput(event) {
     }
 
     // Browser input events can re-fire with the same normalized value during autofill/composition.
+    // A new search ends the sort order and the Untagged view: their chips leave.
     let viewOverridesClearPromise = null;
     if (isFreshSearchInput) {
         if (previousSearchQuery !== analysis.normalizedText) {

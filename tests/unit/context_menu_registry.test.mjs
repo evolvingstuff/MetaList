@@ -641,16 +641,31 @@ test('view context menu no longer exposes the note timestamp visibility preferen
 
 test('background sorting offers all modes and ticks only the current mode', () => {
     const modes = ['normal', 'created', 'updated', 'alphabetical', 'content-volume'];
-    for (const currentMode of modes) {
-        const calls = [];
-        const items = buildContextMenuItems(buildViewContext({ sortMode: currentMode }), buildViewHandlers(calls));
-        const submenu = items.find((item) => item.id === 'sort-by').submenu;
-        assert.deepEqual(submenu.map((item) => item.id), modes.map((mode) => `sort-by-${mode}`));
-        assert.deepEqual(submenu.filter((item) => item.checked).map((item) => item.id), [`sort-by-${currentMode}`]);
-        assert.deepEqual(submenu.filter((item) => !item.enabled).map((item) => item.id), [`sort-by-${currentMode}`]);
-        assert.ok(submenu.every((item) => !item.label.includes('(current)')));
-        for (const item of submenu.filter((item) => item.enabled)) item.onSelect();
-        assert.deepEqual(calls.map((call) => call[1]), modes.filter((mode) => mode !== currentMode));
+    for (const isReversed of [false, true]) {
+        const direction = isReversed ? '-reversed' : '';
+        for (const currentMode of modes) {
+            const calls = [];
+            const items = buildContextMenuItems(
+                buildViewContext({ sortMode: `${currentMode}${direction}` }),
+                buildViewHandlers(calls),
+            );
+            const submenu = items.find((item) => item.id === 'sort-by').submenu;
+            assert.deepEqual(
+                submenu.map((item) => item.id),
+                [...modes.map((mode) => `sort-by-${mode}`), 'sort-by-reverse'],
+            );
+            const checked = [`sort-by-${currentMode}`, ...(isReversed ? ['sort-by-reverse'] : [])];
+            assert.deepEqual(submenu.filter((item) => item.checked).map((item) => item.id), checked);
+            assert.deepEqual(submenu.filter((item) => !item.enabled).map((item) => item.id), [`sort-by-${currentMode}`]);
+            assert.ok(submenu.every((item) => !item.label.includes('(current)')));
+            for (const item of submenu.filter((item) => item.enabled)) item.onSelect();
+            // Picking another order keeps the direction; Reverse Order flips it.
+            const flipped = isReversed ? currentMode : `${currentMode}-reversed`;
+            assert.deepEqual(
+                calls.map((call) => call[1]),
+                [...modes.filter((mode) => mode !== currentMode).map((mode) => `${mode}${direction}`), flipped],
+            );
+        }
     }
 });
 

@@ -54,7 +54,7 @@ import { CONFIG } from '../../config.js';
 import { NotesAPI } from '../../api-client.js';
 import { addDroppedFilePreviews } from '../services/dropped-file-preview-service.js';
 import { ErrorHandler } from '../../error-handler.js';
-import { persistTabStateSnapshot, createTabOnServer, deleteTabOnServer } from '../services/tab-state-service.js';
+import { persistTabStateSnapshot, createTabOnServer, deleteTabOnServer, setTabSortModeOnServer } from '../services/tab-state-service.js';
 import { cacheNotesDomForTab, restoreNotesDomForTab, cloneNotesDomForTab, clearCachedNotesDomForTab, clearActiveNotesDom } from '../services/tab-dom-cache-service.js';
 import { finalizeDuplicatedTabClone, getDuplicateTabCloneOptions } from '../services/tab-duplication-service.js';
 import { areScrollAnchorsEqual, computeScrollAnchor } from '../services/scroll-anchor-service.js';
@@ -67,7 +67,9 @@ import {
 import { analyzeSearchQueryInput } from '../services/search-syntax-service.js';
 import { buildBacklinksQuery } from '../services/backlinks-navigation-service.js';
 import {
+    AI_REFERENCE_VIEW_KINDS,
     captureReferenceOriginScopeForActiveTab,
+    getActiveReferenceSourceQuery,
     getActiveReferenceViewKind,
     getReferenceNavigationLabelForTab,
     isViewingReferenceSource,
@@ -3337,7 +3339,7 @@ export function updateSearchContextsList() {
                             await actionRefreshAndMaybeSelect({ context: 'untaggedView.dismissTab', animateNoteChanges: false });
                         }
                     } else {
-                        await switchToTabContext(tabId, {});
+                        await switchToTabLeavingItsSort(tabId, {});
                     }
                 });
                 if (activityPromise !== null) await activityPromise;
@@ -3463,6 +3465,28 @@ export async function switchToTabContext(tabId, options) {
 	});
 }
 
+/**
+ * The user going to another tab (picking it, or a new one): the tab they leave
+ * drops its sort order, so it shows in normal order when they come back. The
+ * Untagged view already ends with any tab switch. Reference navigation switches
+ * with switchToTabContext and keeps the sort: × returns to the list as it was.
+ */
+async function switchToTabLeavingItsSort(tabId, options) {
+    const leftTabId = ModeContext.activeTabId;
+    await switchToTabContext(tabId, options);
+    if (!ModeContext.tabs[leftTabId] || ModeContext.getTabSortMode(leftTabId) === 'normal') {
+        return;
+    }
+    ModeContext.bumpUndoContextEpoch('sortMode.tabLeft');
+    const response = await setTabSortModeOnServer(leftTabId, 'normal');
+    // The tab now shown keeps its loaded notes and scroll tracking.
+    ModeContext.hydrateTabState(response, { emitUpdate: false, preserveActiveRootTracking: true });
+    ModeContext.clearTabRevealedRedactions(leftTabId);
+    ModeContext.resetTabDiffCache(leftTabId, { preserveRootAnchor: false });
+    clearCachedNotesDomForTab(leftTabId);
+    updateSearchContextsList();
+}
+
 function snapshotActiveTabScrollState() {
     const currentScroll = Math.max(0, Math.round(window.scrollY));
     // Multiple tab commands can snapshot without an intervening scroll event.
@@ -3583,7 +3607,7 @@ async function duplicateTabContext(sourceTabId, animateNoteChanges, shouldSwitch
     if (shouldSwitchImmediately) {
         const switchOptions = { animateNoteChanges };
 
-        await switchToTabContext(newTabId, switchOptions);
+        await switchToTabLeavingItsSort(newTabId, switchOptions);
         focusSearchInputAndSelectAllText();
         return newTabId;
     }
@@ -3612,14 +3636,21 @@ export async function createBlankSearchContextFromHover() {
     snapshotActiveTabScrollState();
     await persistTabStateSnapshot();
 
-    const response = await createTabOnServer(sourceTabId);
-    const newTabId = response?.newTabId;
+    const created = await createTabOnServer(sourceTabId);
+    const newTabId = created?.newTabId;
     if (typeof newTabId !== 'string' || newTabId.length === 0) {
         throw new Error('Server did not return newTabId');
     }
-    if (!response || typeof response !== 'object' || !response.tabs || typeof response.tabs !== 'object') {
+    if (!created || typeof created !== 'object' || !created.tabs || typeof created.tabs !== 'object') {
         throw new Error('Server did not return tab-state payload');
     }
+    if (!created.tabs[newTabId] || typeof created.tabs[newTabId] !== 'object') {
+        throw new Error('Server tab-state response missing new tab payload');
+    }
+    // A blank tab starts unsorted: the tab it was made from may be sorted.
+    const response = created.tabs[newTabId].sortMode === 'normal'
+        ? created
+        : await setTabSortModeOnServer(newTabId, 'normal');
     const newTab = response.tabs[newTabId];
     if (!newTab || typeof newTab !== 'object') {
         throw new Error('Server tab-state response missing new tab payload');
@@ -3634,7 +3665,7 @@ export async function createBlankSearchContextFromHover() {
     ModeContext.hydrateTabState(response);
     ModeContext.resetTabDiffCache(newTabId, { preserveRootAnchor: false });
 
-    await switchToTabContext(newTabId, {});
+    await switchToTabLeavingItsSort(newTabId, {});
     await actionEnterSearchMode();
     focusSearchInputAndSelectAllText();
     await persistTabStateSnapshot();
@@ -3653,15 +3684,19 @@ export async function openReferenceInNewTab(referenceNoteId) {
     );
 }
 
-export async function openReferenceQueryInNewTab(referenceQuery) {
+/** An AI answer's references: one of them ('reference') or all of them ('references'). */
+export async function openReferenceQueryInNewTab(referenceQuery, viewKind) {
     if (typeof referenceQuery !== 'string' || referenceQuery.length === 0) {
         throw new Error('openReferenceQueryInNewTab requires referenceQuery');
+    }
+    if (!AI_REFERENCE_VIEW_KINDS.has(viewKind)) {
+        throw new Error('openReferenceQueryInNewTab requires an AI reference viewKind');
     }
     return openReferenceQueryInNewTabWithContext(
         referenceQuery,
         'reference.collection_open_tab',
         true,
-        'references',
+        viewKind,
     );
 }
 
@@ -3683,6 +3718,15 @@ async function openReferenceQueryInNewTabWithContext(
 ) {
     if (typeof replaceActiveReference !== 'boolean') {
         throw new Error('Reference navigation requires replacement policy');
+    }
+    // The same AI references clicked again while they are shown: already there.
+    if (
+        replaceActiveReference
+        && isViewingReferenceSource()
+        && getActiveReferenceViewKind() === viewKind
+        && getActiveReferenceSourceQuery() === referenceQuery
+    ) {
+        return ModeContext.activeTabId;
     }
     let resultTabId = '';
     await navigateWithReferenceSlide('forward', async () => {
@@ -3744,7 +3788,7 @@ async function openReferenceQueryBehindTransition(
     if (
         replaceActiveReference
         && isViewingReferenceSource()
-        && getActiveReferenceViewKind() === 'references'
+        && AI_REFERENCE_VIEW_KINDS.has(getActiveReferenceViewKind())
     ) {
         replaceActiveReferenceNavigationQuery(referenceQuery, viewKind);
         await runReferenceSearchInActiveTab(referenceQuery, context);

@@ -1,8 +1,10 @@
 import {
     ROOT_SORT_MODES,
+    getRootSortModeChipLabel,
     getRootSortModeIndicatorLabel,
     normalizeRootSortMode,
 } from './root-sort-service.js';
+import { showSearchInputChip } from './search-input-chip-service.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import { setTabSortModeOnServer } from './tab-state-service.js';
 
@@ -23,13 +25,14 @@ export function updateRootSortIndicator(snapshot) {
     const sortMode = normalizeRootSortMode(snapshot.sortMode);
     indicator.dataset.sortMode = sortMode;
     if (sortMode === ROOT_SORT_MODES.NORMAL) {
-        label.textContent = '';
-        indicator.hidden = true;
+        // The label stays while the chip shrinks out.
+        showSearchInputChip(indicator, false);
         return;
     }
 
-    label.textContent = getRootSortModeIndicatorLabel(sortMode);
-    indicator.hidden = false;
+    label.textContent = getRootSortModeChipLabel(sortMode);
+    label.title = getRootSortModeIndicatorLabel(sortMode);
+    showSearchInputChip(indicator, true);
 }
 
 export async function clearActiveSortModeForSearchInput() {

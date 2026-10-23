@@ -239,6 +239,28 @@
                                 <path d="m16 16 5 5" />
                             </svg>
                         </button>
+                        <div class="search-input-chips">
+                            <div id="untagged-view-indicator" class="search-input-chip untagged-view-indicator">
+                                <span class="search-input-chip-label" title="Untagged notes">Untagged</span>
+                                <button
+                                    id="untagged-view-indicator-clear"
+                                    class="search-input-chip-clear interactive"
+                                    type="button"
+                                    aria-label="Return to all notes"
+                                    title="Return to all notes"
+                                >×</button>
+                            </div>
+                            <div id="root-sort-indicator" class="search-input-chip root-sort-indicator">
+                                <span id="root-sort-indicator-label" class="search-input-chip-label"></span>
+                                <button
+                                    id="root-sort-indicator-clear"
+                                    class="search-input-chip-clear interactive"
+                                    type="button"
+                                    aria-label="Return to normal sort order"
+                                    title="Return to normal sort order"
+                                >×</button>
+                            </div>
+                        </div>
                         <div id="reference-source-indicator" class="reference-view-chip">
                             <button
                                 id="reference-view-chip-back"
@@ -261,28 +283,6 @@
                         <div id="search-suggestions" class="search-suggestions" hidden></div>
                     </div>
                     <div id="search-validation-message" class="search-validation-message" hidden></div>
-                </div>
-                <div class="view-indicators">
-                    <div id="root-sort-indicator" class="root-sort-indicator" hidden>
-                        <span id="root-sort-indicator-label" class="root-sort-indicator-label"></span>
-                        <button
-                            id="root-sort-indicator-clear"
-                            class="root-sort-indicator-clear interactive"
-                            type="button"
-                            aria-label="Return to normal sort order"
-                            title="Return to normal sort order"
-                        >×</button>
-                    </div>
-                    <div id="untagged-view-indicator" class="untagged-view-indicator" hidden>
-                        <span class="untagged-view-indicator-label">Untagged notes</span>
-                        <button
-                            id="untagged-view-indicator-clear"
-                            class="untagged-view-indicator-clear interactive"
-                            type="button"
-                            aria-label="Return to all notes"
-                            title="Return to all notes"
-                        >×</button>
-                    </div>
                 </div>
                 <!-- <button id="trash-can" class="trash-can interactive" draggable="false">🗑️</button> -->
             </div>

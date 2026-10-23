@@ -41,6 +41,10 @@
       "tags": ["sort", "order", "content", "volume", "length", "character", "characters", "count", "text", "largest", "longest", "view"]
     },
     {
+      "id": "view.sort_mode.reverse",
+      "tags": ["sort", "order", "reverse", "reversed", "descending", "ascending", "oldest", "smallest", "z", "a", "flip", "view"]
+    },
+    {
       "id": "view.all_notes",
       "tags": ["view", "all", "notes", "normal", "unfiltered"]
     },

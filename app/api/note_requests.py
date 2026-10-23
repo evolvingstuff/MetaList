@@ -56,13 +56,19 @@ class Viewport(TypedDict):
     scrollY: Nonnegative
     scrollAnchor: ScrollAnchor | None
 
+# A root sort order, and the same order reversed (app/services/root_sorting.py).
+SortMode = Literal[
+    'normal', 'created', 'updated', 'alphabetical', 'content-volume',
+    'normal-reversed', 'created-reversed', 'updated-reversed', 'alphabetical-reversed', 'content-volume-reversed',
+]
+
 @with_config(ConfigDict(strict=True))
 class Tab(TypedDict):
     searchQuery: Text
     scrollY: Nonnegative
     anchorRootId: Text | None
     scrollAnchor: ScrollAnchor | None
-    sortMode: Literal['normal', 'created', 'updated', 'alphabetical', 'content-volume']
+    sortMode: SortMode
 
 @with_config(ConfigDict(strict=True))
 class ViewDiffRequest(TypedDict):
@@ -98,7 +104,7 @@ class UpdateTabStateRequest(TypedDict):
 @with_config(ConfigDict(strict=True))
 class UpdateTabSortModeRequest(TypedDict):
     tabId: Identifier
-    sortMode: Literal['normal', 'created', 'updated', 'alphabetical', 'content-volume']
+    sortMode: SortMode
     clientId: Identifier
     undoContext: UndoContext
 

@@ -116,7 +116,7 @@ test('reference tabs keep their hidden query and label across a page reload', as
     assert.equal(isViewingReferenceSource(), true);
     assert.equal(getActiveReferenceSourceQuery(), openAllQuery);
     assert.equal(indicator.classList.contains('is-shown'), true);
-    assert.equal(label.textContent, 'References');
+    assert.equal(label.textContent, 'All references');
     assert.deepEqual(JSON.parse(storage.getItem(STORAGE_KEY)).map((entry) => entry.toTabId), ['refs']);
 
     ModeContext.hydrateTabState({

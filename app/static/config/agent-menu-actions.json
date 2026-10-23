@@ -210,7 +210,13 @@
   },
   {
     "id": "view.sort_mode.content_volume",
-    "label": "Sort order: Content volume (largest first)",
+    "label": "Sort order: Content volume",
+    "selector": "#command-palette-modal",
+    "presentation": "palette"
+  },
+  {
+    "id": "view.sort_mode.reverse",
+    "label": "Sort order: Reverse",
     "selector": "#command-palette-modal",
     "presentation": "palette"
   },

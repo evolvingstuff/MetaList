@@ -1949,7 +1949,7 @@ function handleAiChatOpenAllReferencesClick(event) {
         if (ModeContext.isEditing) {
             await actionDeselectNote();
         }
-        await openReferenceQueryInNewTab(referenceQuery);
+        await openReferenceQueryInNewTab(referenceQuery, 'references');
     });
     return true;
 }
@@ -2009,7 +2009,7 @@ function handleReferenceLinkClick(event) {
             if (ModeContext.isEditing) {
                 await actionDeselectNote();
             }
-            await openReferenceQueryInNewTab(referenceQuery);
+            await openReferenceQueryInNewTab(referenceQuery, 'reference');
         });
         return true;
     }
