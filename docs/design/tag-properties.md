@@ -60,12 +60,17 @@ book:author=Ursula-Le-Guin
   suggestions never offer this form.
 - `>` and `<` stay forbidden in tags; only search uses them.
 
-**Proposed:**
 - A second token for a tag already on the note (`jogging` beside
-  `jogging:miles=3`) is refused, with the reason in a tooltip, rather than merged.
+  `jogging:miles=3`) is refused rather than merged: the tag bar says
+  "jogging is already on this note" and the second token is not saved. This applies
+  when either token has properties; older notes with `priority=high priority=low`
+  are unaffected.
 - Properties apply to regular tags only. Meta tags (`@size=2`, `@code=python`) keep
   their single value and gain no named properties.
-- Property tokens inside scoped wrappers (`{{jogging:miles=3}}`) are not allowed.
+- Property tokens inside scoped wrappers (`{{jogging:miles=3}}`) are not allowed;
+  their colons are removed as before.
+
+**Proposed:**
 - Property names match with the same case rule as tag names in search.
 
 ## Types
@@ -75,7 +80,7 @@ A value is read as the first type it parses as:
 | Type | Written | Compares |
 |---|---|---|
 | Number | `3`, `3.5`, `-2`, `1500` | numerically (`3` = `3.0`) |
-| Date | `2026`, `2026-10`, `2026-10-23` | by its first day: `2026-10` is 2026-10-01 |
+| Date | `2026-10`, `2026-10-23` | by its first day: `2026-10` is 2026-10-01 (a year alone, `2026`, is a number) |
 | Date-time | `2026-10-23T10:30`, `2026-10-23T10:30:15` | by the moment |
 | Time | `10:30`, `10:30:15`, `10:30am`, `10:30pm`, `10am` | by time of day |
 | Text | anything else | case-insensitively, alphabetically |

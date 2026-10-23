@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 from app.services.content_formatting import COMMENT_CLOSE, COMMENT_OPEN, MAX_DELIMITER_DEPTH, _unwrap_tag_token
+from app.services.tag_properties import tag_part_of_token
 
 
 
@@ -55,7 +56,8 @@ def delete_tag_from_tag_bar(*, tags: str, tag: str) -> tuple[str, bool]:
         base, wrapper = _unwrap_tag_token(token)
 
         if wrapper is None:
-            if base == tag:
+            # Deleting jogging also removes jogging:miles=3, its properties with it.
+            if tag_part_of_token(base) == tag:
                 changed = True
             else:
                 out += token
@@ -137,8 +139,9 @@ def rename_tag_in_tag_bar(*, tags: str, old: str, new: str) -> tuple[str, bool]:
         base, wrapper = _unwrap_tag_token(token)
 
         if wrapper is None:
-            if base == old:
-                out += new
+            # Renaming jogging keeps its properties: running:miles=3.
+            if tag_part_of_token(base) == old:
+                out += new + base[len(old):]
                 changed = True
             else:
                 out += token

@@ -77,6 +77,62 @@ function enforceTagToken(rawToken) {
     return output;
 }
 
+// Property terms (docs/design/tag-properties.md): jogging:miles>2, jogging:miles?,
+// jogging:miles, date>=2024-01 (app/services/tag_properties.py parse_property_term).
+const PROPERTY_SEPARATOR = ':';
+const PROPERTY_TERM_MARKS = new Set([PROPERTY_SEPARATOR, '<', '>', '?']);
+const NAMED_PROPERTY_TERM_RE = /^[^:=<>?@][^:=<>?]*:[A-Za-z][^:=<>?]*(?:\?|(?:>=|<=|>|<|=)[^<>?=]+)?$/;
+const IMPLICIT_PROPERTY_TERM_RE = /^[^:=<>?@][^:=<>?]*(?:>=|<=|>|<)[^<>?=]+$/;
+const TRAILING_OPERATOR_RE = /(>=|<=|>|<|=)$/;
+const PROPERTY_NAME_NOT_A_LETTER_RE = /^[^:]+:[^A-Za-z]/;
+const PROPERTY_TERM_EXAMPLE = 'jogging:miles>2';
+
+function isPropertyTerm(token) {
+    if (token.startsWith('@')) {
+        return false;
+    }
+    if (token.indexOf(PROPERTY_SEPARATOR) > 0) {
+        return true;
+    }
+    return /[<>]/.test(token);
+}
+
+// A property term's characters: a tag's, plus : < > ? (and = in any number: an
+// extra one is explained, not dropped, so the term never changes meaning silently).
+function enforcePropertyTerm(rawToken) {
+    let output = '';
+    for (const char of rawToken) {
+        if (!isAsciiPrintable(char)) {
+            continue;
+        }
+        if (char === TAG_VALUE_SEPARATOR || PROPERTY_TERM_MARKS.has(char) || !TAG_CONTAINS_DISALLOWED.has(char)) {
+            output += char;
+        }
+    }
+    return output;
+}
+
+/** What is unfinished or wrong in a property term, or '' when it can run. */
+function describePropertyTermProblem(term) {
+    if (term.split(/[:<>]/)[0] === OR_OPERATOR) {
+        return 'OR is reserved and cannot be used as a tag';
+    }
+    if (NAMED_PROPERTY_TERM_RE.test(term) || IMPLICIT_PROPERTY_TERM_RE.test(term)) {
+        return '';
+    }
+    if (term.endsWith(PROPERTY_SEPARATOR)) {
+        return `Name a property after the colon (for example ${PROPERTY_TERM_EXAMPLE})`;
+    }
+    if (PROPERTY_NAME_NOT_A_LETTER_RE.test(term)) {
+        return `A property name starts with a letter (for example ${PROPERTY_TERM_EXAMPLE})`;
+    }
+    const trailingOperator = TRAILING_OPERATOR_RE.exec(term);
+    if (trailingOperator) {
+        return `Write a value after ${trailingOperator[1]}`;
+    }
+    return `Search one property per term (for example ${PROPERTY_TERM_EXAMPLE} jogging:duration<40)`;
+}
+
 function readQuotedInner(rawInput, startIndex, quoteChar) {
     if (typeof rawInput !== 'string') {
         throw new Error('readQuotedInner expects rawInput string');
@@ -260,6 +316,33 @@ export function analyzeSearchQueryInput(rawInput) {
             continue;
         }
 
+        const unprefixedToken = rawToken.replace(/^[+-]+/, '');
+        if (isPropertyTerm(unprefixedToken)) {
+            const term = `${prefix}${enforcePropertyTerm(unprefixedToken)}`;
+            normalizedTerms.push(term);
+            const problem = describePropertyTermProblem(term.slice(prefix.length));
+            if (problem !== '') {
+                // Still being typed until a space follows it: then say how to finish it.
+                // OR is reserved at once, as a tag OR is.
+                isComplete = false;
+                let isFinished = hasTrailingWhitespace;
+                if (index < rawInput.length) {
+                    isFinished = true;
+                }
+                if (problem.startsWith(OR_OPERATOR)) {
+                    isFinished = true;
+                }
+                if (isFinished && !warningMessage) {
+                    warningMessage = problem;
+                }
+                continue;
+            }
+            sanitizedTerms.push(term);
+            currentClauseTermCount += 1;
+            endsWithOrOperator = false;
+            continue;
+        }
+
         const enforcedToken = enforceTagToken(rawToken);
         if (enforcedToken.length === 0) {
             if (prefix) {
@@ -421,6 +504,10 @@ export function findSearchTagAtIndex(rawInput, cursorIndex) {
             let tokenText = rawInput.slice(tokenStart, tokenEnd);
             if (prefix) {
                 tokenText = tokenText.slice(1);
+            }
+            // A property term is about its tag: jogging:miles>2 is jogging.
+            if (isPropertyTerm(tokenText)) {
+                tokenText = tokenText.split(/[:<>]/)[0];
             }
             const enforced = enforceTagToken(tokenText);
             if (enforced === OR_OPERATOR) {

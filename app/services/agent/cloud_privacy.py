@@ -135,6 +135,7 @@ def _disclosable_clause_terms(
     """The clause's terms as the AI may be shown them, and whether any was withheld."""
     required_terms = [format_search_term(tag, is_phrase=False, is_excluded=False) for tag in sorted(clause.required_tags)]
     required_terms += [format_search_term(phrase, is_phrase=True, is_excluded=False) for phrase in clause.required_text]
+    required_terms += [condition.format() for condition in clause.required_properties]
     shown: list[str] = []
     withheld = False
     # Every required term picks out the same notes: the ones the clause finds.
@@ -148,7 +149,9 @@ def _disclosable_clause_terms(
     for tag in sorted(clause.forbidden_tags):
         removed = SearchClause(required_tags=clause.required_tags | {tag},
                                forbidden_tags=clause.forbidden_tags - {tag},
-                               required_text=clause.required_text, forbidden_text=clause.forbidden_text)
+                               required_text=clause.required_text, forbidden_text=clause.forbidden_text,
+                               required_properties=clause.required_properties,
+                               forbidden_properties=clause.forbidden_properties)
         if finds_visible_note(_clause_search(removed)):
             shown.append(format_search_term(tag, is_phrase=False, is_excluded=True))
         else:
@@ -156,9 +159,21 @@ def _disclosable_clause_terms(
     for index, phrase in enumerate(clause.forbidden_text):
         removed = SearchClause(required_tags=clause.required_tags, forbidden_tags=clause.forbidden_tags,
                                required_text=clause.required_text + (phrase,),
-                               forbidden_text=clause.forbidden_text[:index] + clause.forbidden_text[index + 1:])
+                               forbidden_text=clause.forbidden_text[:index] + clause.forbidden_text[index + 1:],
+                               required_properties=clause.required_properties,
+                               forbidden_properties=clause.forbidden_properties)
         if finds_visible_note(_clause_search(removed)):
             shown.append(format_search_term(phrase, is_phrase=True, is_excluded=True))
+        else:
+            excluded_withheld = True
+    for index, condition in enumerate(clause.forbidden_properties):
+        removed = SearchClause(required_tags=clause.required_tags, forbidden_tags=clause.forbidden_tags,
+                               required_text=clause.required_text, forbidden_text=clause.forbidden_text,
+                               required_properties=clause.required_properties + (condition,),
+                               forbidden_properties=clause.forbidden_properties[:index]
+                               + clause.forbidden_properties[index + 1:])
+        if finds_visible_note(_clause_search(removed)):
+            shown.append(f"-{condition.format()}")
         else:
             excluded_withheld = True
     if excluded_withheld:

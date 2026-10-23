@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.services.search_index import extract_tags_for_search, search_index
 from app.services.search_query import parse_search_query
+from app.services.tag_properties import PROPERTY_SEPARATOR, PropertyCondition
 from app.services.search_text import build_searchable_text_casefold, text_term_matches
 from app.services.store import store
 from app.services.tag_case import (
@@ -40,7 +41,7 @@ def ensure_tags_match_search_query(
 
     parsed = parse_search_query(search_query)
     first_clause = parsed.first_clause
-    if not first_clause.required_tags and not first_clause.required_text:
+    if not first_clause.required_tags and not first_clause.required_text and not first_clause.required_properties:
         return tags
 
     inherited_non_meta = compute_inherited_non_meta_tag_terms(parent_id)
@@ -64,7 +65,14 @@ def ensure_tags_match_search_query(
             continue
         if term.casefold() in inherited_non_meta_casefold or term.casefold() in explicit_terms_casefold:
             continue
+        if any(term.casefold() == condition.tag.casefold() for condition in first_clause.required_properties):
+            continue  # added below, with its values
         additions.append(term)
+    additions += _property_tag_tokens(
+        first_clause.required_properties,
+        present_casefold=explicit_terms_casefold | inherited_non_meta_casefold,
+        preferred_by_casefold=preferred_by_casefold,
+    )
 
     next_tags = tags.strip()
     if additions:
@@ -102,6 +110,31 @@ def ensure_tags_match_search_query(
     if next_tags == "":
         return suffix
     return f"{next_tags} {suffix}"
+
+
+def _property_tag_tokens(
+    conditions: tuple[PropertyCondition, ...], *, present_casefold: set[str],
+    preferred_by_casefold: dict[str, str],
+) -> list[str]:
+    """What a note added in a property search carries (docs/design/tag-properties.md): the
+    tag of each property term, with the values its = terms name (jogging:miles=3 adds
+    jogging:miles=3). Other comparisons name no value, so they add the tag alone."""
+    values_by_tag: dict[str, list[str]] = {}
+    spelling_by_tag: dict[str, str] = {}
+    for condition in conditions:
+        key = condition.tag.casefold()
+        if key not in values_by_tag:
+            values_by_tag[key] = []
+            spelling_by_tag[key] = prefer_existing_tag_case(condition.tag, preferred_by_casefold)
+        if condition.operator == "=":
+            values_by_tag[key].append(f"{condition.name}={condition.value_text}")
+    tokens: list[str] = []
+    for key, values in values_by_tag.items():
+        if values:
+            tokens.append(PROPERTY_SEPARATOR.join([spelling_by_tag[key], *values]))
+        elif key not in present_casefold:
+            tokens.append(spelling_by_tag[key])
+    return tokens
 
 
 __all__ = ["compute_inherited_non_meta_tag_terms", "ensure_tags_match_search_query"]

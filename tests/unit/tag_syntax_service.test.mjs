@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
     analyzeTagBarInput,
     enforceTagBarInputForEditing,
+    findTagAtIndexInTagBar,
     normalizeTagBarInput,
     parseTagBarSuggestionContext,
     splitTagsForDisplay,
@@ -204,4 +205,46 @@ test('display pieces keep the saved text and handle empty or unfinished input', 
     ]);
     const saved = 'phone-number contact {@json} /* a b */';
     assert.equal(splitTagsForDisplay(saved).map((piece) => piece.text).join(' '), saved);
+});
+
+// Tag properties (docs/design/tag-properties.md): jogging:miles=3:duration=30.
+test('a tag keeps properties as typed and saves only complete ones, once each', () => {
+    const cases = [
+        ['jogging:miles=3:duration=30', 'jogging:miles=3:duration=30', 'jogging:miles=3:duration=30'],
+        ['run:start=10:30pm:miles=3', 'run:start=10:30pm:miles=3', 'run:start=10:30pm:miles=3'],
+        ['meeting:at=2026-10-23T10:30:room=b2', 'meeting:at=2026-10-23T10:30:room=b2', 'meeting:at=2026-10-23T10:30:room=b2'],
+        ['url:link=https://x.com/a', 'url:link=https://x.com/a', 'url:link=https://x.com/a'],
+        ['jogging:', 'jogging:', 'jogging'],
+        ['jogging:mi', 'jogging:mi', 'jogging'],
+        ['jogging:miles=', 'jogging:miles=', 'jogging'],
+        ['jogging:miles=3:miles=5', 'jogging:miles=3:miles=5', 'jogging:miles=3'],
+        ['jogging:3', 'jogging:', 'jogging'],
+        ['jogging=3:miles=3', 'jogging=3:miles=3', 'jogging=3:miles=3'],
+        ['x:ref=abc:def', 'x:ref=abc:def', 'x:ref=abc'],
+    ];
+    for (const [typed, whileTyping, saved] of cases) {
+        assert.equal(enforceTagBarInputForEditing(typed), whileTyping, `while typing ${typed}`);
+        assert.equal(analyzeTagBarInput(typed).sanitizedText, saved, `saving ${typed}`);
+    }
+});
+
+test('meta tags and tags inside scopes have no properties', () => {
+    assert.equal(enforceTagBarInputForEditing('{{jogging:miles=3}}'), '{{joggingmiles=3}}');
+    assert.equal(enforceTagBarInputForEditing('@size:2'), '@size2');
+});
+
+test('a tag with properties is on a note once: a second token for it is refused', () => {
+    for (const typed of ['jogging:miles=3 jogging', 'jogging jogging:miles=3', 'jogging:miles=3 Jogging:miles=4']) {
+        const analysis = analyzeTagBarInput(typed);
+        assert.equal(analysis.sanitizedText.split(' ').length, 1, typed);
+        assert.equal(analysis.reminderMessage.endsWith('is already on this note'), true, typed);
+    }
+    // Valued tags without properties keep working as before.
+    assert.equal(analyzeTagBarInput('priority=high priority=low').sanitizedText, 'priority=high priority=low');
+});
+
+test('a tag with properties counts as its tag for menus and suggestions', () => {
+    assert.equal(findTagAtIndexInTagBar('foo jogging:miles=3', 15).text, 'jogging');
+    assert.equal(parseTagBarSuggestionContext('foo jogging:mi', 14), null);
+    assert.deepEqual(parseTagBarSuggestionContext('foo jogging:miles=3 ba', 22).explicitTags, ['foo', 'jogging', 'ba']);
 });

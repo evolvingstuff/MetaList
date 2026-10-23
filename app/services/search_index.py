@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from itertools import combinations
 from threading import RLock
 import time
-from typing import Callable, Dict, FrozenSet, Iterable, List, Mapping, Optional, Set, Tuple
+from typing import Callable, Dict, FrozenSet, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar
 
 from loguru import logger
 
@@ -13,6 +13,18 @@ from app.services.content_formatting import _tokenize_tag_bar, _unwrap_tag_token
 from app.services.shared_sets import SharedSetColumn, SharedSets
 from app.services.search_query import SearchClause, parse_search_query
 from app.services.tag_term_matching import tag_term_matches_prefix
+from app.services.tag_properties import (
+    MISSING_OPERATOR,
+    PRESENT_OPERATOR,
+    PROPERTY_ASSIGNMENT,
+    PropertyCondition,
+    PropertyValue,
+    is_property_term,
+    property_term_tag,
+    tag_part_of_token,
+    token_properties,
+    value_satisfies,
+)
 from app.services.link_titles import link_title_store
 from app.services.search_text import (
     append_link_titles_casefold,
@@ -152,7 +164,10 @@ def _carries_tag_family(tag_terms_casefold: FrozenSet[str], tag_casefold: str) -
     return any(term.startswith(prefix) for term in tag_terms_casefold)
 
 
-def _posting_or_empty(postings: Mapping[str, Set[int]], key: str) -> Set[int]:
+_PostingKey = TypeVar("_PostingKey")
+
+
+def _posting_or_empty(postings: Mapping[_PostingKey, Set[int]], key: _PostingKey) -> Set[int]:
     """The notes with this term; a term no note has has no posting."""
     if key not in postings:  # shockharness: ignore[DEF002] reason="a term no note has has no posting"
         return set()
@@ -228,6 +243,9 @@ def _parse_search_suggestion_context(raw_input: str) -> _SearchSuggestionContext
 
         is_partial = index >= length and not raw_input[-1].isspace()
         if is_partial:
+            # Typing a property term (jogging:mi, date>2) suggests no tags.
+            if is_property_term(token):
+                return _SearchSuggestionContext(tuple(anchors), None, '', False)
             return _SearchSuggestionContext(
                 tuple(anchors), token, raw_input[clause_start:term_start], prefix == '-',
             )
@@ -235,6 +253,9 @@ def _parse_search_suggestion_context(raw_input: str) -> _SearchSuggestionContext
         if prefix == "-":
             clause_term_count += 1
             continue
+        # A property term anchors suggestions by its tag: jogging:miles>2 is jogging.
+        if is_property_term(token):
+            token = property_term_tag(token)
         anchors.append(token)
         clause_term_count += 1
 
@@ -299,6 +320,8 @@ def extract_ordered_tags_for_search(tags: str) -> tuple[str, ...]:
     for token in _tokenize_tag_bar(tags):
         base, wrapper = _unwrap_tag_token(token)
         if wrapper is None:
+            # A tag with properties is its tag: jogging:miles=3 is jogging.
+            base = tag_part_of_token(base)
             if base != "OR" and base not in seen_terms:
                 seen_terms.add(base)
                 ordered_terms.append(base)
@@ -350,6 +373,12 @@ class SearchIndex:
         # each suggestion after a broad tag take most of a second (2026-10-20).
         self._tag_family_members: Dict[str, List[str]] = {}
 
+        # Each note's own property values (docs/design/tag-properties.md), by casefolded
+        # tag and property name: jogging:miles=3 is ("jogging", "miles"). Only notes
+        # with values are kept; values are never inherited.
+        self._note_properties: Dict[int, Dict[Tuple[str, str], PropertyValue]] = {}
+        self._property_notes: Dict[Tuple[str, str], Set[int]] = {}
+
         self._result_cache: Dict[str, tuple[int, FrozenSet[str]]] = {}
         self._untagged_result_cache: tuple[int, FrozenSet[str]] | None = None
 
@@ -388,6 +417,8 @@ class SearchIndex:
             self._tag_notes.clear()
             self._tag_notes_casefold.clear()
             self._tag_family_members.clear()
+            self._note_properties.clear()
+            self._property_notes.clear()
             self._result_cache.clear()
 
             self._revision += 1
@@ -415,6 +446,7 @@ class SearchIndex:
                 text_started = time.perf_counter()
                 tag_seconds += text_started - step_started
                 self._set_note_text_locked(note_int_id, record.content_text, record.tags)
+                self._set_note_properties_locked(note_int_id, record.tags)
                 text_seconds += time.perf_counter() - text_started
                 processed += 1
                 if processed - last_reported >= progress_interval:
@@ -468,6 +500,7 @@ class SearchIndex:
                     {},
                 )
                 self._set_note_text_locked(note_int_id, content_text, tags)
+                self._set_note_properties_locked(note_int_id, tags)
 
             self._revision += 1
             self._result_cache.clear()
@@ -974,6 +1007,7 @@ class SearchIndex:
         assert all(isinstance(word, str) and word.strip() == word and word != "" for word in words)
         clause = SearchClause(
             required_tags=frozenset(), forbidden_tags=frozenset(), required_text=words, forbidden_text=(),
+            required_properties=(), forbidden_properties=(),
         )
         with self._lock:
             return frozenset(
@@ -1009,6 +1043,7 @@ class SearchIndex:
             or clause.forbidden_tags
             or clause.required_text
             or clause.forbidden_text
+            or clause.has_property_terms
             for clause in parsed.clauses
         )
         if not has_terms:
@@ -1214,6 +1249,7 @@ class SearchIndex:
             )
 
         self._set_note_text_locked(note_int_id, content_text, tags)
+        self._set_note_properties_locked(note_int_id, tags)
 
     def _remove_existing_locked(self, note_int_id: int) -> None:
         if note_int_id not in self._alive:
@@ -1227,6 +1263,7 @@ class SearchIndex:
         for term_casefold in {term.casefold() for term in self._note_raw_tag_terms[note_int_id]}:
             self._raw_tag_notes_casefold.remove(term_casefold)
         self._note_text_casefold[note_int_id] = ""
+        self._set_note_properties_locked(note_int_id, "")
         self._set_link_title_urls_locked(note_int_id, frozenset())
         if note_int_id in self._note_base_text_casefold:
             del self._note_base_text_casefold[note_int_id]
@@ -1234,6 +1271,48 @@ class SearchIndex:
         self._note_raw_tag_terms[note_int_id] = frozenset()
         self._note_tag_terms[note_int_id] = frozenset()
         self._note_tag_terms_casefold[note_int_id] = frozenset()
+
+    def _set_note_properties_locked(self, note_int_id: int, tags: str) -> None:
+        properties: Dict[Tuple[str, str], PropertyValue] = {}
+        # Only a token with = has a value (jogging=3, jogging:miles=3).
+        if PROPERTY_ASSIGNMENT in tags:
+            for token in _tokenize_tag_bar(tags):
+                base, wrapper = _unwrap_tag_token(token)
+                if wrapper is not None or base.startswith("@"):
+                    continue
+                tag_name, values = token_properties(base)
+                for property_name, value in values.items():
+                    properties[(tag_name, property_name)] = value
+        previous: Dict[Tuple[str, str], PropertyValue] = {}
+        if note_int_id in self._note_properties:
+            previous = self._note_properties[note_int_id]
+        for key in previous.keys() - properties.keys():
+            self._property_notes[key].discard(note_int_id)
+        for key in properties.keys() - previous.keys():
+            if key not in self._property_notes:
+                self._property_notes[key] = set()
+            self._property_notes[key].add(note_int_id)
+        if properties:
+            self._note_properties[note_int_id] = properties
+        elif note_int_id in self._note_properties:
+            del self._note_properties[note_int_id]
+
+    def _note_satisfies_property_locked(self, note_int_id: int, condition: PropertyCondition) -> bool:
+        """Whether a note's own values meet a property term: has it (jogging:miles), lacks
+        it on its own tag (jogging:miles?), or has a value that compares (jogging:miles>2)."""
+        values: Dict[Tuple[str, str], PropertyValue] = {}
+        if note_int_id in self._note_properties:
+            values = self._note_properties[note_int_id]
+        if condition.operator == MISSING_OPERATOR:
+            own_tag_names = {
+                term.casefold().split(PROPERTY_ASSIGNMENT, 1)[0] for term in self._note_explicit_tag_terms[note_int_id]
+            }
+            return condition.key[0] in own_tag_names and condition.key not in values
+        if condition.key not in values:
+            return False
+        if condition.operator == PRESENT_OPERATOR:
+            return True
+        return value_satisfies(values[condition.key], condition)
 
     def _set_note_text_locked(self, note_int_id: int, content_text: str, tags: str) -> None:
         base_text_casefold = build_searchable_base_text_casefold(content_text, tags)
@@ -1350,11 +1429,18 @@ class SearchIndex:
             for tag in clause.forbidden_tags:
                 candidate_ids.difference_update(self._tag_family_posting_locked(tag.casefold()))
 
+        # A property term needs its property (or, missing it, its tag) on the note.
+        for condition in clause.required_properties:
+            if condition.operator == MISSING_OPERATOR:
+                candidate_ids.intersection_update(self._tag_family_posting_locked(condition.key[0]))
+            else:
+                candidate_ids.intersection_update(_posting_or_empty(self._property_notes, condition.key))
+
         return candidate_ids
 
     def _matching_note_int_ids_for_clause_locked(self, clause: SearchClause) -> Set[int]:
         candidate_ids = self._candidate_note_ids_locked(clause)
-        if not clause.required_text and not clause.forbidden_text:
+        if not clause.required_text and not clause.forbidden_text and not clause.has_property_terms:
             # Tags alone: the postings answer exactly. They hold only live notes (removing
             # a note discards it from each), and the forbidden tags' notes are removed
             # already. Checking each note again took half of suggesting after a broad tag.
@@ -1377,6 +1463,12 @@ class SearchIndex:
         note_tag_terms_casefold = self._note_tag_terms_casefold[note_int_id]
         for tag in clause.forbidden_tags:
             if _carries_tag_family(note_tag_terms_casefold, tag.casefold()):
+                return False
+        for condition in clause.required_properties:
+            if not self._note_satisfies_property_locked(note_int_id, condition):
+                return False
+        for condition in clause.forbidden_properties:
+            if self._note_satisfies_property_locked(note_int_id, condition):
                 return False
         return True
 

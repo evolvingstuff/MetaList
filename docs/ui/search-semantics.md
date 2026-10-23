@@ -115,6 +115,34 @@ break is one mark. Excluded phrases and tags are never marked.
 - Phrases the browser cannot see are not marked: a web page title or a hidden link
   URL the note matched by.
 
+### Property Terms
+Tags can carry values (`jogging:miles=3`, `drug:dosage=10mg`; see the tag bar's Tag
+Properties and `docs/design/tag-properties.md`). A search compares a note's own values:
+
+- `jogging:miles>2`: notes whose `jogging` has `miles` over 2. Operators: `>`, `<`,
+  `>=`, `<=`, `=`.
+- `jogging:miles?`: notes carrying `jogging` themselves (not only inheriting it) with no
+  `miles`: incomplete data to fill in.
+- `jogging:miles`: notes whose `jogging` has `miles`, with any value.
+- `date>=2024-01`: a valued tag's own value (`date=2024-03-05`); `>`, `<`, `>=`, `<=`.
+  (`date=2024-01` stays the valued tag it has always been.)
+- `-` excludes, spaces combine, `OR` separates clauses, as for tags:
+  `jogging:miles>2 jogging:duration<40`, `jogging -jogging:miles>10`.
+- One property per term: `jogging:miles>2:duration<40` is refused with how to write it.
+- Values are compared by kind: numbers, dates (`2024-01` is its first day; a year alone,
+  `2026`, is a number), date-times (`2024-01-15T10:30`), times of day (`10:30`, `22:30`,
+  `10:30pm`, `10am`; `12am` is midnight) and text (any case). A value of another kind is
+  skipped: `miles>2` ignores `miles=far`.
+- Units are labels: `drug:dosage>5mg` compares only `mg` values; `drug:dosage>5` compares
+  every unit (`10mg`, `10kg`, `10`), which shows when a search should name one.
+- Values belong to the note they are written on: a child of a 3-mile run inherits
+  `jogging`, never `miles=3`.
+- A note added while such a search is active gets the term's tag; an `=` term also gives
+  it the value (`jogging:miles=3` adds `jogging:miles=3`). Other comparisons name no
+  value, so the new note has the tag only.
+- Not yet: finding `jogging` values through implications (`exercise:miles>2`), and
+  suggestions for property names and units.
+
 ### UUID Terms
 - UUIDs in positive terms are treated as direct note targets (including when pasted as `[[UUID]]`).
 - This is additive with normal tag/text matching.

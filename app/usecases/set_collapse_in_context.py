@@ -57,6 +57,7 @@ def _collect_context_root_ids(search_query: Optional[str]) -> List[str]:
         or clause.forbidden_tags
         or clause.required_text
         or clause.forbidden_text
+        or clause.has_property_terms
         for clause in parsed.clauses
     )
 
@@ -80,6 +81,8 @@ def _collect_context_root_ids(search_query: Optional[str]) -> List[str]:
                         forbidden_tags=frozenset(),
                         required_text=(),
                         forbidden_text=(),
+                        required_properties=(),
+                        forbidden_properties=(),
                     )
                 )
             )
@@ -91,6 +94,21 @@ def _collect_context_root_ids(search_query: Optional[str]) -> List[str]:
                         forbidden_tags=frozenset(),
                         required_text=(phrase,),
                         forbidden_text=(),
+                        required_properties=(),
+                        forbidden_properties=(),
+                    )
+                )
+            )
+        for condition in clause.forbidden_properties:
+            excluded_note_ids.update(
+                search_index.query_clause_note_ids(
+                    SearchClause(
+                        required_tags=frozenset(),
+                        forbidden_tags=frozenset(),
+                        required_text=(),
+                        forbidden_text=(),
+                        required_properties=(condition,),
+                        forbidden_properties=(),
                     )
                 )
             )

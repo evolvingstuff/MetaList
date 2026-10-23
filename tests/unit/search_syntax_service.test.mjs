@@ -115,3 +115,31 @@ test('a tag in a search keeps one = as typed, as the tag bar does (@code=python)
     assert.equal(enforceSearchQueryInputForEditing('a=b=c'), 'a=bc');
     assert.equal(enforceSearchQueryInputForEditing('=code'), 'code');
 });
+
+// Property terms (docs/design/tag-properties.md): jogging:miles>2, jogging:miles?, date>=2024-01.
+test('property terms run when complete and say how to finish them otherwise', () => {
+    for (const term of ['jogging:miles>2', 'drug:dosage<=5mg', 'jogging:miles?', '-jogging:miles', 'date>=2024-01', 'run:start>10:30pm']) {
+        const analysis = analyzeSearchQueryInput(term);
+        assert.equal(analysis.isComplete, true, term);
+        assert.equal(analysis.sanitizedText, term, term);
+    }
+    const cases = [
+        ['jogging: ', 'Name a property after the colon'],
+        ['jogging:miles> ', 'Write a value after >'],
+        ['jogging:3>2 ', 'A property name starts with a letter'],
+        ['jogging:miles>2:duration<40 ', 'Search one property per term'],
+    ];
+    for (const [typed, warning] of cases) {
+        const analysis = analyzeSearchQueryInput(typed);
+        assert.equal(analysis.isComplete, false, typed);
+        assert.equal(analysis.warningMessage.startsWith(warning), true, typed);
+    }
+    // While the term is still being typed (no space after it), it waits without a warning.
+    const typing = analyzeSearchQueryInput('jogging:miles>');
+    assert.equal(typing.isComplete, false);
+    assert.equal(typing.warningMessage, null);
+});
+
+test('a property term is about its tag for the tag menu', () => {
+    assert.equal(findSearchTagAtIndex('foo jogging:miles>2', 10).tag, 'jogging');
+});

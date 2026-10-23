@@ -35,6 +35,16 @@ Notes:
 - Tag tokens follow the same character rules as tag-bar *non-wrapper* tokens.
 - Bracket wrappers (`[foo]`, `{foo}`, `((foo))`) are **not** part of search syntax.
 
+### Property Terms
+- `jogging:miles>2`, `jogging:miles<=5mg`, `jogging:miles=3`, `jogging:miles?`, `jogging:miles`,
+  `date>=2024-01`, with an optional `-` or `+` before them.
+- The tag comes first; a property name starts with a letter; a value may contain `:`
+  (`run:start>10:30pm`) but not `<`, `>`, `?` or `=`.
+- An unfinished term does not run: `jogging:` and `jogging:miles>` while typing. Once a
+  space follows it, the warning says how to finish it ("Name a property after the colon",
+  "Write a value after >"). A term with two properties says "Search one property per term".
+- Semantics: `docs/ui/search-semantics.md` (Property Terms).
+
 ### Text Terms
 A text term is a quoted string using either quote character, as long as the opener and closer match:
 - Double-quoted: `"some text"`
