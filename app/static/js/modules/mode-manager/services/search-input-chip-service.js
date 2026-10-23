@@ -50,14 +50,15 @@ function finishAnimation(chip, className, animationName) {
     });
 }
 
-/** Show or hide a chip, animating only a change the user made in this tab. */
-export function showSearchInputChip(chip, isShown) {
+/** Show or hide a chip ({ isShown }), animating only a change the user made in this tab. */
+export function showSearchInputChip(chip, options) {
     if (!(chip instanceof HTMLElement)) {
         throw new Error('showSearchInputChip requires a chip element');
     }
-    if (typeof isShown !== 'boolean') {
-        throw new Error('showSearchInputChip requires isShown boolean');
+    if (options === null || typeof options !== 'object' || typeof options.isShown !== 'boolean') {
+        throw new Error('showSearchInputChip requires { isShown } boolean');
     }
+    const isShown = options.isShown;
     const activeTabId = ModeContext.activeTabId;
     const wasShown = chip.classList.contains(SHOWN_CLASS);
     const isSameTab = moduleState.tabIdByChipId.get(chip.id) === activeTabId;

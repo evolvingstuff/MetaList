@@ -139,6 +139,8 @@ class TabStateStore:
         self._encrypted_state_json: Optional[str] = None
         self._encrypted_state_nonce: Optional[bytes] = None
         self._encrypted_state_tag: Optional[bytes] = None
+        self._tabs: Dict[str, Dict[str, object]] = {}
+        self._reference_views: Dict[str, Dict[str, object]] = {}
         self._install_default_state_locked(version=0)
 
     def bootstrap(self, *, connection) -> None:
@@ -262,7 +264,7 @@ class TabStateStore:
         active_tab_id: str,
         tabs: Dict[str, Dict[str, object]],
         tab_order: List[str],
-        reference_views: Dict[str, Dict[str, object]],
+        reference_views: object,
     ) -> Dict[str, object]:
         normalized_tabs = self._normalize_tabs(tabs, from_storage=False)
         normalized_order = self._normalize_tab_order(tab_order, normalized_tabs)
@@ -373,7 +375,7 @@ class TabStateStore:
             raise TypeError("version must be a non-negative int")
         default_tab_id = self._new_tab_id()
         self._active_tab_id = default_tab_id
-        self._tabs: Dict[str, Dict[str, object]] = {
+        self._tabs = {
             default_tab_id: {
                 "searchQuery": "",
                 "scrollY": 0,
@@ -383,7 +385,7 @@ class TabStateStore:
             }
         }
         self._tab_order = [default_tab_id]
-        self._reference_views: Dict[str, Dict[str, object]] = {}
+        self._reference_views = {}
         self._version = version
 
     def _snapshot_locked(self) -> Dict[str, object]:

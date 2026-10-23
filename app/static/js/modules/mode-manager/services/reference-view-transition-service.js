@@ -21,8 +21,11 @@ const GHOST_CLASS = 'reference-slide-ghost';
 const SLIDING_ROOT_CLASS = 'reference-sliding';
 
 const DIRECTIONS = new Set(['forward', 'back']);
-// Which way the old column leaves: left when going deeper, right when coming back.
-const OUTGOING_SIGN_BY_DIRECTION = Object.freeze({ forward: -1, back: 1 });
+// Which way the old column leaves: left (towards negative x) when going deeper,
+// right when coming back.
+const TOWARDS_LEFT = -1;
+const TOWARDS_RIGHT = 1;
+const OUTGOING_SIGN_BY_DIRECTION = Object.freeze({ forward: TOWARDS_LEFT, back: TOWARDS_RIGHT });
 
 const moduleState = ApplicationState.createFields('reference-view-transition-service', {
     pending: null,

@@ -26,13 +26,13 @@ export function updateRootSortIndicator(snapshot) {
     indicator.dataset.sortMode = sortMode;
     if (sortMode === ROOT_SORT_MODES.NORMAL) {
         // The label stays while the chip shrinks out.
-        showSearchInputChip(indicator, false);
+        showSearchInputChip(indicator, { isShown: false });
         return;
     }
 
     label.textContent = getRootSortModeChipLabel(sortMode);
     label.title = getRootSortModeIndicatorLabel(sortMode);
-    showSearchInputChip(indicator, true);
+    showSearchInputChip(indicator, { isShown: true });
 }
 
 export async function clearActiveSortModeForSearchInput() {

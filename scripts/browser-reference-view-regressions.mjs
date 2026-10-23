@@ -84,17 +84,23 @@ async function installTransitionRecorder(page) {
     const record = () => {
       const state = document.documentElement.dataset.referenceTransition;
       if (state === undefined) return;
-      const describe = element => (element === null ? [] : element.getAnimations()
+      // A slide's keyframes move (transform); a Reduce Motion fade's change opacity.
+      const describeFrame = frame => (Object.hasOwn(frame, 'transform')
+        ? {transform: frame.transform} : {opacity: Number(frame.opacity)});
+      const describe = element => element.getAnimations()
         .filter(animation => animation.constructor.name === 'Animation')
         .map(animation => ({
-          keyframes: animation.effect.getKeyframes().map(frame => (frame.transform === undefined
-            ? {opacity: Number(frame.opacity)} : {transform: frame.transform})),
+          keyframes: animation.effect.getKeyframes().map(describeFrame),
           duration: animation.effect.getTiming().duration,
-        })));
+        }));
       const row = document.querySelector('.controls .search-input-row');
+      // Without motion there is no copy of the old column, and nothing slides.
+      const ghost = document.querySelector('.reference-slide-ghost');
+      const ghostAnimations = [];
+      if (ghost !== null) ghostAnimations.push(...describe(ghost));
       window.__referenceTransitions.push({
         state,
-        ghost: describe(document.querySelector('.reference-slide-ghost')),
+        ghost: ghostAnimations,
         column: describe(document.getElementById('notes-container')),
         isChipAnimating: row.classList.contains('is-chip-animating'),
         isChipShown: document.getElementById('reference-source-indicator').classList.contains('is-shown'),
@@ -319,11 +325,16 @@ async function addAiReference(page, id, html) {
 async function tabLabels(page) {
   return page.evaluate(async () => {
     const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
+    // An ordinary search's tab has no icon; a reference view's has one note's or several.
+    const iconOf = item => {
+      const icon = item.querySelector('.tab-context-reference-icon');
+      if (icon === null) return 'none';
+      return icon.classList.contains('is-several-notes') ? 'several' : 'one';
+    };
     return [...document.querySelectorAll('#search-contexts-list .tab-context-item')].map(item => ({
       tabId: item.dataset.tabId,
       label: item.querySelector('.tab-context-query').textContent,
-      icon: item.querySelector('.tab-context-reference-icon') === null ? 'none'
-        : (item.querySelector('.tab-context-reference-icon').classList.contains('is-several-notes') ? 'several' : 'one'),
+      icon: iconOf(item),
       isActive: item.dataset.tabId === mode.activeTabId,
     }));
   });

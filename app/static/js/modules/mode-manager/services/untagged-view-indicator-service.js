@@ -11,5 +11,5 @@ export function updateUntaggedViewIndicator(snapshot) {
     if (!(indicator instanceof HTMLElement)) {
         throw new Error('untagged-view-indicator element missing');
     }
-    showSearchInputChip(indicator, snapshot.isUntaggedView);
+    showSearchInputChip(indicator, { isShown: snapshot.isUntaggedView });
 }

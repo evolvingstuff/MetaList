@@ -416,8 +416,12 @@ function readRenderedSourceTitle(noteId) {
     content.classList.add(READING_TITLE_CLASS);
     const text = content.innerText;
     content.classList.remove(READING_TITLE_CLASS);
-    const firstLine = text.split('\n').map((line) => line.trim()).find((line) => line !== '');
-    return firstLine === undefined ? '' : firstLine;
+    const lines = text.split('\n').map((line) => line.trim()).filter((line) => line !== '');
+    // A note with no text has an empty first line.
+    if (lines.length === 0) {
+        return '';
+    }
+    return lines[0];
 }
 
 function resolveSourceTitle(entry) {

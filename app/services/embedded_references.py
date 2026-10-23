@@ -750,6 +750,10 @@ def _render_collapsed_embed_body(
     """A collapsed embed: the source's first line drawn as a collapsed note draws it,
     in the source's own formatting (a heading, a colour), with the source icon."""
     record = context.get_note(reference_note_id)
+    source_content = getattr(record, "content")
+    source_tags = getattr(record, "tags")
+    if not isinstance(source_content, str) or not isinstance(source_tags, str):
+        raise TypeError("an embedded note's content and tags must be strings")
     _preview, redacted_credential = _resolve_note_reference_preview(
         reference_note_id=reference_note_id,
         context=context,
@@ -762,7 +766,7 @@ def _render_collapsed_embed_body(
     )
     # These first lines keep their compact preview: a hidden password, footnote
     # markers without their references, a picture or diagram as a thumbnail.
-    if redacted_credential != "" or has_scoped_footnotes(record.tags) or thumbnail_html != "":
+    if redacted_credential != "" or has_scoped_footnotes(source_tags) or thumbnail_html != "":
         return _render_link_body(
             reference_note_id=reference_note_id,
             context=context,
@@ -772,8 +776,8 @@ def _render_collapsed_embed_body(
         )
     preview_html = render_collapsed_note_content_with_embeds(
         note_id=reference_note_id,
-        content_html=record.content,
-        tags=record.tags,
+        content_html=source_content,
+        tags=source_tags,
         context=context,
         static_export=static_export,
         redact_credentials=redact_credentials,
