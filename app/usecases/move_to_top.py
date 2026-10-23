@@ -28,6 +28,7 @@ def _resolve_search_root_ids(note_id: str, search_query: Optional[str]) -> List[
         search=search_query,
         editing_note_id=None,
         sort_mode="normal",
+        date_filter=None,
         ordered_root_ids=None,
     )
     root_ids = search_scope.search_root_ids_ordered

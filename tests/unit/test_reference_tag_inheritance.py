@@ -82,7 +82,7 @@ def test_descendant_tag_search_renders_referenced_subtree(monkeypatch):
     monkeypatch.setattr(snapshot_module, "search_index", index)
     monkeypatch.setattr(snapshot_module, "get_all_locks", lambda: {})
     state = snapshot_module.build_view_state(
-        editing_note_id=None, find_reveal_note_id=None, search="descendant", sort_mode="normal",
+        editing_note_id=None, find_reveal_note_id=None, search="descendant", sort_mode="normal", date_filter=None,
         client_known_note_ids=set(), previous_root_ids=[], visible_top_root_id=None,
         visible_bottom_root_id=None, is_untagged_view=False,
         start_at_list_end=False,
@@ -340,7 +340,7 @@ def test_search_snapshot_shows_references_and_inherited_metadata(monkeypatch):
     monkeypatch.setattr(snapshot_module, "search_index", index)
     monkeypatch.setattr(snapshot_module, "get_all_locks", lambda: {})
     state = snapshot_module.build_view_state(
-        editing_note_id=None, find_reveal_note_id=None, search="foo", sort_mode="normal",
+        editing_note_id=None, find_reveal_note_id=None, search="foo", sort_mode="normal", date_filter=None,
         client_known_note_ids=set(), previous_root_ids=[], visible_top_root_id=None,
         visible_bottom_root_id=None, is_untagged_view=False,
         start_at_list_end=False,
@@ -349,7 +349,7 @@ def test_search_snapshot_shows_references_and_inherited_metadata(monkeypatch):
     assert sorted(store.get_inherited_non_meta_tag_terms(HOST)) == ["foo"]
     assert sorted(store.get_inherited_non_meta_tag_terms(CHILD)) == ["foo"]
     untagged = snapshot_module.build_view_state(
-        editing_note_id=None, find_reveal_note_id=None, search=None, sort_mode="normal",
+        editing_note_id=None, find_reveal_note_id=None, search=None, sort_mode="normal", date_filter=None,
         client_known_note_ids=set(), previous_root_ids=[], visible_top_root_id=None,
         visible_bottom_root_id=None, is_untagged_view=True,
         start_at_list_end=False,

@@ -105,6 +105,11 @@ export function buildCommandPaletteEndpoints(deps) {
     const setSortMode = requireAction(actions, 'setSortMode');
     const getIsUntaggedView = requireAction(actions, 'getIsUntaggedView');
     const setIsUntaggedView = requireAction(actions, 'setIsUntaggedView');
+    const getDateRangeKind = requireAction(actions, 'getDateRangeKind');
+    const getDateRangeField = requireAction(actions, 'getDateRangeField');
+    const setDateRangePreset = requireAction(actions, 'setDateRangePreset');
+    const setDateRangeField = requireAction(actions, 'setDateRangeField');
+    const openCustomDateRange = requireAction(actions, 'openCustomDateRange');
     const openAiAgentSettings = requireAction(actions, 'openAiAgentSettings');
     const openCloudPrivacySettings = requireAction(actions, 'openCloudPrivacySettings');
     const openProposalManager = requireAction(actions, 'openProposalManager');
@@ -255,6 +260,37 @@ export function buildCommandPaletteEndpoints(deps) {
             getValue: () => (getIsUntaggedView() ? 'Current' : '↵'),
             closeOnExecute: true,
             execute: async () => setIsUntaggedView(true),
+        },
+        // Date range (date-range-filter-service.js): which date, then its range.
+        ...[['updated', 'Last updated'], ['created', 'Created']].map(([field, label]) => ({
+            id: `view.date_range.field.${field}`,
+            kind: 'action',
+            label: `Date range: ${label}`,
+            getValue: () => (getDateRangeField() === field ? 'Current' : '↵'),
+            closeOnExecute: true,
+            execute: async () => setDateRangeField(field),
+        })),
+        ...[
+            ['none', 'none', 'Any date'],
+            ['today', 'today', 'Today'],
+            ['last_7_days', 'last-7-days', 'Last 7 days'],
+            ['last_30_days', 'last-30-days', 'Last 30 days'],
+            ['this_year', 'this-year', 'This year'],
+        ].map(([idPart, rangeKind, label]) => ({
+            id: `view.date_range.${idPart}`,
+            kind: 'action',
+            label: `Date range: ${label}`,
+            getValue: () => (getDateRangeKind() === rangeKind ? 'Current' : '↵'),
+            closeOnExecute: true,
+            execute: async () => setDateRangePreset(rangeKind),
+        })),
+        {
+            id: 'view.date_range.custom',
+            kind: 'action',
+            label: 'Date range: Custom range',
+            getValue: () => (getDateRangeKind() === 'custom' ? 'Current' : '↵'),
+            closeOnExecute: true,
+            execute: async () => openCustomDateRange(),
         },
         {
             id: 'pref.theme',

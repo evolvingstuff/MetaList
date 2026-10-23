@@ -72,7 +72,7 @@ def test_snapshot_reads_each_hierarchy_branch_once(monkeypatch):
     state = snapshot_module.build_view_state(
         editing_note_id=None, find_reveal_note_id=None,
         search=None,
-        sort_mode="normal",
+        sort_mode="normal", date_filter=None,
         client_known_note_ids=set(), previous_root_ids=[],
         visible_top_root_id=None,
         visible_bottom_root_id=None,

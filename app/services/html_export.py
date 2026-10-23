@@ -26,6 +26,7 @@ from app.services.file_storage import download_file, find_file_preview
 from app.services.file_storage import get_file_reference_record
 from app.services.note_store import store as note_store
 from app.services.reference_presentation import decorate_note_references
+from app.services.root_date_filter import RootDateFilter
 from app.services.snapshot import is_content_collapsible
 from app.services.snapshot import resolve_view_scope_membership
 from app.services.content_formatting import extract_note_text_for_agent
@@ -309,6 +310,7 @@ def build_notes_export_document(
     *,
     search: str | None,
     sort_mode: str,
+    date_filter: RootDateFilter | None,
     is_untagged_view: bool,
     theme: str,
     token: str,
@@ -349,7 +351,8 @@ def build_notes_export_document(
 
     is_download = purpose == "download"
     root_ids, allowed_note_ids = resolve_export_scope(
-        search=search, sort_mode=sort_mode, is_untagged_view=is_untagged_view, root_note_id=root_note_id,
+        search=search, sort_mode=sort_mode, date_filter=date_filter, is_untagged_view=is_untagged_view,
+        root_note_id=root_note_id,
     )
     notes_markup = _render_exported_notes_markup(
         root_ids=root_ids,
@@ -460,7 +463,8 @@ def build_notes_export_filename(title: str) -> str:
 
 
 def resolve_export_scope(
-    *, search: str | None, sort_mode: str, is_untagged_view: bool, root_note_id: str | None,
+    *, search: str | None, sort_mode: str, date_filter: RootDateFilter | None, is_untagged_view: bool,
+    root_note_id: str | None,
 ) -> tuple[list[str], set[str] | None]:
     """The roots exported, in order, and the notes allowed under them (None: all)."""
     if root_note_id is not None:
@@ -472,7 +476,7 @@ def resolve_export_scope(
     if search is not None:
         search_text = search
     scope = resolve_view_scope_membership(
-        search=search_text, sort_mode=sort_mode, is_untagged_view=is_untagged_view,
+        search=search_text, sort_mode=sort_mode, date_filter=date_filter, is_untagged_view=is_untagged_view,
     )
     if not scope.filter_active:
         return list(scope.ordered_root_ids), None
@@ -487,13 +491,15 @@ class CredentialCounts:
 
 
 def exported_credential_counts(
-    *, search: str | None, sort_mode: str, is_untagged_view: bool, root_note_id: str | None,
+    *, search: str | None, sort_mode: str, date_filter: RootDateFilter | None, is_untagged_view: bool,
+    root_note_id: str | None,
 ) -> CredentialCounts:
     """How many @password and @username notes an export or print would show: those
     exported, and those shown inside them (embedded notes with their children,
     and the notes references point to)."""
     root_ids, allowed_note_ids = resolve_export_scope(
-        search=search, sort_mode=sort_mode, is_untagged_view=is_untagged_view, root_note_id=root_note_id,
+        search=search, sort_mode=sort_mode, date_filter=date_filter, is_untagged_view=is_untagged_view,
+        root_note_id=root_note_id,
     )
     passwords: set[str] = set()
     usernames: set[str] = set()

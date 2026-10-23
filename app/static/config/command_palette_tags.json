@@ -53,6 +53,38 @@
       "tags": ["view", "untagged", "unclassified", "notes", "tag", "filter", "empty"]
     },
     {
+      "id": "view.date_range.field.updated",
+      "tags": ["date", "range", "filter", "updated", "last", "modified", "edit", "view"]
+    },
+    {
+      "id": "view.date_range.field.created",
+      "tags": ["date", "range", "filter", "created", "creation", "view"]
+    },
+    {
+      "id": "view.date_range.none",
+      "tags": ["date", "range", "filter", "any", "all", "clear", "none", "view"]
+    },
+    {
+      "id": "view.date_range.today",
+      "tags": ["date", "range", "filter", "today", "day", "view"]
+    },
+    {
+      "id": "view.date_range.last_7_days",
+      "tags": ["date", "range", "filter", "last", "week", "7", "days", "recent", "view"]
+    },
+    {
+      "id": "view.date_range.last_30_days",
+      "tags": ["date", "range", "filter", "last", "month", "30", "days", "recent", "view"]
+    },
+    {
+      "id": "view.date_range.this_year",
+      "tags": ["date", "range", "filter", "this", "year", "view"]
+    },
+    {
+      "id": "view.date_range.custom",
+      "tags": ["date", "range", "filter", "custom", "from", "to", "between", "since", "until", "view"]
+    },
+    {
       "id": "pref.theme",
       "tags": ["theme", "appearance", "light", "dark", "system", "ui"]
     },

@@ -55,6 +55,7 @@ import { NotesAPI } from '../../api-client.js';
 import { addDroppedFilePreviews } from '../services/dropped-file-preview-service.js';
 import { ErrorHandler } from '../../error-handler.js';
 import { persistTabStateSnapshot, createTabOnServer, deleteTabOnServer, setTabSortModeOnServer } from '../services/tab-state-service.js';
+import { endDateFilterOfLeftTab } from '../services/root-sort-indicator-service.js';
 import { cacheNotesDomForTab, restoreNotesDomForTab, cloneNotesDomForTab, clearCachedNotesDomForTab, clearActiveNotesDom } from '../services/tab-dom-cache-service.js';
 import { finalizeDuplicatedTabClone, getDuplicateTabCloneOptions } from '../services/tab-duplication-service.js';
 import { areScrollAnchorsEqual, computeScrollAnchor } from '../services/scroll-anchor-service.js';
@@ -3495,11 +3496,18 @@ export async function switchToTabContext(tabId, options) {
 async function switchToTabLeavingItsSort(tabId, options) {
     const leftTabId = ModeContext.activeTabId;
     await switchToTabContext(tabId, options);
-    if (!ModeContext.tabs[leftTabId] || ModeContext.getTabSortMode(leftTabId) === 'normal') {
+    if (!ModeContext.tabs[leftTabId]) {
         return;
     }
-    ModeContext.bumpUndoContextEpoch('sortMode.tabLeft');
-    const response = await setTabSortModeOnServer(leftTabId, 'normal');
+    // Its date range ends too.
+    let response = await endDateFilterOfLeftTab(leftTabId);
+    if (ModeContext.getTabSortMode(leftTabId) !== 'normal') {
+        ModeContext.bumpUndoContextEpoch('sortMode.tabLeft');
+        response = await setTabSortModeOnServer(leftTabId, 'normal');
+    }
+    if (response === null) {
+        return;
+    }
     // The tab now shown keeps its loaded notes and scroll tracking.
     ModeContext.hydrateTabState(response, { emitUpdate: false, preserveActiveRootTracking: true });
     ModeContext.clearTabRevealedRedactions(leftTabId);

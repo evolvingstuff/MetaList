@@ -32,6 +32,7 @@ def _resolve_context_root_ids(search_query: Optional[str]) -> List[str]:
         search=normalized_search,
         editing_note_id=None,
         sort_mode="normal",
+        date_filter=None,
         ordered_root_ids=store.children(None),
     )
     if not search_scope.search_active:

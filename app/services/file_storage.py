@@ -168,6 +168,28 @@ def bootstrap_file_registry() -> set[str]:
     return file_ids
 
 
+def _load_file_titles() -> dict[str, str]:
+    """Every file's name by id, decrypted (the file registry asks once, when notes are searched)."""
+    with connect_file_reader() as connection:
+        rows = fetch_all_file_metadata(connection)
+    encryption_service = _resolve_encryption_service(None)
+    titles: dict[str, str] = {}
+    for row in rows:
+        file_id = row["id"]
+        titles[file_id] = _decrypt_text_field(
+            encryption_service=encryption_service,
+            value=row["title"],
+            nonce=row["title_encryption_nonce"],
+            tag=row["title_encryption_tag"],
+            field_name="title",
+            file_id=file_id,
+        )
+    return titles
+
+
+file_registry.install_title_loader(_load_file_titles)
+
+
 def create_file(
     *,
     original_filename: str,
@@ -232,7 +254,7 @@ def create_file(
             updated_at=now,
         )
 
-    file_registry.add_with_thumbnail_kind(file_id, thumbnail_kind=metadata["thumbnail_kind"])
+    file_registry.add_with_thumbnail_kind(file_id, thumbnail_kind=metadata["thumbnail_kind"], title=title)
     return FileReferenceRecord(
         id=file_id,
         title=title,

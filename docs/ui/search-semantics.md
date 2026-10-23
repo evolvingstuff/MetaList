@@ -81,6 +81,11 @@ Text matching is:
 - Also against the URL of a web link whose label hides it (for example a link
   pasted from a web page that shows a video title): the note is searched as
   "Video title (https://...)".
+- Also against the names of files the note references (`[[id]]` or `![[id]]`, which
+  MetaList shows by the file's name): `"congratulation"` finds a note holding
+  `0025018697_CongratulationLetter.pdf`. Names are read from the files database the
+  first time a note is indexed (in an encrypted vault, once it is unlocked) and kept in
+  memory (`FileRegistry.referenced_file_names`); a file's name never changes after upload.
 - Also against the titles of web pages linked in the note: for each `http(s)` URL
   in the note (written out, or hidden behind a link label), the page title
   MetaList has already fetched and stored. Titles are fetched when a URL on its own

@@ -124,3 +124,38 @@ def test_prioritize_endpoint_blocks_root_reorder_when_sort_locked(
 
     assert exc_info.value.status_code == 409
     assert "Root-note reordering" in exc_info.value.detail
+
+
+def _date_filter_request(**overrides: str) -> dict[str, str]:
+    return {
+        "tabId": "tab-1", "field": "created", "rangeKind": "custom", "fromDate": "2026-10-01",
+        "toDate": "2026-10-22", "clientId": "client-1", "undoContext": "undo-1", **overrides,
+    }
+
+
+def test_update_tab_date_filter_sets_the_range_and_resets_undo_when_changed(monkeypatch: pytest.MonkeyPatch) -> None:
+    stored: list[object] = []
+    resets: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        notes_route.tab_state_store, "set_date_filter",
+        lambda *, tab_id, date_filter: stored.append((tab_id, date_filter)) or {"changed": True},  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append returns None)"
+    )
+    monkeypatch.setattr(notes_route, "reset_undo_stack", lambda client_id, undo_context: resets.append((client_id, undo_context)))
+
+    notes_route.update_tab_date_filter(_date_filter_request())
+    notes_route.update_tab_date_filter(_date_filter_request(rangeKind="none", fromDate="", toDate=""))
+
+    assert stored == [
+        ("tab-1", notes_route.make_root_date_filter(
+            field="created", range_kind="custom", from_date="2026-10-01", to_date="2026-10-22",
+        )),
+        ("tab-1", None),
+    ]
+    assert resets == [("client-1", "undo-1"), ("client-1", "undo-1")]
+
+
+def test_update_tab_date_filter_rejects_a_start_after_its_end_politely(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(notes_route.tab_state_store, "set_date_filter", lambda **kwargs: pytest.fail("nothing is stored"))
+    with pytest.raises(InputRejected) as exc_info:
+        notes_route.update_tab_date_filter(_date_filter_request(fromDate="2026-10-22", toDate="2026-10-01"))
+    assert str(exc_info.value) == "The start of a date range must not be after its end"

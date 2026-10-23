@@ -17,6 +17,7 @@ from app.security.encryption import (
 )
 from app.services.root_sorting import SORT_MODE_NORMAL, SORT_MODES, normalize_sort_mode
 from app.services.input_errors import InputRejected
+from app.services.root_date_filter import RootDateFilter, root_date_filter_from_payload, root_date_filter_payload
 
 
 _UUID_RE = re.compile(
@@ -121,6 +122,21 @@ def _normalize_reference_views(
     return normalized
 
 
+def _normalize_date_filters(
+    filters: object,
+    tabs: Dict[str, Dict[str, object]],
+) -> Dict[str, Dict[str, str]]:
+    """Date range filters by tab (root_date_filter.py); a tab that is gone has none."""
+    if not isinstance(filters, dict):
+        raise InputRejected("dateFilters must be an object")
+    normalized: Dict[str, Dict[str, str]] = {}
+    for tab_id, payload in filters.items():
+        if tab_id not in tabs:
+            continue
+        normalized[tab_id] = root_date_filter_payload(root_date_filter_from_payload(payload))
+    return normalized
+
+
 def _is_uuid_string(value: str) -> bool:
     if not isinstance(value, str):
         return False
@@ -141,6 +157,7 @@ class TabStateStore:
         self._encrypted_state_tag: Optional[bytes] = None
         self._tabs: Dict[str, Dict[str, object]] = {}
         self._reference_views: Dict[str, Dict[str, object]] = {}
+        self._date_filters: Dict[str, Dict[str, str]] = {}
         self._install_default_state_locked(version=0)
 
     def bootstrap(self, *, connection) -> None:
@@ -217,6 +234,8 @@ class TabStateStore:
 
             source = deepcopy(self._tabs[copy_from_tab_id])
             self._tabs[new_tab_id] = source
+            # A date range ends when the user leaves its tab, so a copy starts without
+            # one (a reference view then always shows its source).
             self._tab_order.append(new_tab_id)
             self._version += 1
             self._persist_locked(connection=None, encryption_service=None, force_plaintext=False)
@@ -254,6 +273,8 @@ class TabStateStore:
             self._reference_views = _normalize_reference_views(
                 self._reference_views, self._tabs, from_storage=False,
             )
+            if tab_id in self._date_filters:
+                del self._date_filters[tab_id]
             self._version += 1
             self._persist_locked(connection=None, encryption_service=None, force_plaintext=False)
             return self._snapshot_locked()
@@ -307,6 +328,48 @@ class TabStateStore:
                 raise InputRejected("tab_id must reference an existing tab")
             value = self._tabs[target_tab_id]["sortMode"]
             return normalize_sort_mode(value)
+
+    def get_date_filter(self, *, tab_id: str) -> RootDateFilter | None:
+        """The tab's date range filter, or None when it shows every date."""
+        with self._lock:
+            self._try_decrypt_locked(token="", require_success=True)
+            if tab_id not in self._tabs:
+                raise InputRejected("tab_id must reference an existing tab")
+            if tab_id not in self._date_filters:
+                return None
+            return root_date_filter_from_payload(self._date_filters[tab_id])
+
+    def set_date_filter(self, *, tab_id: str, date_filter: RootDateFilter | None) -> Dict[str, object]:
+        """Set (or, with None, remove) a tab's date range filter. Like a sort order it
+        changes what the view shows, so the tab's scroll starts again at the top."""
+        if not isinstance(tab_id, str) or not tab_id:
+            raise InputRejected("tabId must be a non-empty string")
+        with self._lock:
+            self._try_decrypt_locked(token="", require_success=True)
+            if tab_id not in self._tabs:
+                raise InputRejected("tabId must reference an existing tab")
+            had_filter = tab_id in self._date_filters
+            if date_filter is None:
+                changed = had_filter
+                if changed:
+                    del self._date_filters[tab_id]
+            else:
+                next_payload = root_date_filter_payload(date_filter)
+                changed = True
+                if had_filter:
+                    changed = self._date_filters[tab_id] != next_payload
+                if changed:
+                    self._date_filters[tab_id] = next_payload
+            if changed:
+                entry = self._tabs[tab_id]
+                entry["scrollY"] = 0
+                entry["scrollAnchor"] = None
+                entry["anchorRootId"] = None
+                self._version += 1
+                self._persist_locked(connection=None, encryption_service=None, force_plaintext=False)
+            snapshot = self._snapshot_locked()
+            snapshot["changed"] = changed
+            return snapshot
 
     def get_active_tab_id(self) -> str:
         with self._lock:
@@ -386,6 +449,7 @@ class TabStateStore:
         }
         self._tab_order = [default_tab_id]
         self._reference_views = {}
+        self._date_filters = {}
         self._version = version
 
     def _snapshot_locked(self) -> Dict[str, object]:
@@ -394,6 +458,7 @@ class TabStateStore:
             "tabs": deepcopy(self._tabs),
             "tabOrder": list(self._tab_order),
             "referenceViews": deepcopy(self._reference_views),
+            "dateFilters": deepcopy(self._date_filters),
             "version": self._version,
         }
 
@@ -418,15 +483,20 @@ class TabStateStore:
             raise RuntimeError("tab-state JSON version must be a non-negative integer")
         if not isinstance(tab_order, list):
             raise RuntimeError("tab-state JSON tabOrder must be a list")
-        # Tab state saved before reference views were kept with the tabs has none.
+        # Tab state saved before reference views (or date filters) were kept with the
+        # tabs has none.
         reference_views: object = {}
         if "referenceViews" in parsed:
             reference_views = parsed["referenceViews"]
+        date_filters: object = {}
+        if "dateFilters" in parsed:
+            date_filters = parsed["dateFilters"]
         return {
             "activeTabId": active_tab_id,
             "tabs": self._normalize_tabs(tabs, from_storage=True),
             "tabOrder": [str(entry) for entry in tab_order],
             "referenceViews": reference_views,
+            "dateFilters": date_filters,
             "version": version,
         }
 
@@ -453,6 +523,9 @@ class TabStateStore:
         self._tab_order = normalized_order
         self._reference_views = _normalize_reference_views(
             snapshot["referenceViews"], normalized_tabs, from_storage=True,
+        )
+        self._date_filters = _normalize_date_filters(
+            snapshot["dateFilters"], normalized_tabs,
         )
         self._active_tab_id = active_tab_id
         self._version = version

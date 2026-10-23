@@ -92,6 +92,7 @@ import {
 import { actionRedo, actionUndo } from '../actions/history-actions.js';
 import { hasRootsBelowLoadedWindow } from '../services/infinite-scroll-service.js';
 import { isRootReorderLocked } from '../services/root-sort-service.js';
+import { getDateRangeField } from '../services/date-range-filter-service.js';
 import { addDiagramToNote, openDiagramEditor } from '../../excalidraw/excalidraw-actions.js';
 import { unlessDiagramEditorOpen } from '../../excalidraw/excalidraw-editor-state.js';
 import { serverRenderedHtml } from '../../server-rendered-html.js';
@@ -1345,7 +1346,26 @@ function buildViewAndOrderHandlers() {
                 await CommandPalette.setSortMode(sortMode);
             });
         },
+        onSetDateRangeField: (field) => {
+            void CommandGate.run('contextMenu.view.date_range_field', async () => {
+                await CommandPalette.setDateRangeField(field);
+            });
+        },
+        onSetDateRangePreset: (rangeKind) => {
+            void CommandGate.run('contextMenu.view.date_range', async () => {
+                await CommandPalette.setDateRangePreset(rangeKind);
+            });
+        },
+        // The dialog waits for the user, so it runs outside the command gate.
+        onOpenCustomDateRange: () => {
+            void CommandPalette.openCustomDateRange();
+        },
     };
+}
+
+// The date range as the Date range menu ticks it.
+function dateRangeMenuContext() {
+    return { dateRangeKind: CommandPalette.getDateRangeKind(), dateRangeField: getDateRangeField() };
 }
 
 // Right-clicking the search box past what is typed (or an empty box): View and Sort by.
@@ -1357,6 +1377,7 @@ function showSearchBarContextMenu(event) {
         kind: 'search-bar',
         isUntaggedView: ModeContext.isUntaggedView === true,
         sortMode: ModeContext.activeTabSortMode,
+        ...dateRangeMenuContext(),
     }, buildViewAndOrderHandlers());
     showContextMenu({
         items,
@@ -1393,6 +1414,7 @@ function showViewContextMenu(event) {
         isAiChatVisible: document.body.classList.contains('pref-show-ai-chat'),
         areNoteTagsVisible: document.body.classList.contains('pref-show-note-tags'),
         sortMode: ModeContext.activeTabSortMode,
+        ...dateRangeMenuContext(),
     };
     const items = buildContextMenuItems(context, {
         onPasteNoteAtTop: () => {

@@ -8,12 +8,14 @@ import { CommandGate } from './command-gate-service.js';
 import { buildSessionHeaders } from '../../session-auth.js';
 import { AuthenticationRequiredError } from '../../client-state-api.js';
 import { getReferenceViewsPayload, restoreReferenceNavigation } from './reference-source-navigation-service.js';
+import { recordDateFiltersFromServer } from './date-range-filter-service.js';
 
 const HTTP_UNAUTHORIZED = 401;
 const TAB_STATE_ENDPOINT = CONFIG.API.NOTES.TAB_STATE;
 const TAB_STATE_NEW_TAB_ENDPOINT = CONFIG.API.NOTES.TAB_STATE_NEW_TAB;
 const TAB_STATE_DELETE_TAB_ENDPOINT = CONFIG.API.NOTES.TAB_STATE_DELETE_TAB;
 const TAB_STATE_SORT_MODE_ENDPOINT = CONFIG.API.NOTES.TAB_STATE_SORT_MODE;
+const TAB_STATE_DATE_FILTER_ENDPOINT = CONFIG.API.NOTES.TAB_STATE_DATE_FILTER;
 const SCROLL_POLL_INTERVAL_MS = 1000;
 const TAB_STATE_PERSIST_DEBOUNCE_MS = 300;
 
@@ -117,8 +119,10 @@ function captureServerSignature(state) {
 
 // The server answers a post that changes nothing (e.g. one differing only in
 // what it normalises away) with the state and version it already had, so its
-// signature can equal the recorded one.
+// signature can equal the recorded one. Every answer also carries the tabs' date
+// range filters, which only the server changes.
 function recordServerSignature(state) {
+    recordDateFiltersFromServer(state);
     const signature = serializeState(canonicalizeState(state));
     if (moduleState.lastSignature !== signature) {
         moduleState.lastSignature = signature;
@@ -209,6 +213,27 @@ export async function setTabSortModeOnServer(tabId, sortMode) {
     const response = await callTabStateApiAt(TAB_STATE_SORT_MODE_ENDPOINT, 'POST', {
         tabId,
         sortMode,
+        clientId: ModeContext.clientId,
+        undoContext: captureUndoContext(),
+    });
+    captureServerSignature(response);
+    return response;
+}
+
+/** Set a tab's date range filter ({ field, rangeKind, fromDate, toDate }; rangeKind 'none' clears it). */
+export async function setTabDateFilterOnServer(tabId, filter) {
+    if (typeof tabId !== 'string' || tabId.length === 0) {
+        throw new Error('tabId must be a non-empty string');
+    }
+    if (!filter || typeof filter !== 'object') {
+        throw new Error('setTabDateFilterOnServer requires a filter object');
+    }
+    const response = await callTabStateApiAt(TAB_STATE_DATE_FILTER_ENDPOINT, 'POST', {
+        tabId,
+        field: filter.field,
+        rangeKind: filter.rangeKind,
+        fromDate: filter.fromDate,
+        toDate: filter.toDate,
         clientId: ModeContext.clientId,
         undoContext: captureUndoContext(),
     });

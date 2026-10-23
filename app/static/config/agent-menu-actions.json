@@ -233,6 +233,54 @@
     "presentation": "palette"
   },
   {
+    "id": "view.date_range.field.updated",
+    "label": "Date range: Last updated",
+    "selector": "#command-palette-modal",
+    "presentation": "palette"
+  },
+  {
+    "id": "view.date_range.field.created",
+    "label": "Date range: Created",
+    "selector": "#command-palette-modal",
+    "presentation": "palette"
+  },
+  {
+    "id": "view.date_range.none",
+    "label": "Date range: Any date",
+    "selector": "#command-palette-modal",
+    "presentation": "palette"
+  },
+  {
+    "id": "view.date_range.today",
+    "label": "Date range: Today",
+    "selector": "#command-palette-modal",
+    "presentation": "palette"
+  },
+  {
+    "id": "view.date_range.last_7_days",
+    "label": "Date range: Last 7 days",
+    "selector": "#command-palette-modal",
+    "presentation": "palette"
+  },
+  {
+    "id": "view.date_range.last_30_days",
+    "label": "Date range: Last 30 days",
+    "selector": "#command-palette-modal",
+    "presentation": "palette"
+  },
+  {
+    "id": "view.date_range.this_year",
+    "label": "Date range: This year",
+    "selector": "#command-palette-modal",
+    "presentation": "palette"
+  },
+  {
+    "id": "view.date_range.custom",
+    "label": "Date range: Custom range",
+    "selector": "#command-palette-modal",
+    "presentation": "palette"
+  },
+  {
     "id": "pref.theme",
     "label": "Theme",
     "selector": "#command-palette-modal",

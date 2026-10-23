@@ -155,7 +155,7 @@ node. Unrelated top-level trees are not added through selection. The same disclo
 policy removes private branches before serialization, token sizing, or citations.
 Shared agent text extraction writes a web link whose label hides its URL as
 `label (URL)`, so the model sees the address of a pasted link such as a video
-title, and also includes already-cached URL titles alongside their URLs, labeled as metadata rather than fetched page content. This applies to
+title, and also includes already-cached URL titles alongside their URLs, labeled as metadata rather than fetched page content, and the names of files the note references (`[[id]]`, `![[id]]`) with their ids, labeled as names only, not file contents. This applies to
 selected trees, broader investigation, and tagging inputs. It reads only the
 in-memory successful-title cache after note disclosure filtering; it never starts
 a URL fetch, rewrites stored notes, or attaches titles from excluded notes. Titles

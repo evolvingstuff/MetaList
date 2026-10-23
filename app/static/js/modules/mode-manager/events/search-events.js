@@ -11,7 +11,8 @@ import { scheduleDebouncedSearchExecution } from '../services/search-debounce-se
 import { primeActiveSearchInteractionState } from '../services/search-interaction-service.js';
 import { initializeSearchSuggestions, updateSearchSuggestions } from '../services/search-suggestions-service.js';
 import { clearActiveNotesDom, clearCachedNotesDomForTab } from '../services/tab-dom-cache-service.js';
-import { clearActiveSortModeForSearchInput } from '../services/root-sort-indicator-service.js';
+import { clearActiveDateFilterForSearchInput, clearActiveSortModeForSearchInput } from '../services/root-sort-indicator-service.js';
+import { getActiveDateFilter } from '../services/date-range-filter-service.js';
 import {
     dismissReferenceSourceModeForActiveTab,
     isShowingNewSearchInReferenceView,
@@ -89,7 +90,7 @@ export function handleSearchInput(event) {
     }
 
     // Browser input events can re-fire with the same normalized value during autofill/composition.
-    // A new search ends the sort order and the Untagged view: their chips leave.
+    // A new search ends the sort order, the date range and the Untagged view: their chips leave.
     let viewOverridesClearPromise = null;
     if (isFreshSearchInput) {
         if (previousSearchQuery !== analysis.normalizedText) {
@@ -98,11 +99,13 @@ export function handleSearchInput(event) {
         if (wasUntaggedView) {
             ModeContext.setUntaggedView(false);
         }
-        const hasPersistedViewOverride = ModeContext.activeTabSortMode !== 'normal';
-        if (hasPersistedViewOverride) {
+        const isSorted = ModeContext.activeTabSortMode !== 'normal';
+        const hasDateRange = getActiveDateFilter() !== null;
+        if (isSorted || hasDateRange) {
             const intendedSearchQuery = analysis.normalizedText;
             viewOverridesClearPromise = (async () => {
                 await clearActiveSortModeForSearchInput();
+                await clearActiveDateFilterForSearchInput();
                 if (ModeContext.searchQuery !== intendedSearchQuery) {
                     ModeContext.setSearchQuery(intendedSearchQuery);
                 }

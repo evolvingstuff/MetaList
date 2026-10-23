@@ -64,7 +64,7 @@ def test_search_with_uuid_target_includes_direct_note_and_descendants(
     state = build_view_state(
         editing_note_id=None, find_reveal_note_id=None,
         search=f"[[{target_id}]]",
-        sort_mode="normal",
+        sort_mode="normal", date_filter=None,
         client_known_note_ids=set(), previous_root_ids=[],
         visible_top_root_id=None,
         visible_bottom_root_id=None,

@@ -13,6 +13,7 @@ from app.api.note_requests import (
     ViewDiffRequest,
     FindInListRequest,
     UpdateTabStateRequest,
+    UpdateTabDateFilterRequest,
     UpdateTabSortModeRequest,
     CreateNewTabRequest,
     DeleteTabRequest,
@@ -63,6 +64,9 @@ from app.api.note_requests import (
 )
 from app.api.transactions import serialized_read_route, transactional_route
 from app.services.sync import touch_client
+from app.services.root_date_filter import DATE_RANGE_NONE
+from app.services.root_date_filter import RootDateFilter
+from app.services.root_date_filter import make_root_date_filter
 from app.services.snapshot import build_view_state
 from app.services.snapshot import find_in_view
 from app.services.snapshot import resolve_search_scope
@@ -262,6 +266,13 @@ def _resolve_tab_sort_mode(tab_id: object) -> str:
     return sort_mode
 
 
+def _resolve_tab_date_filter(tab_id: str) -> RootDateFilter | None:
+    """The tab's date range filter (None: every date), as its sort order is resolved."""
+    if not isinstance(tab_id, str) or tab_id == "":
+        raise TypeError("tabId must be a non-empty string")
+    return tab_state_store.get_date_filter(tab_id=tab_id)
+
+
 def _block_root_reorder_when_sorted(note_id: str, *, tab_id: object, new_parent_id: object) -> None:
     sort_mode = _resolve_tab_sort_mode(tab_id)
     if not is_root_reorder_locked(sort_mode):
@@ -367,6 +378,7 @@ def view_diff(payload: ViewDiffRequest):
         find_reveal_note_id=find_reveal_note_id,
         search=normalized_search,
         sort_mode=sort_mode,
+        date_filter=_resolve_tab_date_filter(tab_id),
         client_known_note_ids=client_known_note_ids,
         previous_root_ids=previous_root_ids,
         visible_top_root_id=visible_top_root_id,
@@ -471,6 +483,23 @@ def update_tab_sort_mode(payload: UpdateTabSortModeRequest) -> Dict[str, object]
         raise RuntimeError("tab_state_store.set_sort_mode returned no value")
     if response["changed"] is True:
         reset_undo_stack(client_id, undo_context)
+    return response
+
+
+@router.post("/notes/tab-state/date-filter")
+@transactional_route
+def update_tab_date_filter(payload: UpdateTabDateFilterRequest) -> Dict[str, object]:
+    """Set or clear a tab's date range filter (root_date_filter.py). A range that is
+    not one (its start after its end, say) is answered as rejected input."""
+    date_filter: RootDateFilter | None = None
+    if payload["rangeKind"] != DATE_RANGE_NONE:
+        date_filter = make_root_date_filter(
+            field=payload["field"], range_kind=payload["rangeKind"],
+            from_date=payload["fromDate"], to_date=payload["toDate"],
+        )
+    response = tab_state_store.set_date_filter(tab_id=payload["tabId"], date_filter=date_filter)
+    if response["changed"] is True:
+        reset_undo_stack(payload["clientId"], payload["undoContext"])
     return response
 
 
@@ -664,6 +693,7 @@ def find_in_list(payload: FindInListRequest) -> Dict[str, object]:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="text must hold more than spaces")
     window = find_in_view(
         find_text=payload["text"], search=search, sort_mode=_resolve_tab_sort_mode(payload["tabId"]),
+        date_filter=_resolve_tab_date_filter(payload["tabId"]),
         is_untagged_view=payload["isUntaggedView"], from_root_index=payload["fromRootIndex"],
         direction=payload["direction"],
     )
@@ -797,6 +827,7 @@ def export_summary(request: Request) -> Dict[str, object]:
         normalized_search = None
     counts = exported_credential_counts(
         search=normalized_search, sort_mode=_resolve_tab_sort_mode(tab_id),
+        date_filter=_resolve_tab_date_filter(tab_id),
         is_untagged_view=is_untagged_view == "true", root_note_id=note_id,
     )
     return {
@@ -856,6 +887,7 @@ def export_notes_html(request: Request) -> Response:
     document = build_notes_export_document(
         search=normalized_search,
         sort_mode=_resolve_tab_sort_mode(tab_id),
+        date_filter=_resolve_tab_date_filter(tab_id),
         is_untagged_view=is_untagged_view == "true",
         theme=normalized_theme,
         token=token,
@@ -917,6 +949,7 @@ def backlinks(request: Request, note_id: str) -> Dict[str, object]:
             search=normalized_search,
             editing_note_id=None,
             sort_mode="normal",
+            date_filter=None,
             ordered_root_ids=None,
         )
         source_note_ids = search_scope.allowed_note_ids
@@ -1117,6 +1150,7 @@ def _robot_scope_note_ids(body: dict) -> frozenset[str]:
     return resolve_view_scope_membership(
         search=body["search"],
         sort_mode=_resolve_tab_sort_mode(body["tabId"]),
+        date_filter=_resolve_tab_date_filter(body["tabId"]),
         is_untagged_view=body["isUntaggedView"],
     ).allowed_note_ids
 

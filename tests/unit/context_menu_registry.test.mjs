@@ -489,7 +489,7 @@ test('buildContextMenuItems adds a top note action to non-editing note context',
 function buildViewContext(overrides) {
     return {
         kind: 'view', isMac: true, isEditing: false, canPasteNoteAtTop: false, canGoToTop: false, canGoToBottom: false,
-        isUntaggedView: false, theme: 'system', sortMode: 'normal',
+        isUntaggedView: false, theme: 'system', sortMode: 'normal', dateRangeKind: 'none', dateRangeField: 'updated',
         areTabsVisible: false, isAiChatVisible: false, areNoteTagsVisible: false,
         ...overrides,
     };
@@ -497,7 +497,8 @@ function buildViewContext(overrides) {
 
 const VIEW_HANDLER_NAMES = [
     'onAddNoteAtTop', 'onPasteNoteAtTop', 'onPasteReferenceAtTop', 'onUndo', 'onRedo', 'onGoToTop', 'onGoToBottom', 'onFullyExpandAll',
-    'onFullyCollapseAll', 'onSetUntaggedView', 'onSetSortMode', 'onToggleAiChat', 'onToggleTabs',
+    'onFullyCollapseAll', 'onSetUntaggedView', 'onSetSortMode', 'onSetDateRangeField', 'onSetDateRangePreset',
+    'onOpenCustomDateRange', 'onToggleAiChat', 'onToggleTabs',
     'onToggleNoteTags', 'onSetTheme', 'onNewTab', 'onOpenNamespace', 'onOpenReminders',
     'onExportViewHtml', 'onPrintView', 'onLogOut',
 ];
@@ -524,6 +525,7 @@ test('the background menu groups adding, history, the list, the view, opening, e
         'Fully Collapse All',
         '— View',
         'Sort by',
+        'Date range',
         'Show',
         'Theme',
         '— New Tab',
@@ -888,4 +890,40 @@ test('Suggest Tags with AI follows Add Excalidraw Diagram, with the robot icon, 
         const without = buildContextMenuItems(buildNoteContext({ canAddDiagram: true, canSuggestTagsWithAi }), handlers);
         assert.equal(without.some((item) => item.id === 'suggest-tags-with-ai'), false);
     }
+});
+
+// Date range: which date, then its range; the current ones ticked and not offered again.
+test('the date range menu ticks its date and range and calls their handlers', () => {
+    const calls = [];
+    const items = buildContextMenuItems(
+        buildViewContext({ dateRangeKind: 'last-7-days', dateRangeField: 'created' }), buildViewHandlers(calls),
+    );
+    const dateRange = items.find((item) => item.id === 'date-range');
+    assert.equal(dateRange.icon, 'date_range');
+    assert.deepEqual(dateRange.submenu.map((item) => [item.label, item.checked, item.enabled]), [
+        ['Last updated', false, true],
+        ['Created', true, false],
+        ['Any date', false, true],
+        ['Today', false, true],
+        ['Last 7 days', true, false],
+        ['Last 30 days', false, true],
+        ['This year', false, true],
+        ['Custom Range…', false, true],
+    ]);
+    assert.equal(dateRange.submenu.find((item) => item.id === 'date-range-none').separated, true);
+    dateRange.submenu.find((item) => item.id === 'date-range-field-updated').onSelect();
+    dateRange.submenu.find((item) => item.id === 'date-range-none').onSelect();
+    dateRange.submenu.find((item) => item.id === 'date-range-this-year').onSelect();
+    dateRange.submenu.find((item) => item.id === 'date-range-custom').onSelect();
+    assert.deepEqual(calls, [
+        ['onSetDateRangeField', 'updated'],
+        ['onSetDateRangePreset', 'none'],
+        ['onSetDateRangePreset', 'this-year'],
+        ['onOpenCustomDateRange'],
+    ]);
+    // A custom range stays offered: Custom Range… changes its dates.
+    const custom = buildContextMenuItems(buildViewContext({ dateRangeKind: 'custom' }), buildViewHandlers([]))
+        .find((item) => item.id === 'date-range').submenu.find((item) => item.id === 'date-range-custom');
+    assert.equal(custom.checked, true);
+    assert.equal(custom.enabled, true);
 });

@@ -31,6 +31,7 @@ from app.services.root_sorting import build_root_sort_buckets
 from app.services.root_sorting import get_root_ids_for_sort_mode
 from app.services.root_sorting import get_root_sort_timestamps
 from app.services.root_sorting import normalize_sort_mode
+from app.services.root_date_filter import RootDateFilter, filter_root_ids_by_date, local_today
 from app.services.search_index import search_index
 from app.services.search_query import ParsedSearchQuery, SearchClause, parse_search_query, search_highlight_phrases
 from app.services.sync import get_all_locks
@@ -217,6 +218,7 @@ def resolve_search_scope(
     search: Optional[str],
     editing_note_id: Optional[str],
     sort_mode: str,
+    date_filter: RootDateFilter | None,
     ordered_root_ids: Optional[List[str]],
 ) -> SearchScope:
     normalized_sort_mode = normalize_sort_mode(sort_mode)
@@ -242,14 +244,7 @@ def resolve_search_scope(
         )
 
     if ordered_root_ids is None:
-        if normalized_sort_mode == "normal":
-            ordered_root_ids = note_store.get_children(None)
-        else:
-            root_sort_timestamps = get_root_sort_timestamps(normalized_sort_mode)
-            ordered_root_ids = get_root_ids_for_sort_mode(
-                normalized_sort_mode,
-                root_timestamps=root_sort_timestamps,
-            )
+        ordered_root_ids = _ordered_view_root_ids(normalized_sort_mode, date_filter)
     search_allowed_note_ids: Set[str] = set()
     positively_matched_note_ids: Set[str] = set()
     for clause in parsed.clauses:
@@ -260,6 +255,11 @@ def resolve_search_scope(
         search_allowed_note_ids.update(clause_allowed_note_ids)
         positively_matched_note_ids.update(clause_matched_note_ids)
 
+    if date_filter is not None:
+        # Only notes under the roots the date range keeps.
+        kept_note_ids = _note_ids_under_roots(ordered_root_ids)
+        search_allowed_note_ids &= kept_note_ids
+        positively_matched_note_ids &= kept_note_ids
     search_root_ids_ordered = [
         root_id for root_id in ordered_root_ids if root_id in search_allowed_note_ids
     ]
@@ -292,10 +292,31 @@ def _apply_untagged_view(
     )
 
 
+def _ordered_view_root_ids(normalized_sort_mode: str, date_filter: RootDateFilter | None) -> List[str]:
+    """The roots a view lists, in its order, kept to the date range when it has one."""
+    if normalized_sort_mode == "normal":
+        ordered_root_ids = note_store.get_children(None)
+    else:
+        ordered_root_ids = get_root_ids_for_sort_mode(
+            normalized_sort_mode,
+            root_timestamps=get_root_sort_timestamps(normalized_sort_mode),
+        )
+    if date_filter is None:
+        return ordered_root_ids
+    return filter_root_ids_by_date(ordered_root_ids, date_filter, today=local_today())
+
+
+def _note_ids_under_roots(root_ids: List[str]) -> Set[str]:
+    note_ids = set(root_ids)
+    _include_descendants(note_ids, starting_ids=set(root_ids))
+    return note_ids
+
+
 def resolve_view_scope_membership(
     *,
     search: str,
     sort_mode: str,
+    date_filter: RootDateFilter | None,
     is_untagged_view: bool,
 ) -> ResolvedViewScope:
     """Resolve evidence membership using the same rules as ``/notes/view``.
@@ -311,14 +332,7 @@ def resolve_view_scope_membership(
     if not isinstance(is_untagged_view, bool):
         raise TypeError("is_untagged_view must be a bool")
     normalized_sort_mode = normalize_sort_mode(sort_mode)
-    if normalized_sort_mode == "normal":
-        ordered_root_ids = note_store.get_children(None)
-    else:
-        root_sort_timestamps = get_root_sort_timestamps(normalized_sort_mode)
-        ordered_root_ids = get_root_ids_for_sort_mode(
-            normalized_sort_mode,
-            root_timestamps=root_sort_timestamps,
-        )
+    ordered_root_ids = _ordered_view_root_ids(normalized_sort_mode, date_filter)
     if is_untagged_view:
         search_scope = _apply_untagged_view(ordered_root_ids=ordered_root_ids)
     else:
@@ -326,6 +340,7 @@ def resolve_view_scope_membership(
             search=search,
             editing_note_id=None,
             sort_mode=normalized_sort_mode,
+            date_filter=date_filter,
             ordered_root_ids=ordered_root_ids,
         )
 
@@ -340,6 +355,12 @@ def resolve_view_scope_membership(
         allowed_note_ids = set(search_scope.allowed_note_ids)
         matched_note_ids = set(search_scope.matched_note_ids)
         scoped_root_ids = list(search_scope.search_root_ids_ordered)
+    elif date_filter is not None:
+        # No search: every note under the roots the date range keeps.
+        filter_active = True
+        allowed_note_ids = _note_ids_under_roots(ordered_root_ids)
+        matched_note_ids = set(allowed_note_ids)
+        scoped_root_ids = list(ordered_root_ids)
     else:
         allowed_note_ids = set(note_store.list_note_ids())
         matched_note_ids = set(allowed_note_ids)
@@ -577,7 +598,7 @@ def _ancestor_ids(note_id: str, traversal_cache: _SnapshotTraversalCache) -> Set
 
 def _select_view(
     *, editing_note_id: str | None, find_reveal_note_id: str | None, search: str | None, sort_mode: str,
-    client_known_note_ids: Set[str], previous_root_ids: List[str], visible_top_root_id: str | None,
+    date_filter: RootDateFilter | None, client_known_note_ids: Set[str], previous_root_ids: List[str], visible_top_root_id: str | None,
     visible_bottom_root_id: str | None, is_untagged_view: bool, start_at_list_end: bool,
     traversal_cache: _SnapshotTraversalCache,
 ) -> _ViewSelection:
@@ -591,6 +612,15 @@ def _select_view(
             normalized_sort_mode,
             root_timestamps=root_sort_timestamps,
         )
+    if date_filter is not None:
+        kept_root_ids = set(filter_root_ids_by_date(ordered_root_ids, date_filter, today=local_today()))
+        # The note being edited stays while it is edited, also when saving it (or
+        # adding it, today) put its date outside the range.
+        if editing_note_id is not None and note_store.has_note(editing_note_id):
+            edited_root_id = _root_id_of_note(editing_note_id, traversal_cache)
+            if edited_root_id is not None:
+                kept_root_ids.add(edited_root_id)
+        ordered_root_ids = [root_id for root_id in ordered_root_ids if root_id in kept_root_ids]
     root_count_total = len(ordered_root_ids)
     if is_untagged_view:
         search_scope = _apply_untagged_view(
@@ -601,6 +631,7 @@ def _select_view(
             search=search,
             editing_note_id=editing_note_id,
             sort_mode=normalized_sort_mode,
+            date_filter=date_filter,
             ordered_root_ids=ordered_root_ids,
         )
 
@@ -954,6 +985,7 @@ def build_view_state(
     find_reveal_note_id: Optional[str],
     search: Optional[str],
     sort_mode: str,
+    date_filter: RootDateFilter | None,
     client_known_note_ids: Set[str],
     previous_root_ids: List[str],
     visible_top_root_id: Optional[str],
@@ -974,7 +1006,7 @@ def build_view_state(
 
     selection = _select_view(
         editing_note_id=editing_note_id, find_reveal_note_id=find_reveal_note_id, search=search, sort_mode=sort_mode,
-        client_known_note_ids=client_known_note_ids, previous_root_ids=previous_root_ids,
+        date_filter=date_filter, client_known_note_ids=client_known_note_ids, previous_root_ids=previous_root_ids,
         visible_top_root_id=visible_top_root_id,
         visible_bottom_root_id=visible_bottom_root_id, is_untagged_view=is_untagged_view,
         start_at_list_end=start_at_list_end, traversal_cache=traversal_cache,
@@ -1229,7 +1261,8 @@ def _find_in_root(
 
 
 def find_in_view(
-    *, find_text: str, search: str, sort_mode: str, is_untagged_view: bool, from_root_index: int, direction: str,
+    *, find_text: str, search: str, sort_mode: str, date_filter: RootDateFilter | None, is_untagged_view: bool,
+    from_root_index: int, direction: str,
 ) -> FindWindow:
     """One step of find through the list a view shows: forward, the roots from
     from_root_index on; backward, the roots before it, until FIND_WINDOW_MATCHED_NOTES
@@ -1238,7 +1271,9 @@ def find_in_view(
         raise ValueError("find_text must hold text")
     if direction not in FIND_DIRECTIONS:
         raise ValueError(f"direction must be one of {FIND_DIRECTIONS}, got {direction!r}")
-    scope = resolve_view_scope_membership(search=search, sort_mode=sort_mode, is_untagged_view=is_untagged_view)
+    scope = resolve_view_scope_membership(
+        search=search, sort_mode=sort_mode, date_filter=date_filter, is_untagged_view=is_untagged_view,
+    )
     roots = scope.ordered_root_ids
     if not isinstance(from_root_index, int) or from_root_index < 0:
         raise ValueError(f"from_root_index must be a non-negative integer, got {from_root_index!r}")

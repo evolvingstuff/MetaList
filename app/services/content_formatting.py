@@ -45,6 +45,7 @@ from app.services.latex_rendering import render_latex_to_html
 from app.utils.text_utils import HTMLStripper, LinkUrlKeepingStripper, strip_html
 from app.services.markdown_rendering import render_markdown_to_html
 from app.services.ontology_rules_store import get_ontology_if_ready
+from app.services.file_registry import file_registry
 from app.services.link_titles import display_domain_for_url
 from app.services.link_titles import link_title_store
 from app.services.link_titles import normalize_url_for_link_title
@@ -422,7 +423,8 @@ def extract_agent_note_text(
     ``@username``.
     Search-redacted notes are excluded by the agent search tool before this helper
     is called; this function enforces the independent credential boundary.
-    Cached URL titles are included as metadata without fetching or rewriting notes.
+    Cached URL titles and the names of referenced files are included as metadata
+    without fetching or rewriting notes.
     """
     if not isinstance(content_html, str):
         raise TypeError(f"content_html must be a string, got {type(content_html)}")
@@ -435,8 +437,12 @@ def extract_agent_note_text(
     parser.feed(content_html)
     text = re.sub(r"\s+", " ", parser.get_data()).strip()
     titles = _cached_agent_url_titles(text, parser.anchor_urls, title_lookup)
+    # A [[id]] naming a file shows in MetaList as the file's name.
+    file_names = [{"id": file_id, "name": name} for file_id, name in file_registry.referenced_file_names(text)]
     if titles:
         text += "\nCached URL titles (metadata, not page contents): " + json.dumps(titles, ensure_ascii=False)
+    if file_names:
+        text += "\nReferenced files (names only, not file contents): " + json.dumps(file_names, ensure_ascii=False)
     return text, False
 
 

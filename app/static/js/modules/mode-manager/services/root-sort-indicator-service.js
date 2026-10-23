@@ -6,7 +6,13 @@ import {
 } from './root-sort-service.js';
 import { showSearchInputChip } from './search-input-chip-service.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
-import { setTabSortModeOnServer } from './tab-state-service.js';
+import { setTabDateFilterOnServer, setTabSortModeOnServer } from './tab-state-service.js';
+import { DATE_RANGE_KINDS, OPEN_DATE, getActiveDateFilter, getTabDateFilter } from './date-range-filter-service.js';
+
+// A date range filter ends as a sort order does: rangeKind 'none' shows every date.
+function noDateFilter(field) {
+    return { field, rangeKind: DATE_RANGE_KINDS.NONE, fromDate: OPEN_DATE, toDate: OPEN_DATE };
+}
 
 export function updateRootSortIndicator(snapshot) {
     if (!snapshot || typeof snapshot !== 'object') {
@@ -48,4 +54,28 @@ export async function clearActiveSortModeForSearchInput() {
     ModeContext.hydrateTabState(response, { emitUpdate: false });
     ModeContext.clearTabRevealedRedactions(activeTabId);
     ModeContext.resetTabDiffCache(activeTabId, { preserveRootAnchor: false });
+}
+
+/** A new search ends the active tab's date range, as it ends its sort order. */
+export async function clearActiveDateFilterForSearchInput() {
+    const filter = getActiveDateFilter();
+    if (filter === null) {
+        return;
+    }
+    const activeTabId = ModeContext.activeTabId;
+    ModeContext.bumpUndoContextEpoch('dateFilter.searchInput');
+    const response = await setTabDateFilterOnServer(activeTabId, noDateFilter(filter.field));
+    ModeContext.hydrateTabState(response, { emitUpdate: false });
+    ModeContext.clearTabRevealedRedactions(activeTabId);
+    ModeContext.resetTabDiffCache(activeTabId, { preserveRootAnchor: false });
+}
+
+/** The date range of a tab the user left; the answer is the server's tab state, or null with none to end. */
+export async function endDateFilterOfLeftTab(tabId) {
+    const filter = getTabDateFilter(tabId);
+    if (filter === null) {
+        return null;
+    }
+    ModeContext.bumpUndoContextEpoch('dateFilter.tabLeft');
+    return await setTabDateFilterOnServer(tabId, noDateFilter(filter.field));
 }

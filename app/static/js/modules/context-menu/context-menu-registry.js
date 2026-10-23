@@ -5,6 +5,11 @@ import {
     ROOT_SORT_MODES,
     rootSortModeWithDirection,
 } from '../mode-manager/services/root-sort-service.js';
+import {
+    DATE_RANGE_FIELDS,
+    DATE_RANGE_KINDS,
+    DATE_RANGE_PRESETS,
+} from '../mode-manager/services/date-range-kinds.js';
 
 function buildTagContextItems(context, handlers) {
     if (!context || typeof context !== 'object') {
@@ -690,6 +695,54 @@ function buildSortModeItem(sortMode, onSetSortMode) {
     };
 }
 
+// Date range: which date (Created or Last updated) and its range, the current ones
+// ticked (date-range-filter-service.js). Any date shows every note again.
+function buildDateRangeItem(context, handlers) {
+    const rangeKind = context.dateRangeKind;
+    const field = context.dateRangeField;
+    if (typeof rangeKind !== 'string' || !Object.values(DATE_RANGE_KINDS).includes(rangeKind)) {
+        throw new Error('View context missing dateRangeKind');
+    }
+    if (!Object.values(DATE_RANGE_FIELDS).includes(field)) {
+        throw new Error('View context missing dateRangeField');
+    }
+    const onSetDateRangeField = requireViewHandler(handlers, 'onSetDateRangeField');
+    const onSetDateRangePreset = requireViewHandler(handlers, 'onSetDateRangePreset');
+    const onOpenCustomDateRange = requireViewHandler(handlers, 'onOpenCustomDateRange');
+    const fields = [[DATE_RANGE_FIELDS.UPDATED, 'Last updated'], [DATE_RANGE_FIELDS.CREATED, 'Created']];
+    const ranges = [[DATE_RANGE_KINDS.NONE, 'Any date'], ...DATE_RANGE_PRESETS];
+    return {
+        id: 'date-range',
+        label: 'Date range',
+        icon: 'date_range',
+        enabled: true,
+        submenu: [
+            ...fields.map(([value, label]) => ({
+                id: `date-range-field-${value}`,
+                label,
+                checked: value === field,
+                enabled: value !== field,
+                onSelect: () => onSetDateRangeField(value),
+            })),
+            ...ranges.map(([value, label], index) => ({
+                id: `date-range-${value}`,
+                label,
+                separated: index === 0,
+                checked: value === rangeKind,
+                enabled: value !== rangeKind,
+                onSelect: () => onSetDateRangePreset(value),
+            })),
+            {
+                id: 'date-range-custom',
+                label: 'Custom Range…',
+                checked: rangeKind === DATE_RANGE_KINDS.CUSTOM,
+                enabled: true,
+                onSelect: () => onOpenCustomDateRange(),
+            },
+        ],
+    };
+}
+
 const MAC_KEY_SYMBOLS = Object.freeze({ Enter: '↩', Backspace: '⌫' });
 
 // A keyboard shortcut as the platform writes it: ⇧⌘Z on a Mac, Ctrl+Shift+Z elsewhere.
@@ -746,6 +799,7 @@ function buildSearchBarContextItems(context, handlers) {
     return [
         buildViewModeItem(requireViewFlag(context, 'isUntaggedView'), requireViewHandler(handlers, 'onSetUntaggedView')),
         buildSortModeItem(context.sortMode, requireViewHandler(handlers, 'onSetSortMode')),
+        buildDateRangeItem(context, handlers),
     ];
 }
 
@@ -834,6 +888,7 @@ function buildViewContextItems(context, handlers) {
     items.push(
         { ...buildViewModeItem(isUntaggedView, onSetUntaggedView), separated: true },
         buildSortModeItem(context.sortMode, handlers.onSetSortMode),
+        buildDateRangeItem(context, handlers),
         {
             id: 'show', label: 'Show', icon: 'show', enabled: true,
             submenu: [

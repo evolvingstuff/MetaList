@@ -100,6 +100,7 @@ def _snapshot(*, oversized_first_root: bool) -> ScopedSearchSnapshot:
         tree_nodes_by_id=MappingProxyType(nodes),
         note_records_at_send=MappingProxyType({}),
         disclosable_search_query=_descriptor().search_query,
+        date_filter=None,
         preparation_ms=0.0, text_extraction=TextExtractionMeter.start(),
         selected_note=NO_SELECTED_NOTE,
     )

@@ -125,6 +125,18 @@ class UpdateTabSortModeRequest(TypedDict):
     undoContext: UndoContext
 
 @with_config(ConfigDict(strict=True))
+class UpdateTabDateFilterRequest(TypedDict):
+    tabId: Identifier
+    field: Literal["created", "updated"]
+    # "none" shows every date again.
+    rangeKind: Literal["none", "today", "last-7-days", "last-30-days", "this-year", "custom"]
+    # A custom range's ends (YYYY-MM-DD); "" for an open end, and for every other range.
+    fromDate: Text
+    toDate: Text
+    clientId: Identifier
+    undoContext: UndoContext
+
+@with_config(ConfigDict(strict=True))
 class CreateNewTabRequest(TypedDict):
     copyFromTabId: Identifier
     clientId: Identifier

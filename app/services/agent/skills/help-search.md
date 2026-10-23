@@ -175,6 +175,9 @@ Text matching is:
 - Also against the URL of a web link whose label hides it (for example a link
   pasted from a web page that shows a video title): the note is searched as
   "Video title (https://...)".
+- Also against the names of files the note references (a PDF or other file shown by
+  its name): `"congratulation"` finds a note holding `0025018697_CongratulationLetter.pdf`.
+  Find (⌘F) finds file names in the list too.
 - Also against the titles of web pages linked in the note: for each `http(s)` URL
   in the note (written out, or hidden behind a link label), the page title
   MetaList has already fetched and stored. Titles are fetched when a URL on its own
