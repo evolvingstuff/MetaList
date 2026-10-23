@@ -1,10 +1,14 @@
-// MetaList is idle: nothing is loading and no command is running. The one
-// definition the browser suites wait on, so a new idle condition is added once.
+// MetaList is idle: nothing is loading, no command is running, no search is
+// waiting for its typing delay and no dictation paste is being cleaned up (those
+// two run outside CommandGate). The one definition the browser suites wait on, so
+// a new idle condition is added once.
 export async function waitForAppIdle(page) {
   await page.waitForFunction(async () => {
     const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
     const {CommandGate} = await import('/static/js/modules/mode-manager/services/command-gate-service.js');
-    return !mode.isLoading && !CommandGate.isBusy();
+    const {isDebouncedSearchPending} = await import('/static/js/modules/mode-manager/services/search-debounce-service.js');
+    const {isDictationCleanupInProgress} = await import('/static/js/modules/mode-manager/services/dictation-paste-service.js');
+    return !mode.isLoading && !CommandGate.isBusy() && !isDebouncedSearchPending() && !isDictationCleanupInProgress();
   });
 }
 
