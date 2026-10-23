@@ -38,7 +38,10 @@ export async function checkBackgroundSortMenu(page) {
     console.log(`Checking background sort ${currentMode} -> ${nextMode}`);
     await openSortMenu(page);
     const buttons = await page.$$('#context-submenu .context-menu-item');
-    assert.equal(buttons.length, modes.length);
+    // The orders, then Reverse Order, which combines with any of them (unticked here).
+    assert.equal(buttons.length, modes.length + 1);
+    assert.deepEqual(await buttons[modes.length].evaluate(node => [node.textContent.trim(), node.disabled]),
+      ['Reverse Order', false]);
     const disabledLabels = await page.$$eval('#context-submenu button:disabled', nodes => nodes.map(node => node.textContent));
     assert.equal(disabledLabels.length, 1);
     // The current mode is ticked (and disabled).
