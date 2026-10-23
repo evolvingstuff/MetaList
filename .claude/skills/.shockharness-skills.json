@@ -4,11 +4,11 @@
   "skills": {
     "adopt-shockharness": {
       "path": "adopt-shockharness/SKILL.md",
-      "sha256": "3ee8b52ffc8876a8c9fafd39a0cc820565d4a91324dc9c511c3b0e0f38b19413"
+      "sha256": "1a640755840a23895134a5a59b0962577488944a34d2b20f38f08c25a895ba08"
     },
     "async-lifecycle": {
       "path": "async-lifecycle/SKILL.md",
-      "sha256": "ab3ac35ef8dbb81677cefb14779fe29ff9bd01d9b7ed91178805f4b533c4eaf9"
+      "sha256": "3f134247ff6b27d6f2a67e587707431ca192c59ccd01d79d196136912a07a0f2"
     },
     "fix-violations": {
       "path": "fix-violations/SKILL.md",
@@ -16,7 +16,7 @@
     },
     "pre-commit-review": {
       "path": "pre-commit-review/SKILL.md",
-      "sha256": "7ce852f5ecacc6657281c5f5c1f6ea2945c66f0f22b7033a6f802a92a86fb2b0"
+      "sha256": "e55194e18434b44b4dd88a8b18f54c7787f10083949ecd4a6e9427fdb4a3124a"
     },
     "property-contracts": {
       "path": "property-contracts/SKILL.md",
@@ -35,5 +35,5 @@
       "sha256": "9da5089dd7dd1bf0d5a6e8260920bc62bc3dc48acf37d7cc977dc162ebc02c2a"
     }
   },
-  "tool_version": "0.25.0"
+  "tool_version": "0.26.0"
 }

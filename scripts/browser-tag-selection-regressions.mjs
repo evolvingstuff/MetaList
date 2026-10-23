@@ -17,6 +17,8 @@ export async function checkTagDoubleClickSelection(page) {
   });
   await page.click('.note.editing .note-tag-bar-input');
   await page.waitForFunction(() => document.activeElement.classList.contains('note-tag-bar-input'));
+  // A click that leaves the caret at the end adds a space for the next tag, a moment later.
+  await page.waitForFunction(() => document.activeElement.value === 'foo-bar @red alpha_beta a/b.c ');
   await checkInput(page, '.note.editing .note-tag-bar-input');
   await page.keyboard.press('Escape');
   await page.click('#search-input');
