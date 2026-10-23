@@ -98,8 +98,9 @@ export async function checkSearchInputRejected(page) {
   await clearSearch(page);
 }
 
-// Right-clicking the search box past what is typed (or an empty box) offers View and
-// Sort by, the background menu's two; on a typed tag it still offers the tag's own menu.
+// Right-clicking the search box past what is typed (or an empty box) offers View,
+// Sort by and Date range, as the background menu does; on a typed tag it still
+// offers the tag's own menu.
 async function rightClickSearch(page, where) {
   const point = await page.evaluate(where => {
     const input = document.getElementById('search-input');
@@ -123,12 +124,95 @@ export async function checkSearchBarMenu(page) {
   await page.reload();
   await page.waitForSelector('[data-app-ready="true"]');
   await idle(page);
-  assert.deepEqual(await rightClickSearch(page, 'past-text'), ['View', 'Sort by'], 'an empty search box offers View and Sort by');
+  assert.deepEqual(await rightClickSearch(page, 'past-text'), ['View', 'Sort by', 'Date range'], 'an empty search box offers View, Sort by and Date range');
   await page.click('#search-input');
   await page.keyboard.type('menucheck');
   await idle(page);
   await page.keyboard.press('Escape');
-  assert.deepEqual(await rightClickSearch(page, 'past-text'), ['View', 'Sort by'], 'past the typed tag: View and Sort by');
+  assert.deepEqual(await rightClickSearch(page, 'past-text'), ['View', 'Sort by', 'Date range'], 'past the typed tag: View, Sort by and Date range');
   assert.deepEqual(await rightClickSearch(page, 'on-text'), ['Edit Tag Relationships'], 'on the typed tag: its own menu');
+  await clearSearch(page);
+}
+
+function dateRangeChip(page) {
+  return page.evaluate(() => {
+    const chip = document.getElementById('date-range-indicator');
+    return chip.classList.contains('is-shown') ? document.getElementById('date-range-indicator-label').textContent : '';
+  });
+}
+
+// Picks Date range → <range> from the search box's menu past the typed text.
+async function pickDateRange(page, label) {
+  const box = await page.evaluate(() => {
+    const rect = document.getElementById('search-input').getBoundingClientRect();
+    return {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2};
+  });
+  await page.mouse.click(box.x, box.y, {button: 'right'});
+  await page.waitForSelector('#context-menu.is-visible');
+  const item = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('#context-menu.is-visible .context-menu-item-label')]
+      .find(label => label.textContent.trim() === 'Date range');
+    if (!node) return null;
+    const rect = node.getBoundingClientRect();
+    return {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2};
+  });
+  assert.ok(item, 'the search box menu offers Date range');
+  // Pointing at it opens its submenu.
+  await page.mouse.move(item.x, item.y);
+  const point = await page.waitForFunction(label => {
+    const node = [...document.querySelectorAll('#context-submenu .context-menu-item-label')].find(item => item.textContent.trim() === label);
+    if (!node) return null;
+    const rect = node.getBoundingClientRect();
+    if (rect.width === 0) return null;
+    return {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2};
+  }, {}, label);
+  const {x, y} = await point.jsonValue();
+  await page.mouse.click(x, y);
+  await idle(page);
+}
+
+// Date range filters the root notes by date and shows a chip; its × and a new
+// search end it, as they end a sort order (docs/ui/controls.md).
+export async function checkDateRange(page) {
+  await page.reload();
+  await page.waitForSelector('[data-app-ready="true"]');
+  await idle(page);
+  const all = await rootCount(page);
+  assert.ok(all > 0, 'the vault has notes to filter');
+  assert.equal(await dateRangeChip(page), '', 'no date range at first');
+
+  await pickDateRange(page, 'Today');
+  assert.equal(await dateRangeChip(page), 'Updated · today', 'the chip names the date and the range');
+  const today = await rootCount(page);
+  assert.ok(today <= all, 'Today shows no more notes than every date');
+
+  // A range that ends before any note was written shows none.
+  await page.evaluate(async () => {
+    const {CommandPalette} = await import('/static/js/modules/command-palette/command-palette-controller.js');
+    const {CommandGate} = await import('/static/js/modules/mode-manager/services/command-gate-service.js');
+    await CommandGate.run('test.dateRange.custom', async () => {
+      await CommandPalette.setDateFilter({field: 'created', rangeKind: 'custom', fromDate: '', toDate: '2000-01-01'});
+    });
+  });
+  await idle(page);
+  assert.equal(await rootCount(page), 0, 'nothing was created before 2000');
+  assert.match(await dateRangeChip(page), /^Created · until /, 'a custom range names its end');
+
+  // The chip's × shows every date again.
+  await page.click('#date-range-indicator-clear');
+  await idle(page);
+  assert.equal(await dateRangeChip(page), '', 'the × ends the date range');
+  assert.equal(await rootCount(page), all, 'every note is back');
+
+  // Typing a new search ends it too.
+  await pickDateRange(page, 'Today');
+  assert.equal(await dateRangeChip(page), 'Updated · today');
+  await page.click('#search-input');
+  await page.keyboard.type('datecheck');
+  await idle(page);
+  assert.equal(await dateRangeChip(page), '', 'a new search ends the date range');
+  const ended = await page.evaluate(async () => (await import('/static/js/modules/mode-manager/services/date-range-filter-service.js')).getActiveDateFilter());
+  assert.equal(ended, null, 'the server has no date range for the tab');
+  await page.keyboard.press('Escape');
   await clearSearch(page);
 }

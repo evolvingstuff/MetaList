@@ -88,6 +88,7 @@ def use_fake_chat_dependencies(monkeypatch):
         "get_sort_mode",
         lambda *, tab_id: "normal",
     )
+    monkeypatch.setattr(ai_routes.tab_state_store, "get_date_filter", lambda *, tab_id: None)
     monkeypatch.setattr(
         ai_routes.scoped_search_snapshot_factory,
         "freeze",
@@ -1028,6 +1029,7 @@ def test_stream_chat_freezes_originating_scope_while_reference_tab_is_active(
         "get_sort_mode",
         lambda *, tab_id: "normal" if tab_id == "scope-tab" else "invalid",
     )
+    monkeypatch.setattr(ai_routes.tab_state_store, "get_date_filter", lambda *, tab_id: None)
 
     def freeze(**arguments):
         captured_freeze_arguments.update(arguments)

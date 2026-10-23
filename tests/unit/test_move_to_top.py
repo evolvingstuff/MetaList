@@ -102,7 +102,7 @@ def test_move_to_top_uses_search_root_order_for_root_notes(monkeypatch: pytest.M
     monkeypatch.setattr(
         move_to_top_module,
         "resolve_search_scope",
-        lambda *, search, editing_note_id, sort_mode, ordered_root_ids: SearchScope(
+        lambda *, search, editing_note_id, sort_mode, date_filter, ordered_root_ids: SearchScope(
             search_active=True,
             allowed_note_ids={"root-a", "root-b"},
             search_root_ids_ordered=["root-b", "root-a"],
@@ -260,7 +260,7 @@ def test_move_to_bottom_goes_after_the_last_root_the_search_shows(monkeypatch: p
     monkeypatch.setattr(
         move_to_top_module,
         "resolve_search_scope",
-        lambda *, search, editing_note_id, sort_mode, ordered_root_ids: SearchScope(
+        lambda *, search, editing_note_id, sort_mode, date_filter, ordered_root_ids: SearchScope(
             search_active=True,
             allowed_note_ids={"root-a", "root-b"},
             search_root_ids_ordered=["root-a", "root-b"],

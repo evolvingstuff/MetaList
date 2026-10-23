@@ -28,7 +28,7 @@ def test_backlinks_search_scope_does_not_build_full_view_state(
     monkeypatch.setattr(
         notes_route,
         "resolve_search_scope",
-        lambda *, search, editing_note_id, sort_mode, ordered_root_ids: SearchScope(
+        lambda *, search, editing_note_id, sort_mode, date_filter, ordered_root_ids: SearchScope(
             search_active=True,
             allowed_note_ids={"source-a", target_id},
             search_root_ids_ordered=["source-a", target_id],

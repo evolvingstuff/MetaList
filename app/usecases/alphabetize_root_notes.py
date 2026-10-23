@@ -38,6 +38,7 @@ def _resolve_visible_root_ids(search_query: Optional[str]) -> List[str]:
         search=normalized_search,
         editing_note_id=None,
         sort_mode="normal",
+        date_filter=None,
         ordered_root_ids=None,
     )
     if not search_scope.search_active or search_scope.search_root_ids_ordered is None:

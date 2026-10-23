@@ -11,6 +11,7 @@ import { clearEditingStateForHiddenFilteredNote } from '../services/filtered-ref
 import { attachEditorSurface, detachEditorSurface } from '../../editor-toolbar.js';
 import { rebuildRootDateSeparators } from '../services/root-date-separator-service.js';
 import { updateRootSortIndicator } from '../services/root-sort-indicator-service.js';
+import { updateDateRangeIndicator } from '../services/date-range-filter-service.js';
 import { updateUntaggedViewIndicator } from '../services/untagged-view-indicator-service.js';
 import { updateReferenceSourceIndicator } from '../services/reference-source-navigation-service.js';
 import { hasRootsBelowLoadedWindow, resetInfiniteScrollState } from '../services/infinite-scroll-service.js';
@@ -189,6 +190,7 @@ export async function actionRefreshAndMaybeSelect(options) {
 
         updateSearchResultsCount(snapshot, requestTabId);
         updateRootSortIndicator(snapshot);
+        updateDateRangeIndicator();
         updateUntaggedViewIndicator(snapshot);
         const previousRootCountTotals = ModeContext.getRootCountTotals(requestTabId);
         // Incremental notes.view refreshes can return the same totals when only note content changed.

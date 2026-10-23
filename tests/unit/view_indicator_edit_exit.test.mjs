@@ -26,7 +26,7 @@ function editExitExclusions() {
 
 test('every view indicator pill is pressed without ending the edit', () => {
     const ids = viewIndicatorIds();
-    assert.deepEqual(ids, ['untagged-view-indicator', 'root-sort-indicator']);
+    assert.deepEqual(ids, ['untagged-view-indicator', 'date-range-indicator', 'root-sort-indicator']);
     // A reference view's chip, centered in the search bar.
     assert.match(template, /<div id="reference-source-indicator" class="reference-view-chip"/);
     const exclusions = editExitExclusions();

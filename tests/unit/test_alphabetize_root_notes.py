@@ -105,7 +105,7 @@ def test_alphabetize_ascending_reorders_only_visible_roots_and_clears_undo(
     monkeypatch.setattr(
         alphabetize_module,
         "resolve_search_scope",
-        lambda *, search, editing_note_id, sort_mode, ordered_root_ids: SearchScope(
+        lambda *, search, editing_note_id, sort_mode, date_filter, ordered_root_ids: SearchScope(
             search_active=True,
             allowed_note_ids={"root-c", "root-a", "root-b"},
             search_root_ids_ordered=["root-c", "root-a", "root-b"],
@@ -165,7 +165,7 @@ def test_alphabetize_descending_reorders_current_search_context(
     monkeypatch.setattr(
         alphabetize_module,
         "resolve_search_scope",
-        lambda *, search, editing_note_id, sort_mode, ordered_root_ids: SearchScope(
+        lambda *, search, editing_note_id, sort_mode, date_filter, ordered_root_ids: SearchScope(
             search_active=True,
             allowed_note_ids={"root-a", "root-b", "root-c"},
             search_root_ids_ordered=["root-a", "root-b", "root-c"],

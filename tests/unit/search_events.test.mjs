@@ -313,6 +313,8 @@ test('fresh search input resets the active tab sort without losing the typed que
         requests.push({ url, body: JSON.parse(options.body) });
         const responseState = structuredClone(sortedTabState);
         responseState.tabs[activeTabId].sortMode = 'normal';
+        // The server's tab state always carries the tabs' date ranges.
+        responseState.dateFilters = {};
         return {
             ok: true,
             async json() {

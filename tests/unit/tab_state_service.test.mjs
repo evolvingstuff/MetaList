@@ -41,6 +41,7 @@ async function harness() {
         computeScrollAnchor: () => null, areScrollAnchorsEqual: (a, b) => a === b,
         restoreReferenceNavigation: (state) => restoredReferenceTabs.push(state.tabs),
         getReferenceViewsPayload: () => ({}),
+        recordDateFiltersFromServer: () => {},
         ErrorHandler: { handleApiError(_error, response) { apiErrors.push(response.status); } },
         HttpRequestError, AuthenticationRequiredError,
         fetch: async (_endpoint, options) => {

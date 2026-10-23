@@ -107,7 +107,15 @@ import { cancelDebouncedSearchExecution } from '../mode-manager/services/search-
 import { attachPickedFileToCurrentNote, pickFileForAttachment } from '../mode-manager/services/file-reference-service.js';
 import { isRootReorderLocked, normalizeRootSortMode } from '../mode-manager/services/root-sort-service.js';
 import { blockRootNoteCreation } from '../mode-manager/services/root-note-creation-service.js';
-import { setTabSortModeOnServer } from '../mode-manager/services/tab-state-service.js';
+import { setTabDateFilterOnServer, setTabSortModeOnServer } from '../mode-manager/services/tab-state-service.js';
+import {
+    DATE_RANGE_KINDS,
+    OPEN_DATE,
+    getActiveDateFilter,
+    getDateRangeField,
+    rememberDateRangeField,
+} from '../mode-manager/services/date-range-filter-service.js';
+import { DateRangeModal } from '../modals/date-range-modal.js';
 import { settleResult } from '../async-result.js';
 import { buildSessionHeaders } from '../session-auth.js';
 import { isValidTagToken } from '../tag-token.js';
@@ -361,6 +369,7 @@ class CommandPaletteController {
         this._deleteNamespaceModal = null;
         this._prioritizeModal = null;
         this._alphabetizeRootNotesModal = null;
+        this._dateRangeModal = null;
         this._resetUpdatedAtModal = null;
         this._reminderModal = null;
 
@@ -452,6 +461,11 @@ class CommandPaletteController {
                 setSortMode: this.setSortMode.bind(this),
                 getIsUntaggedView: this.getIsUntaggedView.bind(this),
                 setIsUntaggedView: this.setIsUntaggedView.bind(this),
+                getDateRangeKind: this.getDateRangeKind.bind(this),
+                getDateRangeField: getDateRangeField,
+                setDateRangePreset: this.setDateRangePreset.bind(this),
+                setDateRangeField: this.setDateRangeField.bind(this),
+                openCustomDateRange: this.openCustomDateRange.bind(this),
                 openAiAgentSettings: this.openAiAgentSettings.bind(this),
                 openCloudPrivacySettings: this.openCloudPrivacySettings.bind(this),
                 openProposalManager: async () => {
@@ -1434,6 +1448,105 @@ class CommandPaletteController {
             startedAt: performance.now(),
             context: `sortMode.${normalizedSortMode}`,
             animateNoteChanges: false,
+        });
+    }
+
+    // The active tab's date range (date-range-filter-service.js): 'none' when it shows every date.
+    getDateRangeKind() {
+        const filter = getActiveDateFilter();
+        if (filter === null) {
+            return DATE_RANGE_KINDS.NONE;
+        }
+        return filter.rangeKind;
+    }
+
+    /** Any date ('none') or a preset range, on the field the menu ticks. */
+    async setDateRangePreset(rangeKind) {
+        if (rangeKind === DATE_RANGE_KINDS.CUSTOM || !Object.values(DATE_RANGE_KINDS).includes(rangeKind)) {
+            throw new Error(`setDateRangePreset requires a preset range, not ${rangeKind}`);
+        }
+        await this.setDateFilter({
+            field: getDateRangeField(), rangeKind, fromDate: OPEN_DATE, toDate: OPEN_DATE,
+        });
+    }
+
+    /** Created or Last updated: the active range moves to it; with none, the next range uses it. */
+    async setDateRangeField(field) {
+        rememberDateRangeField(field);
+        const filter = getActiveDateFilter();
+        if (filter === null || filter.field === field) {
+            return;
+        }
+        await this.setDateFilter({ ...filter, field });
+    }
+
+    async setDateFilter(filter) {
+        const activeTabId = ModeContext.activeTabId;
+        if (typeof activeTabId !== 'string' || activeTabId.length === 0) {
+            throw new Error('ModeContext.activeTabId must be a non-empty string');
+        }
+        const current = getActiveDateFilter();
+        if (filter.rangeKind === DATE_RANGE_KINDS.NONE && current === null) {
+            return;
+        }
+        if (current !== null && JSON.stringify({ ...current }) === JSON.stringify({ ...filter })) {
+            return;
+        }
+        if (ModeContext.isEditing) {
+            await actionSaveAndExitEditingWithoutRefreshing();
+        }
+        ModeContext.bumpUndoContextEpoch(`dateFilter.${filter.rangeKind}`);
+        const response = await setTabDateFilterOnServer(activeTabId, filter);
+        ModeContext.hydrateTabState(response, { emitUpdate: false });
+        this._showChangedViewFromTop(activeTabId);
+        await actionRefreshAndMaybeSelect({
+            startedAt: performance.now(),
+            context: `dateFilter.${filter.rangeKind}`,
+            animateNoteChanges: false,
+        });
+    }
+
+    // A view that now shows other notes starts again at its top, as after a new sort order.
+    _showChangedViewFromTop(activeTabId) {
+        ModeContext.clearTabRevealedRedactions(activeTabId);
+        ModeContext.resetTabDiffCache(activeTabId, { preserveRootAnchor: false });
+        if (ModeContext.getTabScrollPosition(activeTabId) !== 0) {
+            ModeContext.updateTabScroll(activeTabId, 0, { emit: false });
+        }
+        if (ModeContext.getTabScrollAnchor(activeTabId) !== null) {
+            ModeContext.updateTabScrollAnchor(activeTabId, null, { emit: false });
+        }
+        if (ModeContext.getRootAnchorId() !== null) {
+            ModeContext.setRootAnchorId(null);
+        }
+        ModeContext.beginIgnoreScrollEvents();
+        window.scrollTo(0, 0);
+        ModeContext.endIgnoreScrollEvents();
+    }
+
+    /** The From/To dialog; a chosen range filters the active tab. */
+    async openCustomDateRange() {
+        const isReady = await this._prepareForModalOpen('commandPalette.dateRange.custom');
+        if (!isReady) {
+            return;
+        }
+        if (this._dateRangeModal === null) {
+            this._dateRangeModal = new DateRangeModal();
+        }
+        const current = getActiveDateFilter();
+        let fromDate = OPEN_DATE;
+        let toDate = OPEN_DATE;
+        if (current !== null && current.rangeKind === DATE_RANGE_KINDS.CUSTOM) {
+            fromDate = current.fromDate;
+            toDate = current.toDate;
+        }
+        const chosen = await this._dateRangeModal.openForRange({ field: getDateRangeField(), fromDate, toDate });
+        if (chosen === null) {
+            return;
+        }
+        rememberDateRangeField(chosen.field);
+        await CommandGate.run('commandPalette.dateRange.custom.apply', async () => {
+            await this.setDateFilter({ ...chosen, rangeKind: DATE_RANGE_KINDS.CUSTOM });
         });
     }
 

@@ -9,4 +9,3 @@ def test_removed_calendar_routes_are_not_registered() -> None:
     }
 
     assert f"{API_PREFIX}/notes/activity" not in registered_paths
-    assert f"{API_PREFIX}/notes/tab-state/date-filter" not in registered_paths

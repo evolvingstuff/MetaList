@@ -91,6 +91,16 @@ const CONTEXT_MENU_ICONS = {
         'M8 14h2',
         'M14 14h2',
     ],
+    // A calendar with a span of days marked.
+    date_range: [
+        'M4 5h16v15H4z',
+        'M8 3v4',
+        'M16 3v4',
+        'M4 10h16',
+        'M7 15h10',
+        'M7 13v4',
+        'M17 13v4',
+    ],
     clock: [
         'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18',
         'M12 7v5l3 2',

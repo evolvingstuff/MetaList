@@ -64,6 +64,11 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
             setSortMode: noop,
             getIsUntaggedView: () => false,
             setIsUntaggedView: noop,
+            getDateRangeKind: () => 'none',
+            getDateRangeField: () => 'updated',
+            setDateRangePreset: noop,
+            setDateRangeField: noop,
+            openCustomDateRange: noop,
         },
     });
 
@@ -181,6 +186,9 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
     assert.equal(endpointIds.has('view.sort_mode.content_volume'), true);
     assert.equal(endpointIds.has('view.all_notes'), true);
     assert.equal(endpointIds.has('view.untagged_notes'), true);
+    for (const id of ['field.updated', 'field.created', 'none', 'today', 'last_7_days', 'last_30_days', 'this_year', 'custom']) {
+        assert.equal(endpointIds.has(`view.date_range.${id}`), true);
+    }
     assert.equal(
         endpoints.find((endpoint) => endpoint.id === 'view.sort_mode.alphabetical').label,
         'Sort order: Alphabetical',

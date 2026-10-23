@@ -30,8 +30,8 @@ marking each place the text occurs.
   included. A space at an edge of the text limits it to a word edge on that side
   ("fat " does not find "father"), as quoted search text does
   ([search semantics](search-semantics.md)).
-- What notes show: their text, including the text of expanded embedded notes, and
-  tag-bar comments. Not tag names (search finds those), not link addresses or fetched
+- What notes show: their text, including the text of expanded embedded notes, the
+  names of files they show (a PDF's or other file's name on its card), and tag-bar comments. Not tag names (search finds those), not link addresses or fetched
   link titles the note does not show, and not the grey placeholder lines a search leaves
   for branches outside it.
 - Only the notes of the current tab, search and sort order, in list order: each note,

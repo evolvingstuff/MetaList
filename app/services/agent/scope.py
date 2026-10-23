@@ -17,6 +17,7 @@ from app.services.agent.cloud_privacy import CloudPrivacyEvaluator
 from app.services.agent.cloud_privacy import cloud_privacy_evaluator
 from app.services.agent.cloud_privacy import disclosable_search_query
 from app.services.content_formatting import extract_note_text_for_agent
+from app.services.root_date_filter import RootDateFilter
 from app.services.note_store import NoteRecord
 from app.services.note_store import NoteStore
 from app.services.note_store import store as note_store
@@ -290,6 +291,9 @@ class ScopedSearchSnapshot:
     # it picks out, judged at Send (cloud_privacy.disclosable_search_query). The
     # descriptor keeps the search as typed, for the server's own searches.
     disclosable_search_query: str
+    # The tab's date range filter at Send (None: every date), for the server's own
+    # searches of this view later in the run.
+    date_filter: RootDateFilter | None
     # How long freezing took, shown on the chat's first activity line.
     preparation_ms: float
     # Note text extracted on first read during the run (NoteText).
@@ -330,12 +334,14 @@ class ScopedSearchSnapshotFactory:
         descriptor: AgentScopeDescriptor,
         authoritative_search_query: str,
         authoritative_sort_mode: str,
+        authoritative_date_filter: RootDateFilter | None,
         run_id: str,
         session_key: str,
         privacy_boundary: CloudPrivacyBoundary,
         selected_note_id: str,
         authoritative_active_search_query: str,
         authoritative_active_sort_mode: str,
+        authoritative_active_date_filter: RootDateFilter | None,
     ) -> ScopedSearchSnapshot:
         started_at = time.perf_counter()
         text_extraction = TextExtractionMeter.start()
@@ -349,6 +355,7 @@ class ScopedSearchSnapshotFactory:
         resolved = self._view_scope_resolver(
             search=descriptor.search_query,
             sort_mode=descriptor.sort_mode,
+            date_filter=authoritative_date_filter,
             is_untagged_view=descriptor.scope_kind == "untagged",
         )
         selected_view = resolved
@@ -356,6 +363,7 @@ class ScopedSearchSnapshotFactory:
             selected_view = self._view_scope_resolver(
                 search=authoritative_active_search_query,
                 sort_mode=authoritative_active_sort_mode,
+                date_filter=authoritative_active_date_filter,
                 is_untagged_view=False,
             )
         selected_note = self._freeze_selected_note(selected_note_id, selected_view, privacy_boundary)
@@ -426,6 +434,7 @@ class ScopedSearchSnapshotFactory:
             tree_nodes_by_id=MappingProxyType(tree_nodes),
             note_records_at_send=self._records_at_send(tree_nodes),
             disclosable_search_query=self._disclosable_search_query(descriptor, privacy_boundary),
+            date_filter=authoritative_date_filter,
             preparation_ms=(time.perf_counter() - started_at) * MS_PER_SECOND,
             text_extraction=text_extraction,
             selected_note=selected_note,
@@ -442,7 +451,9 @@ class ScopedSearchSnapshotFactory:
         )
 
     def _finds_visible_note(self, *, search: str, sort_mode: str, boundary: CloudPrivacyBoundary) -> bool:
-        resolved = self._view_scope_resolver(search=search, sort_mode=sort_mode, is_untagged_view=False)
+        resolved = self._view_scope_resolver(
+            search=search, sort_mode=sort_mode, date_filter=None, is_untagged_view=False,
+        )
         return self._privacy_evaluator.has_visible_note(note_ids=tuple(resolved.matched_note_ids), boundary=boundary)
 
     def _freeze_selected_note(

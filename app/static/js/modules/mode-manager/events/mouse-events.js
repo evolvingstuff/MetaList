@@ -295,6 +295,7 @@ function isMouseDownOutsideEditExclusion(target) {
             // The magnifier leaves edit mode itself, then opens the empty search input.
             '#reference-view-new-search',
             '#root-sort-indicator',
+            '#date-range-indicator',
             '#untagged-view-indicator',
             '#menu-button',
             '#chat-toggle-button',
@@ -1508,6 +1509,18 @@ function handleClick(event) {
         const clearButton = event.target.closest('#root-sort-indicator-clear');
         if (clearButton) {
             void CommandPalette.setSortMode('normal');
+        }
+        return;
+    }
+
+    const dateRangeIndicator = event.target.closest('#date-range-indicator');
+    if (dateRangeIndicator) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.target.closest('#date-range-indicator-clear')) {
+            void CommandGate.run('dateRangeIndicator.clear', async () => {
+                await CommandPalette.setDateRangePreset('none');
+            });
         }
         return;
     }

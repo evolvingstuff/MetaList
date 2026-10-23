@@ -25,7 +25,7 @@ import {checkExitEditScroll} from './browser-scroll-regressions.mjs';
 import {checkMoveToBottom} from './browser-move-to-bottom-regressions.mjs';
 import {checkListEdges} from './browser-list-edge-regressions.mjs';
 import {checkSortedTabs} from './browser-sorted-tab-regressions.mjs';
-import {checkSearchBarMenu, checkSearchInputRejected} from './browser-search-input-regressions.mjs';
+import {checkDateRange, checkSearchBarMenu, checkSearchInputRejected} from './browser-search-input-regressions.mjs';
 import {checkDictationPaste} from './browser-dictation-paste-regressions.mjs';
 import {checkFileDropPreviews} from './browser-file-drop-preview-regressions.mjs';
 import {checkImageMenu} from './browser-image-menu-regressions.mjs';
@@ -194,6 +194,7 @@ try {
   } else if (process.env.BROWSER_TEST_SUITE === 'search-input') {
     await checkSearchInputRejected(page);
     await checkSearchBarMenu(page);
+    await checkDateRange(page);
     assert.deepEqual(errors, []);
     console.log(`PASS search input regressions in ${await browser.version()}`);
   } else if (process.env.BROWSER_TEST_SUITE === 'dictation-paste') {

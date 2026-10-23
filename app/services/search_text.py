@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 from app.services.content_formatting import COMMENT_CLOSE, COMMENT_OPEN, find_plain_text_urls
+from app.services.file_registry import file_registry
 from app.services.link_titles import link_title_store, normalize_url_for_link_title
 from app.utils.text_utils import strip_html_keeping_link_urls
 
@@ -79,7 +80,8 @@ def build_searchable_text_casefold_from_plaintext(content_text: str, tags: str) 
 
 
 def build_searchable_base_text_casefold(content_text: str, tags: str) -> str:
-    """Visible text and tag-bar comments, casefolded (without URL titles)."""
+    """Visible text, the names of files it references ([[id]], shown by name) and
+    tag-bar comments, casefolded (without URL titles)."""
     if not isinstance(content_text, str):
         raise TypeError(f"content_text must be a string, got {type(content_text)}")
     if not isinstance(tags, str):
@@ -88,6 +90,9 @@ def build_searchable_base_text_casefold(content_text: str, tags: str) -> str:
     comment_text = extract_tag_bar_comment_text(tags)
 
     combined = content_text
+    file_names = [name for _file_id, name in file_registry.referenced_file_names(content_text)]
+    if file_names:
+        combined = " ".join([combined, *file_names])
     if comment_text:
         if combined:
             combined = f"{combined} {comment_text}"
