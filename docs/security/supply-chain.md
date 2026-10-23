@@ -6,6 +6,10 @@ The 0.12.0 main-branch release audit failed on one newly published advisory:
 
 - `multidict` 6.7.1 (CVE-2026-104874, GHSA-54p9-h82j-f925), a transitive dependency through `instructor` → `aiohttp`/`yarl`, fixed by locking `multidict` **6.9.1** (`uv lock --upgrade-package multidict`; no other package moved; exports regenerated). The local audit then reported no known advisories across 95 Python versions and 87 vendor versions.
 
+## Update dated 2026-10-23 (America/Los_Angeles)
+
+The main-branch release audit for 0.23.0 failed on three DOMPurify advisories published on 2026-10-22, all fixed in **3.4.17**: GHSA-cg2g-xh64-v4q7 (critical: `SAFE_FOR_TEMPLATES` with a DOM-returning mode leaves template expressions in shadow roots), GHSA-mrv2-3pqr-j5jr (high: an `IN_PLACE` hook that removes a parent or sibling leaves its event handlers armed) and GHSA-c6gr-qvv4-5v3f (low: the SMIL `attributeName=href` guard skipped with `PARSER_MEDIA_TYPE: 'application/xhtml+xml'`). DOMPurify **3.4.17** is vendored: the npm archive's sha512 matched the registry integrity before `package/dist/purify.min.js` and `package/LICENSE` (unchanged) were copied. MetaList sanitizes to a string with the default HTML parser, never sets `SAFE_FOR_TEMPLATES`, `RETURN_DOM`, `IN_PLACE` or `PARSER_MEDIA_TYPE`, and registers only an `uponSanitizeAttribute` hook that removes no node, so none of the three applied; the upgrade keeps the version-based audit clean. The Excalidraw build lockfile also resolves DOMPurify 3.4.16, but it is not among the packages compiled into that bundle (`bundle-packages.json`).
+
 ## Update dated 2026-10-04 (America/Los_Angeles)
 
 The main-branch release audit failed on two newly published advisories:
@@ -34,7 +38,7 @@ Each bundle was compared with an npm archive whose registry integrity digest was
 
 | npm package | Shipped version | Bundle SHA-256 |
 |---|---|---|
-| dompurify | 3.4.16 | `2c90a9b46d6463f26038a29b686e82bc91de01fdac9d5229e7cfe3b360134ea2` |
+| dompurify | 3.4.17 | `cd37898f9782adf54820c413191b5691803f0f137c799d6edcfd38523b4c2c31` |
 | mermaid | 11.16.1 | `18327bef70d96fb505fe7287d9f6a7362ebf07ff6576ddfaffb1a06f3e1a2954` |
 | zxcvbn | 4.4.2 | `f42c651f40506acb6b662490f338dd47a5951d3312039c4ab8fe5090484f351a` |
 | @excalidraw/excalidraw (built bundle) | 0.18.1 | `98d0fb0b56f3a2b061d643d8040918e09e0ba72ad4208c5d25ff2e43e15b3946` |
