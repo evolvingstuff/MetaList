@@ -104,8 +104,8 @@ function buildReferenceSourceItem(referenceNoteId, onOpenReferenceSource) {
     }
     return {
         id: 'open-reference-source',
-        label: 'Go to Source',
-        icon: 'external',
+        label: 'Go to Source Note',
+        icon: 'note_reference',
         enabled: true,
         onSelect: () => onOpenReferenceSource(referenceNoteId),
     };
@@ -751,6 +751,11 @@ function buildViewContextItems(context, handlers) {
             items.push({
                 id: 'paste-note-at-top', label: 'Paste Note at Top', icon: 'paste', enabled: true,
                 shortcut: commandKey('V'), onSelect: () => onPasteNoteAtTop(),
+            });
+            const onPasteReferenceAtTop = requireViewHandler(handlers, 'onPasteReferenceAtTop');
+            items.push({
+                id: 'paste-reference-at-top', label: 'Paste Note as Reference at Top', icon: 'note_reference',
+                enabled: true, shortcut: commandKey('R'), onSelect: () => onPasteReferenceAtTop(),
             });
         }
         // While a note is edited, its own editor undoes typing (⌘Z).

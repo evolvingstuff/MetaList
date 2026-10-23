@@ -4,7 +4,8 @@ import { half } from '../../half.js';
 
 const DEFAULT_BELT_SIZE = 4;
 const MAX_BELT_SIZE = 10;
-// A root note whose top is this close to the viewport top is pinned there as the anchor.
+// A root note that reaches the viewport top, with its top at most this far above it,
+// is pinned there as the anchor.
 const PINNED_TOP_ANCHOR_MAX_DISTANCE_PX = 80;
 
 const ROOT_PARENT_SENTINELS = new Set(['', 'null', 'undefined', 'none']);
@@ -150,7 +151,11 @@ export function computeScrollAnchor(options) {
             if (!element) continue;
             const rect = element.getBoundingClientRect();
             if (rect.bottom <= topRef) continue;
-            const dist = Math.abs(rect.top - topRef);
+            // A note still below the line cannot be pinned: its distance from the line is
+            // lost (an offset is never negative), and coming back would scroll it up to
+            // the line (80px further down the list, reported 2026-10-23).
+            if (rect.top > topRef) continue;
+            const dist = topRef - rect.top;
             if (dist <= PINNED_TOP_ANCHOR_MAX_DISTANCE_PX && dist < bestPinnedDistance) {
                 bestPinnedIndex = i;
                 bestPinnedDistance = dist;

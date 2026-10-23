@@ -96,10 +96,26 @@ class FindInListRequest(TypedDict):
     direction: Literal['forward', 'backward']
 
 @with_config(ConfigDict(strict=True))
+class ReferenceOriginScope(TypedDict):
+    scopeTabId: Identifier
+    searchQuery: Text
+    sortMode: SortMode
+    isUntaggedView: bool
+
+# A tab showing a reference view, opened from another tab (app/services/tab_state.py).
+@with_config(ConfigDict(strict=True))
+class ReferenceView(TypedDict):
+    fromTabId: Identifier
+    referenceQuery: Text
+    viewKind: Literal['source', 'backlinks', 'reference', 'references']
+    originScope: ReferenceOriginScope
+
+@with_config(ConfigDict(strict=True))
 class UpdateTabStateRequest(TypedDict):
     activeTabId: Identifier
     tabs: dict[Identifier, Tab]
     tabOrder: list[Identifier]
+    referenceViews: dict[Identifier, ReferenceView]
 
 @with_config(ConfigDict(strict=True))
 class UpdateTabSortModeRequest(TypedDict):

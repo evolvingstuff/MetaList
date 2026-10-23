@@ -140,6 +140,15 @@ const CONTEXT_MENU_ICONS = {
         'M7 10l5 5 5-5',
         'M5 20h14',
     ],
+    // The reference icon notes use (main.css --note-reference-icon): a page with an
+    // arrow coming into it.
+    note_reference: [
+        'M14 3H7a2 2 0 0 0-2 2v6',
+        'M14 3v4a1 1 0 0 0 1 1h4',
+        'M19 8v11a2 2 0 0 1-2 2h-6',
+        'M4 21v-3a3 3 0 0 1 3-3h5',
+        'M10 12l3 3-3 3',
+    ],
     external: [
         'M14 4h6v6',
         'M10 14 20 4',

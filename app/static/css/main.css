@@ -27,10 +27,13 @@
     --note-corner-radius: 12px;
     --note-corner-radius-nested: 10px;
     /* Embeds: greys, the first level, then each embed inside an embed a shade deeper. */
-    --embed-tint-1: #f1f3f5;
-    --embed-tint-2: #e5e8eb;
-    --embed-tint-3: #d8dce0;
+    --embed-tint-1: #e4e7eb;
+    --embed-tint-2: #d5dade;
+    --embed-tint-3: #c6ccd2;
     --embed-edge: rgba(0, 0, 0, 0.12);
+    /* Several notes (an AI answer's references, all of them): two pages, one behind the other. */
+    --note-references-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 6V4a1 1 0 0 1 1-1h5l4 4v11a1 1 0 0 1-1 1h-2'/%3E%3Cpath d='M5 7a1 1 0 0 1 1-1h5l4 4v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z'/%3E%3Cpath d='M11 6v4h4'/%3E%3C/svg%3E");
+    --note-reference-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 3H7a2 2 0 0 0-2 2v6'/%3E%3Cpath d='M14 3v4a1 1 0 0 0 1 1h4'/%3E%3Cpath d='M19 8v11a2 2 0 0 1-2 2h-6'/%3E%3Cpath d='M4 21v-3a3 3 0 0 1 3-3h5'/%3E%3Cpath d='M10 12l3 3-3 3'/%3E%3C/svg%3E");
     /* The light theme's header bar (search, tabs icon, result count): black,
        with white on it, as it long was. */
     --search-shell-surface: #000000;
@@ -4270,6 +4273,35 @@ body[data-tag-style="text"],
     margin-right: 0.35em;
 }
 
+/* The one sign for a note reference (an embed's corner button, a link's icon): a
+   page with an arrow coming into it, a shortcut to a note kept elsewhere. Drawn
+   with a mask so the notes' HTML holds no SVG; text inside (the ↗ in older copied
+   AI answers) is pushed out of sight. */
+.note-reference-icon {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.15em;
+    overflow: hidden;
+    text-indent: 1em;
+    white-space: nowrap;
+    background-color: currentColor;
+    -webkit-mask: var(--note-reference-icon) center / contain no-repeat;
+    mask: var(--note-reference-icon) center / contain no-repeat;
+}
+
+/* In a note (an embed's corner, after a link) a little larger than the text. */
+.note-content .note-reference-icon {
+    width: 1.2em;
+    height: 1.2em;
+    vertical-align: -0.25em;
+}
+
+.note-reference-icon.is-several-notes {
+    -webkit-mask-image: var(--note-references-icon);
+    mask-image: var(--note-references-icon);
+}
+
 .note-reference-link-title {
     min-width: 0;
     overflow: hidden;
@@ -5047,13 +5079,15 @@ html[data-theme="dark"] .note.collapsed:not(.editing) .note-content img.note-fil
 }
 
 /* A collapsed embed looks like any collapsed note: its first line as plain
-   text, the ↗ at the top right. A press on the text edits the note, as
-   anywhere in an embed; only the ↗ goes to the source. */
+   text, the reference icon at the top right. A press on the text edits the
+   note, as anywhere in an embed; only the icon goes to the source. */
 .note-reference-embed-first-line {
     position: relative;
 }
 
 .note-reference-embed-first-line .note-reference-link {
+    /* The padding keeps the text clear of the icon: inside the width, not past it. */
+    box-sizing: border-box;
     width: 100%;
     padding-right: 1.6em;
     color: inherit;
@@ -5065,11 +5099,19 @@ html[data-theme="dark"] .note.collapsed:not(.editing) .note-content img.note-fil
     text-decoration: none;
 }
 
+/* The source's first line comes in its own blocks (a paragraph, a heading): each
+   stays on one line and ends with … where it would run under the icon. */
+.note-reference-embed-first-line .note-reference-link-title :not(img) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .note-reference-embed-first-line .note-reference-link-icon {
     position: absolute;
     top: 0;
     right: 0;
-    width: 1em;
+    width: 1.2em;
     text-align: right;
     color: #64748b;
     pointer-events: auto;
@@ -5090,8 +5132,8 @@ html[data-theme="dark"] .note-embed-holds-embed .note-reference-block.note-embed
     background: transparent;
 }
 
-/* The go-to arrows (↗ source, ↖ backlinks) sit at the top right; only the
-   first line makes room for them. A link's ↗ follows its text. */
+/* The go-to buttons (the reference icon to the source, ↖ backlinks) sit at the
+   top right; only the first line makes room for them. A link's icon follows its text. */
 .note-embed-with-source,
 .note:not(.editing) > .note-content .note-with-backlinks,
 .note.collapsed:not(.editing) > .note-content .note-with-backlinks {
@@ -5117,7 +5159,7 @@ html[data-theme="dark"] .note-embed-holds-embed .note-reference-block.note-embed
     position: absolute;
     top: 0;
     right: 0;
-    width: 1em;
+    width: 1.2em;
     margin: 0;
     padding: 0;
     border: 0;
@@ -6370,8 +6412,20 @@ body:not(.pref-show-search-results-count) .controls .search-results-count {
     cursor: pointer;
 }
 
-.controls .reference-view-chip-button[hidden] {
+.controls .reference-view-chip-button[hidden],
+.controls .reference-view-chip-icon[hidden] {
     display: none;
+}
+
+/* A reference view's tab in the tab list starts with its chip's icon. */
+.tab-context-reference-icon {
+    margin-right: 0.35em;
+}
+
+/* A reference view's chip starts with its icon: one note, or several. */
+.controls .reference-view-chip-icon {
+    flex: none;
+    font-size: 15px;
 }
 
 .controls .reference-view-chip-button:hover,

@@ -223,7 +223,7 @@ test('overlapping connectivity checks clear user activity once', async () => {
 test('tab-state persistence accepts a server echo of the state it already has', async () => {
     const source = moduleSource('mode-manager/services/tab-state-service.js');
     const serverState = {
-        activeTabId: 'tab-1', tabOrder: ['tab-1'], version: 7,
+        activeTabId: 'tab-1', tabOrder: ['tab-1'], version: 7, referenceViews: {},
         tabs: { 'tab-1': { searchQuery: '', scrollY: 120, anchorRootId: null, scrollAnchor: null, sortMode: 'normal' } },
     };
     // The browser's copy differs only in a detail the server normalises away
@@ -238,6 +238,7 @@ test('tab-state persistence accepts a server echo of the state it already has', 
         ErrorHandler: { handleApiError() {} },
         HttpRequestError: Error,
         buildSessionHeaders: () => ({}),
+        getReferenceViewsPayload: () => ({}),
         fetch: async () => ({ ok: true, json: async () => structuredClone(serverState) }),
     };
     const { captureServerSignature, persistTabStateSnapshot } = new Function(

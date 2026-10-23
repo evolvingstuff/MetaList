@@ -58,6 +58,7 @@ import {checkDeleteWarning} from './browser-delete-warning-regressions.mjs';
 import {FOCUSED_SUITES} from './browser-suite-names.mjs';
 import {checkPaletteActivation} from './browser-palette-activation-regressions.mjs';
 import {checkSearchHighlight} from './browser-search-highlight-regressions.mjs';
+import {checkReferenceViews} from './browser-reference-view-regressions.mjs';
 import {installRequestMonitor, waitForAppQuiet} from './browser-app-idle.mjs';
 
 // Requests count as quiet after this long without one starting or ending: after a
@@ -238,6 +239,10 @@ try {
     await checkPaletteActivation(page);
     assert.deepEqual(errors, []);
     console.log(`PASS palette activation regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'reference-views') {
+    await checkReferenceViews(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS reference view regressions in ${await browser.version()}`);
   } else if (process.env.BROWSER_TEST_SUITE === 'search-highlight') {
     await checkSearchHighlight(page);
     assert.deepEqual(errors, []);

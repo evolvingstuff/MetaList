@@ -643,7 +643,14 @@ def _render_reference_block(
 
     if note_exists:
         wrapper_classes = f"{wrapper_classes} note-reference-note"
-        if display_as_embed:
+        if shows_embed_first_line:
+            body_html = _render_collapsed_embed_body(
+                reference_note_id=reference_note_id,
+                context=context,
+                static_export=static_export,
+                redact_credentials=redact_credentials,
+            )
+        elif display_as_embed:
             body_html = _render_embed_body(
                 reference_note_id=reference_note_id,
                 context=context,
@@ -727,9 +734,58 @@ def _render_embed_body(
     return (
         '<div class="note-embed-with-source">'
         f'<a href="#" class="note-reference-link note-source-arrow" data-ref-note-id="{escaped_note_id}" '
-        'title="Go to reference source" aria-label="Go to reference source">'
-        '<span aria-hidden="true">&#8599;</span></a>'
+        'title="Go to source note" aria-label="Go to source note">'
+        '<span class="note-reference-icon" aria-hidden="true"></span></a>'
         f"{embedded_content}</div>"
+    )
+
+
+def _render_collapsed_embed_body(
+    *,
+    reference_note_id: str,
+    context: EmbedRenderContext,
+    static_export: bool,
+    redact_credentials: bool,
+) -> str:
+    """A collapsed embed: the source's first line drawn as a collapsed note draws it,
+    in the source's own formatting (a heading, a colour), with the source icon."""
+    record = context.get_note(reference_note_id)
+    _preview, redacted_credential = _resolve_note_reference_preview(
+        reference_note_id=reference_note_id,
+        context=context,
+        redact_credentials=redact_credentials,
+    )
+    thumbnail_html, _caption = _render_link_preview_thumbnail(
+        record=record,
+        context=context,
+        static_export=static_export,
+    )
+    # These first lines keep their compact preview: a hidden password, footnote
+    # markers without their references, a picture or diagram as a thumbnail.
+    if redacted_credential != "" or has_scoped_footnotes(record.tags) or thumbnail_html != "":
+        return _render_link_body(
+            reference_note_id=reference_note_id,
+            context=context,
+            static_export=static_export,
+            redact_credentials=redact_credentials,
+            show_media=True,
+        )
+    preview_html = render_collapsed_note_content_with_embeds(
+        note_id=reference_note_id,
+        content_html=record.content,
+        tags=record.tags,
+        context=context,
+        static_export=static_export,
+        redact_credentials=redact_credentials,
+    )
+    if static_export:
+        return f'<span class="note-reference-link note-reference-link-static">{preview_html}</span>'
+    escaped_note_id = html.escape(reference_note_id, quote=True)
+    return (
+        f'<a href="#" class="note-reference-link" data-ref-note-id="{escaped_note_id}">'
+        '<span class="note-reference-link-icon note-reference-icon" aria-hidden="true" title="Go to source note"></span>'
+        f'<span class="note-reference-link-title">{preview_html}</span>'
+        "</a>"
     )
 
 
@@ -795,7 +851,7 @@ def _render_link_body(
         )
     return (
         f'<a href="#" class="note-reference-link" data-ref-note-id="{escaped_note_id}">'
-        '<span class="note-reference-link-icon" aria-hidden="true" title="Link to reference source">&#8599;</span>'
+        '<span class="note-reference-link-icon note-reference-icon" aria-hidden="true" title="Go to source note"></span>'
         f'<span class="{title_classes}">{preview_html}</span>'
         "</a>"
     )

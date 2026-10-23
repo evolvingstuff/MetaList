@@ -39,7 +39,8 @@ async function harness() {
         CONFIG: { API: { NOTES: { TAB_STATE: '/tabs' } } },
         CommandGate: { isBusy: () => false }, buildSessionHeaders: () => ({}),
         computeScrollAnchor: () => null, areScrollAnchorsEqual: (a, b) => a === b,
-        restoreReferenceNavigationFromSession: (tabs) => restoredReferenceTabs.push(tabs),
+        restoreReferenceNavigation: (state) => restoredReferenceTabs.push(state.tabs),
+        getReferenceViewsPayload: () => ({}),
         ErrorHandler: { handleApiError(_error, response) { apiErrors.push(response.status); } },
         HttpRequestError, AuthenticationRequiredError,
         fetch: async (_endpoint, options) => {
@@ -56,7 +57,7 @@ async function harness() {
         return { initializeTabStateService, persistTabStateSnapshot };`)(...Object.values(dependencies));
     await service.initializeTabStateService();
     assert.equal(polls.length, 1);
-    // Reference-tab labels are restored from the freshly loaded server tabs.
+    // Reference views are restored from the freshly loaded server tab state.
     assert.deepEqual(restoredReferenceTabs, [payload.tabs]);
     return { service, requests, context, payload, window, poll: polls[0], apiErrors };
 }

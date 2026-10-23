@@ -26,6 +26,8 @@ const OUTGOING_SIGN_BY_DIRECTION = Object.freeze({ forward: -1, back: 1 });
 
 const moduleState = ApplicationState.createFields('reference-view-transition-service', {
     pending: null,
+    // Counts transitions begun, so a slide that ends late leaves a newer one alone.
+    generation: 0,
 });
 
 function prefersReducedMotion() {
@@ -102,7 +104,8 @@ export function beginReferenceViewTransition(direction) {
         notesContainer.style.visibility = 'hidden';
         document.documentElement.classList.add(SLIDING_ROOT_CLASS);
     }
-    moduleState.pending = { direction, ghost, isAnimated };
+    moduleState.generation += 1;
+    moduleState.pending = { direction, ghost, isAnimated, generation: moduleState.generation };
     document.documentElement.dataset.referenceTransition = 'pending';
 }
 
@@ -158,16 +161,23 @@ function startColumnAnimations(pending, notesContainer) {
 
 /**
  * Show the view the navigation rendered: the chip and input change (showChange
- * applies them, with their CSS transition enabled) and the columns slide or fade.
- * Resolves once everything has settled.
+ * applies them, with their CSS transition enabled) and the columns slide or fade;
+ * afterChange runs once they are done (or at once without motion). Returns at
+ * once: the slide cleans up after itself when it ends, so nothing waits on it (a
+ * page in the background may not run animations until it is shown).
  */
-export async function playReferenceViewTransition(showChange) {
-    if (typeof showChange !== 'function') {
-        throw new Error('playReferenceViewTransition requires showChange');
+export function playReferenceViewTransition(showChange, afterChange) {
+    if (typeof showChange !== 'function' || typeof afterChange !== 'function') {
+        throw new Error('playReferenceViewTransition requires showChange and afterChange');
     }
     const pending = releasePending();
-    if (!pending.isAnimated) {
+    // A page nobody sees has nothing to animate.
+    if (!pending.isAnimated || document.hidden) {
+        if (pending.ghost !== null) {
+            pending.ghost.remove();
+        }
         showChange();
+        afterChange();
         finishTransition();
         return;
     }
@@ -177,11 +187,17 @@ export async function playReferenceViewTransition(showChange) {
     row.classList.add(CHIP_ANIMATING_CLASS);
     showChange();
     const animations = startColumnAnimations(pending, notesContainer);
-    await Promise.all(animations.map((animation) => animation.finished));
-    for (const animation of animations) {
-        animation.cancel();
-    }
-    pending.ghost.remove();
-    row.classList.remove(CHIP_ANIMATING_CLASS);
-    finishTransition();
+    void Promise.all(animations.map((animation) => animation.finished)).then(() => {
+        for (const animation of animations) {
+            animation.cancel();
+        }
+        pending.ghost.remove();
+        // A newer navigation owns the bar and the page's state from here.
+        if (moduleState.generation !== pending.generation) {
+            return;
+        }
+        row.classList.remove(CHIP_ANIMATING_CLASS);
+        afterChange();
+        finishTransition();
+    });
 }

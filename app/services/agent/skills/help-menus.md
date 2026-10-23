@@ -52,9 +52,9 @@ Opening or dismissing the command palette does not clear undo/redo. Global actio
 
 ## Untagged Notes View
 - `View: Untagged notes` temporarily overrides the displayed results with notes that have no non-meta effective tags while preserving the active tab and its search. Its search box is visually blank because the preserved query is not active.
-- `View: All notes` returns to the underlying tab view. The active untagged view also appears as a dismissible pill above the sticky top bar.
+- `View: All notes` returns to the underlying tab view. The active untagged view also appears as an `Untagged` chip inside the search input, before any sort chip.
 - The setting is transient and tab-agnostic: it is not persisted or inherited when a tab is duplicated.
-- Clicking any tab, changing the search input, or dismissing the pill exits the untagged view. Changing it resets the active display's scroll state and undo/redo context.
+- Clicking any tab, changing the search input, or dismissing the chip exits the untagged view. Changing it resets the active display's scroll state and undo/redo context.
 
 ## Config
 - Tag mappings live in `app/static/config/command_palette_tags.json`.

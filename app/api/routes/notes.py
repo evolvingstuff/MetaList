@@ -422,17 +422,26 @@ def get_tab_state() -> Dict[str, object]:
 @router.post("/notes/tab-state")
 @transactional_route
 def update_tab_state(payload: UpdateTabStateRequest) -> Dict[str, object]:
-    if "activeTabId" not in payload or "tabs" not in payload or "tabOrder" not in payload:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="activeTabId, tabs, and tabOrder are required")
+    if (
+        "activeTabId" not in payload or "tabs" not in payload or "tabOrder" not in payload
+        or "referenceViews" not in payload
+    ):
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail="activeTabId, tabs, tabOrder, and referenceViews are required",
+        )
     active_tab_id = payload["activeTabId"]
     tabs = payload["tabs"]
     tab_order = payload["tabOrder"]
+    reference_views = payload["referenceViews"]
     if not isinstance(tab_order, list):
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="tabOrder must be a list")
     tab_order_list = [str(entry) for entry in tab_order]
     capture = CapturedExceptionContext(InputRejected, boundary='app/api/routes/notes.py:update_tab_state:capture')
     with capture:
-        response = tab_state_store.update(active_tab_id=active_tab_id, tabs=tabs, tab_order=tab_order_list)
+        response = tab_state_store.update(
+            active_tab_id=active_tab_id, tabs=tabs, tab_order=tab_order_list, reference_views=reference_views,
+        )
     if capture.captured_exception is not None:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Invalid or stale tab state") from capture.captured_exception
     return response

@@ -292,6 +292,8 @@ function isMouseDownOutsideEditExclusion(target) {
             '.note-tag-bar',
             '#search-contexts-list',
             '#reference-source-indicator',
+            // The magnifier leaves edit mode itself, then opens the empty search input.
+            '#reference-view-new-search',
             '#root-sort-indicator',
             '#untagged-view-indicator',
             '#menu-button',
@@ -2072,10 +2074,15 @@ function handleReferenceSourceIndicatorClick(event) {
     if (newSearchButton) {
         event.preventDefault();
         event.stopPropagation();
-        if (isViewingReferenceSource()) {
-            showNewSearchInReferenceView();
-            focusSearchInputAndSelectAllText();
-        }
+        void CommandGate.run('mouse.reference_view_new_search', async () => {
+            if (ModeContext.isEditing) {
+                await actionDeselectNote();
+            }
+            if (isViewingReferenceSource()) {
+                showNewSearchInReferenceView();
+                focusSearchInputAndSelectAllText();
+            }
+        });
         return true;
     }
 

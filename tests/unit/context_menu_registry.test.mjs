@@ -85,8 +85,8 @@ test('buildContextMenuItems prepends source action for a reference context', () 
         },
         {
             id: 'open-reference-source',
-            label: 'Go to Source',
-            icon: 'external',
+            label: 'Go to Source Note',
+            icon: 'note_reference',
             enabled: true,
         },
     );
@@ -496,7 +496,7 @@ function buildViewContext(overrides) {
 }
 
 const VIEW_HANDLER_NAMES = [
-    'onAddNoteAtTop', 'onPasteNoteAtTop', 'onUndo', 'onRedo', 'onGoToTop', 'onGoToBottom', 'onFullyExpandAll',
+    'onAddNoteAtTop', 'onPasteNoteAtTop', 'onPasteReferenceAtTop', 'onUndo', 'onRedo', 'onGoToTop', 'onGoToBottom', 'onFullyExpandAll',
     'onFullyCollapseAll', 'onSetUntaggedView', 'onSetSortMode', 'onToggleAiChat', 'onToggleTabs',
     'onToggleNoteTags', 'onSetTheme', 'onNewTab', 'onOpenNamespace', 'onOpenReminders',
     'onExportViewHtml', 'onPrintView', 'onLogOut',
@@ -515,6 +515,7 @@ test('the background menu groups adding, history, the list, the view, opening, e
     assert.deepEqual(describeMenu(items), [
         'Add Note at Top ↩',
         'Paste Note at Top ⌘V',
+        'Paste Note as Reference at Top ⌘R',
         '— Undo ⌘Z',
         'Redo ⇧⌘Z',
         '— Go to Top',
@@ -538,6 +539,7 @@ test('background items that do not apply are hidden, not greyed', () => {
     const atTop = buildContextMenuItems(buildViewContext({}), buildViewHandlers([]));
     const ids = atTop.map((item) => item.id);
     assert.ok(!ids.includes('paste-note-at-top'));
+    assert.ok(!ids.includes('paste-reference-at-top'));
     assert.ok(!ids.includes('go-to-top'));
     assert.ok(!ids.includes('go-to-bottom'));
     assert.equal(atTop.find((item) => item.id === 'fully-expand-all').separated, true);
@@ -546,7 +548,7 @@ test('background items that do not apply are hidden, not greyed', () => {
     // While a note is edited, Enter, ⌘V and ⌘Z belong to the editor.
     const editing = buildContextMenuItems(buildViewContext({ isEditing: true, canPasteNoteAtTop: true }), buildViewHandlers([]));
     const editingIds = editing.map((item) => item.id);
-    for (const id of ['add-note-at-top', 'paste-note-at-top', 'undo', 'redo']) {
+    for (const id of ['add-note-at-top', 'paste-note-at-top', 'paste-reference-at-top', 'undo', 'redo']) {
         assert.ok(!editingIds.includes(id), id);
     }
     assert.equal(editing[0].id, 'fully-expand-all');
@@ -566,6 +568,7 @@ test('background shortcuts are written the Windows and Linux way off a Mac', () 
     assert.deepEqual(shortcuts, {
         'add-note-at-top': 'Enter',
         'paste-note-at-top': 'Ctrl+V',
+        'paste-reference-at-top': 'Ctrl+R',
         undo: 'Ctrl+Z',
         redo: 'Ctrl+Shift+Z',
     });
@@ -585,8 +588,8 @@ test('background actions call their handlers', () => {
         item.onSelect();
     }
     assert.deepEqual(calls.map((call) => call[0]), [
-        'onAddNoteAtTop', 'onPasteNoteAtTop', 'onUndo', 'onRedo', 'onGoToTop', 'onGoToBottom', 'onFullyExpandAll',
-        'onFullyCollapseAll', 'onNewTab', 'onOpenNamespace', 'onOpenReminders', 'onExportViewHtml', 'onPrintView', 'onLogOut',
+        'onAddNoteAtTop', 'onPasteNoteAtTop', 'onPasteReferenceAtTop', 'onUndo', 'onRedo', 'onGoToTop', 'onGoToBottom',
+        'onFullyExpandAll', 'onFullyCollapseAll', 'onNewTab', 'onOpenNamespace', 'onOpenReminders', 'onExportViewHtml', 'onPrintView', 'onLogOut',
     ]);
 });
 

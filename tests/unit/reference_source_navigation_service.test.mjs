@@ -54,6 +54,7 @@ test('nested reference source entries expose and dismiss one temporary context a
     const elements = {
         'reference-source-indicator': indicator,
         'reference-source-indicator-label': label,
+        'reference-view-chip-icon': new FakeHTMLElement(),
         'reference-view-chip-back': backButton,
         'notes-container': new FakeHTMLElement(),
     };
@@ -130,14 +131,14 @@ test('nested reference source entries expose and dismiss one temporary context a
         tabOrder: ['original', 'source-1', 'source-2'],
     }, { emitUpdate: false });
     pushReferenceNavigationEntry('source-1', 'source-2', 'uuid-2', originScope, 'source');
-    assert.equal(getReferenceNavigationLabelForTab('source-2'), 'Reference source');
+    assert.equal(getReferenceNavigationLabelForTab('source-2'), 'Source note');
     assert.deepEqual(getActiveReferenceOriginScope(), originScope);
     assert.deepEqual(getActiveReferenceChain().map((entry) => entry.toTabId), ['source-1', 'source-2']);
     assert.equal(backButton.hidden, false, 'a second level shows the back arrow');
     replaceActiveReferenceNavigationQuery('uuid-3', 'source');
     assert.equal(getActiveReferenceSourceQuery(), 'uuid-3');
-    // A source view's chip shows its note's first line; this note is not rendered.
-    assert.equal(label.textContent, '\u2196 ');
+    // A source view's chip says Source note; its first line is the tooltip.
+    assert.equal(label.textContent, 'Source note');
     assert.deepEqual(popReferenceNavigationEntryForActiveTab(), {
         fromTabId: 'source-1',
         toTabId: 'source-2',

@@ -207,8 +207,15 @@ export async function initializeSearchEvents() {
     // Initialize search contexts list
     updateSearchContextsList();
 
-    // Always sync the input field to the active tab query.
-    const analysis = syncSearchInputValue(searchInput, activeTabQuery);
+    // Always sync the input field to the active tab query, except a reference view's
+    // hidden note-ID search, which runs the view but never shows in the input.
+    let analysis = null;
+    if (isViewingReferenceSource()) {
+        syncSearchInputValue(searchInput, '');
+        analysis = analyzeSearchQueryInput(activeTabQuery);
+    } else {
+        analysis = syncSearchInputValue(searchInput, activeTabQuery);
+    }
     // Tab-state hydration already seeds ModeContext.searchQuery for the active tab.
     if (ModeContext.searchQuery !== analysis.normalizedText) {
         ModeContext.setSearchQuery(analysis.normalizedText);

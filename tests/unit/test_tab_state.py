@@ -33,7 +33,7 @@ def test_create_tab_copies_sort_mode_from_source_tab() -> None:
     initial = store.snapshot()
     source_tab_id = initial["activeTabId"]
     initial["tabs"][source_tab_id]["sortMode"] = "updated"
-    updated = store.update(
+    updated = store.update(reference_views={}, 
         active_tab_id=source_tab_id,
         tabs=initial["tabs"],
         tab_order=initial["tabOrder"],
@@ -60,7 +60,7 @@ def test_set_sort_mode_resets_scroll_state_and_marks_change() -> None:
         "beltNext": [],
         "anchorSortKey": {"domIndex": 0},
     }
-    store.update(
+    store.update(reference_views={}, 
         active_tab_id=tab_id,
         tabs=payload,
         tab_order=snapshot["tabOrder"],
@@ -123,7 +123,7 @@ def test_bootstrap_restores_persisted_tab_state() -> None:
         "beltNext": ["root-2"],
         "anchorSortKey": {"domIndex": 3},
     }
-    persisted = store.update(
+    persisted = store.update(reference_views={}, 
         active_tab_id=tab_id,
         tabs=payload,
         tab_order=initial["tabOrder"],
@@ -186,15 +186,15 @@ def test_unchanged_update_keeps_version_and_skips_persistence(monkeypatch: pytes
     snapshot = store.snapshot()
     tab_id = snapshot["activeTabId"]
     snapshot["tabs"][tab_id]["scrollY"] = 120
-    changed = store.update(active_tab_id=tab_id, tabs=snapshot["tabs"], tab_order=snapshot["tabOrder"])
+    changed = store.update(reference_views={}, active_tab_id=tab_id, tabs=snapshot["tabs"], tab_order=snapshot["tabOrder"])
     writes: list[bool] = []
     monkeypatch.setattr(store, "_persist_locked", lambda **_kwargs: writes.append(True))
 
-    unchanged = store.update(active_tab_id=tab_id, tabs=changed["tabs"], tab_order=changed["tabOrder"])
+    unchanged = store.update(reference_views={}, active_tab_id=tab_id, tabs=changed["tabs"], tab_order=changed["tabOrder"])
 
     assert unchanged["version"] == changed["version"]
     assert writes == []
     changed["tabs"][tab_id]["scrollY"] = 240
-    moved = store.update(active_tab_id=tab_id, tabs=changed["tabs"], tab_order=changed["tabOrder"])
+    moved = store.update(reference_views={}, active_tab_id=tab_id, tabs=changed["tabs"], tab_order=changed["tabOrder"])
     assert moved["version"] == changed["version"] + 1
     assert writes == [True]

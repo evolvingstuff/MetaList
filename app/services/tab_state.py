@@ -45,6 +45,82 @@ def _normalize_tab_sort_mode(sort_mode: object, *, from_storage: bool) -> str:
     return normalize_sort_mode(sort_mode)
 
 
+# Reference views (docs/ui/references.md): a tab that shows a note's source, the
+# notes referencing it, or an AI answer's references, opened from another tab.
+# They are kept with the tabs, so every window and reload labels them.
+REFERENCE_VIEW_KINDS = frozenset({"source", "backlinks", "reference", "references"})
+_REFERENCE_VIEW_KEYS = ("fromTabId", "referenceQuery", "viewKind", "originScope")
+_ORIGIN_SCOPE_KEYS = ("scopeTabId", "searchQuery", "sortMode", "isUntaggedView")
+
+
+def _normalize_origin_scope(origin_scope: object, *, from_storage: bool) -> Dict[str, object]:
+    if not isinstance(origin_scope, dict):
+        raise InputRejected("referenceViews originScope must be an object")
+    for key in _ORIGIN_SCOPE_KEYS:
+        if key not in origin_scope:
+            raise InputRejected(f"referenceViews originScope missing {key}")
+    scope_tab_id = origin_scope["scopeTabId"]
+    search_query = origin_scope["searchQuery"]
+    is_untagged_view = origin_scope["isUntaggedView"]
+    if not isinstance(scope_tab_id, str) or not _is_uuid_string(scope_tab_id):
+        raise InputRejected("referenceViews originScope.scopeTabId must be a tab id")
+    if not isinstance(search_query, str):
+        raise InputRejected("referenceViews originScope.searchQuery must be a string")
+    if not isinstance(is_untagged_view, bool):
+        raise InputRejected("referenceViews originScope.isUntaggedView must be a boolean")
+    return {
+        "scopeTabId": scope_tab_id,
+        "searchQuery": search_query,
+        "sortMode": _normalize_tab_sort_mode(origin_scope["sortMode"], from_storage=from_storage),
+        "isUntaggedView": is_untagged_view,
+    }
+
+
+def _normalize_reference_views(
+    views: object,
+    tabs: Dict[str, Dict[str, object]],
+    *,
+    from_storage: bool,
+) -> Dict[str, Dict[str, object]]:
+    """Reference views by the tab showing them. A view has ended, and is dropped,
+    when its tab or the tab it was opened from is gone, or its tab now runs
+    another search; a saved view of a kind this version does not know is dropped too."""
+    if not isinstance(views, dict):
+        raise InputRejected("referenceViews must be an object")
+    normalized: Dict[str, Dict[str, object]] = {}
+    for tab_id, view in views.items():
+        if not isinstance(tab_id, str) or not _is_uuid_string(tab_id):
+            raise InputRejected("referenceViews keys must be tab ids")
+        if not isinstance(view, dict):
+            raise InputRejected("referenceViews entries must be objects")
+        for key in _REFERENCE_VIEW_KEYS:
+            if key not in view:
+                raise InputRejected(f"referenceViews entry missing {key}")
+        from_tab_id = view["fromTabId"]
+        reference_query = view["referenceQuery"]
+        view_kind = view["viewKind"]
+        if not isinstance(from_tab_id, str) or not _is_uuid_string(from_tab_id):
+            raise InputRejected("referenceViews fromTabId must be a tab id")
+        if not isinstance(reference_query, str) or reference_query == "":
+            raise InputRejected("referenceViews referenceQuery must be a non-empty string")
+        if view_kind not in REFERENCE_VIEW_KINDS:
+            if from_storage:
+                continue
+            raise InputRejected("referenceViews viewKind is not a known kind of view")
+        origin_scope = _normalize_origin_scope(view["originScope"], from_storage=from_storage)
+        if tab_id not in tabs or from_tab_id not in tabs or from_tab_id == tab_id:
+            continue
+        if tabs[tab_id]["searchQuery"] != reference_query:
+            continue
+        normalized[tab_id] = {
+            "fromTabId": from_tab_id,
+            "referenceQuery": reference_query,
+            "viewKind": view_kind,
+            "originScope": origin_scope,
+        }
+    return normalized
+
+
 def _is_uuid_string(value: str) -> bool:
     if not isinstance(value, str):
         return False
@@ -173,6 +249,9 @@ class TabStateStore:
                 self._active_tab_id = next_active
 
             self._tab_order = order
+            self._reference_views = _normalize_reference_views(
+                self._reference_views, self._tabs, from_storage=False,
+            )
             self._version += 1
             self._persist_locked(connection=None, encryption_service=None, force_plaintext=False)
             return self._snapshot_locked()
@@ -183,9 +262,13 @@ class TabStateStore:
         active_tab_id: str,
         tabs: Dict[str, Dict[str, object]],
         tab_order: List[str],
+        reference_views: Dict[str, Dict[str, object]],
     ) -> Dict[str, object]:
         normalized_tabs = self._normalize_tabs(tabs, from_storage=False)
         normalized_order = self._normalize_tab_order(tab_order, normalized_tabs)
+        normalized_reference_views = _normalize_reference_views(
+            reference_views, normalized_tabs, from_storage=False,
+        )
         if active_tab_id not in normalized_tabs:
             raise InputRejected("activeTabId must reference an existing tab")
         with self._lock:
@@ -200,11 +283,13 @@ class TabStateStore:
                 self._tabs == normalized_tabs
                 and self._active_tab_id == active_tab_id
                 and self._tab_order == normalized_order
+                and self._reference_views == normalized_reference_views
             ):
                 return self._snapshot_locked()
             self._tabs = normalized_tabs
             self._active_tab_id = active_tab_id
             self._tab_order = normalized_order
+            self._reference_views = normalized_reference_views
             self._version += 1
             self._persist_locked(connection=None, encryption_service=None, force_plaintext=False)
             return self._snapshot_locked()
@@ -298,6 +383,7 @@ class TabStateStore:
             }
         }
         self._tab_order = [default_tab_id]
+        self._reference_views: Dict[str, Dict[str, object]] = {}
         self._version = version
 
     def _snapshot_locked(self) -> Dict[str, object]:
@@ -305,6 +391,7 @@ class TabStateStore:
             "activeTabId": self._active_tab_id,
             "tabs": deepcopy(self._tabs),
             "tabOrder": list(self._tab_order),
+            "referenceViews": deepcopy(self._reference_views),
             "version": self._version,
         }
 
@@ -329,10 +416,15 @@ class TabStateStore:
             raise RuntimeError("tab-state JSON version must be a non-negative integer")
         if not isinstance(tab_order, list):
             raise RuntimeError("tab-state JSON tabOrder must be a list")
+        # Tab state saved before reference views were kept with the tabs has none.
+        reference_views: object = {}
+        if "referenceViews" in parsed:
+            reference_views = parsed["referenceViews"]
         return {
             "activeTabId": active_tab_id,
             "tabs": self._normalize_tabs(tabs, from_storage=True),
             "tabOrder": [str(entry) for entry in tab_order],
+            "referenceViews": reference_views,
             "version": version,
         }
 
@@ -357,6 +449,9 @@ class TabStateStore:
             raise RuntimeError("snapshot activeTabId must reference an existing tab")
         self._tabs = normalized_tabs
         self._tab_order = normalized_order
+        self._reference_views = _normalize_reference_views(
+            snapshot["referenceViews"], normalized_tabs, from_storage=True,
+        )
         self._active_tab_id = active_tab_id
         self._version = version
 

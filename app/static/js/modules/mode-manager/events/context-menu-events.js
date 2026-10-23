@@ -83,7 +83,12 @@ import { printNotes } from '../services/print-service.js';
 import { exportNotes } from '../services/export-service.js';
 import { openNoteFullscreen } from '../services/note-fullscreen-service.js';
 import { openFloatingNote } from '../services/floating-note-service.js';
-import { createBlankSearchContextFromHover, openReferenceInNewTab, pasteCopiedNoteIntoNewTopNote } from './keyboard-events.js';
+import {
+    createBlankSearchContextFromHover,
+    openReferenceInNewTab,
+    pasteCopiedNoteIntoNewTopNote,
+    pasteCopiedNoteReferenceIntoNewTopNote,
+} from './keyboard-events.js';
 import { actionRedo, actionUndo } from '../actions/history-actions.js';
 import { hasRootsBelowLoadedWindow } from '../services/infinite-scroll-service.js';
 import { isRootReorderLocked } from '../services/root-sort-service.js';
@@ -1358,6 +1363,9 @@ function showViewContextMenu(event) {
     const items = buildContextMenuItems(context, {
         onPasteNoteAtTop: () => {
             void pasteCopiedNoteIntoNewTopNote();
+        },
+        onPasteReferenceAtTop: () => {
+            void pasteCopiedNoteReferenceIntoNewTopNote();
         },
         onUndo: () => {
             void CommandGate.run('contextMenu.view.undo', async () => {

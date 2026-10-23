@@ -72,6 +72,8 @@ import {
     getActiveReferenceSourceQuery,
     getActiveReferenceViewKind,
     getReferenceNavigationLabelForTab,
+    getReferenceViewIconClasses,
+    getReferenceViewKindForTab,
     isViewingReferenceSource,
     popActiveReferenceChain,
     popReferenceNavigationEntryForActiveTab,
@@ -1337,15 +1339,7 @@ function handleInsertEmbedReferenceShortcut(event) {
         if (event.shiftKey) {
             return;
         }
-        if (blockRootNoteCreation('top', 'pasteReferenceNewTopNote')) {
-            return;
-        }
-        void CommandGate.run('keyboard.paste_reference_new_top_note', async () => {
-            const newNoteId = requireCreatedNoteId(await createNoteAtTop(), 'pasteReferenceNewTopNote');
-            insertReferenceTokenIntoActiveEditor(`[[${referenceNoteId}]]`);
-            await actionSaveNote(newNoteId);
-            ModeContext.resetEditSessionState({ startedCollapsed: false });
-        });
+        void pasteCopiedNoteReferenceIntoNewTopNote();
         return;
     }
 
@@ -2797,6 +2791,24 @@ function insertFormatDetectedPasteIntoNewNote(clipboardData) {
     return true;
 }
 
+/** ⌘R outside edit mode, or Paste Note as Reference at Top: a new top note holding the copied note's reference. */
+export async function pasteCopiedNoteReferenceIntoNewTopNote() {
+    const referenceNoteId = ModeContext.clipboardNoteId;
+    if (typeof referenceNoteId !== 'string' || referenceNoteId.length === 0) {
+        throw new Error('Paste reference at top requires a copied note');
+    }
+    if (blockRootNoteCreation('top', 'pasteReferenceNewTopNote')) {
+        return false;
+    }
+    return await CommandGate.run('paste_reference.new_top_note', async () => {
+        const newNoteId = requireCreatedNoteId(await createNoteAtTop(), 'pasteReferenceNewTopNote');
+        insertReferenceTokenIntoActiveEditor(`[[${referenceNoteId}]]`);
+        await actionSaveNote(newNoteId);
+        ModeContext.resetEditSessionState({ startedCollapsed: false });
+        return true;
+    });
+}
+
 export async function pasteCopiedNoteIntoNewTopNote() {
     if (blockRootNoteCreation('top', 'pasteNoteNewTopNote')) {
         return false;
@@ -3236,6 +3248,14 @@ function handleTabDragClick(event) {
     event.stopImmediatePropagation();
 }
 
+function buildTabReferenceIconHtml(tabId) {
+    const viewKind = getReferenceViewKindForTab(tabId);
+    if (viewKind === '') return '';
+    const iconClasses = getReferenceViewIconClasses(viewKind);
+    if (iconClasses.length === 0) return '';
+    return `<span class="${iconClasses.join(' ')} tab-context-reference-icon" aria-hidden="true"></span>`;
+}
+
 export function updateSearchContextsList() {
     const searchContextsList = document.getElementById('search-contexts-list');
     updateReferenceSourceIndicator();
@@ -3298,7 +3318,8 @@ export function updateSearchContextsList() {
             `<div data-tab-id="${escapeHtml(tabId)}" class="tab-context-item ${activeClass}" draggable="true">`
             + `<span class="tab-context-index">${i + 1}:</span>`
             // The search is the user's text: shown as text, never as markup.
-            + `<span class="tab-context-query">${escapeHtml(displayQuery)}</span>`
+            // A reference view's tab starts with its chip's icon.
+            + `<span class="tab-context-query">${buildTabReferenceIconHtml(tabId)}${escapeHtml(displayQuery)}</span>`
             + `<span class="tab-context-actions">${actions}</span>`
             + `</div>`
         );
@@ -3711,7 +3732,7 @@ export async function openBacklinksInNewTab(sourceNoteId) {
 }
 
 async function openReferenceQueryInNewTabWithContext(
-    referenceQuery,
+    rawReferenceQuery,
     context,
     replaceActiveReference,
     viewKind,
@@ -3719,6 +3740,12 @@ async function openReferenceQueryInNewTabWithContext(
     if (typeof replaceActiveReference !== 'boolean') {
         throw new Error('Reference navigation requires replacement policy');
     }
+    // The view is kept as the tab's search reads it, so the server can tell it still runs.
+    const queryAnalysis = analyzeSearchQueryInput(rawReferenceQuery);
+    if (!queryAnalysis.isComplete) {
+        throw new Error('Reference navigation query must be a complete search query');
+    }
+    const referenceQuery = queryAnalysis.normalizedText;
     // The same AI references clicked again while they are shown: already there.
     if (
         replaceActiveReference
@@ -3766,15 +3793,16 @@ async function navigateWithReferenceSlide(direction, navigate) {
     const isReferenceView = isViewingReferenceSource();
     // Back at the search, the input fades in with its text; into a reference view, it
     // fades out with the text it had and is emptied once out of sight.
-    await playReferenceViewTransition(() => {
+    playReferenceViewTransition(() => {
         if (!isReferenceView) {
             syncSearchInputField();
         }
         updateReferenceSourceIndicator();
+    }, () => {
+        if (isReferenceView) {
+            syncSearchInputField();
+        }
     });
-    if (isReferenceView) {
-        syncSearchInputField();
-    }
     return true;
 }
 

@@ -80,6 +80,10 @@ const keyboardSource = readFileSync(new URL('../../app/static/js/modules/mode-ma
 const referenceStart = keyboardSource.indexOf('function handleInsertEmbedReferenceShortcut(event)');
 const referenceEnd = keyboardSource.indexOf('async function handleSplitNoteShortcut(event)', referenceStart);
 assert.ok(referenceStart >= 0 && referenceEnd > referenceStart);
+// ⌘R outside edit mode does what the menu's Paste Note as Reference at Top does.
+const topReferenceStart = keyboardSource.indexOf('export async function pasteCopiedNoteReferenceIntoNewTopNote()');
+const topReferenceEnd = keyboardSource.indexOf('export async function pasteCopiedNoteIntoNewTopNote()', topReferenceStart);
+assert.ok(topReferenceStart >= 0 && topReferenceEnd > topReferenceStart);
 
 function referenceHarness({ isEditing, clipboardNoteId, sortBlocksTopNote }) {
     const events = [];
@@ -101,7 +105,9 @@ function referenceHarness({ isEditing, clipboardNoteId, sortBlocksTopNote }) {
         blockRootNoteCreation(placement) { events.push(`block-check:${placement}`); return sortBlocksTopNote; },
         requireCreatedNoteId(noteId) { return noteId; },
     };
-    const run = new Function(...Object.keys(dependencies), `${keyboardSource.slice(referenceStart, referenceEnd)}\nreturn handleInsertEmbedReferenceShortcut;`)(...Object.values(dependencies));
+    const source = keyboardSource.slice(referenceStart, referenceEnd)
+        + keyboardSource.slice(topReferenceStart, topReferenceEnd).replace('export ', '');
+    const run = new Function(...Object.keys(dependencies), `${source}\nreturn handleInsertEmbedReferenceShortcut;`)(...Object.values(dependencies));
     const event = { shiftKey: false, preventDefault() { events.push('prevent'); }, stopPropagation() {} };
     return { run, event, events, pending };
 }

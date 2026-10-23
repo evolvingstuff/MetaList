@@ -201,7 +201,7 @@ def test_embed_reference_renders_as_block_and_includes_descendants(monkeypatch: 
     assert "embedded grandchild" in rendered
     assert 'class="note-reference-link note-source-arrow"' in rendered
     assert "note-embed-source-link" not in rendered
-    assert 'title="Go to reference source" aria-label="Go to reference source"' in rendered
+    assert 'title="Go to source note" aria-label="Go to source note"' in rendered
     assert "note-reference-link-kind" not in rendered
     assert "Open referenced note:" not in rendered
     assert rendered.index("note-source-arrow") < rendered.index("embedded root")
@@ -428,7 +428,7 @@ def test_collapsed_host_renders_note_embed_as_link_only(monkeypatch: pytest.Monk
     assert "note-reference-link" in rendered
     assert "note-reference-toggle" not in rendered
     assert "note-reference-link-icon" in rendered
-    assert 'title="Link to reference source"' in rendered
+    assert 'title="Go to source note"' in rendered
     assert "note-reference-link-kind" not in rendered
     assert "note-embed-block" not in rendered
     assert "note-embed-node" not in rendered
