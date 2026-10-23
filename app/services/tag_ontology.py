@@ -4,6 +4,16 @@ from dataclasses import dataclass
 import re
 from typing import Dict, FrozenSet, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 
+from app.services.exception_capture import CapturedExceptionContext
+from app.services.input_errors import InputRejected
+from app.services.tag_properties import (
+    PropertyCondition,
+    PropertyValue,
+    condition_holds,
+    is_property_term,
+    parse_property_term,
+)
+
 # An escape is a backslash and the character it escapes.
 _ESCAPE_LENGTH = 2
 
@@ -40,7 +50,15 @@ class RegexAtom:
     flags: str
 
 
-Atom = TagAtom | TextAtom | RegexAtom
+@dataclass(frozen=True, slots=True)
+class PropertyAtom:
+    """A super tag term on a rule's left side (docs/design/tag-properties.md):
+    jogging:miles>10, task:due?, task:status=done. Every search form but MAX and MIN."""
+
+    condition: PropertyCondition
+
+
+Atom = TagAtom | TextAtom | RegexAtom | PropertyAtom
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,6 +86,20 @@ class MatcherRule:
             if compiled.search(plaintext) is None:
                 return False
         return True
+
+
+@dataclass(frozen=True, slots=True)
+class ValueRule:
+    """A rule testing a note's super tag values. It is decided from the note itself:
+    the tags its values infer are its own, so children and referencing notes inherit
+    them like the tags written on it (note_store applies them while tags are inherited)."""
+
+    conditions: Tuple[PropertyCondition, ...]
+    # The rule's tag atoms: tags the note must carry (written, inherited or implied).
+    required_tags: FrozenSet[str]
+    required_text_patterns: Tuple[re.Pattern[str], ...]
+    required_regexes: Tuple[re.Pattern[str], ...]
+    rhs: str
 
 
 def _compile_quoted_text_as_word_match(phrase: str) -> re.Pattern[str]:
@@ -272,6 +304,8 @@ def _parse_atom(
         return RegexAtom(pattern=pattern, flags=flags), next_index
 
     token, next_index = _read_bare_token(line, index)
+    if is_property_term(token):
+        return _parse_property_atom(token, line=line, index=index, filename=filename, line_number=line_number), next_index
     if token in ("=>", "="):
         raise OntologyParseError(
             filename=filename,
@@ -289,6 +323,24 @@ def _parse_atom(
             source_line=line,
         )
     return TagAtom(tag=token), next_index
+
+
+def _parse_property_atom(token: str, *, line: str, index: int, filename: str, line_number: int) -> PropertyAtom:
+    def error(message: str) -> OntologyParseError:
+        return OntologyParseError(
+            filename=filename, line=line_number, column=index + 1, message=message, source_line=line,
+        )
+
+    capture = CapturedExceptionContext(InputRejected, boundary='app/services/tag_ontology.py:_parse_property_atom:capture')
+    condition: PropertyCondition | None = None
+    with capture:
+        condition = parse_property_term(token)
+    if capture.captured_exception is not None:
+        raise error(str(capture.captured_exception)) from capture.captured_exception
+    assert condition is not None
+    if condition.is_extreme:
+        raise error(f"{condition.value_text} is for searches: a rule decides from one note, not among notes")
+    return PropertyAtom(condition=condition)
 
 
 def _read_bare_token(line: str, index: int) -> tuple[str, int]:
@@ -404,6 +456,9 @@ class TagOntology:
     implied_by_closure: Mapping[str, FrozenSet[str]]
     scc_members_by_tag: Mapping[str, FrozenSet[str]]
     matcher_rules: Tuple[MatcherRule, ...]
+    value_rules: Tuple[ValueRule, ...]
+    # For super tag terms: each tag (casefolded) and the tags implying it, casefolded.
+    implying_casefold: Mapping[str, FrozenSet[str]]
 
     @staticmethod
     def empty() -> TagOntology:
@@ -413,11 +468,13 @@ class TagOntology:
             implied_by_closure={},
             scc_members_by_tag={},
             matcher_rules=(),
+            value_rules=(),
+            implying_casefold={},
         )
 
     @property
     def is_empty(self) -> bool:
-        if self.matcher_rules:
+        if self.matcher_rules or self.value_rules:
             return False
         for edges in self.implication_out_edges.values():
             if edges:
@@ -490,6 +547,51 @@ class TagOntology:
 
         return frozenset(tags)
 
+    def infer_value_tags(
+        self, *, values: Mapping[Tuple[str, str], PropertyValue], own_tag_names: FrozenSet[str],
+        base_tags: FrozenSet[str], plaintext: str,
+    ) -> FrozenSet[str]:
+        """The tags a note's super tag values infer (ValueRule), with the tags they imply.
+        values and own_tag_names: the note's own, from its tag bar; base_tags: the tags it
+        carries (written and inherited), which a rule's tag atoms read with what they imply;
+        a rule's text atoms read the note's plaintext. Rules can feed each other."""
+        inferred: Set[str] = set()
+        if not self.value_rules:
+            return frozenset()
+        tags = set(self.infer_implication_only(base_tags=base_tags))
+        changed = True
+        while changed:
+            changed = False
+            for rule in self.value_rules:
+                if rule.rhs in tags:
+                    continue
+                if not self._value_rule_holds(rule, values=values, own_tag_names=own_tag_names, tags=tags,
+                                              plaintext=plaintext):
+                    continue
+                added = self.infer_implication_only(base_tags=frozenset({rule.rhs}))
+                inferred.update(added)
+                tags.update(added)
+                changed = True
+        return frozenset(inferred)
+
+    def _value_rule_holds(
+        self, rule: ValueRule, *, values: Mapping[Tuple[str, str], PropertyValue], own_tag_names: FrozenSet[str],
+        tags: Set[str], plaintext: str,
+    ) -> bool:
+        if not rule.required_tags <= tags:
+            return False
+        for condition in rule.conditions:
+            tag_names = self.implying_casefold.get(condition.key[0], frozenset()) | {condition.key[0]}
+            if not condition_holds(condition, values=values, own_tag_names=own_tag_names, tag_names=tag_names):
+                return False
+        if any(pattern.search(plaintext) is None for pattern in rule.required_text_patterns):
+            return False
+        return all(compiled.search(plaintext) is not None for compiled in rule.required_regexes)
+
+    @property
+    def value_rules_read_text(self) -> bool:
+        return any(rule.required_text_patterns or rule.required_regexes for rule in self.value_rules)
+
     def infer_implication_only(self, *, base_tags: FrozenSet[str]) -> FrozenSet[str]:
         if self.is_empty:
             return base_tags
@@ -500,6 +602,37 @@ class TagOntology:
             if implied:
                 tags.update(implied)
         return frozenset(tags)
+
+
+def _compile_value_rule(rule: Rule) -> ValueRule:
+    conditions: List[PropertyCondition] = []
+    required_tags: Set[str] = set()
+    text_patterns: List[re.Pattern[str]] = []
+    regexes: List[re.Pattern[str]] = []
+    for atom in rule.lhs:
+        if isinstance(atom, PropertyAtom):
+            conditions.append(atom.condition)
+        elif isinstance(atom, TagAtom):
+            required_tags.add(atom.tag)
+        elif isinstance(atom, TextAtom):
+            text_patterns.append(_compile_quoted_text_as_word_match(atom.phrase))
+        elif isinstance(atom, RegexAtom):
+            regexes.append(_compile_regex(atom.pattern, atom.flags))
+        else:
+            raise TypeError(f"Unknown atom type: {type(atom)}")
+    return ValueRule(
+        conditions=tuple(conditions), required_tags=frozenset(required_tags),
+        required_text_patterns=tuple(text_patterns), required_regexes=tuple(regexes), rhs=rule.rhs,
+    )
+
+
+def rule_text_tests_values(text: str) -> bool:
+    """Whether rule text holds a super tag term (its rules change notes' own tags)."""
+    return any(
+        isinstance(atom, PropertyAtom)
+        for rule in parse_rules_text(text=f"{text}\n", filename="ontology_rules:check")
+        for atom in rule.lhs
+    )
 
 
 def _add_tag_node(out_edges: Dict[str, Set[str]], tag: str) -> None:
@@ -514,6 +647,7 @@ def compile_rules(*, rules: Sequence[Rule], filename: str) -> TagOntology:
 
     out_edges: Dict[str, Set[str]] = {}
     matcher_rules: List[MatcherRule] = []
+    value_rules: List[ValueRule] = []
 
     for rule in rules:
         if len(rule.lhs) == 1 and isinstance(rule.lhs[0], TagAtom):
@@ -521,6 +655,10 @@ def compile_rules(*, rules: Sequence[Rule], filename: str) -> TagOntology:
             _add_tag_node(out_edges, src)
             _add_tag_node(out_edges, rule.rhs)
             out_edges[src].add(rule.rhs)
+            continue
+        if any(isinstance(atom, PropertyAtom) for atom in rule.lhs):
+            value_rules.append(_compile_value_rule(rule))
+            _add_tag_node(out_edges, rule.rhs)
             continue
 
         required_tags: Set[str] = set()
@@ -558,7 +696,14 @@ def compile_rules(*, rules: Sequence[Rule], filename: str) -> TagOntology:
 
     closure, scc_members_by_tag = _compute_implication_closure_and_scc_members(frozen_out)
     implied_by = _compute_implied_by_closure(closure)
+    implying_casefold: Dict[str, Set[str]] = {}
+    for tag, implying in implied_by.items():
+        if tag.casefold() not in implying_casefold:
+            implying_casefold[tag.casefold()] = set()
+        implying_casefold[tag.casefold()].update(other.casefold() for other in implying)
     return TagOntology(
+        value_rules=tuple(value_rules),
+        implying_casefold={tag: frozenset(implying) for tag, implying in implying_casefold.items()},
         implication_out_edges=frozen_out,
         implication_closure=closure,
         implied_by_closure=implied_by,

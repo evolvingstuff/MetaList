@@ -18,6 +18,7 @@ from app.services.tag_properties import (
     MISSING_OPERATOR,
     PRESENT_OPERATOR,
     PROPERTY_SUGGESTION_PLACES,
+    PROPERTY_SUGGESTIONS_IN_SEARCH,
     PROPERTY_SUGGESTIONS_IN_TAG_BAR,
     MAX_KEYWORD,
     MIN_KEYWORD,
@@ -28,6 +29,7 @@ from app.services.tag_properties import (
     PROPERTY_ASSIGNMENT,
     PropertyCondition,
     PropertyValue,
+    condition_holds,
     is_property_term,
     property_term_tag,
     tag_part_of_token,
@@ -344,6 +346,22 @@ def extract_ordered_tags_for_search(tags: str) -> tuple[str, ...]:
                 seen_terms.add(inner)
                 ordered_terms.append(inner)
     return tuple(ordered_terms)
+
+
+def tag_bar_values(tags: str) -> Tuple[FrozenSet[str], Dict[Tuple[str, str], PropertyValue]]:
+    """A tag bar's written tag names (casefolded, without values) and its super tag values
+    by casefolded (tag, property). Meta tags and tags inside scopes have none."""
+    own_tag_names: Set[str] = set()
+    values: Dict[Tuple[str, str], PropertyValue] = {}
+    for token in _tokenize_tag_bar(tags):
+        base, wrapper = _unwrap_tag_token(token)
+        if wrapper is not None or base.startswith("@"):
+            continue
+        tag_name, token_values = token_properties(base)
+        own_tag_names.add(tag_name)
+        for property_name, value in token_values.items():
+            values[(tag_name, property_name)] = value
+    return frozenset(own_tag_names), values
 
 
 def extract_tags_for_search(tags: str) -> FrozenSet[str]:
@@ -1309,13 +1327,7 @@ class SearchIndex:
         properties: Dict[Tuple[str, str], PropertyValue] = {}
         # Only a token with = has a value (jogging=3, jogging:miles=3).
         if PROPERTY_ASSIGNMENT in tags:
-            for token in _tokenize_tag_bar(tags):
-                base, wrapper = _unwrap_tag_token(token)
-                if wrapper is not None or base.startswith("@"):
-                    continue
-                tag_name, values = token_properties(base)
-                for property_name, value in values.items():
-                    properties[(tag_name, property_name)] = value
+            _own_tag_names, properties = tag_bar_values(tags)
         previous: Dict[Tuple[str, str], PropertyValue] = {}
         if note_int_id in self._note_properties:
             previous = self._note_properties[note_int_id]
@@ -1372,7 +1384,10 @@ class SearchIndex:
         implying it, which upward search finds. Most used first."""
         if place not in PROPERTY_SUGGESTION_PLACES:
             raise ValueError(f"Unknown place for property suggestions: {place}")
-        completion = read_property_completion(typed, in_tag_bar=place == PROPERTY_SUGGESTIONS_IN_TAG_BAR)
+        completion = read_property_completion(
+            typed, in_tag_bar=place == PROPERTY_SUGGESTIONS_IN_TAG_BAR,
+            offers_extremes=place == PROPERTY_SUGGESTIONS_IN_SEARCH,
+        )
         if completion is None:
             return []
         if completion.offers_extremes:
@@ -1383,6 +1398,7 @@ class SearchIndex:
                     replacement=f"{completion.before}{keyword}", label=keyword,
                     reasons=(f"The {extreme_words[keyword]} {completion.property_name} "
                              "among the notes the rest of the search finds",),
+                    note_count=0,
                 )
                 for keyword in EXTREME_KEYWORDS if keyword.startswith(completion.partial)
             ]
@@ -1408,6 +1424,15 @@ class SearchIndex:
         return [
             completion.suggestion(name, by_tag) for name, by_tag in ranked[:limit]
         ]
+
+    def uses_property(self, *, tag: str, property_name: str) -> bool:
+        """Whether some note gives this property a value on the tag or a tag implying it."""
+        with self._lock:
+            tag_names = self._tags_implying_locked(tag.casefold())
+            return any(
+                _posting_or_empty(self._property_notes, (tag_name, property_name.casefold()))
+                for tag_name in tag_names
+            )
 
     def _property_name_counts_locked(self, tag_names: FrozenSet[str]) -> Dict[str, Dict[str, int]]:
         """Per property name, how many notes use it with each of these tags."""
@@ -1437,25 +1462,18 @@ class SearchIndex:
         return counts
 
     def _note_satisfies_property_locked(self, note_int_id: int, condition: PropertyCondition) -> bool:
-        """Whether a note's own values meet a property term: has it (jogging:miles), lacks
-        it on its own tag (jogging:miles?), or has a value that compares (jogging:miles>2).
-        Values on a tag implying the term's tag count (jogging for exercise); any one
-        value meeting the term is enough."""
+        """Whether a note's own values meet a property term (tag_properties.condition_holds);
+        values on a tag implying the term's tag count (jogging for exercise)."""
         values: Dict[Tuple[str, str], PropertyValue] = {}
         if note_int_id in self._note_properties:
             values = self._note_properties[note_int_id]
-        tag_names = self._tags_implying_locked(condition.key[0])
-        keys = [(tag_name, condition.key[1]) for tag_name in tag_names if (tag_name, condition.key[1]) in values]
-        if condition.operator == MISSING_OPERATOR:
-            own_tag_names = {
-                term.casefold().split(PROPERTY_ASSIGNMENT, 1)[0] for term in self._note_explicit_tag_terms[note_int_id]
-            }
-            return bool(own_tag_names & tag_names) and not keys
-        # MAX and MIN need the property here; which notes hold the extreme is decided
-        # across the notes found (_keep_extreme_notes_locked).
-        if condition.operator == PRESENT_OPERATOR or condition.is_extreme:
-            return len(keys) > 0
-        return any(value_satisfies(values[key], condition) for key in keys)
+        own_tag_names = frozenset(
+            term.casefold().split(PROPERTY_ASSIGNMENT, 1)[0] for term in self._note_explicit_tag_terms[note_int_id]
+        )
+        return condition_holds(
+            condition, values=values, own_tag_names=own_tag_names,
+            tag_names=self._tags_implying_locked(condition.key[0]),
+        )
 
     def _extreme_notes_locked(self, note_int_ids: Set[int], condition: PropertyCondition) -> Set[int]:
         """Of these notes, those holding the largest (MAX) or smallest (MIN) value of the

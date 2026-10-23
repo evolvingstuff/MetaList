@@ -35,7 +35,7 @@ A super tag is a tag carrying values, its properties, written in the tag bar as 
 - Searching by values (`jogging:miles>2`, `jogging:miles?`, `date>=2024-01`): `docs/ui/search-semantics.md` (Super Tag Searches).
 - Searches also read values through implications: with `jogging => exercise`, `exercise:miles>2` finds `jogging:miles=3`.
 - Suggestions: after `jogging:` the tag bar suggests property names used with `jogging` and with the tags it implies (`duration` from `exercise`), most used first, leaving out names the token already has; picking one adds it with its `=` (`jogging:miles=`). After a value's number (`drug:dosage=10`) it suggests the units used with that property (`10mg`). The list shows only the name or unit; right-clicking a suggestion says how many notes use it with which tag.
-- Not yet: ontology rules that test values.
+- Ontology rules can test values: `jogging:miles>10 => long-run`, `task:due? => needs-date` (Edit Tag Relationships, the left column of the tag they give; `help-ontology`, Super tag atom). The tag a rule gives is the note's own, so its children inherit it.
 
 ## Wrapper Tags
 A tag token may be wrapped with matching brackets:

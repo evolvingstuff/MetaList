@@ -214,11 +214,31 @@ jogging:miles>10 => long-run
 exercise:duration>60 => long-workout
 ```
 
-- Upward matching applies as in search: `exercise:duration>60` matches
-  `swimming:duration=75`.
-- An inferred tag is a plain tag; rules do not create values.
+Decided 2026-10-23:
+
+- **Every search form except MAX and MIN:** comparisons (`drug:dosage>500mg`,
+  `task:status=done`), a property present (`task:due => scheduled`) or missing
+  (`task:due? => needs-date`, on the note's own tag or one implying it). MAX and MIN
+  are search-only: a note's tags must depend on the note alone, not on which other
+  notes exist, or adding one run could move a tag between notes.
+- **Upward matching applies as in search:** `exercise:duration>60` matches
+  `swimming:duration=75` when `swimming => exercise`.
+- **An inferred tag is a plain tag:** children and referencing notes inherit it like
+  any tag (a 12-mile run's child inherits `long-run`, never `miles=12`). Rules do not
+  create values. A referencing note gets it as it gets the source's own tags: when a
+  rule's tag atom holds only through a tag the source inherits, it does not reach them.
+  Built 2026-10-23.
+- **In Edit Tag Relationships** such a rule is an incoming condition of its right-hand
+  tag: it shows in the left column of `long-run`, with the other derivation rules, and
+  is added there. It does not show on `jogging`'s page (the right column never shows
+  rules).
+- **Renaming** `jogging` rewrites `jogging:miles>10` in rules; **deleting** it deletes
+  the rules that test its values, as it deletes rules naming it.
+- **The rule editor suggests** property names, units and values as the tag bar and the
+  search box do, and **warns** about a property atom no note can match (a typo such as
+  `jogging:mile>10`).
 - **Later:** setting a value on the right-hand side
-  (`marathon => jogging:miles=26.2`).
+  (`marathon => jogging:miles=26.2`), and relative dates (below).
 
 ## Renaming and deleting
 
@@ -312,6 +332,10 @@ next. Recorded so the first build does not close these doors.
 
 What the first build should leave room for:
 
+- **TODAY and NOW**, keywords like MAX and MIN: `task:due<TODAY`, `meeting:at>=NOW`, and
+  relative forms such as `TODAY-7d`. In rules (`task:due<TODAY => overdue`) a note's tags
+  would then change with the calendar, nobody editing it: MetaList would re-check those
+  rules as days pass. Designed together for search and rules.
 - **Relative dates** in search and rules: `today`, `+7d`, `-1w` (`due<today`,
   `due<=+7d`). The search parser should not claim these words as plain text.
 - **Not equal:** `status!=done`. It differs from `-task:status=done`, which also drops

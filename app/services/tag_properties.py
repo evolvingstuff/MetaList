@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 import re
-from typing import Dict, FrozenSet, List, Tuple
+from typing import Dict, FrozenSet, List, Mapping, Tuple
 
 from app.services.input_errors import InputRejected
 
@@ -312,7 +312,11 @@ def value_satisfies(value: PropertyValue, condition: PropertyCondition) -> bool:
 _NOTE_NOUNS = {True: "note", False: "notes"}
 PROPERTY_SUGGESTIONS_IN_TAG_BAR = "tag-bar"
 PROPERTY_SUGGESTIONS_IN_SEARCH = "search"
-PROPERTY_SUGGESTION_PLACES = frozenset({PROPERTY_SUGGESTIONS_IN_TAG_BAR, PROPERTY_SUGGESTIONS_IN_SEARCH})
+# A rule's condition in Edit Tag Relationships: read as a search reads, without MAX/MIN.
+PROPERTY_SUGGESTIONS_IN_RULE = "rule"
+PROPERTY_SUGGESTION_PLACES = frozenset({
+    PROPERTY_SUGGESTIONS_IN_TAG_BAR, PROPERTY_SUGGESTIONS_IN_SEARCH, PROPERTY_SUGGESTIONS_IN_RULE,
+})
 # A number and the start of its unit: 10, 10m, -2.5k.
 _NUMBER_AND_PARTIAL_UNIT_RE = re.compile(r"^(-?(?:\d+(?:\.\d+)?|\.\d+))([A-Za-z%][A-Za-z%/]*)?$")
 
@@ -324,6 +328,8 @@ class PropertySuggestion:
     replacement: str
     label: str
     reasons: Tuple[str, ...]
+    # How many notes use it (none for MAX and MIN).
+    note_count: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -351,15 +357,19 @@ class PropertyCompletion:
             for tag, count in sorted(notes_by_tag.items(), key=lambda item: (-item[1], item[0]))
         )
         # A name gets its suffix (= in the tag bar); a unit shows with its number.
+        note_count = sum(notes_by_tag.values())
         if self.property_name is None:
             label = f"{completed}{self.name_suffix}"
-            return PropertySuggestion(replacement=f"{self.before}{label}", label=label, reasons=reasons)
+            return PropertySuggestion(
+                replacement=f"{self.before}{label}", label=label, reasons=reasons, note_count=note_count,
+            )
         return PropertySuggestion(
             replacement=f"{self.before}{completed}", label=f"{self.number}{completed}", reasons=reasons,
+            note_count=note_count,
         )
 
 
-def read_property_completion(typed: str, *, in_tag_bar: bool) -> PropertyCompletion | None:
+def read_property_completion(typed: str, *, in_tag_bar: bool, offers_extremes: bool) -> PropertyCompletion | None:
     """The property name or unit being typed at the end of a tag-bar token
     (jogging:miles=3:du, drug:dosage=10m) or a search term (exercise:mi, drug:dosage>5m,
     date>5), or None when neither is."""
@@ -388,7 +398,7 @@ def read_property_completion(typed: str, *, in_tag_bar: bool) -> PropertyComplet
                 tag=tag, property_name=None, partial=name, before=typed[: len(typed) - len(name)], number="",
                 excluded_names=excluded, name_suffix=name_suffix, offers_extremes=False,
             )
-        if not in_tag_bar and operator == "=" and any(keyword.startswith(value) for keyword in EXTREME_KEYWORDS):
+        if offers_extremes and operator == "=" and any(keyword.startswith(value) for keyword in EXTREME_KEYWORDS):
             return PropertyCompletion(
                 tag=tag, property_name=name, partial=value, before=typed[: len(typed) - len(value)], number="",
                 excluded_names=frozenset(), name_suffix="", offers_extremes=True,
@@ -421,3 +431,23 @@ def _unit_completion(typed: str, *, tag: str, property_name: str, value: str) ->
         tag=tag, property_name=property_name, partial=partial, before=typed[: len(typed) - len(partial)],
         number=match.group(1), excluded_names=frozenset(), name_suffix="", offers_extremes=False,
     )
+
+
+def condition_holds(
+    condition: PropertyCondition, *, values: Mapping[Tuple[str, str], PropertyValue],
+    own_tag_names: FrozenSet[str], tag_names: FrozenSet[str],
+) -> bool:
+    """Whether one note's values meet a super tag term, as search and rules read it.
+    values: the note's own values by casefolded (tag, property); own_tag_names: the
+    casefolded names of the tags written on the note; tag_names: the term's tag and every
+    tag implying it. The term has its property (jogging:miles), lacks it on a tag of its
+    own (jogging:miles?), or has a value that compares (jogging:miles>2); any one value
+    is enough. MAX and MIN need the property; which notes hold the extreme is decided
+    across the notes found."""
+    keys = [(tag_name, condition.key[1]) for tag_name in tag_names if (tag_name, condition.key[1]) in values]
+    if condition.operator == MISSING_OPERATOR:
+        return bool(own_tag_names & tag_names) and not keys
+    if condition.operator == PRESENT_OPERATOR or condition.is_extreme:
+        return len(keys) > 0
+    return any(value_satisfies(values[key], condition) for key in keys)
+

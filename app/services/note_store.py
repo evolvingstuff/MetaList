@@ -33,8 +33,8 @@ from app.services.hierarchy import hierarchy_depths
 from app.services.note_ordering import NoteOrdering
 from app.services.tag_ontology import TagOntology
 from app.services.note_image_tags import infer_image_tag_terms
-from app.services.ontology_rules_store import get_ontology
-from app.services.search_index import SearchRecord, extract_tags_for_search, search_index
+from app.services.ontology_rules_store import get_ontology, get_ontology_if_ready
+from app.services.search_index import SearchRecord, extract_tags_for_search, search_index, tag_bar_values
 from app.utils.text_utils import strip_html, strip_sanitized_html_keeping_link_urls
 
 # Hydration reports its progress after every this many notes.
@@ -284,6 +284,23 @@ class NoteStore:
                 | self._effective_non_meta_tag_terms[note_id]
                 | self._effective_proposed_non_meta_tag_terms[note_id])
 
+    @staticmethod
+    def _value_inferred_terms_locked(record: NoteRecord, *, base_terms: FrozenSet[str]) -> FrozenSet[str]:
+        """The non-meta tags a note's own super tag values infer (TagOntology.value_rules),
+        its tags read as base_terms; none while the rules cannot be read."""
+        ontology = get_ontology_if_ready()
+        if ontology is None or not ontology.value_rules:
+            return frozenset()
+        own_tag_names, values = tag_bar_values(record.tags)
+        plaintext = ""
+        if ontology.value_rules_read_text:
+            plaintext = strip_html(record.content)
+        inferred = ontology.infer_value_tags(
+            values=values, own_tag_names=own_tag_names, base_tags=base_terms | record.tag_terms, plaintext=plaintext,
+        )
+        # Meta tags are never inherited, so a rule giving one adds nothing here.
+        return frozenset(term for term in inferred if not term.startswith("@"))
+
     def _rebuild_effective_tag_terms_locked(self) -> Dict[str, FrozenSet[str]]:
         # Hierarchy cycles remain invalid; reference cycles are valid dependencies.
         visited: set[str] = set()
@@ -380,11 +397,17 @@ class NoteStore:
             own_proposed = record.proposed_non_meta_tag_terms | frozenset().union(
                 *(self._subtree_proposed_non_meta_tag_terms[target] for target in targets))
             if record.parent_id is None:
-                accepted[note_id] = own_accepted
+                carried = own_accepted
                 proposed[note_id] = own_proposed
-                continue
-            accepted[note_id] = _union_term_sets([own_accepted, accepted[record.parent_id]])
-            proposed[note_id] = _union_term_sets([own_proposed, proposed[record.parent_id]])
+            else:
+                carried = _union_term_sets([own_accepted, accepted[record.parent_id]])
+                proposed[note_id] = _union_term_sets([own_proposed, proposed[record.parent_id]])
+            # The tags its super tag values infer are the note's own, so its children
+            # inherit them (rules about values: docs/design/tag-properties.md).
+            value_terms = self._value_inferred_terms_locked(record, base_terms=carried)
+            if value_terms:
+                carried = carried | value_terms
+            accepted[note_id] = carried
         accepted.publish()
         proposed.publish()
         return {note_id: self._raw_tag_terms_locked(note_id) for note_id in affected}
@@ -395,7 +418,11 @@ class NoteStore:
         proposed = _PendingTermSets(self._subtree_proposed_non_meta_tag_terms)
         for note_id in affected:
             record = self._note_map[note_id]
-            accepted[note_id] = record.non_meta_tag_terms
+            # A source's value-inferred tags reach notes referencing it, read from the
+            # source's own tags.
+            accepted[note_id] = record.non_meta_tag_terms | self._value_inferred_terms_locked(
+                record, base_terms=record.non_meta_tag_terms,
+            )
             proposed[note_id] = record.proposed_non_meta_tag_terms
             dependencies[note_id] = (set(self._get_children_locked(note_id))
                                      | self._reference_targets_locked(note_id))
