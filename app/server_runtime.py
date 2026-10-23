@@ -267,9 +267,9 @@ def _assert_launch_profile_rows_belong_to_namespace(
 
 def _missing_launch_profile_message(*, namespace: str) -> str:
     return (
-        f"Namespace {namespace} has no launch profile. "
-        "Run this namespace once with an explicit --port value"
-        " plus --https-port when TLS is enabled, or configure its ports from the namespace UI."
+        f"Vault {namespace} has no launch profile. "
+        "Run this vault once with an explicit --port value"
+        " plus --https-port when TLS is enabled, or configure its ports from Manage vault ports."
     )
 
 
@@ -568,24 +568,26 @@ def apply_main_cli_args_to_environ(
     parser = argparse.ArgumentParser(description="Run the MetaList server")
     parser.add_argument(
         "--namespace",
+        "--vault",
+        dest="namespace",
         type=_parse_namespace_argument,
-        help="Namespace to run. Defaults to 'default' when omitted.",
+        help="Vault to run. Defaults to 'default' when omitted.",
     )
     parser.add_argument(
         "namespace_shorthand",
         nargs="?",
         type=_parse_namespace_argument,
-        help="Namespace shorthand, e.g. `python main.py cla`.",
+        help="Vault shorthand, e.g. `python main.py cla`.",
     )
     parser.add_argument(
         "--port",
         type=_parse_port_argument,
-        help="HTTP port for this launch and remembered namespace profile.",
+        help="HTTP port for this launch and remembered vault profile.",
     )
     parser.add_argument(
         "--https-port",
         type=_parse_port_argument,
-        help="HTTPS port for this launch and remembered namespace profile.",
+        help="HTTPS port for this launch and remembered vault profile.",
     )
     parser.add_argument(
         "--enable-shell",
@@ -601,7 +603,7 @@ def apply_main_cli_args_to_environ(
         del environ[SHELL_EXECUTION_ENV_NAME]
 
     if parsed_args.namespace is not None and parsed_args.namespace_shorthand is not None:
-        raise RuntimeError("Specify namespace either positionally or with --namespace, not both")
+        raise RuntimeError("Specify the vault either positionally or with --vault, not both")
 
     namespace_requested = False
     if parsed_args.namespace is not None:

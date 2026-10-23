@@ -526,7 +526,7 @@ test('the background menu groups adding, history, the list, the view, opening, e
         'Show',
         'Theme',
         '— New Tab',
-        'Open/Switch Namespace…',
+        'Open/Switch Vault…',
         'Reminders…',
         '— Export View as HTML',
         'Print View',

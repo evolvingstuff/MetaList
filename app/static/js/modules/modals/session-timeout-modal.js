@@ -116,7 +116,7 @@ export class SessionTimeoutModal extends BaseModal {
         modalElement.innerHTML = `
             <div class="modal-content">
                 <h3>Session Idle Timeout</h3>
-                <p>Choose how many minutes of inactivity MetaList allows before this namespace requires login again. The hydrated server cache stays warm.</p>
+                <p>Choose how many minutes of inactivity MetaList allows before this vault requires login again. The hydrated server cache stays warm.</p>
 
                 <div class="form-group">
                     <label>

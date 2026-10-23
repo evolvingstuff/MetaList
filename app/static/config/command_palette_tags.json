@@ -130,23 +130,23 @@
     },
     {
       "id": "form.open_namespace",
-      "tags": ["namespace", "namespaces", "open", "switch", "switcher", "change", "go", "select", "new", "same", "tab", "window", "launch", "database", "instance", "workspace"]
+      "tags": ["vault", "vaults", "namespace", "namespaces", "open", "switch", "switcher", "change", "go", "select", "new", "same", "tab", "window", "launch", "database", "instance", "workspace"]
     },
     {
       "id": "form.create_namespace",
-      "tags": ["namespace", "namespaces", "create", "new", "add", "ports", "database", "instance", "workspace"]
+      "tags": ["vault", "vaults", "namespace", "namespaces", "create", "new", "add", "ports", "database", "instance", "workspace"]
     },
     {
       "id": "form.manage_namespace_ports",
-      "tags": ["namespace", "namespaces", "manage", "ports", "port", "configure", "settings", "http", "https", "launch"]
+      "tags": ["vault", "vaults", "namespace", "namespaces", "manage", "ports", "port", "configure", "settings", "http", "https", "launch"]
     },
     {
       "id": "form.rename_current_namespace",
-      "tags": ["namespace", "namespaces", "rename", "name", "current", "workspace"]
+      "tags": ["vault", "vaults", "namespace", "namespaces", "rename", "name", "current", "workspace"]
     },
     {
       "id": "form.delete_current_namespace",
-      "tags": ["namespace", "namespaces", "delete", "remove", "destroy", "permanent", "current", "workspace", "database"]
+      "tags": ["vault", "vaults", "namespace", "namespaces", "delete", "remove", "destroy", "permanent", "current", "workspace", "database"]
     },
     {
       "id": "action.create_backup",

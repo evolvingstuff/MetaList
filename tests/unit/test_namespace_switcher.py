@@ -108,7 +108,7 @@ def test_rename_current_namespace_rejects_existing_target(
     save_namespace_launch_profile(namespace="default", port=8000, https_port=None, mcp_port=8765)
     save_namespace_launch_profile(namespace="personal", port=8001, https_port=None, mcp_port=8766)
 
-    with pytest.raises(RuntimeError, match="Namespace personal already exists"):
+    with pytest.raises(RuntimeError, match="Vault personal already exists"):
         rename_current_namespace(
             environ={},
             current_namespace="default",
@@ -309,7 +309,7 @@ def test_open_or_launch_namespace_rejects_reserved_current_port(
 
     with pytest.raises(
         RuntimeError,
-        match="HTTP port 8000 conflicts with HTTP port reserved for namespace default",
+        match="HTTP port 8000 conflicts with HTTP port reserved for vault default",
     ):
         open_or_launch_namespace(
             environ={},
@@ -423,7 +423,7 @@ def test_save_namespace_port_profiles_rejects_batch_conflicts(
 
     with pytest.raises(
         RuntimeError,
-        match="HTTP port 8100 for namespace work conflicts with HTTP port for namespace cla",
+        match="HTTP port 8100 for vault work conflicts with HTTP port for vault cla",
     ):
         save_namespace_port_profiles(
             environ={},
@@ -479,7 +479,7 @@ def test_open_login_namespace_uses_catalog_default_profile(
                 mcp_port=None,
             ),
             saved_for_next_launch=False,
-            message=f"Opened namespace {namespace}.",
+            message=f"Opened vault {namespace}.",
         )
 
     monkeypatch.setattr(namespace_switcher, "open_or_launch_namespace", _fake_open_or_launch_namespace)
@@ -564,7 +564,7 @@ def test_open_or_launch_all_namespaces_repairs_saved_port_conflicts(
         mcp_port=8765,
     )
     assert (
-        "[startup] WARNING: adjusted namespace henry ports to resolve a saved conflict: "
+        "[startup] WARNING: adjusted vault henry ports to resolve a saved conflict: "
         "HTTP 8000 -> 8001, HTTPS 8443 -> 8444."
     ) in capsys.readouterr().err
 
@@ -668,7 +668,7 @@ def test_open_or_launch_all_namespaces_restarts_warm_running_processes(
     assert events == [("stop", (8000,)), ("start", "default", 8000, None), ("wait", "default")]
     assert len(results) == 1
     assert results[0].action == "restarted"
-    assert results[0].message == "Restarted namespace default."
+    assert results[0].message == "Restarted vault default."
 
 
 def test_open_or_launch_all_namespaces_stops_all_then_starts_all_then_waits(
@@ -773,7 +773,7 @@ def test_open_or_launch_all_namespaces_rejects_missing_launch_profile(
     server_runtime.prepare_database_runtime_path(database_path=database_path)
     database_path.touch()
 
-    with pytest.raises(RuntimeError, match="Namespace work has no launch profile"):
+    with pytest.raises(RuntimeError, match="Vault work has no launch profile"):
         open_or_launch_all_namespaces(environ={})
 
 
@@ -1069,7 +1069,7 @@ def test_wait_for_namespace_ready_reports_early_child_exit_and_log(
 
     with pytest.raises(
         RuntimeError,
-        match=r"(?s)Namespace default process exited with code 7.*child exploded",
+        match=r"(?s)Vault default process exited with code 7.*child exploded",
     ):
         namespace_switcher._wait_for_namespace_ready(
             environ={},
@@ -1151,7 +1151,7 @@ def test_open_or_launch_namespace_reuses_warm_running_namespace_when_profile_is_
         namespace_switcher,
         "_restart_running_namespace_process",
         lambda **kwargs: (_ for _ in ()).throw(
-            AssertionError("unchanged running namespace must not restart")
+            AssertionError("unchanged running vault must not restart")
         ),
     )
 
@@ -1166,7 +1166,7 @@ def test_open_or_launch_namespace_reuses_warm_running_namespace_when_profile_is_
     assert result.action == "opened-running"
     assert result.url == "http://127.0.0.1:8123"
     assert result.saved_for_next_launch is False
-    assert result.message == "Namespace work is already running with a warm cache."
+    assert result.message == "Vault work is already running with a warm cache."
 
 
 def test_open_or_launch_namespace_short_circuits_current_namespace_process(
@@ -1209,7 +1209,7 @@ def test_open_or_launch_namespace_short_circuits_current_namespace_process(
     assert result.action == "opened-running"
     assert result.url == "http://127.0.0.1:8000"
     assert result.saved_for_next_launch is False
-    assert result.message == "Namespace default is already running."
+    assert result.message == "Vault default is already running."
 
 
 def test_probe_namespace_status_sends_required_tab_header(
@@ -1282,7 +1282,7 @@ def test_delete_current_namespace_launches_default_and_spawns_cleanup_worker(
                 mcp_port=None,
             ),
             saved_for_next_launch=False,
-            message=f"Started namespace {namespace}.",
+            message=f"Started vault {namespace}.",
         )
 
     monkeypatch.setattr(namespace_switcher, "open_or_launch_namespace", _fake_open_or_launch_namespace)
@@ -1317,7 +1317,7 @@ def test_delete_current_namespace_launches_default_and_spawns_cleanup_worker(
     assert result.deleted_namespace == "work"
     assert result.delete_job_id == "11111111-1111-1111-1111-111111111111"
     assert result.active_namespace_deleted is True
-    assert result.message == "Deleting namespace work. Opening the namespace removal page."
+    assert result.message == "Deleting vault work. Opening the vault removal page."
     parsed_redirect = urlsplit(result.redirect_url)
     assert parsed_redirect.netloc == "127.0.0.1:8001"
     assert parsed_redirect.path == "/namespace-deleted"
@@ -1330,7 +1330,7 @@ def test_delete_current_namespace_launches_default_and_spawns_cleanup_worker(
 
 
 def test_delete_current_namespace_requires_confirmed_namespace_name() -> None:
-    with pytest.raises(RuntimeError, match="Type 'work' to confirm namespace deletion"):
+    with pytest.raises(RuntimeError, match="Type 'work' to confirm vault deletion"):
         delete_namespace(
             environ={},
             current_namespace="work",
@@ -1431,7 +1431,7 @@ def test_delete_namespace_removes_inactive_namespace_without_redirect(
     assert result.redirect_url == ""
     assert result.delete_job_id == ""
     assert result.active_namespace_deleted is False
-    assert result.message == "cla namespace successfully deleted."
+    assert result.message == "cla vault successfully deleted."
     assert namespace_directory.exists() is False
     assert stopped_profiles == [target_profile]
 
@@ -1484,14 +1484,14 @@ def test_namespace_startup_waits_for_cold_start_and_reaps_timeout(monkeypatch, t
     monkeypatch.setattr(namespace_switcher, "_probe_namespace_status", lambda **kwargs: {"namespace": "work"} if ready_after is not None and clock[0] >= ready_after else None)
     launched = namespace_switcher.NamespaceLaunchProcess(child, log, 0)
     if ready_after is None:
-        with pytest.raises(RuntimeError, match="Timed out waiting for namespace work"):
+        with pytest.raises(RuntimeError, match="Timed out waiting for vault work"):
             namespace_switcher._wait_for_namespace_ready(environ=environ, namespace="work", port=8123, launched_process=launched)
         assert events == ["terminate", "wait"]
         assert expected_timeout <= clock[0] < expected_timeout + 2
     else:
         namespace_switcher._wait_for_namespace_ready(environ=environ, namespace="work", port=8123, launched_process=launched)
         assert events == []
-    assert "Still starting namespace work" in capsys.readouterr().out
+    assert "Still starting vault work" in capsys.readouterr().out
 
 
 def test_failed_startup_kills_and_reaps_child_that_ignores_termination():

@@ -299,7 +299,7 @@ def test_run_backup_rejects_when_no_namespaces_are_selected(
         )
 
     assert excinfo.value.status_code == 400
-    assert excinfo.value.detail == "Select at least one namespace to back up"
+    assert excinfo.value.detail == "Select at least one vault to back up"
 
 
 def test_pick_backup_folder_returns_selected_folder(
@@ -595,7 +595,7 @@ def test_restore_import_rejects_existing_target_without_overwrite_confirmation(
         backups_route.import_backup(payload=payload, token="token")
 
     assert excinfo.value.status_code == 409
-    assert excinfo.value.detail == "Target namespace already exists: target"
+    assert excinfo.value.detail == "Target vault already exists: target"
 
 
 def test_restore_import_rejects_restored_profile_port_conflict(
@@ -658,7 +658,7 @@ def test_restore_import_rejects_restored_profile_port_conflict(
         backups_route.import_backup(payload=payload, token="token")
 
     assert excinfo.value.status_code == 409
-    assert excinfo.value.detail == "HTTP port 8001 from backup conflicts with HTTP port reserved for namespace source"
+    assert excinfo.value.detail == "HTTP port 8001 from backup conflicts with HTTP port reserved for vault source"
 
 
 def test_restore_import_passes_source_namespace_for_new_target(
@@ -881,7 +881,7 @@ def test_restore_import_rejects_missing_password_for_existing_protected_target(
         backups_route.import_backup(payload=payload, token="token")
 
     assert excinfo.value.status_code == 400
-    assert excinfo.value.detail == "Target namespace password is required"
+    assert excinfo.value.detail == "Target vault password is required"
 
 
 def test_restore_import_rejects_wrong_password_for_existing_protected_target(
@@ -928,7 +928,7 @@ def test_restore_import_rejects_wrong_password_for_existing_protected_target(
         backups_route.import_backup(payload=payload, token="token")
 
     assert excinfo.value.status_code == 403
-    assert excinfo.value.detail == "Target namespace password is incorrect"
+    assert excinfo.value.detail == "Target vault password is incorrect"
 
 
 def test_restore_import_accepts_correct_password_for_existing_protected_target(
@@ -1067,6 +1067,6 @@ def test_run_backup_keeps_the_newest_backups_and_deletes_only_the_oldest_beyond_
 
     kept_default = sorted(path.name for path in folder.glob("default-*"))
     assert kept_default == sorted([created_name, older_default[3].name, older_default[4].name])
-    assert all(path.exists() for path in other_namespace), "another namespace's backups are not counted or deleted"
+    assert all(path.exists() for path in other_namespace), "another vault's backups are not counted or deleted"
     assert unrelated.exists(), "files that are not backups are never deleted"
     assert (response.results[0].deleted_count, response.results[0].remaining_count) == (3, 3)

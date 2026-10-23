@@ -231,7 +231,7 @@ export class MemoryUsageModal extends BaseModal {
     _usageRows(usage) {
         const notesHeld = usage.notesLoaded
             ? `${usage.noteCount.toLocaleString()} notes, ${megabytes(usage.noteTextBytes)} of text`
-            : 'Not loaded yet (the namespace is still unlocking)';
+            : 'Not loaded yet (the vault is still unlocking)';
         return [
             ['Server process memory now', megabytes(usage.processBytes)],
             ['Server process memory at its peak', megabytes(usage.peakProcessBytes)],
@@ -292,7 +292,7 @@ export class MemoryUsageModal extends BaseModal {
         modalElement.innerHTML = `
             <div class="modal-content memory-usage-modal-content">
                 <h2>Memory Usage</h2>
-                <p class="note-layout-description">For this namespace's server process, which holds the decrypted notes. The browser's own memory is not included.</p>
+                <p class="note-layout-description">For this vault's server process, which holds the decrypted notes. The browser's own memory is not included.</p>
                 ${body}
                 <h3 class="memory-usage-subheading">Last unlock</h3>
                 ${unlockHtml}

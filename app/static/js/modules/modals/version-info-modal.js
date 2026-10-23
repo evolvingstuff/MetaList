@@ -150,11 +150,11 @@ export class VersionInfoModal extends BaseModal {
         const rows = [
             ['App version', requireString(info, 'version')],
             ['Database schema version', String(requireNonNegativeInteger(info, 'database_user_version'))],
-            ['Namespace', requireString(info, 'namespace')],
+            ['Vault', requireString(info, 'namespace')],
             ['Authenticated', yesNo(requireBoolean(info, 'authenticated'))],
             ['Password set', yesNo(requireBoolean(info, 'has_password'))],
             ['Encryption enabled', yesNo(requireBoolean(info, 'encryption_enabled'))],
-            ['Vault version', nullableValue(info.vault_version)],
+            ['Encryption format version', nullableValue(info.vault_version)],
             ['KDF algorithm', nullableValue(info.kdf_algorithm)],
             ['KDF memory KiB', nullableValue(info.kdf_memory_cost_kib)],
             ['KDF parallelism', nullableValue(info.kdf_parallelism)],
@@ -228,7 +228,7 @@ export class VersionInfoModal extends BaseModal {
         }
         if (state.release === null) return '<button type="button" data-update-action="check">Check again</button>';
         if (!state.release.update_available || !state.release.supported) return '';
-        return `<p>Checks the release, creates verified backups, and restarts all namespaces. You may need to sign in again.</p>
+        return `<p>Checks the release, creates verified backups, and restarts all vaults. You may need to sign in again.</p>
             <button type="button" data-update-action="install" ${state.updatePending ? 'disabled' : ''}>Update to ${escapeHtml(state.release.target_version)}</button>`;
     }
 

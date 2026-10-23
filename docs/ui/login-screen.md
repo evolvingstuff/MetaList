@@ -17,7 +17,7 @@ from the top and never moves; everything else happens in the panel under it.
 | Moment | Screen |
 |---|---|
 | Press OK (or Enter) | Nothing moves. The button reads "Checking…" and is disabled |
-| An upgrade is due (`/auth/status` `database_upgrade_pending`) | While checking, a grey italic note under OK: "Backing up and upgrading this namespace…" |
+| An upgrade is due (`/auth/status` `database_upgrade_pending`) | While checking, a grey italic note under OK: "Backing up and upgrading this vault…" |
 | Wrong password, too many attempts, or the request fails | The reason appears under OK; the field is emptied and focused. Nothing moved |
 | Password accepted | The form slides out to the left while the loading view slides in from the right (350 ms, within the logo's width) |
 | Loading | A progress bar the logo's width that never moves backwards; under it, in grey italics, the current step and the seconds elapsed ("Decrypting notes into memory… · 4s") |
@@ -53,7 +53,7 @@ since this tab never owns a session there, so no white page shows while it
 checks a cookie from another tab's session. A refused switch fades the panel back
 in, with the reason under the dropdown and this namespace selected again.
 
-In the app, Open/Switch namespace offers Open in This Tab (the same as here) and Open in
+In the app, Open/Switch vault offers Open in This Tab (the same as here) and Open in
 New Tab. A new tab shows this screen's logo, exactly where the namespace's login screen puts
 it, until the namespace answers
 (`app/static/js/modules/modals/namespace-loading-page.js`, which copies this

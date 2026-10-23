@@ -623,7 +623,7 @@ def _build_force_reauth_url(*, url: str) -> str:
 async def namespace_deleted_page(request: Request):
     job_id = _page_param(request, "job")
     if job_id is None:
-        return HTMLResponse("Missing namespace deletion job", status_code=HTTPStatus.BAD_REQUEST)
+        return HTMLResponse("Missing vault deletion job", status_code=HTTPStatus.BAD_REQUEST)
     job_record_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/main.py:namespace_deleted_page:job_record_capture')
     job_record: dict[str, object] | None = None
     with job_record_capture:
@@ -632,7 +632,7 @@ async def namespace_deleted_page(request: Request):
         exc = job_record_capture.captured_exception
         return HTMLResponse(str(exc), status_code=HTTPStatus.BAD_REQUEST)
     if job_record is None:
-        return HTMLResponse(f"Namespace deletion job not found: {job_id}", status_code=HTTPStatus.NOT_FOUND)
+        return HTMLResponse(f"Vault deletion job not found: {job_id}", status_code=HTTPStatus.NOT_FOUND)
 
     template = templates.get_template("namespace_deleted.html")
     namespace_links = _build_namespace_deleted_links(
@@ -652,7 +652,7 @@ async def namespace_deleted_page(request: Request):
         request=request,
         version=VERSION,
         asset_version=ASSET_VERSION,
-        page_title="MetaList - Namespace Deleted",
+        page_title="MetaList - Vault Deleted",
         deleted_namespace=job_record["deleted_namespace"],
         namespace_links=namespace_links,
         page_state_json=page_state,
@@ -675,10 +675,10 @@ def _open_catalog_namespace(*, namespace: str) -> NamespaceOpenResult:
 async def namespace_deleted_open_page(request: Request):
     job_id = _page_param(request, "job")
     if job_id is None:
-        return HTMLResponse("Missing namespace deletion job", status_code=HTTPStatus.BAD_REQUEST)
+        return HTMLResponse("Missing vault deletion job", status_code=HTTPStatus.BAD_REQUEST)
     namespace = _page_param(request, "namespace")
     if namespace is None:
-        return HTMLResponse("Missing namespace", status_code=HTTPStatus.BAD_REQUEST)
+        return HTMLResponse("Missing vault", status_code=HTTPStatus.BAD_REQUEST)
     job_record_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/main.py:namespace_deleted_open_page:job_record_capture')
     job_record: dict[str, object] | None = None
     with job_record_capture:
@@ -687,14 +687,14 @@ async def namespace_deleted_open_page(request: Request):
         exc = job_record_capture.captured_exception
         return HTMLResponse(str(exc), status_code=HTTPStatus.BAD_REQUEST)
     if job_record is None:
-        return HTMLResponse(f"Namespace deletion job not found: {job_id}", status_code=HTTPStatus.NOT_FOUND)
+        return HTMLResponse(f"Vault deletion job not found: {job_id}", status_code=HTTPStatus.NOT_FOUND)
     if job_record["status"] == "pending":
-        return HTMLResponse("Namespace deletion is still in progress", status_code=HTTPStatus.CONFLICT)
+        return HTMLResponse("Vault deletion is still in progress", status_code=HTTPStatus.CONFLICT)
     if (
         namespace == job_record["deleted_namespace"]
         and namespace != job_record["redirect_namespace"]
     ):
-        return HTMLResponse("Deleted namespace is unavailable", status_code=HTTPStatus.BAD_REQUEST)
+        return HTMLResponse("Deleted vault is unavailable", status_code=HTTPStatus.BAD_REQUEST)
 
     launch_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/main.py:namespace_deleted_open_page:launch_capture')
     result = None
@@ -714,7 +714,7 @@ async def namespace_deleted_open_page(request: Request):
 async def namespace_renamed_page(request: Request):
     job_id = _page_param(request, "job")
     if job_id is None:
-        return HTMLResponse("Missing namespace rename job", status_code=HTTPStatus.BAD_REQUEST)
+        return HTMLResponse("Missing vault rename job", status_code=HTTPStatus.BAD_REQUEST)
     job_record_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/main.py:namespace_renamed_page:job_record_capture')
     job_record: dict[str, object] | None = None
     with job_record_capture:
@@ -723,7 +723,7 @@ async def namespace_renamed_page(request: Request):
         exc = job_record_capture.captured_exception
         return HTMLResponse(str(exc), status_code=HTTPStatus.BAD_REQUEST)
     if job_record is None:
-        return HTMLResponse(f"Namespace rename job not found: {job_id}", status_code=HTTPStatus.NOT_FOUND)
+        return HTMLResponse(f"Vault rename job not found: {job_id}", status_code=HTTPStatus.NOT_FOUND)
 
     page_state = json.dumps(
         {
@@ -739,7 +739,7 @@ async def namespace_renamed_page(request: Request):
         request=request,
         version=VERSION,
         asset_version=ASSET_VERSION,
-        page_title="MetaList - Namespace Renamed",
+        page_title="MetaList - Vault Renamed",
         source_namespace=job_record["source_namespace"],
         target_namespace=job_record["target_namespace"],
         page_state_json=page_state,
@@ -750,7 +750,7 @@ async def namespace_renamed_page(request: Request):
 async def namespace_renamed_open_page(request: Request):
     job_id = _page_param(request, "job")
     if job_id is None:
-        return HTMLResponse("Missing namespace rename job", status_code=HTTPStatus.BAD_REQUEST)
+        return HTMLResponse("Missing vault rename job", status_code=HTTPStatus.BAD_REQUEST)
     job_record_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/main.py:namespace_renamed_open_page:job_record_capture')
     job_record: dict[str, object] | None = None
     with job_record_capture:
@@ -759,11 +759,11 @@ async def namespace_renamed_open_page(request: Request):
         exc = job_record_capture.captured_exception
         return HTMLResponse(str(exc), status_code=HTTPStatus.BAD_REQUEST)
     if job_record is None:
-        return HTMLResponse(f"Namespace rename job not found: {job_id}", status_code=HTTPStatus.NOT_FOUND)
+        return HTMLResponse(f"Vault rename job not found: {job_id}", status_code=HTTPStatus.NOT_FOUND)
     if job_record["status"] != "succeeded":
-        return HTMLResponse("Namespace rename is not complete", status_code=HTTPStatus.CONFLICT)
+        return HTMLResponse("Vault rename is not complete", status_code=HTTPStatus.CONFLICT)
     if ACTIVE_NAMESPACE != job_record["target_namespace"]:
-        return HTMLResponse("Renamed namespace is not running here", status_code=HTTPStatus.CONFLICT)
+        return HTMLResponse("Renamed vault is not running here", status_code=HTTPStatus.CONFLICT)
     response = RedirectResponse(url="/?force_reauth=1", status_code=HTTPStatus.TEMPORARY_REDIRECT)
     clear_auth_cookie(response=response)
     return response

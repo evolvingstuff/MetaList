@@ -349,7 +349,7 @@ def _read_launch_profile_from_database(
     stored_namespace = str(namespace_value)
     if stored_namespace != namespace:
         raise RuntimeError(
-            f"Backup launch profile namespace mismatch: expected {namespace}, got {stored_namespace}"
+            f"Backup launch profile vault mismatch: expected {namespace}, got {stored_namespace}"
         )
     return BackupLaunchProfile(
         namespace=stored_namespace,
@@ -566,7 +566,7 @@ def _validate_archive_manifest(
         raise RuntimeError("Archive manifest missing namespace")
     if expected_namespace is not None and namespace != expected_namespace:
         raise RuntimeError(
-            f"Archive namespace {namespace!r} does not match expected namespace {expected_namespace!r}"
+            f"Archive vault {namespace!r} does not match expected vault {expected_namespace!r}"
         )
 
     if "created_at" not in manifest:

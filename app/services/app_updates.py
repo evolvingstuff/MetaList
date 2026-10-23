@@ -124,7 +124,7 @@ def _create_update_job_locked(target_version: str) -> dict[str, object]:
     job_id = str(uuid4())
     record = {'job_id': job_id, 'status': 'queued', 'current_version': __version__,
               'target_version': target_version, 'pid': os.getpid(),
-              'message': 'Preparing the update. All namespaces will restart.',
+              'message': 'Preparing the update. All vaults will restart.',
               'log_path': str(directory / f'{job_id}.log')}
     write_job(record)
     with active_path.open('x', encoding='utf-8') as stream:

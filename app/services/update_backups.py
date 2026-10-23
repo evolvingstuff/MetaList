@@ -158,7 +158,7 @@ def backup_all_namespaces_for_update(*, namespaces_directory: Path) -> tuple[Pat
     databases = _namespace_database_paths(namespaces_directory.resolve())
     archives = []
     for database in databases:
-        print(f"Backing up namespace {database.parent.name}...", flush=True)
+        print(f"Backing up vault {database.parent.name}...", flush=True)
         archive = _backup_namespace(database)
         archives.append(archive)
         print(f"Verified backup: {archive}", flush=True)

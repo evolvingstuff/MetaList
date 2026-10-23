@@ -19,7 +19,7 @@ from app.services.namespace_switcher import open_or_launch_namespace
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Rename a namespace after its server process exits")
+    parser = argparse.ArgumentParser(description="Rename a vault after its server process exits")
     parser.add_argument("--pid", type=int, required=True)
     parser.add_argument("--source-namespace", required=True)
     parser.add_argument("--target-namespace", required=True)

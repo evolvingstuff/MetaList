@@ -131,7 +131,7 @@ class ProposeTagReviewArguments(BaseModel):
         ..., description="accept turns proposals into tags; remove discards proposals.",
     )
     scope: Literal["current_view", "namespace"] = Field(
-        ..., description="current_view unless the user explicitly asked for the whole namespace.",
+        ..., description="current_view unless the user explicitly asked for the whole vault.",
     )
     tag_filter: str = Field(
         ..., max_length=MAX_TAG_FILTER_CHARACTERS,
@@ -211,7 +211,7 @@ PROPOSE_TAG_GENERATION_TOOL = AgentTool(
 PROPOSE_TAG_REVIEW_TOOL = AgentTool(
     name="propose_tag_review",
     description=(
-        "Accept or remove pending tag proposals in the current view or the whole namespace, all of them "
+        "Accept or remove pending tag proposals in the current view or the whole vault, all of them "
         "or only those of one named tag. MetaList shows the user exactly what will change and applies it "
         "only after Yes. Ends your turn."
     ),

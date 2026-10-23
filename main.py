@@ -169,7 +169,7 @@ def _run_startup_encryption_audit(
     namespaces_directory: Path,
 ) -> EncryptionAuditReport:
     console = make_startup_console(environ=os.environ)
-    with working(console, "Encrypted namespace audit"):
+    with working(console, "Encrypted vault audit"):
         report = audit_all_namespaces(namespaces_directory=namespaces_directory)
     if report.passed:
         # Nothing was checked without an encrypted namespace: no line at all.
@@ -177,7 +177,7 @@ def _run_startup_encryption_audit(
             return report
         print_check_passed(
             console,
-            label="Encrypted namespace audit",
+            label="Encrypted vault audit",
             detail=f"{report.checked_payload_count:,} payloads checked",
         )
         print_audit_namespaces(console, statuses=report.namespace_statuses())
@@ -215,7 +215,7 @@ def _run_startup_encryption_audit(
     )
     print(rendered_report, file=sys.stderr, flush=True)
     print(warning_border, file=sys.stderr, flush=True)
-    raise RuntimeError(f"Encrypted namespace audit failed:\n{rendered_report}")
+    raise RuntimeError(f"Encrypted vault audit failed:\n{rendered_report}")
 
 
 class FilterCheckUpdates(logging.Filter):
@@ -320,7 +320,7 @@ def _prompt_for_missing_namespace_launch_profile(*, entry: dict[str, object]) ->
     raw_profile = entry["default_profile"]
     if not isinstance(raw_profile, dict):
         raise RuntimeError(f"Namespace {namespace} missing default profile")
-    print(f"Namespace {namespace} has no saved launch profile. Enter ports or press Return for suggestions.")
+    print(f"Vault {namespace} has no saved launch profile. Enter ports or press Return for suggestions.")
     port = _read_prompted_port(
         namespace=namespace,
         service="HTTP",
@@ -351,7 +351,7 @@ def _save_missing_default_namespace_launch_profile(*, entry: dict[str, object]) 
         raise RuntimeError("Namespace default missing suggested HTTP port")
     if https_port is not None and not isinstance(https_port, int):
         raise RuntimeError("Namespace default has invalid suggested HTTPS port")
-    print("Namespace default has no saved launch profile. Saving suggested default ports.")
+    print("Vault default has no saved launch profile. Saving suggested default ports.")
     save_namespace_launch_profile(
         namespace="default",
         port=port,
@@ -401,7 +401,7 @@ def _bootstrap_default_namespace_if_empty(*, environ: dict[str, str]) -> None:
         raise RuntimeError("Suggested default namespace profile missing HTTP port")
     if https_port is not None and not isinstance(https_port, int):
         raise RuntimeError("Suggested default namespace profile has invalid HTTPS port")
-    print("No namespaces found. Creating a fresh default namespace.")
+    print("No vaults found. Creating a fresh default vault.")
     save_namespace_launch_profile(
         namespace="default",
         port=port,

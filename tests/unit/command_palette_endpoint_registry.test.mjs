@@ -83,7 +83,7 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
     assert.equal(endpointIds.has('form.delete_current_namespace'), true);
     assert.equal(
         endpoints.find((endpoint) => endpoint.id === 'form.delete_current_namespace').label,
-        'Delete namespace',
+        'Delete vault',
     );
     assert.equal(endpointIds.has('form.restore_backup'), true);
     assert.equal(endpointIds.has('form.add_password'), true);

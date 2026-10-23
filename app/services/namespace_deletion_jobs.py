@@ -74,7 +74,7 @@ def _validate_job_id(*, job_id: str) -> str:
         raise TypeError(f"job_id must be a string, got {type(job_id)}")
     normalized_job_id = job_id.strip()
     if _JOB_ID_PATTERN.fullmatch(normalized_job_id) is None:
-        raise NamespaceInputRejected(f"Invalid namespace deletion job id: {job_id!r}")
+        raise NamespaceInputRejected(f"Invalid vault deletion job id: {job_id!r}")
     return normalized_job_id
 
 

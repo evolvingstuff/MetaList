@@ -152,7 +152,7 @@ class OpenAICredentialStore:
         values = self._credential_columns(settings=settings)
         if any(value is not None for value in values):
             raise RuntimeError(
-                "Unencrypted namespace contains persisted OpenAI credential data"
+                "Unencrypted vault contains persisted OpenAI credential data"
             )
 
     def _load_persisted_key(self, *, token: str) -> str:

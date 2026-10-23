@@ -21,6 +21,7 @@
 
 ## Project: MetaList
 - Single-user FastAPI app for hierarchical notes with SSR + a diff-based `POST /api2/notes/view`.
+- Vocabulary: a **vault** on screen (menus, dialogs, messages, launcher output, AI help) is a **namespace** in code, on disk (`~/MetaList/namespaces/`), in APIs, backup archives and `--namespace` (`--vault` is an alias). New visible text says vault. The encryption code's "vault metadata/version" is the encryption format; Version Info shows it as "Encryption format version".
 - Why everything is in server memory (search over encrypted data, speed, single-user scale, thin wire): `docs/design/in_memory_store.md#design-rationale`.
 
 ## Architecture

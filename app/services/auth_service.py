@@ -289,7 +289,7 @@ class AuthService:
                 applied_versions=(),
                 rewritten_payload_count=0,
             )
-        maintenance_service.enter_maintenance("Upgrading namespace database")
+        maintenance_service.enter_maintenance("Upgrading vault database")
         try:
             create_timestamped_backup()
             migration_encryption = EncryptionService()

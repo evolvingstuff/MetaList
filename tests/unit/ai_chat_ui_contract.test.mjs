@@ -870,8 +870,8 @@ test('AI settings persist and submit a required thinking level', () => {
     assert.doesNotMatch(modal, /_saveConnection/);
     assert.match(modal, /OpenAI API/);
     assert.match(modal, /id="ai-agent-openai-api-key" type="password"/);
-    assert.match(modal, /Encrypted namespaces[\s\S]*?persist it encrypted/);
-    assert.match(modal, /unencrypted namespaces keep it[\s\S]*?server session only/);
+    assert.match(modal, /Encrypted vaults[\s\S]*?persist it encrypted/);
+    assert.match(modal, /unencrypted vaults keep it[\s\S]*?server session only/);
     assert.match(modal, /await saveOpenAiCredential\(apiKey\)/);
     assert.match(chatApi, /export async function loadOpenAiCredentialStatus/);
     assert.match(chatApi, /export async function clearOpenAiCredential/);

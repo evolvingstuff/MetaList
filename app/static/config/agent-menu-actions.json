@@ -103,36 +103,36 @@
   },
   {
     "id": "form.open_namespace",
-    "label": "Open/Switch namespace",
+    "label": "Open/Switch vault",
     "selector": "#open-namespace-modal",
     "presentation": "dialog",
     "alternate_dialog": {
-      "when": "there is no other namespace to open",
-      "label": "Create namespace",
+      "when": "there is no other vault to open",
+      "label": "Create vault",
       "selector": "#create-namespace-modal"
     }
   },
   {
     "id": "form.create_namespace",
-    "label": "Create namespace",
+    "label": "Create vault",
     "selector": "#create-namespace-modal",
     "presentation": "dialog"
   },
   {
     "id": "form.manage_namespace_ports",
-    "label": "Manage namespace ports",
+    "label": "Manage vault ports",
     "selector": "#manage-namespace-ports-modal",
     "presentation": "dialog"
   },
   {
     "id": "form.rename_current_namespace",
-    "label": "Rename current namespace",
+    "label": "Rename current vault",
     "selector": "#rename-namespace-modal",
     "presentation": "dialog"
   },
   {
     "id": "form.delete_current_namespace",
-    "label": "Delete namespace",
+    "label": "Delete vault",
     "selector": "#delete-namespace-modal",
     "presentation": "dialog"
   },

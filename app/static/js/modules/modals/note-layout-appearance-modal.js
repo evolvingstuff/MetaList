@@ -72,7 +72,7 @@ export class NoteLayoutAppearanceModal extends BaseModal {
         modalElement.innerHTML = `
             <div class="modal-content note-layout-appearance-modal-content">
                 <h2>Note Layout &amp; Appearance</h2>
-                <p class="note-layout-description">Adjust how note hierarchy, spacing, corners and tags appear in this namespace.</p>
+                <p class="note-layout-description">Adjust how note hierarchy, spacing, corners and tags appear in this vault.</p>
 
                 <div class="note-layout-controls">
                     <label for="note-layout-top-level-size">

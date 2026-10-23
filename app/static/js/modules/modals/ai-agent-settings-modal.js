@@ -158,7 +158,7 @@ export class AiAgentSettingsModal extends BaseModal {
             </div>
         `;
         const credentialStatus = state.openAiCredentialPersistent
-            ? 'Configured · encrypted in this namespace'
+            ? 'Configured · encrypted in this vault'
             : (state.openAiCredentialConfigured
                 ? 'Configured · session only'
                 : 'Not configured');
@@ -172,8 +172,8 @@ export class AiAgentSettingsModal extends BaseModal {
             <section class="ai-agent-credential" aria-labelledby="ai-agent-openai-title">
                 <h3 id="ai-agent-openai-title">OpenAI API key</h3>
                 <p>
-                    The key is sent only to the MetaList server. Encrypted namespaces
-                    persist it encrypted; unencrypted namespaces keep it for this
+                    The key is sent only to the MetaList server. Encrypted vaults
+                    persist it encrypted; unencrypted vaults keep it for this
                     server session only.
                 </p>
                 <div class="ai-agent-credential-row">

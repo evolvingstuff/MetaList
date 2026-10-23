@@ -109,6 +109,6 @@ test('namespace switching opens and navigates another tab without replacing the 
 test('openPendingNamespaceTab fails loudly when the browser blocks the tab', () => {
     assert.throws(
         () => openPendingNamespaceTab({ open: () => null }),
-        /Browser blocked the namespace tab/,
+        /Browser blocked the vault tab/,
     );
 });

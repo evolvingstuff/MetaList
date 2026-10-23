@@ -54,7 +54,7 @@ export class DeleteNamespaceModal extends BaseModal {
             redirectNamespace: '',
             recreatesDefault: false,
             error: '',
-            status: 'Loading namespaces...',
+            status: 'Loading vaults...',
             successMessage: '',
         };
     }
@@ -89,7 +89,7 @@ export class DeleteNamespaceModal extends BaseModal {
         if (!this.isCurrentOpen(generation)) return;
         if (!catalogResult.ok) {
             const error = catalogResult.error;
-            const message = error instanceof Error ? error.message : 'Failed to load namespaces';
+            const message = error instanceof Error ? error.message : 'Failed to load vaults';
             this.updateModalState({
                 loading: false,
                 error: message,
@@ -177,7 +177,7 @@ export class DeleteNamespaceModal extends BaseModal {
             }
             modalElement.innerHTML = `
                 <div class="modal-content namespace-delete-modal-content">
-                    <h3>Delete namespace</h3>
+                    <h3>Delete vault</h3>
                     <p>${escapeHtml(successMessage)}</p>
                 </div>
             `;
@@ -187,7 +187,7 @@ export class DeleteNamespaceModal extends BaseModal {
         if (loading) {
             modalElement.innerHTML = `
                 <div class="modal-content namespace-delete-modal-content">
-                    <h3>Delete namespace</h3>
+                    <h3>Delete vault</h3>
                     <p class="namespace-delete-status">${escapeHtml(status)}</p>
                     <div class="form-actions">
                         <button type="button" class="secondary-btn" id="delete-namespace-cancel-loading-btn">Cancel</button>
@@ -208,14 +208,14 @@ export class DeleteNamespaceModal extends BaseModal {
             }
             modalElement.innerHTML = `
                 <div class="modal-content namespace-delete-modal-content">
-                    <h3>Delete namespace</h3>
-                    <p>Select the namespace to delete.</p>
+                    <h3>Delete vault</h3>
+                    <p>Select the vault to delete.</p>
                     <div class="form-group">
-                        <label for="delete-namespace-target">Namespace</label>
+                        <label for="delete-namespace-target">Vault</label>
                         <select
                             id="delete-namespace-target"
                         >
-                            <option value="">Choose namespace</option>
+                            <option value="">Choose vault</option>
                             ${selectableNamespaces.map((candidate) => `
                                 <option value="${escapeHtml(candidate)}" ${candidate === targetNamespaceText ? 'selected' : ''}>${escapeHtml(candidate)}</option>
                             `).join('')}
@@ -238,11 +238,11 @@ export class DeleteNamespaceModal extends BaseModal {
         }
         modalElement.innerHTML = `
             <div class="modal-content namespace-delete-modal-content">
-                <h3>Delete namespace</h3>
+                <h3>Delete vault</h3>
                 <div class="namespace-delete-warning">
-                    <p>This permanently deletes the namespace, its notes database, file database, backups, and saved ports.</p>
-                    <p class="namespace-delete-namespace">Namespace: <strong>${escapeHtml(namespace)}</strong></p>
-                    ${activeNamespaceDeleted ? '<p>Because this is the active namespace, choose where MetaList should redirect after deletion.</p>' : ''}
+                    <p>This permanently deletes the vault, its notes database, file database, backups, and saved ports.</p>
+                    <p class="namespace-delete-namespace">Vault: <strong>${escapeHtml(namespace)}</strong></p>
+                    ${activeNamespaceDeleted ? '<p>Because this is the active vault, choose where MetaList should redirect after deletion.</p>' : ''}
                     <p>Type <span class="namespace-delete-phrase">${escapeHtml(namespace)}</span> to confirm.</p>
                 </div>
 
@@ -250,7 +250,7 @@ export class DeleteNamespaceModal extends BaseModal {
                     <div class="form-group">
                         <label for="delete-namespace-redirect">Redirect after deletion</label>
                         ${recreatesDefault ? `
-                            <p>A fresh <strong>default</strong> namespace will be created because this is the final namespace.</p>
+                            <p>A fresh <strong>default</strong> vault will be created because this is the final vault.</p>
                             <input id="delete-namespace-redirect" type="hidden" value="default" />
                         ` : `
                             <select id="delete-namespace-redirect" ${deleting ? 'disabled' : ''}>
@@ -263,7 +263,7 @@ export class DeleteNamespaceModal extends BaseModal {
                 ` : ''}
 
                 <div class="form-group">
-                    <label for="delete-namespace-confirmation">Namespace name</label>
+                    <label for="delete-namespace-confirmation">Vault name</label>
                     <input
                         id="delete-namespace-confirmation"
                         type="text"
@@ -279,7 +279,7 @@ export class DeleteNamespaceModal extends BaseModal {
 
                 <div class="form-actions">
                     <button type="button" class="danger-btn" id="delete-namespace-submit-btn" ${deleting ? 'disabled' : ''}>
-                        Delete namespace
+                        Delete vault
                     </button>
                     <button type="button" class="secondary-btn" id="delete-namespace-back-btn" ${deleting ? 'disabled' : ''}>Back</button>
                 </div>
@@ -373,7 +373,7 @@ export class DeleteNamespaceModal extends BaseModal {
             : '';
         if (targetNamespace.length === 0) {
             this.updateModalState({
-                error: 'Enter a namespace to delete',
+                error: 'Enter a vault to delete',
                 status: '',
             });
             this.renderModalContent();
@@ -382,7 +382,7 @@ export class DeleteNamespaceModal extends BaseModal {
         this.updateModalState({
             loading: true,
             error: '',
-            status: 'Checking namespace...',
+            status: 'Checking vault...',
         });
         this.renderModalContent();
 
@@ -414,7 +414,7 @@ export class DeleteNamespaceModal extends BaseModal {
                 throw new Error('Namespace delete preflight response missing recreates_default');
             }
             if (!preflight.target_exists) {
-                throw new Error(`Namespace ${preflight.target_namespace} is unavailable`);
+                throw new Error(`Vault ${preflight.target_namespace} is unavailable`);
             }
             this.updateModalState({
                 loading: false,
@@ -432,7 +432,7 @@ export class DeleteNamespaceModal extends BaseModal {
         });
         if (!preflightResult.ok) {
             const error = preflightResult.error;
-            const message = error instanceof Error ? error.message : 'Failed to check namespace';
+            const message = error instanceof Error ? error.message : 'Failed to check vault';
             this.updateModalState({
                 loading: false,
                 confirming: false,
@@ -455,7 +455,7 @@ export class DeleteNamespaceModal extends BaseModal {
         });
         if (!payloadResult.ok) {
             const error = payloadResult.error;
-            const message = error instanceof Error ? error.message : 'Invalid namespace deletion request';
+            const message = error instanceof Error ? error.message : 'Invalid vault deletion request';
             this.updateModalState({
                 error: message,
                 status: '',
@@ -471,7 +471,7 @@ export class DeleteNamespaceModal extends BaseModal {
         this.updateModalState({
             deleting: true,
             error: '',
-            status: 'Deleting namespace...',
+            status: 'Deleting vault...',
         });
         this.renderModalContent();
 
@@ -516,7 +516,7 @@ export class DeleteNamespaceModal extends BaseModal {
         });
         if (!deleteResult.ok) {
             const error = deleteResult.error;
-            const message = error instanceof Error ? error.message : 'Failed to delete namespace';
+            const message = error instanceof Error ? error.message : 'Failed to delete vault';
             this.updateModalState({
                 deleting: false,
                 error: message,

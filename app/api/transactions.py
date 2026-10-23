@@ -86,7 +86,7 @@ def transactional_route(func: Callable[P, R] | Callable[P, Awaitable[R]]) -> Cal
                 _check_bulk_guard(func.__name__)
                 maintenance = nullcontext()
                 if func.__name__ in _STORAGE_TRANSITIONS:
-                    maintenance = maintenance_service.hold_for_transaction("Updating namespace storage")
+                    maintenance = maintenance_service.hold_for_transaction("Updating vault storage")
                 with maintenance:
                     with begin_request_transaction():
                         register_runtime_recovery()
@@ -147,7 +147,7 @@ def assert_mutation_routes_wrapped(app: FastAPI) -> None:
 
 def _check_bulk_guard(endpoint_name: str) -> None:
     if endpoint_name in _STORAGE_TRANSITIONS and bulk_operation_guard.active_mutations > 1:
-        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail="Wait for the current request to finish before changing namespace storage.")
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail="Wait for the current request to finish before changing vault storage.")
     # Preferences never touch notes, and every operation reads them once when it
     # starts, so saving them (e.g. the chat panel width) cannot disturb it.
     permitted = {"answer_bulk_question", "preview_cloud_privacy", "put_ai_debug_details", "put_client_preferences"}

@@ -245,11 +245,11 @@ export const Auth = {
 
         const select = this._requireElement('login-namespace-select');
         select.disabled = true;
-        this._setLoginNamespaceStatus('Loading namespaces...', 'info');
+        this._setLoginNamespaceStatus('Loading vaults...', 'info');
 
         const response = await fetch(CONFIG.API.AUTH.LOGIN_NAMESPACES.LIST);
         if (!response.ok) {
-            throw new HttpRequestError(await this._readResponseDetail(response, 'Failed to load namespaces'));
+            throw new HttpRequestError(await this._readResponseDetail(response, 'Failed to load vaults'));
         }
 
         const payload = parseLoginNamespaceCatalog(await response.json());
@@ -398,7 +398,7 @@ export const Auth = {
             () => this._revealLoginPanel(passwordInput),
             (error) => {
                 rethrowUnexpectedError(error);
-                const message = error instanceof Error ? error.message : 'Failed to load namespaces';
+                const message = error instanceof Error ? error.message : 'Failed to load vaults';
                 this._setLoginNamespaceStatus(message, 'error');
                 // Shown anyway, with the error, so the login is never stuck hidden.
                 this._revealLoginPanel(passwordInput);
@@ -530,7 +530,7 @@ export const Auth = {
             });
 
             if (!response.ok) {
-                throw new HttpRequestError(await this._readResponseDetail(response, 'Failed to open namespace'));
+                throw new HttpRequestError(await this._readResponseDetail(response, 'Failed to open vault'));
             }
 
             const payload = await response.json();
@@ -552,7 +552,7 @@ export const Auth = {
                 this._setLoginNamespaceStatus(error.message, 'error');
                 throw error;
             }
-            this._setLoginNamespaceStatus('Failed to open namespace', 'error');
+            this._setLoginNamespaceStatus('Failed to open vault', 'error');
             throw new Error('Failed to open namespace');
         }
     },

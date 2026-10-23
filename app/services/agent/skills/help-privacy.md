@@ -2,7 +2,7 @@
 
 Cloud AI privacy opens the privacy section of AI agent settings. Four fields,
 one entry per line, configure whitelist tags/phrases and blacklist tags/phrases.
-The policy is namespace-scoped. Whitelist entries use OR, blacklist entries use
+The policy is vault-scoped. Whitelist entries use OR, blacklist entries use
 OR, and a blacklist match wins. Effective tag matching includes inheritance and
 ontology relationships; text phrases are case-insensitive literal phrases.
 Proposed tags count for the blacklist but never for the whitelist: a proposed
@@ -28,8 +28,8 @@ note private starts the chat's AI memory afresh; but if an answer already quoted
 something that should have stayed private and the note was edited rather than made
 private, tell the user to press Clear Chat, which removes that memory.
 
-OpenAI credentials persist encrypted when the namespace is password-protected.
-For a plaintext namespace they are held only in server session memory. Do not
+OpenAI credentials persist encrypted when the vault is password-protected.
+For a plaintext vault they are held only in server session memory. Do not
 ask the user to paste an API key or password into chat: open AI agent settings
 or the appropriate password form. OpenAI requests use store:false; do not claim
 this guarantees zero provider retention or overrides the provider's policies.
@@ -43,7 +43,7 @@ does not inspect. For "is everything encrypted at rest?", explain both the broad
 sensitive-data coverage and the specific exceptions; do not simply say yes or
 give a vague disclaimer about protected content.
 
-With namespace password protection enabled, MetaList uses AES-256-GCM for its
+With vault password protection enabled, MetaList uses AES-256-GCM for its
 persisted sensitive payloads. This is application field-level encryption, not
 whole-file SQLite encryption or OS full-disk encryption. Coverage includes:
 
@@ -54,21 +54,21 @@ whole-file SQLite encryption or OS full-disk encryption. Coverage includes:
   reminders, and cached link URLs/titles.
 - UI/client preferences, command-palette usage/query tokens, backup settings,
   and cloud privacy settings stored in client preferences.
-- Persisted OpenAI credentials, when present in a protected namespace.
+- Persisted OpenAI credentials, when present in a protected vault.
 
 Readable structural/operational metadata remains: note IDs, parent/previous/next
 relationships (hierarchy and order), collapse state, created/updated timestamps,
-namespace names and listener ports, schema/vault versions, salts/KDF parameters,
+vault names and listener ports, schema/encryption format versions, salts/KDF parameters,
 the password verifier, ciphertext lengths and encryption nonces/tags. The DEK is
 stored wrapped (encrypted), not as a readable raw key. Attachment filenames and
 their metadata payload are encrypted; do not confuse them with readable database
 structure or file/container sizes. Encryption does not hide all sizes or access
 patterns. Machine-level network configuration also remains plaintext.
 
-Without a namespace password, MetaList stores ordinary note and attachment
+Without a vault password, MetaList stores ordinary note and attachment
 payloads in plaintext. This is known behavior, not merely an absence of a promise.
 OS disk encryption is a separate layer and must not be assumed. An unprotected
-namespace's OpenAI key is session-memory-only, not a persisted plaintext key.
+vault's OpenAI key is session-memory-only, not a persisted plaintext key.
 
 Adding a password encrypts existing live sensitive data and subsequent writes.
 Removing the password decrypts the live data. Changing the password rewraps the
@@ -81,9 +81,9 @@ server memory while unlocked. No model/tool here can inspect or recover it.
 
 A backup copies consistent notes/files SQLite snapshots into a `.tar.gz` archive.
 It does not decrypt encrypted payloads or add whole-archive encryption. A snapshot
-of an encrypted namespace retains its encrypted sensitive payloads and wrapped
-DEK; a snapshot of a plaintext namespace retains plaintext. The archive manifest
-(namespace, creation time, file entries/checksums, encryption-enabled flag) and
+of an encrypted vault retains its encrypted sensitive payloads and wrapped
+DEK; a snapshot of a plaintext vault retains plaintext. The archive manifest
+(vault, creation time, file entries/checksums, encryption-enabled flag) and
 structural metadata are readable. Thus "protected backup contents remain
 encrypted" is correct; "every byte of every backup is encrypted" is not.
 
@@ -103,7 +103,7 @@ deleting recovery artifacts to bypass a failed transition.
 
 ## Diagnostics, memory and verification
 
-For a protected namespace, startup diagnostics before unlock are plaintext and
+For a protected vault, startup diagnostics before unlock are plaintext and
 do not contain decrypted vault data. After successful key unwrap, persistent
 Loguru records and direct stdout/stderr writes use individual `MLLOG1` AES-GCM
 envelopes with a DEK-derived logging key. Plaintext fault logging is disabled
@@ -123,21 +123,21 @@ neither is a guarantee of forensic zeroization of Python allocations/OS memory.
 
 The startup encrypted-storage audit checks declared sensitive payload encryption
 metadata, known table/column coverage, nonce uniqueness and SQLite integrity in
-live namespace databases. Unsupported/unprotected current-version storage fails
+live vault databases. Unsupported/unprotected current-version storage fails
 loudly; known old-version issues may require authenticated migration. This is a
 storage-contract check, not proof of every disk byte being encrypted or a scan
 of all logs/backups/swap. It does not authenticate ciphertext without the key.
 
-Logging in: the login screen shows the MetaList logo with the namespace dropdown,
+Logging in: the login screen shows the MetaList logo with the vault dropdown,
 the password field and OK. A wrong password shows the reason under OK without
 leaving the form. After the password is accepted, a progress bar shows the
 current loading step and the seconds elapsed. When a database upgrade is due,
-"Backing up and upgrading this namespace…" appears under OK while it checks, and
+"Backing up and upgrading this vault…" appears under OK while it checks, and
 that login takes longer. "Session locked" means the session moved to another tab
 or device; Go to Login opens the login screen.
 
 The Add password, Change password, and Remove password menus open forms. Change
-password in a namespace with no password opens the Add password form. Opening
+password in a vault with no password opens the Add password form. Opening
 is not submitting. An encryption explanation alone does not request a form or a
 password change. Never ask for an actual password or API key in chat.
 
@@ -149,7 +149,7 @@ generator is a local dialog; do not invent or expose actual saved passwords.
 a copyable username field. Both are AI exclusion boundaries: such a note and its
 whole subtree are never sent to any AI, and a cloud whitelist cannot bypass that.
 Exports and prints hide both unless the user checks Include Unredacted ... in
-their dialog. A blurred display is not a substitute for namespace encryption. @shell execution is separately opt-in on the server
+their dialog. A blurred display is not a substitute for vault encryption. @shell execution is separately opt-in on the server
 (--enable-shell); AI help has no shell execution tool. Explain only what this
 reference establishes; do not assert the user's current encryption, disclosure
 policy, or session settings without explicit supplied evidence.

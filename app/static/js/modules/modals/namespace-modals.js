@@ -295,7 +295,7 @@ export async function fetchHasOtherNamespace() {
         headers: buildSessionHeaders(false),
     });
     if (!response.ok) {
-        throw new HttpRequestError(`Namespace list request failed with ${response.status}`);
+        throw new HttpRequestError(`Vault list request failed with ${response.status}`);
     }
     const catalog = await response.json();
     assertCatalogShape(catalog);
@@ -319,7 +319,7 @@ export class OpenNamespaceModal extends NamespaceModalBase {
             catalog: null,
             selectedNamespace: '',
             error: '',
-            status: 'Loading namespaces...',
+            status: 'Loading vaults...',
         };
     }
 
@@ -337,7 +337,7 @@ export class OpenNamespaceModal extends NamespaceModalBase {
         const status = typeof state.status === 'string' ? state.status : '';
 
         if (loading || !catalog) {
-            this._renderLoading('Open Namespace', 'open-namespace-cancel-loading-btn');
+            this._renderLoading('Open Vault', 'open-namespace-cancel-loading-btn');
             return;
         }
 
@@ -362,7 +362,7 @@ export class OpenNamespaceModal extends NamespaceModalBase {
         const isCurrentSelection = selectedEntry.is_current === true;
         this._renderIntoModal(`
             <div class="modal-content namespace-modal-content switch-namespace-modal-content">
-                <h3>Open Namespace</h3>
+                <h3>Open Vault</h3>
                 <div class="namespace-modal-list">${rowsHtml}</div>
                 <div class="form-actions namespace-modal-actions">
                     <button type="button" class="primary-btn" id="open-namespace-this-tab-btn" ${submitting || isCurrentSelection ? 'disabled' : ''}>Open in This Tab</button>
@@ -413,7 +413,7 @@ export class OpenNamespaceModal extends NamespaceModalBase {
             loading: true,
             submitting: false,
             error: '',
-            status: 'Loading namespaces...',
+            status: 'Loading vaults...',
         });
         this.renderModalContent();
         const catalogResult = await settleResult(async () => {
@@ -435,7 +435,7 @@ export class OpenNamespaceModal extends NamespaceModalBase {
         if (!this.isCurrentOpen(generation)) return;
         if (!catalogResult.ok) {
             const error = catalogResult.error;
-            const message = error instanceof Error ? error.message : 'Failed to load namespaces';
+            const message = error instanceof Error ? error.message : 'Failed to load vaults';
             this.updateModalState({
                 loading: false,
                 error: message,
@@ -455,13 +455,13 @@ export class OpenNamespaceModal extends NamespaceModalBase {
         const payloadResult = await settleResult(() => {
             const entry = findNamespaceEntry(catalog, selectedNamespace);
             if (entry.is_current === true) {
-                throw new UserInputRejected('Select a different namespace');
+                throw new UserInputRejected('Select a different vault');
             }
             return profilePayloadFromEntry(entry);
         });
         if (!payloadResult.ok) {
             const error = payloadResult.error;
-            const message = error instanceof Error ? error.message : 'Invalid namespace selection';
+            const message = error instanceof Error ? error.message : 'Invalid vault selection';
             this.updateModalState({ error: message, status: '' });
             this.renderModalContent();
             return;
@@ -478,7 +478,7 @@ export class OpenNamespaceModal extends NamespaceModalBase {
         });
         if (!pendingTabResult.ok) {
             const error = pendingTabResult.error;
-            const message = error instanceof Error ? error.message : 'Failed to open namespace tab';
+            const message = error instanceof Error ? error.message : 'Failed to open vault tab';
             this.updateModalState({ error: message, status: '' });
             this.renderModalContent();
             return;
@@ -487,7 +487,7 @@ export class OpenNamespaceModal extends NamespaceModalBase {
         this.updateModalState({
             submitting: true,
             error: '',
-            status: 'Opening namespace...',
+            status: 'Opening vault...',
         });
         this.renderModalContent();
 
@@ -507,7 +507,7 @@ export class OpenNamespaceModal extends NamespaceModalBase {
                 pendingTab.close();
             }
             const error = switchResult.error;
-            const message = error instanceof Error ? error.message : 'Failed to open namespace';
+            const message = error instanceof Error ? error.message : 'Failed to open vault';
             this.updateModalState({
                 submitting: false,
                 error: message,
@@ -524,7 +524,7 @@ export class OpenNamespaceModal extends NamespaceModalBase {
         this.updateModalState({
             submitting: true,
             error: '',
-            status: 'Opening namespace...',
+            status: 'Opening vault...',
         });
         this.renderModalContent();
         const switchResult = await settleResult(async () => {
@@ -539,7 +539,7 @@ export class OpenNamespaceModal extends NamespaceModalBase {
         });
         if (!switchResult.ok) {
             const error = switchResult.error;
-            const message = error instanceof Error ? error.message : 'Failed to open namespace';
+            const message = error instanceof Error ? error.message : 'Failed to open vault';
             this.updateModalState({
                 submitting: false,
                 error: message,
@@ -567,7 +567,7 @@ export class CreateNamespaceModal extends NamespaceModalBase {
             port: '',
             httpsPort: '',
             error: '',
-            status: 'Loading namespace defaults...',
+            status: 'Loading vault defaults...',
         };
     }
 
@@ -587,16 +587,16 @@ export class CreateNamespaceModal extends NamespaceModalBase {
         const status = typeof state.status === 'string' ? state.status : '';
 
         if (loading || !catalog) {
-            this._renderLoading('Create Namespace', 'create-namespace-cancel-loading-btn');
+            this._renderLoading('Create Vault', 'create-namespace-cancel-loading-btn');
             return;
         }
 
         const supportsHttps = Boolean(catalog.supports_https);
         this._renderIntoModal(`
             <div class="modal-content namespace-modal-content create-namespace-modal-content">
-                <h3>Create Namespace</h3>
+                <h3>Create Vault</h3>
                 <div class="form-group">
-                    <label for="create-namespace-name">Namespace Name</label>
+                    <label for="create-namespace-name">Vault Name</label>
                     <input id="create-namespace-name" type="text" value="${escapeHtml(namespace)}" placeholder="work" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" ${submitting ? 'disabled' : ''}>
                 </div>
                 <div class="namespace-modal-port-grid">
@@ -612,7 +612,7 @@ export class CreateNamespaceModal extends NamespaceModalBase {
                     ` : ''}
                 </div>
                 <div class="form-actions namespace-modal-actions">
-                    <button type="button" class="primary-btn" id="create-namespace-submit-btn" ${submitting ? 'disabled' : ''}>Create and Open Namespace</button>
+                    <button type="button" class="primary-btn" id="create-namespace-submit-btn" ${submitting ? 'disabled' : ''}>Create and Open Vault</button>
                     <button type="button" class="secondary-btn" id="create-namespace-cancel-btn" ${submitting ? 'disabled' : ''}>Cancel</button>
                 </div>
                 <p class="namespace-modal-status">${escapeHtml(status)}</p>
@@ -655,7 +655,7 @@ export class CreateNamespaceModal extends NamespaceModalBase {
             loading: true,
             submitting: false,
             error: '',
-            status: 'Loading namespace defaults...',
+            status: 'Loading vault defaults...',
         });
         this.renderModalContent();
         const catalogResult = await settleResult(async () => {
@@ -677,7 +677,7 @@ export class CreateNamespaceModal extends NamespaceModalBase {
         if (!this.isCurrentOpen(generation)) return;
         if (!catalogResult.ok) {
             const error = catalogResult.error;
-            const message = error instanceof Error ? error.message : 'Failed to load namespace defaults';
+            const message = error instanceof Error ? error.message : 'Failed to load vault defaults';
             this.updateModalState({
                 loading: false,
                 error: message,
@@ -693,13 +693,13 @@ export class CreateNamespaceModal extends NamespaceModalBase {
         assertCatalogShape(catalog);
         const namespace = typeof state.namespace === 'string' ? state.namespace.trim() : '';
         if (namespace.length === 0) {
-            throw new UserInputRejected('Enter a namespace name');
+            throw new UserInputRejected('Enter a vault name');
         }
         if (!NAMESPACE_PATTERN.test(namespace)) {
-            throw new UserInputRejected("Namespace must contain only lowercase letters, digits, and '-'");
+            throw new UserInputRejected("Vault must contain only lowercase letters, digits, and '-'");
         }
         if (catalog.namespaces.find((entry) => entry.namespace === namespace)) {
-            throw new UserInputRejected('That namespace already exists');
+            throw new UserInputRejected('That vault already exists');
         }
 
         const payload = {
@@ -715,7 +715,7 @@ export class CreateNamespaceModal extends NamespaceModalBase {
         const payloadResult = await settleResult(() => this._validateSubmission());
         if (!payloadResult.ok) {
             const error = payloadResult.error;
-            const message = error instanceof Error ? error.message : 'Invalid namespace settings';
+            const message = error instanceof Error ? error.message : 'Invalid vault settings';
             this.updateModalState({ error: message, status: '' });
             this.renderModalContent();
             return;
@@ -726,7 +726,7 @@ export class CreateNamespaceModal extends NamespaceModalBase {
         this.updateModalState({
             submitting: true,
             error: '',
-            status: 'Creating namespace...',
+            status: 'Creating vault...',
         });
         this.renderModalContent();
 
@@ -751,7 +751,7 @@ export class CreateNamespaceModal extends NamespaceModalBase {
                 pendingTab.close();
             }
             const error = createResult.error;
-            const message = error instanceof Error ? error.message : 'Failed to create namespace';
+            const message = error instanceof Error ? error.message : 'Failed to create vault';
             this.updateModalState({
                 submitting: false,
                 error: message,
@@ -777,7 +777,7 @@ export class RenameNamespaceModal extends NamespaceModalBase {
             catalog: null,
             targetNamespace: '',
             error: '',
-            status: 'Loading namespace...',
+            status: 'Loading vault...',
         };
     }
 
@@ -789,7 +789,7 @@ export class RenameNamespaceModal extends NamespaceModalBase {
         const state = this.getModalState();
         const catalog = state.catalog;
         if (Boolean(state.loading) || !catalog) {
-            this._renderLoading('Rename Current Namespace', 'rename-namespace-cancel-loading-btn');
+            this._renderLoading('Rename Current Vault', 'rename-namespace-cancel-loading-btn');
             return;
         }
         assertCatalogShape(catalog);
@@ -803,11 +803,11 @@ export class RenameNamespaceModal extends NamespaceModalBase {
         const status = typeof state.status === 'string' ? state.status : '';
         this._renderIntoModal(`
             <div class="modal-content namespace-modal-content create-namespace-modal-content">
-                <h3>Rename Current Namespace</h3>
+                <h3>Rename Current Vault</h3>
                 <p>Rename <strong>${escapeHtml(currentNamespace)}</strong>. Its database, files, backups, and saved ports move together.</p>
-                <p>MetaList will restart this namespace on the same ports and ask you to log in again.</p>
+                <p>MetaList will restart this vault on the same ports and ask you to log in again.</p>
                 <div class="form-group">
-                    <label for="rename-namespace-name">New Namespace Name</label>
+                    <label for="rename-namespace-name">New Vault Name</label>
                     <input id="rename-namespace-name" type="text" value="${escapeHtml(targetNamespace)}" placeholder="personal" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" ${submitting ? 'disabled' : ''}>
                 </div>
                 <div class="form-actions namespace-modal-actions">
@@ -843,7 +843,7 @@ export class RenameNamespaceModal extends NamespaceModalBase {
             loading: true,
             submitting: false,
             error: '',
-            status: 'Loading namespace...',
+            status: 'Loading vault...',
         });
         this.renderModalContent();
         const result = await settleResult(async () => {
@@ -863,7 +863,7 @@ export class RenameNamespaceModal extends NamespaceModalBase {
             const error = result.error;
             this.updateModalState({
                 loading: false,
-                error: error instanceof Error ? error.message : 'Failed to load namespace',
+                error: error instanceof Error ? error.message : 'Failed to load vault',
                 status: '',
             });
         }
@@ -896,13 +896,13 @@ export class RenameNamespaceModal extends NamespaceModalBase {
         if (!payloadResult.ok) {
             const error = payloadResult.error;
             this.updateModalState({
-                error: error instanceof Error ? error.message : 'Invalid namespace name',
+                error: error instanceof Error ? error.message : 'Invalid vault name',
                 status: '',
             });
             this.renderModalContent();
             return;
         }
-        this.updateModalState({ submitting: true, error: '', status: 'Preparing namespace rename...' });
+        this.updateModalState({ submitting: true, error: '', status: 'Preparing vault rename...' });
         this.renderModalContent();
         const result = await settleResult(async () => {
             const response = await this._authRequest(
@@ -922,7 +922,7 @@ export class RenameNamespaceModal extends NamespaceModalBase {
             const error = result.error;
             this.updateModalState({
                 submitting: false,
-                error: error instanceof Error ? error.message : 'Failed to rename namespace',
+                error: error instanceof Error ? error.message : 'Failed to rename vault',
                 status: '',
             });
             this.renderModalContent();
@@ -945,7 +945,7 @@ export class ManageNamespacePortsModal extends NamespaceModalBase {
             catalog: null,
             rows: [],
             error: '',
-            status: 'Loading namespace ports...',
+            status: 'Loading vault ports...',
         };
     }
 
@@ -963,7 +963,7 @@ export class ManageNamespacePortsModal extends NamespaceModalBase {
         const status = typeof state.status === 'string' ? state.status : '';
 
         if (loading || !catalog) {
-            this._renderLoading('Manage Namespace Ports', 'manage-namespace-ports-cancel-loading-btn');
+            this._renderLoading('Manage Vault Ports', 'manage-namespace-ports-cancel-loading-btn');
             return;
         }
 
@@ -989,12 +989,12 @@ export class ManageNamespacePortsModal extends NamespaceModalBase {
 
         this._renderIntoModal(`
             <div class="modal-content namespace-modal-content namespace-ports-modal-content">
-                <h3>Manage Namespace Ports</h3>
+                <h3>Manage Vault Ports</h3>
                 <div class="namespace-ports-table-wrap">
                     <table class="namespace-ports-table">
                         <thead>
                             <tr>
-                                <th scope="col">Namespace</th>
+                                <th scope="col">Vault</th>
                                 <th scope="col">HTTP</th>
                                 ${supportsHttps ? '<th scope="col">HTTPS</th>' : ''}
                                 <th scope="col">Applies</th>
@@ -1066,7 +1066,7 @@ export class ManageNamespacePortsModal extends NamespaceModalBase {
             loading: true,
             saving: false,
             error: '',
-            status: 'Loading namespace ports...',
+            status: 'Loading vault ports...',
         });
         this.renderModalContent();
         const catalogResult = await settleResult(async () => {
@@ -1085,7 +1085,7 @@ export class ManageNamespacePortsModal extends NamespaceModalBase {
         if (!this.isCurrentOpen(generation)) return;
         if (!catalogResult.ok) {
             const error = catalogResult.error;
-            const message = error instanceof Error ? error.message : 'Failed to load namespace ports';
+            const message = error instanceof Error ? error.message : 'Failed to load vault ports';
             this.updateModalState({
                 loading: false,
                 saving: false,
@@ -1141,7 +1141,7 @@ export class ManageNamespacePortsModal extends NamespaceModalBase {
         const payloadResult = await settleResult(() => this._validateSubmission());
         if (!payloadResult.ok) {
             const error = payloadResult.error;
-            const message = error instanceof Error ? error.message : 'Invalid namespace ports';
+            const message = error instanceof Error ? error.message : 'Invalid vault ports';
             this.updateModalState({ error: message, status: '' });
             this.renderModalContent();
             return;
@@ -1150,7 +1150,7 @@ export class ManageNamespacePortsModal extends NamespaceModalBase {
         this.updateModalState({
             saving: true,
             error: '',
-            status: 'Saving namespace ports...',
+            status: 'Saving vault ports...',
         });
         this.renderModalContent();
 
@@ -1166,7 +1166,7 @@ export class ManageNamespacePortsModal extends NamespaceModalBase {
         });
         if (!saveResult.ok) {
             const error = saveResult.error;
-            const message = error instanceof Error ? error.message : 'Failed to save namespace ports';
+            const message = error instanceof Error ? error.message : 'Failed to save vault ports';
             this.updateModalState({
                 saving: false,
                 error: message,
@@ -1179,7 +1179,7 @@ export class ManageNamespacePortsModal extends NamespaceModalBase {
         const response = saveResult.value;
         const statusMessage = typeof response.message === 'string' && response.message.length > 0
             ? response.message
-            : 'Saved namespace ports.';
+            : 'Saved vault ports.';
         ErrorHandler.showInfoBanner(statusMessage, STATUS_BANNER_SECONDS * MS_PER_SECOND);
         await this.loadCatalog();
         this.updateModalState({

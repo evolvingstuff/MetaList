@@ -199,9 +199,9 @@ def test_schedule_self_update_backs_up_after_stop_before_install(
 
     assert events == ["stop", "backup", "install"]
     assert result.update_scheduled is True
-    assert "2 namespace backup(s)" in result.message
+    assert "2 vault backup(s)" in result.message
     output = capsys.readouterr().out
-    assert "Backing up all namespaces" in output
+    assert "Backing up all vaults" in output
 
 
 @pytest.mark.parametrize("platform_name", ("darwin", "linux", "win32"))

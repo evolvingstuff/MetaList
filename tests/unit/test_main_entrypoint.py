@@ -314,7 +314,7 @@ def test_startup_encryption_audit_prints_migration_warning_and_continues(
         passed=False,
         startup_allowed=True,
         render_text=lambda: (
-            "Encrypted namespace audit: MIGRATION REQUIRED\n"
+            "Encrypted vault audit: MIGRATION REQUIRED\n"
             "- cla: MIGRATION REQUIRED\n- default: PASS"
         ),
     )
@@ -373,7 +373,7 @@ def test_startup_encryption_audit_prints_pass_without_warning(
     captured = capsys.readouterr()
     assert returned_report is report
     assert captured.out == (
-        " ✓ Encrypted namespace audit  342,772 payloads checked\n"
+        " ✓ Encrypted vault audit      342,772 payloads checked\n"
         "     cla  PASS\n"
     )
     assert captured.err == ""
@@ -713,7 +713,7 @@ def test_main_enable_shell_launches_all_namespaces_with_shared_capability(
     monkeypatch.setattr(
         main_entrypoint,
         "_run_namespace_server_for_current_env",
-        lambda **kwargs: (_ for _ in ()).throw(AssertionError("single namespace server must not start")),
+        lambda **kwargs: (_ for _ in ()).throw(AssertionError("single vault server must not start")),
     )
 
     main_entrypoint.main(argv=["--enable-shell"])
@@ -785,7 +785,7 @@ def test_prompt_for_missing_namespace_launch_profiles_auto_saves_default_ports(m
     main_entrypoint._prompt_for_missing_namespace_launch_profiles(environ={})
 
     assert calls == [
-        "Namespace default has no saved launch profile. Saving suggested default ports.",
+        "Vault default has no saved launch profile. Saving suggested default ports.",
         {
             "namespace": "default",
             "port": 8000,
@@ -851,7 +851,7 @@ def test_print_namespace_bootstrap_results_shows_http_and_https_urls(monkeypatch
                     mcp_port=8765,
                 ),
                 saved_for_next_launch=False,
-                message="Started namespace default.",
+                message="Started vault default.",
             ),
             NamespaceOpenResult(
                 namespace="cla",
@@ -864,7 +864,7 @@ def test_print_namespace_bootstrap_results_shows_http_and_https_urls(monkeypatch
                     mcp_port=8766,
                 ),
                 saved_for_next_launch=False,
-                message="Restarted namespace cla.",
+                message="Restarted vault cla.",
             ),
         ],
     )

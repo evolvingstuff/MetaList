@@ -1,21 +1,21 @@
-# MetaList namespaces, backups, exports, and updates
+# MetaList vaults, backups, exports, and updates
 
-Namespaces isolate notes, preferences, tags, reminders, and authentication. A
-namespace is not a search tab. Search tabs are views within the same namespace.
-Open/Switch namespace opens a picker of reachable namespaces with two buttons: Open in
-This Tab (switching keeps one tab) and Open in New Tab; with no other namespace
-yet it opens Create namespace instead. Create namespace opens
-a name/port form. Rename current namespace opens a rename form. Delete namespace
+Vaults isolate notes, preferences, tags, reminders, and authentication. A
+vault is not a search tab. Search tabs are views within the same vault.
+Open/Switch vault opens a picker of reachable vaults with two buttons: Open in
+This Tab (switching keeps one tab) and Open in New Tab; with no other vault
+yet it opens Create vault instead. Create vault opens
+a name/port form. Rename current vault opens a rename form. Delete vault
 opens a confirmation form; do not execute deletion or imply it has happened.
-Manage namespace ports edits saved future launch profiles; saving does not launch,
-switch to, or restart a namespace. Port changes take effect on a later launch.
+Manage vault ports edits saved future launch profiles; saving does not launch,
+switch to, or restart a vault. Port changes take effect on a later launch.
 
 Create backup now is an operation, not merely opening a dialog. It can prompt for
-backup folder/settings and creates one versioned .tar.gz archive per namespace
+backup folder/settings and creates one versioned .tar.gz archive per vault
 containing its notes database and sibling files database when present. The result
-shows one row per namespace. The help action cannot invoke backup creation.
+shows one row per vault. The help action cannot invoke backup creation.
 Backup reminder (menu: Off, Daily, Weekly, Every 2 weeks, Monthly; Weekly by
-default) floats a card when this namespace's newest backup is older than that;
+default) floats a card when this vault's newest backup is older than that;
 its Back Up Now opens Backup Settings and × hides it for a day.
 Restore from backup opens a picker for configured-folder snapshots. The user
 chooses and confirms a restore; success is confirmed with OK before reloading.
@@ -40,15 +40,15 @@ When @password or @username notes would show, an Include Unredacted Passwords
 (Usernames, or Usernames and Passwords) checkbox appears (unchecked: shown as
 ••••••••; checked: readable, and the file or print is not encrypted).
 Exported files copy usernames, included passwords and copyable values on click.
-Attach file stores an attachment in the namespace's sibling files database. Default upload limit is 100 MiB and is server-configurable.
+Attach file stores an attachment in the vault's sibling files database. Default upload limit is 100 MiB and is server-configurable.
 Trim unused files removes unused attachments and is not an opening action.
 The agent can explain these operations but cannot execute them through help.
 
-Version info shows application/database/runtime/namespace and encryption status.
+Version info shows application/database/runtime/vault and encryption status.
 It also provides update information; managed uv installs can use the in-app
 installer. Opening Version info does not install an update. The user controls
 installation/restart; do not claim a particular installed/latest version unless
 it was supplied. Local help references cannot establish current release data.
-Updates validate a candidate before stopping live namespaces and create fresh
+Updates validate a candidate before stopping live vaults and create fresh
 backups; old backup archives remain unchanged. Do not advise editing or deleting
 recovery archives to work around a startup failure.

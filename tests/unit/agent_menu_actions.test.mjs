@@ -85,7 +85,7 @@ test('opening a namespace with no other one reports the Create namespace dialog 
         queryElement: selector => ({ getClientRects: () => (shown.has(selector) ? [1] : []) }),
         showMenuEntry: async () => {}, signal: new AbortController().signal,
     });
-    assert.deepEqual(result, { status: 'opened', detail: 'Create namespace' });
+    assert.deepEqual(result, { status: 'opened', detail: 'Create vault' });
 }));
 
 test('a dialog that opened neither of its forms is reported as not opened', async () => withCatalog(async () => {

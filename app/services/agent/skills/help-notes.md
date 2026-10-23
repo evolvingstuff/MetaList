@@ -106,13 +106,13 @@ On macOS, `⌘ + Y` normally opens Safari History rather than performing native 
 - Show/Hide tabs (label reflects current visibility)
 - Show/Hide AI Chat (label reflects current visibility)
 - AI Agent Settings… (OpenAI API key, model, cloud privacy, evidence and tagging limits; model and thinking level are selected beside chat Send)
-- Create backup now (opens Backup Settings, where you choose one backup folder, select the namespaces to include, set retention, and then run the backup; typing `backups` in the palette also matches it, and the completion modal shows archive size)
+- Create backup now (opens Backup Settings, where you choose one backup folder, select the vaults to include, set retention, and then run the backup; typing `backups` in the palette also matches it, and the completion modal shows archive size)
 - Restore from backup…
 - Logout
 - Generate random password…
 - Keyboard Shortcuts / Cheatsheet…
 - Version info… (also found by typing `update`, `upgrade`, or `release`; checks PyPI and offers an update for supported uv installations when behind)
-- Memory usage… (also found by typing `memory`, `ram` or `mb`; the namespace server's memory and the notes it holds decrypted)
+- Memory usage… (also found by typing `memory`, `ram` or `mb`; the vault server's memory and the notes it holds decrypted)
 - Note Layout & Appearance… (top-level size, child indentation, vertical spacing, note corners, and tag style)
 
 > Note: On Windows/Linux, use `Ctrl` instead of `⌘` (Command)
@@ -127,6 +127,6 @@ When `Show tags in list` is enabled, the grey right-aligned tag column wraps and
 
 
 ### Update notifications
-Each document load/refresh starts a fresh server-side PyPI check in parallel with app startup, including on the login page. Once authenticated and ready, a newly discovered release shows a dismissible reminder-style notice linking to Version Info. `pref.update_notice_version` remembers the displayed release using namespace preferences, so refreshes do not repeat it. Failed checks leave the app usable and Version Info offers Check again. Version Info also checks when opened.
+Each document load/refresh starts a fresh server-side PyPI check in parallel with app startup, including on the login page. Once authenticated and ready, a newly discovered release shows a dismissible reminder-style notice linking to Version Info. `pref.update_notice_version` remembers the displayed release using vault preferences, so refreshes do not repeat it. Failed checks leave the app usable and Version Info offers Check again. Version Info also checks when opened.
 
-Update is a deliberate action: it preflights the reviewed release, creates verified immutable backups, and restarts all namespaces. The modal displays progress and a Reload action on completion. Closing/reopening it in the same page resumes the accepted job. Job status can be read using its opaque ID after restart, but starting an update requires authentication. Source checkouts and unmanaged installs show the eligibility reason. After a post-shutdown failure, inspect the updater output/log and restart with `metalist`; automatic rollback is not provided.
+Update is a deliberate action: it preflights the reviewed release, creates verified immutable backups, and restarts all vaults. The modal displays progress and a Reload action on completion. Closing/reopening it in the same page resumes the accepted job. Job status can be read using its opaque ID after restart, but starting an update requires authentication. Source checkouts and unmanaged installs show the eligibility reason. After a post-shutdown failure, inspect the updater output/log and restart with `metalist`; automatic rollback is not provided.

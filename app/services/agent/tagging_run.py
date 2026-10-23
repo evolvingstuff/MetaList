@@ -235,7 +235,7 @@ class TaggingRun:
             self.validate_current()
             if scope == "namespace":
                 note_ids = tuple(store.list_note_ids())
-                scope_label = "the whole namespace"
+                scope_label = "the whole vault"
             else:
                 note_ids = proposal_scope_ids(self.snapshot.descriptor)
                 scope_label = "the current view"

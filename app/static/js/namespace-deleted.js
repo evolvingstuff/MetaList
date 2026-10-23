@@ -29,7 +29,7 @@ async function fetchDeleteJob(jobId) {
         cache: 'no-store',
     });
     if (!response.ok) {
-        throw new HttpRequestError(`Namespace delete job request failed with ${response.status}`);
+        throw new HttpRequestError(`Vault delete job request failed with ${response.status}`);
     }
     const payload = await response.json();
     if (!payload || typeof payload !== 'object') {
@@ -56,31 +56,31 @@ function updateLinksState(state, copyText) {
 
 
 function updatePageForPending(deletedNamespace) {
-    requireElement('namespace-deleted-title').textContent = `Deleting namespace ${deletedNamespace}`;
+    requireElement('namespace-deleted-title').textContent = `Deleting vault ${deletedNamespace}`;
     requireElement('namespace-deleted-copy').textContent = (
-        'Please wait while MetaList removes the namespace from disk and finalizes cleanup.'
+        'Please wait while MetaList removes the vault from disk and finalizes cleanup.'
     );
     const statusElement = requireElement('namespace-deleted-status');
     statusElement.dataset.state = 'pending';
     requireElement('namespace-deleted-status-label').textContent = 'In Progress';
     requireElement('namespace-deleted-status-body').textContent = (
-        'The namespace is being removed. This page will update automatically.'
+        'The vault is being removed. This page will update automatically.'
     );
     requireElement('namespace-deleted-error').classList.add('namespace-deleted-hidden');
-    updateLinksState('disabled', 'These links unlock when namespace cleanup finishes.');
+    updateLinksState('disabled', 'These links unlock when vault cleanup finishes.');
 }
 
 
 function updatePageForSuccess(deletedNamespace) {
-    requireElement('namespace-deleted-title').textContent = `Namespace ${deletedNamespace} deleted`;
+    requireElement('namespace-deleted-title').textContent = `Vault ${deletedNamespace} deleted`;
     requireElement('namespace-deleted-copy').textContent = (
-        'The namespace directory, database files, backups, and launch profile were removed.'
+        'The vault directory, database files, backups, and launch profile were removed.'
     );
     const statusElement = requireElement('namespace-deleted-status');
     statusElement.dataset.state = 'succeeded';
     requireElement('namespace-deleted-status-label').textContent = 'Completed';
     requireElement('namespace-deleted-status-body').textContent = (
-        'Redirecting to the namespace you selected.'
+        'Redirecting to the vault you selected.'
     );
     requireElement('namespace-deleted-error').classList.add('namespace-deleted-hidden');
     updateLinksState('ready', 'Continue manually if the automatic redirect does not begin.');
@@ -88,7 +88,7 @@ function updatePageForSuccess(deletedNamespace) {
 
 
 function updatePageForFailure(deletedNamespace, errorText) {
-    requireElement('namespace-deleted-title').textContent = `Namespace ${deletedNamespace} failed to delete`;
+    requireElement('namespace-deleted-title').textContent = `Vault ${deletedNamespace} failed to delete`;
     requireElement('namespace-deleted-copy').textContent = (
         'Deletion did not complete. The error details are shown below.'
     );
@@ -96,14 +96,14 @@ function updatePageForFailure(deletedNamespace, errorText) {
     statusElement.dataset.state = 'failed';
     requireElement('namespace-deleted-status-label').textContent = 'Failed';
     requireElement('namespace-deleted-status-body').textContent = (
-        'This is a destructive operation failure. Do not assume the namespace is gone.'
+        'This is a destructive operation failure. Do not assume the vault is gone.'
     );
     const errorElement = requireElement('namespace-deleted-error');
     errorElement.textContent = errorText;
     errorElement.classList.remove('namespace-deleted-hidden');
     updateLinksState(
         'ready',
-        'Open another namespace below, but do not assume the failed namespace is gone.',
+        'Open another vault below, but do not assume the failed vault is gone.',
     );
 }
 
@@ -144,7 +144,7 @@ async function run(pageState) {
     if (pageState.initialStatus === 'failed') {
         const errorText = typeof pageState.initialError === 'string' && pageState.initialError !== ''
             ? pageState.initialError
-            : 'Namespace deletion failed without an error message.';
+            : 'Vault deletion failed without an error message.';
         updatePageForFailure(pageState.deletedNamespace, errorText);
         return;
     }
@@ -175,7 +175,7 @@ async function run(pageState) {
         }
         const errorText = typeof payload.error === 'string' && payload.error !== ''
             ? payload.error
-            : 'Namespace deletion failed without an error message.';
+            : 'Vault deletion failed without an error message.';
         updatePageForFailure(pageState.deletedNamespace, errorText);
         return;
     }
@@ -183,16 +183,16 @@ async function run(pageState) {
 
 
 async function main() {
-    let deletedNamespace = 'this namespace';
+    let deletedNamespace = 'this vault';
     const pageStateResult = await settleResult(() => requirePageState());
     if (!pageStateResult.ok) {
         const error = pageStateResult.error;
         const errorText = error instanceof Error
             ? error.message
-            : 'Unknown namespace deletion status error';
+            : 'Unknown vault deletion status error';
         updatePageForFailure(
             deletedNamespace,
-            `Namespace deletion status page failed: ${errorText}`,
+            `Vault deletion status page failed: ${errorText}`,
         );
         return;
     }
@@ -203,10 +203,10 @@ async function main() {
         const error = runResult.error;
         const errorText = error instanceof Error
             ? error.message
-            : 'Unknown namespace deletion status error';
+            : 'Unknown vault deletion status error';
         updatePageForFailure(
             deletedNamespace,
-            `Namespace deletion status page failed: ${errorText}`,
+            `Vault deletion status page failed: ${errorText}`,
         );
         return;
     }

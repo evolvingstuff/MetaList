@@ -47,7 +47,7 @@ class BulkOperationGuard:
     def track_mutation(self):
         with self._mutation_lock:
             if self.active_mutations:
-                raise BulkOperationBusy("Another request is changing the namespace; retry after it finishes")
+                raise BulkOperationBusy("Another request is changing the vault; retry after it finishes")
             self.active_mutations += 1
         try:
             yield
