@@ -3,9 +3,12 @@
 In the user docs and the AI's help a tag with properties is a **super tag**
 (`jogging:miles=3`); its values are its properties.
 
-Status: design, not built. Settled in a brainstorm on 2026-10-23. Items marked
-**Proposed** are smaller details suggested while writing this down; confirm them
-before building.
+Status: built 2026-10-23 (the steps below), from a brainstorm the same day. Items still
+marked **Proposed** were built as written but never discussed; the user docs are
+`docs/ui/tag-bar.md` (Super Tags), `docs/ui/search-semantics.md` (Super Tag Searches)
+and `docs/design/ontology-rules-v1.md` (Super tag atom). Tests: `tests/unit/test_tag_properties.py`,
+`test_tag_ontology_value_rules.py`, `test_super_tag_proposals.py`, and the browser suite
+`super-tags` (`scripts/browser-super-tag-regressions.mjs`).
 
 ## Goal
 
@@ -282,18 +285,17 @@ Decided 2026-10-23:
   `ontology-rules-v1.md`, and the help skills (`help-search.md`, `help-tags.md`,
   `help-ontology.md`).
 
-## Build order (Proposed)
+## Build order (as built)
 
-1. Tag grammar: accept and normalize property tokens in the tag bar and on the
-   server.
+1. Tag grammar: property tokens in the tag bar and on the server; rename and delete
+   keep or remove them.
 2. Search: property terms, types and operators, `?` and bare-name terms, the
    plain-tag match.
 3. Upward search through implications.
-4. Suggestions for property names.
-5. Ontology rule atoms.
-6. Rename and delete.
-
-Each step usable on its own, tried before the next.
+4. Suggestions for property names, units and MAX/MIN; MAX and MIN.
+5. Ontology rule atoms, with suggestions and typo warnings in the rule editor; a saved
+   rule re-tags only the notes it can concern.
+6. The AI proposing super tags with values; accepting one merges its values.
 
 ## Later
 
