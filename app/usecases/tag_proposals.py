@@ -275,7 +275,7 @@ class CmdAddTagProposals(QueryCommand):
             record = note_store.get_note(target_id)
             pending = list(_proposal_tokens(record.proposed_tags))
             seen = {token.casefold() for token in pending} | _effective_accepted_tag_keys(target_id)
-            new_tags = []
+            new_tags: list[str] = []
             for tag in tags:
                 if proposal_says_something_new(proposal=tag, seen=seen, pending=[*pending, *new_tags], tags=record.tags):
                     new_tags.append(tag)

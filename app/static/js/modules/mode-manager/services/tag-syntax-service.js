@@ -175,7 +175,12 @@ function splitPropertySegments(text) {
     return segments;
 }
 
-function keepAllowedChars(text, allowsColon) {
+// The characters a property's name or value keeps ({ allowsColon }: a value's can hold a colon).
+function keepAllowedChars(text, options) {
+    if (options === null || typeof options !== 'object' || typeof options.allowsColon !== 'boolean') {
+        throw new Error('keepAllowedChars requires { allowsColon } boolean');
+    }
+    const allowsColon = options.allowsColon;
     let out = '';
     for (const char of text) {
         if (!isAsciiPrintable(char)) {
@@ -202,11 +207,11 @@ function enforcePropertySegment(segment) {
     const text = segment.slice(start);
     const assignmentIndex = text.indexOf(PROPERTY_ASSIGNMENT);
     if (assignmentIndex === -1) {
-        return { name: keepAllowedChars(text, false), value: null };
+        return { name: keepAllowedChars(text, { allowsColon: false }), value: null };
     }
     return {
-        name: keepAllowedChars(text.slice(0, assignmentIndex), false),
-        value: keepAllowedChars(text.slice(assignmentIndex + 1), true),
+        name: keepAllowedChars(text.slice(0, assignmentIndex), { allowsColon: false }),
+        value: keepAllowedChars(text.slice(assignmentIndex + 1), { allowsColon: true }),
     };
 }
 

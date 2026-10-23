@@ -48,8 +48,6 @@ CAPTURE_BOUNDARIES = {
     # Translate explicitly validated domain input/resource rejection.
     'app/api/routes/notes.py:_resolve_tab_sort_mode:capture': ('InputRejected',),
     # Translate explicitly validated domain input/resource rejection.
-    'app/services/tag_ontology.py:_parse_property_atom:capture': ('InputRejected',),
-    # Translate explicitly validated domain input/resource rejection.
     'app/api/routes/notes.py:add_selected_text_tag:capture': ('SelectedTextTagValidationError',),
     # Translate explicitly validated domain input/resource rejection.
     'app/api/routes/notes.py:create_new_tab:capture': ('InputRejected',),

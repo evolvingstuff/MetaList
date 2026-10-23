@@ -4,8 +4,6 @@ from dataclasses import dataclass
 import re
 from typing import Dict, FrozenSet, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 
-from app.services.exception_capture import CapturedExceptionContext
-from app.services.input_errors import InputRejected
 from app.services.tag_properties import (
     MISSING_OPERATOR,
     PropertyCondition,
@@ -17,6 +15,7 @@ from app.services.tag_properties import (
     split_property_segments,
     tag_part_of_token,
     parse_property_term,
+    property_term_problem,
 )
 
 # An escape is a backslash and the character it escapes.
@@ -360,13 +359,10 @@ def _parse_property_atom(token: str, *, line: str, index: int, filename: str, li
             filename=filename, line=line_number, column=index + 1, message=message, source_line=line,
         )
 
-    capture = CapturedExceptionContext(InputRejected, boundary='app/services/tag_ontology.py:_parse_property_atom:capture')
-    condition: PropertyCondition | None = None
-    with capture:
-        condition = parse_property_term(token)
-    if capture.captured_exception is not None:
-        raise error(str(capture.captured_exception)) from capture.captured_exception
-    assert condition is not None
+    problem = property_term_problem(token)
+    if problem != "":
+        raise error(problem)
+    condition = parse_property_term(token)
     if condition.is_extreme:
         raise error(f"{condition.value_text} is for searches: a rule decides from one note, not among notes")
     return PropertyAtom(condition=condition)

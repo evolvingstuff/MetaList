@@ -241,15 +241,16 @@ def update_rule(request: Request, rule_id: int, payload: RuleTextRequest) -> dic
                 break
         if old_text is None:
             raise RuntimeError("Expected rule text for update")
+        rule_texts = [old_text, text]
         candidate_note_ids = _collect_candidate_note_ids_for_texts(
-            [old_text, text],
+            rule_texts,
             filename=f"ontology_rules:{rule_id}",
         )
 
     token = _maybe_bearer_token(request)
     updated_id, normalized = update_rule_line(rule_id=rule_id, text=text, token=token)
     if note_store.loaded:
-        _refresh_note_tags(candidate_note_ids, rule_texts=[old_text, text])
+        _refresh_note_tags(candidate_note_ids, rule_texts=rule_texts)
         update_uuid = generate_new_uuid()
         return {"id": updated_id, "text": normalized, "updateUUID": update_uuid, "warnings": _rule_warnings(normalized)}
     return {"id": updated_id, "text": normalized, "warnings": []}
@@ -272,14 +273,15 @@ def delete_rule(rule_id: int) -> dict:
                 break
         if old_text is None:
             raise RuntimeError("Expected rule text for delete")
+        rule_texts = [old_text]
         candidate_note_ids = _collect_candidate_note_ids_for_texts(
-            [old_text],
+            rule_texts,
             filename=f"ontology_rules:{rule_id}",
         )
 
     delete_rule_line(rule_id=rule_id)
     if note_store.loaded:
-        _refresh_note_tags(candidate_note_ids, rule_texts=[old_text])
+        _refresh_note_tags(candidate_note_ids, rule_texts=rule_texts)
         update_uuid = generate_new_uuid()
         return {"ok": True, "updateUUID": update_uuid}
     return {"ok": True}

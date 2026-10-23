@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 import re
-from typing import Dict, FrozenSet, List, Mapping, Tuple
+from typing import Any, Dict, FrozenSet, List, Mapping, Tuple
 
 from app.services.input_errors import InputRejected
 
@@ -61,8 +61,8 @@ VALUE_TEXT = "text"
 # Which kind MAX and MIN compare when a property's values are of several, on a tie.
 VALUE_KIND_ORDER = (VALUE_NUMBER, VALUE_TEMPORAL, VALUE_TIME, VALUE_TEXT)
 
-_NUMBER_RE = re.compile(r"^(-?(?:\d+(?:\.\d+)?|\.\d+))([A-Za-z%][A-Za-z%/]*)?$")
-_DATE_RE = re.compile(r"^(\d{4})-(\d{2})(?:-(\d{2}))?$")
+_NUMBER_RE = re.compile(r"^(?P<number>-?(?:\d+(?:\.\d+)?|\.\d+))(?P<unit>[A-Za-z%][A-Za-z%/]*)?$")
+_DATE_RE = re.compile(r"^(?P<year>\d{4})-(?P<month>\d{2})(?:-(?P<day>\d{2}))?$")
 _DATE_TIME_RE = re.compile(r"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$")
 _TIME_RE = re.compile(
     r"^(\d{1,2})(?::(\d{2})(?::(\d{2}))?)?\s*(am|pm|a\.m\.|p\.m\.)?$", re.IGNORECASE,
@@ -83,7 +83,8 @@ class PropertyValue:
     kind: str
     # A number's value, a date's or date-time's moment, a time's seconds after midnight,
     # or casefolded text.
-    sort_key: object
+    # Keys of one kind compare with each other (comparisons check the kind first).
+    sort_key: Any
     # A number's unit as written after it, casefolded ("mg" for 10mg); "" for none.
     unit: str
 
@@ -92,12 +93,12 @@ def _number_value(text: str) -> PropertyValue | None:
     match = _NUMBER_RE.match(text)
     if match is None:
         return None
-    unit = match.group(2)
+    unit = match.group("unit")
     if unit is None:
         unit = ""
     if unit.casefold() in {"am", "pm"}:
         return None
-    return PropertyValue(kind=VALUE_NUMBER, sort_key=Decimal(match.group(1)), unit=unit.casefold())
+    return PropertyValue(kind=VALUE_NUMBER, sort_key=Decimal(match.group("number")), unit=unit.casefold())
 
 
 def _temporal_value(text: str) -> PropertyValue | None:
@@ -111,9 +112,11 @@ def _temporal_value(text: str) -> PropertyValue | None:
             return None
         # A month without a day is its first day: 2024-01 is 2024-01-01.
         day = _FIRST_DAY
-        if date_only.group(3) is not None:
-            day = int(date_only.group(3))
-        moment = _valid_moment(int(date_only.group(1)), int(date_only.group(2)), day, hour=0, minute=0, second=0)
+        if date_only.group("day") is not None:
+            day = int(date_only.group("day"))
+        moment = _valid_moment(
+            int(date_only.group("year")), int(date_only.group("month")), day, hour=0, minute=0, second=0,
+        )
     if moment is None:
         return None
     return PropertyValue(kind=VALUE_TEMPORAL, sort_key=moment, unit="")
@@ -252,39 +255,50 @@ def property_term_tag(token: str) -> str:
 
 def parse_property_term(token: str) -> PropertyCondition:
     """A property search term, or InputRejected saying how to write one."""
+    tag, name, operator, value_text = _split_property_term(token)
+    problem = _condition_problem(tag, name, operator, value_text)
+    if problem != "":
+        raise InputRejected(problem)
+    return PropertyCondition(tag=tag, name=name, operator=operator, value_text=value_text)
+
+
+def property_term_problem(token: str) -> str:
+    """What is wrong with a super tag term, said so the user can fix it; "" for nothing.
+    The rule editor's parser reports it as its own error (tag_ontology)."""
+    return _condition_problem(*_split_property_term(token))
+
+
+def _split_property_term(token: str) -> Tuple[str, str, str, str]:
+    """A term's tag, property name, operator and value, as written."""
     if has_property_syntax(token):
         tag, rest = token.split(PROPERTY_SEPARATOR, 1)
         if rest.endswith(MISSING_OPERATOR):
-            return _condition(tag, rest[:-1], MISSING_OPERATOR, "")
-        for operator in COMPARISON_OPERATORS:
-            if operator in rest:
-                name, value = rest.split(operator, 1)
-                return _condition(tag, name, operator, value)
-        return _condition(tag, rest, PRESENT_OPERATOR, "")
+            return tag, rest[:-1], MISSING_OPERATOR, ""
+        name, operator, value = _split_at_operator(rest)
+        if operator == "":
+            return tag, rest, PRESENT_OPERATOR, ""
+        return tag, name, operator, value
     for operator in IMPLICIT_COMPARISON_OPERATORS:
         if operator in token:
             tag, value = token.split(operator, 1)
-            return _condition(tag, IMPLICIT_PROPERTY, operator, value)
+            return tag, IMPLICIT_PROPERTY, operator, value
     raise InputRejected(f"{token} is not a property search (for example jogging:miles>2)")
 
 
-def _condition(tag: str, name: str, operator: str, value_text: str) -> PropertyCondition:
+def _condition_problem(tag: str, name: str, operator: str, value_text: str) -> str:
     if tag == RESERVED_OR:
-        raise InputRejected("OR is reserved and cannot be used as a tag")
-    if tag == "" or PROPERTY_ASSIGNMENT in tag or PROPERTY_SEPARATOR in tag or tag.startswith(META_TAG_PREFIX):
-        raise InputRejected(f"Name the tag before the property (for example jogging:miles>2), not {tag!r}")
+        return "OR is reserved and cannot be used as a tag"
+    if tag == "" or any(mark in tag for mark in (PROPERTY_ASSIGNMENT, PROPERTY_SEPARATOR)) or tag.startswith(META_TAG_PREFIX):
+        return f"Name the tag before the property (for example jogging:miles>2), not {tag!r}"
     if _PROPERTY_NAME_RE.match(name) is None:
-        raise InputRejected("A property name starts with a letter (for example jogging:miles>2)")
-    has_value = operator not in (MISSING_OPERATOR, PRESENT_OPERATOR)
+        return "A property name starts with a letter (for example jogging:miles>2)"
     if value_text in EXTREME_KEYWORDS and operator != "=":
-        raise InputRejected(f"{value_text} goes after = (for example jogging:miles={value_text})")
-    if has_value and value_text == "":
-        raise InputRejected(f"Write a value after {operator} (for example jogging:miles{operator}2)")
-    if any(mark in value_text for mark in ("<", ">", "?")) or value_text.startswith("="):
-        raise InputRejected("One property per search term (for example jogging:miles>2 jogging:duration<40)")
-    if PROPERTY_ASSIGNMENT in value_text:
-        raise InputRejected("One property per search term (for example jogging:miles>2 jogging:duration<40)")
-    return PropertyCondition(tag=tag, name=name, operator=operator, value_text=value_text)
+        return f"{value_text} goes after = (for example jogging:miles={value_text})"
+    if operator not in (MISSING_OPERATOR, PRESENT_OPERATOR) and value_text == "":
+        return f"Write a value after {operator} (for example jogging:miles{operator}2)"
+    if any(mark in value_text for mark in ("<", ">", "?", PROPERTY_ASSIGNMENT)):
+        return "One property per search term (for example jogging:miles>2 jogging:duration<40)"
+    return ""
 
 
 def value_satisfies(value: PropertyValue, condition: PropertyCondition) -> bool:
@@ -323,7 +337,7 @@ PROPERTY_SUGGESTION_PLACES = frozenset({
     PROPERTY_SUGGESTIONS_IN_TAG_BAR, PROPERTY_SUGGESTIONS_IN_SEARCH, PROPERTY_SUGGESTIONS_IN_RULE,
 })
 # A number and the start of its unit: 10, 10m, -2.5k.
-_NUMBER_AND_PARTIAL_UNIT_RE = re.compile(r"^(-?(?:\d+(?:\.\d+)?|\.\d+))([A-Za-z%][A-Za-z%/]*)?$")
+_NUMBER_AND_PARTIAL_UNIT_RE = re.compile(r"^(?P<number>-?(?:\d+(?:\.\d+)?|\.\d+))(?P<unit>[A-Za-z%][A-Za-z%/]*)?$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -429,12 +443,12 @@ def _unit_completion(typed: str, *, tag: str, property_name: str, value: str) ->
     match = _NUMBER_AND_PARTIAL_UNIT_RE.match(value)
     if tag == "" or match is None or _PROPERTY_NAME_RE.match(property_name) is None:
         return None
-    partial = match.group(2)
+    partial = match.group("unit")
     if partial is None:
         partial = ""
     return PropertyCompletion(
         tag=tag, property_name=property_name, partial=partial, before=typed[: len(typed) - len(partial)],
-        number=match.group(1), excluded_names=frozenset(), name_suffix="", offers_extremes=False,
+        number=match.group("number"), excluded_names=frozenset(), name_suffix="", offers_extremes=False,
     )
 
 
