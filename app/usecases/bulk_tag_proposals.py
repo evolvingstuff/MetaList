@@ -7,12 +7,16 @@ from app.db.session import begin_request_transaction, begin_writer
 from app.services.bulk_operation import bulk_operation_guard
 from app.security.encryption import encrypt
 from app.services.content_cache import cache_note_tags, cache_note_proposed_tags
-from app.services.content_formatting import _tokenize_tag_bar
 from app.services.note_store import store
 from app.services.search_history import current_local_date, record_explicit_tag_addition_batch
 from app.services.sync import generate_new_uuid, get_current_sync_uuid
 from app.services.undo_state import reset_all_undo_state
-from app.usecases.tag_proposals import _effective_accepted_tag_keys, _proposal_tokens, is_new_proposal
+from app.usecases.tag_proposals import (
+    _effective_accepted_tag_keys,
+    _proposal_tokens,
+    merge_accepted_proposals,
+    proposal_says_something_new,
+)
 
 
 def prepare_proposal_changes(note_ids, action, tag_filter, proposals):
@@ -32,7 +36,7 @@ def prepare_proposal_changes(note_ids, action, tag_filter, proposals):
             if note_id in proposals:
                 note_proposals = proposals[note_id]
             for tag in note_proposals:
-                if is_new_proposal(tag=tag, seen=seen):
+                if proposal_says_something_new(proposal=tag, seen=seen, pending=pending, tags=record.tags):
                     pending.append(tag)
                     seen.add(tag.casefold())
                     additions.append(tag)
@@ -47,12 +51,9 @@ def prepare_proposal_changes(note_ids, action, tag_filter, proposals):
             pending = [tag for tag in pending if tag.casefold() not in selected_keys]
             affected += len(selected)
             if action == "accept":
-                accepted = {tag.casefold() for tag in _tokenize_tag_bar(record.tags)}
-                additions = [tag for tag in selected if tag.casefold() not in accepted]
-                # Rewrite the tag bar only when adding to it; normalising every
-                # note would "change" notes that have no proposals at all.
-                if additions:
-                    tags = " ".join(part for part in (tags.strip(), *additions) if part)
+                # Only what adds to the tag bar changes it; normalising every note would
+                # "change" notes that have no proposals at all.
+                tags = merge_accepted_proposals(tags, tuple(selected))
         proposed = " ".join(pending)
         if tags != record.tags or proposed != record.proposed_tags:
             changes[note_id] = (tags, proposed)

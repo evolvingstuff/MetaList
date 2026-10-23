@@ -66,6 +66,40 @@ Regex notes:
 - `/.../i` is case-insensitive.
 - Escaping a literal slash inside the pattern uses `\/`.
 
+4) Super tag atom (a tag's values; `docs/design/tag-properties.md`)
+
+```
+jogging:miles>10
+drug:dosage>500mg
+task:status=done
+task:due
+task:due?
+```
+
+Every super tag search form except MAX and MIN: a comparison (`>`, `<`, `>=`, `<=`, `=`),
+a property present (`task:due`) or missing on the note's own tag (`task:due?`). Examples:
+`jogging:miles>10 => long-run`, `(jogging:miles>=26.2 race) => marathon`,
+`task:due? => needs-date`.
+
+Super tag atom notes:
+- A rule with one decides from one note: its own values, read through implications as a
+  search reads them (`exercise:duration>60` matches `swimming:duration=75` when
+  `swimming => exercise`); its tag atoms read the tags the note carries, inherited ones
+  too; its text atoms read the note's text.
+- The tag it gives is the note's own: children inherit it like a written tag, and so do
+  notes referencing the note (from the note's own tags: a tag atom satisfied only by an
+  inherited tag does not reach them, as references never carry inherited tags). Values
+  are never inherited.
+- MAX and MIN are refused: whether a note holds the largest value depends on the other
+  notes, so a tag could move between notes when one is added.
+- In Edit Tag Relationships such a rule is an incoming condition of the tag it gives (its
+  left column, the tag's own part a chip). Typing one suggests property names (from the
+  tag and the tags implying it), units after a number, and saving warns when no note has
+  that property on that tag ("No note has jogging:mile yet; check the spelling.").
+- Renaming a tag rewrites its terms in rules (`jogging:miles>10` becomes
+  `running:miles>10`); deleting a tag deletes the rules testing its values.
+- Saving such a rule recomputes the tags of the notes it can concern (with a value of a property it tests, or carrying a tag a `?` term tests), their children and the notes referencing them; not the whole vault.
+
 ## Semantics
 
 Rules are applied per note as a monotone fixed point:

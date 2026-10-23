@@ -14,7 +14,8 @@ from app.db.ontology_rules_sql import (
     update_rules_bulk as db_update_rules_bulk,
 )
 from app.security.encryption import decrypt, encrypt
-from app.services.tag_ontology import TagAtom, TagOntology, compile_rules, parse_rules_text
+from app.services.tag_ontology import PropertyAtom, TagAtom, TagOntology, compile_rules, parse_rules_text
+from app.services.tag_properties import is_property_term, property_term_tag
 
 
 @dataclass(frozen=True)
@@ -117,6 +118,9 @@ def _replace_tag_tokens_in_line(*, line: str, old: str, new: str) -> str:
         token = line[start:i]
         if token == old:
             out += new
+        elif is_property_term(token) and property_term_tag(token) == old:
+            # A super tag term keeps its property and comparison: running:miles>10.
+            out += new + token[len(old):]
         else:
             out += token
 
@@ -552,6 +556,8 @@ def delete_tag_everywhere(*, tag: str) -> int:
             references_tag = any(
                 rule.rhs == normalized
                 or any(isinstance(atom, TagAtom) and atom.tag == normalized for atom in rule.lhs)
+                # A rule testing the tag's values goes with it.
+                or any(isinstance(atom, PropertyAtom) and atom.condition.tag == normalized for atom in rule.lhs)
                 for rule in rules
             )
             if references_tag:

@@ -34,6 +34,7 @@ from app.services.root_sorting import normalize_sort_mode
 from app.services.root_date_filter import RootDateFilter, filter_root_ids_by_date, local_today
 from app.services.search_index import search_index
 from app.services.search_query import ParsedSearchQuery, SearchClause, parse_search_query, search_highlight_phrases
+from app.services.tag_properties import PropertyCondition, tag_part_of_token
 from app.services.sync import get_all_locks
 from app.services.view_state import ViewState
 from app.services.editing_image_sizes import editing_image_size_factors
@@ -119,6 +120,7 @@ def _has_search_terms(parsed: ParsedSearchQuery) -> bool:
         or clause.forbidden_tags
         or clause.required_text
         or clause.forbidden_text
+        or clause.has_property_terms
         for clause in parsed.clauses
     )
 
@@ -157,6 +159,19 @@ def _positive_tag_clause(tag: str) -> SearchClause:
         forbidden_tags=frozenset(),
         required_text=(),
         forbidden_text=(),
+        required_properties=(),
+        forbidden_properties=(),
+    )
+
+
+def _positive_property_clause(condition: PropertyCondition) -> SearchClause:
+    return SearchClause(
+        required_tags=frozenset(),
+        forbidden_tags=frozenset(),
+        required_text=(),
+        forbidden_text=(),
+        required_properties=(condition,),
+        forbidden_properties=(),
     )
 
 
@@ -166,6 +181,8 @@ def _positive_text_clause(phrase: str) -> SearchClause:
         forbidden_tags=frozenset(),
         required_text=(phrase,),
         forbidden_text=(),
+        required_properties=(),
+        forbidden_properties=(),
     )
 
 
@@ -175,7 +192,7 @@ def _resolve_clause_note_sets(
     ordered_root_ids: List[str],
 ) -> Tuple[Set[str], Set[str]]:
     has_positive_terms = bool(clause.required_tags)
-    if clause.required_text:
+    if clause.required_text or clause.required_properties:
         has_positive_terms = True
     direct_uuid_note_ids = _extract_direct_uuid_note_ids(clause)
 
@@ -196,6 +213,12 @@ def _resolve_clause_note_sets(
         excluded_note_ids.update(search_index.query_clause_note_ids(_positive_tag_clause(tag)))
     for phrase in clause.forbidden_text:
         excluded_note_ids.update(search_index.query_clause_note_ids(_positive_text_clause(phrase)))
+    for condition in clause.forbidden_properties:
+        # -jogging:miles=MAX removes the longest of the notes the clause finds.
+        excluding_clause = _positive_property_clause(condition)
+        if condition.is_extreme:
+            excluding_clause = clause.requiring(condition)
+        excluded_note_ids.update(search_index.query_clause_note_ids(excluding_clause))
 
     # With every note already allowed, ancestor/descendant closure is a no-op.
     if has_positive_terms:
@@ -955,8 +978,9 @@ def _render_view_note(
         )
     flags["proposalCount"] = proposal_count
     # Proposals no note has yet: accepting one creates a new tag, so the row marks them.
+    # A super tag is new when its tag is (jogging:miles=3 on an existing jogging is not).
     flags["newProposedTags"] = " ".join(
-        term for term in rec.proposed_tags.split() if not search_index.is_tag_on_any_note(term)
+        term for term in rec.proposed_tags.split() if not search_index.is_tag_on_any_note(tag_part_of_token(term))
     )
 
     is_editing = bool(flags["isEditing"])

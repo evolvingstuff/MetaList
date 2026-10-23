@@ -1,0 +1,348 @@
+# Tag Properties (Super Tags)
+
+In the user docs and the AI's help a tag with properties is a **super tag**
+(`jogging:miles=3`); its values are its properties.
+
+Status: built 2026-10-23 (the steps below), from a brainstorm the same day. Items still
+marked **Proposed** were built as written but never discussed; the user docs are
+`docs/ui/tag-bar.md` (Super Tags), `docs/ui/search-semantics.md` (Super Tag Searches)
+and `docs/design/ontology-rules-v1.md` (Super tag atom). Tests: `tests/unit/test_tag_properties.py`,
+`test_tag_ontology_value_rules.py`, `test_super_tag_proposals.py`, and the browser suite
+`super-tags` (`scripts/browser-super-tag-regressions.mjs`).
+
+## Goal
+
+Let a tag carry structured values (`jogging:miles=3:duration=30`), searchable with
+comparisons (`jogging:miles>2`) and usable in ontology rules
+(`jogging:miles>10 => long-run`). This is groundwork: totals, charts and other
+aggregation come later, once real use shows what is needed.
+
+Like Tana's fields, but with no schema to declare first: a property exists as soon
+as a note uses it. Two things make it more than Tana's fields:
+
+- **Upward search.** Properties are read through the implication graph:
+  `exercise:miles>2` finds `jogging:miles=3` because `jogging => exercise`. Ask at
+  any level of abstraction and find every specific instance.
+- **Rules over values.** Ontology rules can infer tags from property values.
+
+## Model
+
+Everything is a triple on a note: *tag*, *property*, *value*.
+
+- `jogging:miles=3` on a note: the tag `jogging` with property `miles` = `3`.
+- `jogging=3` is the existing `tag=value` form; it reads as `jogging`'s implicit
+  property `value` (`jogging:value=3`). Today's valued tags (`priority=high`) keep
+  working unchanged and become a special case of the model.
+- A note carries each tag at most once, so a tag's properties all live in one token.
+- Values belong to the note they are written on. Child notes and notes referencing
+  it inherit the **tag** (as non-meta tags inherit today), never its **values**.
+  Otherwise a child of a 3-mile run would itself match `jogging:miles>2`, and any
+  later totals would count those miles twice.
+
+## Syntax in the tag bar
+
+```
+jogging:miles=3
+jogging:miles=3:duration=30
+run:start=10:30:miles=3
+meeting:at=2026-10-23T10:30:room=b2
+book:author=Ursula-Le-Guin
+```
+
+- The tag is everything before the first `:`. It follows today's tag grammar.
+- After it, each property is `name=value`, introduced by `:`.
+- **Property names start with a letter.** Then they follow tag characters.
+- **A colon followed by a letter starts the next property. Any other colon belongs to
+  the value.** This is what lets values hold times and date-times: in
+  `run:start=10:30:miles=3`, `10:30` is the start and `miles` the next property.
+  `https://…` stays inside a value too (the colon is followed by `/`).
+- Values have no spaces (tags never do): `author=Ursula-Le-Guin`.
+- A value cannot contain a colon followed by a letter (`ref=abc:def` would split).
+  Accepted as rare.
+- Each property appears at most once per token. The tag bar removes a repeated one
+  while typing, as it removes a second `=` today. Properties keep the order typed;
+  nothing sorts them.
+- `jogging=3:miles=3` (implicit value plus named properties) is allowed but unusual:
+  suggestions never offer this form.
+- `>` and `<` stay forbidden in tags; only search uses them.
+
+- A second token for a tag already on the note (`jogging` beside
+  `jogging:miles=3`) is refused rather than merged: the tag bar says
+  "jogging is already on this note" and the second token is not saved. This applies
+  when either token has properties; older notes with `priority=high priority=low`
+  are unaffected.
+- Properties apply to regular tags only. Meta tags (`@size=2`, `@code=python`) keep
+  their single value and gain no named properties.
+- Property tokens inside scoped wrappers (`{{jogging:miles=3}}`) are not allowed;
+  their colons are removed as before.
+
+**Proposed:**
+- Property names match with the same case rule as tag names in search.
+
+## Types
+
+A value is read as the first type it parses as:
+
+| Type | Written | Compares |
+|---|---|---|
+| Number | `3`, `3.5`, `-2`, `1500` | numerically (`3` = `3.0`) |
+| Date | `2026-10`, `2026-10-23` | by its first day: `2026-10` is 2026-10-01 (a year alone, `2026`, is a number) |
+| Date-time | `2026-10-23T10:30`, `2026-10-23T10:30:15` | by the moment |
+| Time | `10:30`, `10:30:15`, `10:30am`, `10:30pm`, `10am` | by time of day |
+| Text | anything else | case-insensitively, alphabetically |
+
+- **Times** are written as a 24-hour clock (`22:30`) or with `am`/`pm`. Values have
+  no spaces, so the suffix is attached: `10:30am`, `10:30pm`, `10am`.
+  `22:30` and `10:30pm` are the same time, so `start>9pm` finds both.
+  `12am` is midnight and `12pm` noon.
+- **Proposed:** `am`/`pm` in any case, with or without periods (`10:30PM`,
+  `10:30p.m.`); written values keep the user's form, only comparisons convert.
+
+- **Mixed types are skipped, not errors.** A comparison applies only to values of its
+  own type: `jogging:miles>2` ignores a note with `miles=far`. Keeping one property
+  to one type is the user's convention.
+- **Units are the user's convention.** Either the name says the unit
+  (`swimming:meters=1500`, `jogging:miles=3`) or the value does (below).
+
+### Units
+
+A number can carry a unit, written right after it with no space:
+
+```
+journey:distance=10miles
+drug:dosage=10mg
+swimming:distance=1500m
+```
+
+- **A unit is a label, never converted.** `10miles` is the number 10 with the label
+  `miles`. A comparison applies only to values with the same label:
+  `drug:dosage>5mg` finds `dosage=10mg`, and skips `dosage=0.01g` just as it skips
+  text. Unknown or invented units work the same way: there is no unit table.
+- **A query with a unit compares only that unit:** `drug:dosage>5mg` compares only
+  `mg` values.
+- **A query without a unit compares every unit.** `drug:dosage>5` finds `10mg`,
+  `10kg` and a plain `10` alike. Seeing mixed units in the results shows that the
+  query should name one; it also finds data whose unit you forgot.
+- **The search box suggests the unit.** After `drug:dosage>5`, it suggests the units
+  used with that property (`mg`), so nobody has to remember which unit they wrote.
+- `am` and `pm` are not units: `10am` is a time of day.
+- Picking one spelling per property (`miles`, not sometimes `mi`) is the user's
+  convention, as with property names. Suggestions help: after the number, the tag bar
+  and the search box both suggest the units already used with that property.
+- **Proposed:** a unit is letters, optionally followed by `/` and more letters
+  (`mg`, `miles`, `mg/kg`); `%` also counts as a unit (`humidity=40%`). Labels
+  compare case-insensitively (`mL` = `ml`).
+
+## Search
+
+```
+jogging:miles>2
+jogging:miles>2 jogging:duration<40
+exercise:miles>=3 date>=2024-01
+jogging:miles?
+jogging:miles
+-jogging:miles>10
+```
+
+- One property per term. Operators: `=`, `>`, `<`, `>=`, `<=`. Terms combine as
+  today: space is AND, `OR` separates clauses, `-` excludes.
+- Since a note has each tag once, `jogging:miles>2 jogging:duration<40` means the
+  same note satisfies both, so search needs no chained conditions in one term.
+- `jogging:miles?` finds notes **missing** the property: notes with `jogging` but no
+  `miles`. It is for auditing incomplete data.
+- **Proposed:** `jogging:miles` with no operator finds notes that have the property
+  with any value. This replaces the outline's `jogging:miles=?`.
+- **A plain tag finds its property tokens.** `jogging` finds a note tagged only
+  `jogging:miles=3`, as `priority` finds `priority=high` today.
+- `date>=2024-01` is the implicit `value`: `date:value>=2024-01`.
+- `jogging:miles=MAX` / `=MIN`: the note (or notes, on a tie) with the largest or
+  smallest value among those the rest of the clause finds. Through implications too;
+  `-jogging:miles=MAX` leaves it out. With values of several kinds, the kind most of
+  them are counts; units are labels. Exact capitals, after `=` only.
+
+### Upward search through implications
+
+A note matches `T:p op v` when one of its own property tokens `S:p=w` has `S = T`,
+or `S` implying `T` through the ontology (any chain, synonyms included), and `w op v`
+holds for `w`'s type.
+
+- `exercise:miles>2` finds `jogging:miles=3` (`jogging => exercise`) and
+  `trail-run:miles=5` (`trail-run => jogging => exercise`).
+- **Any value matching is enough.** A note with `jogging:miles=1 cycling:miles=10`
+  matches both `exercise:miles>2` and `exercise:miles<2`. That is correct by these
+  rules; giving each activity its own note avoids it.
+- `exercise:miles?` finds notes whose tags imply `exercise` and none of which has
+  `miles`.
+- **Proposed:** `?` looks only at notes that carry the tag themselves, or carry a tag
+  implying it. Not at notes that inherit it from a parent: every child of a run
+  would otherwise be reported as missing its miles.
+
+### Known gotchas (accepted)
+
+- **Names drift.** In March `jogging:miles=3`, in June `cycling:distance=12`:
+  `exercise:miles>2` misses the ride. Suggestions are the defence (below); renaming
+  properties and property synonyms come later.
+- **Spellings of one unit differ** (`10mi` and `10miles`): they are different labels
+  and never compare. Suggestions are the defence.
+
+## Suggestions
+
+Suggestions are what keep names and units consistent. They show you what you used
+before, so you write `miles` again rather than `distance`.
+
+- **Tag bar:** after `jogging:`, suggest the property names used with `jogging` and
+  with the tags `jogging` implies (`exercise`), most used first. This is the downward
+  inheritance from the original outline ("`exercise` has `duration`, `jogging =>
+  exercise`, so `jogging` can have `duration`"): with no declared schema, its use is
+  suggestions.
+- **Search box:** after `exercise:`, also suggest property names used with tags that
+  imply `exercise` (`jogging`'s `miles`), since upward search finds those.
+- Never suggest the `jogging=3:miles=3` form.
+- **Units:** after a number (`dosage=10` in the tag bar, `dosage>5` in the search
+  box), suggest the units used with that property, most used first. In the search
+  box this counts the property on the tag and on the tags implying it, as upward
+  search does.
+- **Proposed:** otherwise, after `miles=`, suggest no values at first. Value
+  suggestions can come later if they turn out to help.
+- Activity credit (search suggestion statistics) goes to the tag, as today, never to
+  properties.
+
+## Ontology rules
+
+Property atoms on the left-hand side, with the search operators:
+
+```
+jogging:miles>10 => long-run
+(jogging:miles>=26.2 race) => marathon
+exercise:duration>60 => long-workout
+```
+
+Decided 2026-10-23:
+
+- **Every search form except MAX and MIN:** comparisons (`drug:dosage>500mg`,
+  `task:status=done`), a property present (`task:due => scheduled`) or missing
+  (`task:due? => needs-date`, on the note's own tag or one implying it). MAX and MIN
+  are search-only: a note's tags must depend on the note alone, not on which other
+  notes exist, or adding one run could move a tag between notes.
+- **Upward matching applies as in search:** `exercise:duration>60` matches
+  `swimming:duration=75` when `swimming => exercise`.
+- **An inferred tag is a plain tag:** children and referencing notes inherit it like
+  any tag (a 12-mile run's child inherits `long-run`, never `miles=12`). Rules do not
+  create values. A referencing note gets it as it gets the source's own tags: when a
+  rule's tag atom holds only through a tag the source inherits, it does not reach them.
+  Built 2026-10-23.
+- **In Edit Tag Relationships** such a rule is an incoming condition of its right-hand
+  tag: it shows in the left column of `long-run`, with the other derivation rules, and
+  is added there. It does not show on `jogging`'s page (the right column never shows
+  rules).
+- **Renaming** `jogging` rewrites `jogging:miles>10` in rules; **deleting** it deletes
+  the rules that test its values, as it deletes rules naming it.
+- **The rule editor suggests** property names, units and values as the tag bar and the
+  search box do, and **warns** about a property atom no note can match (a typo such as
+  `jogging:mile>10`).
+- **Later:** setting a value on the right-hand side
+  (`marathon => jogging:miles=26.2`), and relative dates (below).
+
+## Renaming and deleting
+
+- **Renaming a tag** (Edit Tag Relationships) rewrites the tag part of its property
+  tokens: `jogging:miles=3` becomes `running:miles=3`.
+- **Deleting a tag** removes its whole tokens, properties included.
+- **Later:** renaming a property (`jogging:mi` → `jogging:miles` across notes) and
+  property synonyms in the ontology.
+
+## Display
+
+- The tag bar and the note list show the raw token: `jogging:miles=3:duration=30`.
+  No grouping or pretty form.
+
+## Storage and compatibility
+
+- Properties live in the note's tag string (`notes.tags`), stored and encrypted as
+  tags are today. **No database schema change**, so no `CURRENT_DATABASE_VERSION`
+  bump and no encryption-audit change.
+- Older MetaList versions forbid `:` in tags and would strip it when editing such a
+  tag bar. Nobody runs older versions, so this is accepted.
+
+## Where it touches the code
+
+- **Tag grammar:** the tag-bar tokenizer and sanitizer in the browser
+  (`tag-syntax-service.js` and related), and the server's tag tokenization. Today `:`
+  is forbidden and only one `=` is allowed.
+- **Search syntax verifier** (client, `docs/ui/search-syntax.md`): property terms,
+  comparison operators, `?`.
+- **Search parsing and semantics** (`parse_search_query`, `SearchIndex`): property
+  postings by tag and property, typed values, upward matching through the ontology
+  closure, the plain-tag match for property tokens.
+- **Suggestions:** `SearchIndex.suggest_tag_completions` and the tag-bar suggestions,
+  for property names.
+- **Ontology rules** (`app/services/tag_ontology.py`): property atoms on the LHS.
+- **Rename and delete** (`app/services/tag_rename.py`).
+- **Other tag paths that must accept or ignore the form:** Add as Tag from a selection,
+  dictation paste cleanup in the search box, new notes created from a search (they
+  copy its positive tags, which should not include comparison terms), tag counts.
+- **Docs and AI help:** `search-semantics.md`, `search-syntax.md`, `tag-bar.md`,
+  `ontology-rules-v1.md`, and the help skills (`help-search.md`, `help-tags.md`,
+  `help-ontology.md`).
+
+## Build order (as built)
+
+1. Tag grammar: property tokens in the tag bar and on the server; rename and delete
+   keep or remove them.
+2. Search: property terms, types and operators, `?` and bare-name terms, the
+   plain-tag match.
+3. Upward search through implications.
+4. Suggestions for property names, units and MAX/MIN; MAX and MIN.
+5. Ontology rule atoms, with suggestions and typo warnings in the rule editor; a saved
+   rule re-tags only the notes it can concern.
+6. The AI proposing super tags with values; accepting one merges its values.
+
+## Later
+
+- Renaming properties; property synonyms in the ontology.
+- Totals, averages and sorting by a property (for example "miles this month" beside
+  the result count, or Sort by `jogging:miles`).
+- Values set by rules.
+- Value suggestions.
+- Unit conversions the user defines (`1mile = 1.609km`), so a comparison can include
+  values in related units. Much later.
+
+## Where this could lead (ideas, not planned)
+
+Properties make many features views of the same triples instead of separate systems.
+None of this is planned; real use of properties decides what, if anything, comes
+next. Recorded so the first build does not close these doors.
+
+- **Boards (Kanban).** A search grouped by a property: `project-x task` grouped by
+  `status` gives a column per value used (`todo`, `doing`, `done`). Dragging a card to
+  another column rewrites that note's `status=`.
+- **Calendar and scheduling.** A search laid out by a date property:
+  `meeting:at=2026-10-24T10:00`, `task:due=2026-11-01`. Unlike the calendar removed
+  in September 2026, which used created and updated dates, it would show dates the
+  user chose.
+- **Reminders as properties.** `remind=2026-10-24T09:00` could become the same thing
+  as today's separate reminders (`docs/ui/reminders.md`), so reminders are
+  searchable, inferred by rules and shown on a calendar.
+- **Rules as automation.** `task:status=done => archived`,
+  `(task:due<today -done) => overdue`, `bug:severity=high => urgent`. The inferred
+  tags feed searches, boards and chips with no further code.
+- **Tables.** A search shown with a column per property: a spreadsheet of notes,
+  where totals would live.
+- **Date range on any date property.** The Date range filter
+  (`docs/ui/command-palette.md`) could offer a property's dates beside Created and
+  Last updated.
+
+What the first build should leave room for:
+
+- **TODAY and NOW**, keywords like MAX and MIN: `task:due<TODAY`, `meeting:at>=NOW`, and
+  relative forms such as `TODAY-7d`. In rules (`task:due<TODAY => overdue`) a note's tags
+  would then change with the calendar, nobody editing it: MetaList would re-check those
+  rules as days pass. Designed together for search and rules.
+- **Relative dates** in search and rules: `today`, `+7d`, `-1w` (`due<today`,
+  `due<=+7d`). The search parser should not claim these words as plain text.
+- **Not equal:** `status!=done`. It differs from `-task:status=done`, which also drops
+  notes with no `status` at all.
+- **Grouping and sorting by a property** (Sort by `due`, group by `status`): boards
+  and calendars rest on it.
+- **Values set by rules** (a new `task` with no `status` gets `status=todo`), already
+  under Later above.

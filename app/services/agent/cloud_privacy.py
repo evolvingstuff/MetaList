@@ -14,7 +14,9 @@ from app.services.search_index import search_index
 from app.services.tag_case import build_preferred_tag_case_map
 from app.services.search_query import ParsedSearchQuery, SearchClause
 from app.services.search_query import format_search_query, format_search_term, parse_search_query
+from app.services.search_index import extract_ordered_tags_for_agent
 from app.services.tag_ontology import is_valid_tag_token
+from app.services.tag_properties import PROPERTY_SEPARATOR, has_property_syntax, split_property_segments, tag_part_of_token
 from app.services.content_formatting import extract_note_text_for_agent
 
 
@@ -106,6 +108,37 @@ def visible_tag_counts(boundary: CloudPrivacyBoundary) -> tuple[dict[str, str], 
     return display, counts
 
 
+# The AI is shown at most this many properties in use (visible_super_tag_examples).
+_MAX_SUPER_TAG_EXAMPLES = 40
+
+
+def visible_super_tag_examples(boundary: CloudPrivacyBoundary) -> tuple[str, ...]:
+    """One example of each property in use on notes the AI may see, most used first
+    (jogging:miles=3, drug:dosage=10mg), so super tags it proposes reuse their names and
+    units (docs/design/tag-properties.md)."""
+    note_ids = tuple(note_store.list_note_ids())
+    hidden = cloud_privacy_evaluator.hidden_note_ids(note_ids=note_ids, boundary=boundary)
+    counts: Counter[tuple[str, str]] = Counter()
+    examples: dict[tuple[str, str], str] = {}
+    for note_id in note_ids:
+        tags = note_store.get_note(note_id).tags
+        if note_id in hidden or PROPERTY_SEPARATOR not in tags:
+            continue
+        for token in extract_ordered_tags_for_agent(tags):
+            if not has_property_syntax(token):
+                continue
+            tag = tag_part_of_token(token).split("=", 1)[0]
+            for segment in split_property_segments(token[len(tag_part_of_token(token)) + 1:]):
+                name, has_value, value = segment.partition("=")
+                if not has_value or value == "":
+                    continue
+                key = (tag.casefold(), name.casefold())
+                counts[key] += 1
+                if key not in examples:
+                    examples[key] = f"{tag}{PROPERTY_SEPARATOR}{name}={value}"
+    return tuple(examples[key] for key, _count in counts.most_common(_MAX_SUPER_TAG_EXAMPLES))
+
+
 # What the AI is shown in place of a search term it may not see.
 PRIVATE_SEARCH_TERM = "[private]"
 
@@ -135,6 +168,7 @@ def _disclosable_clause_terms(
     """The clause's terms as the AI may be shown them, and whether any was withheld."""
     required_terms = [format_search_term(tag, is_phrase=False, is_excluded=False) for tag in sorted(clause.required_tags)]
     required_terms += [format_search_term(phrase, is_phrase=True, is_excluded=False) for phrase in clause.required_text]
+    required_terms += [condition.format() for condition in clause.required_properties]
     shown: list[str] = []
     withheld = False
     # Every required term picks out the same notes: the ones the clause finds.
@@ -148,7 +182,9 @@ def _disclosable_clause_terms(
     for tag in sorted(clause.forbidden_tags):
         removed = SearchClause(required_tags=clause.required_tags | {tag},
                                forbidden_tags=clause.forbidden_tags - {tag},
-                               required_text=clause.required_text, forbidden_text=clause.forbidden_text)
+                               required_text=clause.required_text, forbidden_text=clause.forbidden_text,
+                               required_properties=clause.required_properties,
+                               forbidden_properties=clause.forbidden_properties)
         if finds_visible_note(_clause_search(removed)):
             shown.append(format_search_term(tag, is_phrase=False, is_excluded=True))
         else:
@@ -156,9 +192,21 @@ def _disclosable_clause_terms(
     for index, phrase in enumerate(clause.forbidden_text):
         removed = SearchClause(required_tags=clause.required_tags, forbidden_tags=clause.forbidden_tags,
                                required_text=clause.required_text + (phrase,),
-                               forbidden_text=clause.forbidden_text[:index] + clause.forbidden_text[index + 1:])
+                               forbidden_text=clause.forbidden_text[:index] + clause.forbidden_text[index + 1:],
+                               required_properties=clause.required_properties,
+                               forbidden_properties=clause.forbidden_properties)
         if finds_visible_note(_clause_search(removed)):
             shown.append(format_search_term(phrase, is_phrase=True, is_excluded=True))
+        else:
+            excluded_withheld = True
+    for index, condition in enumerate(clause.forbidden_properties):
+        removed = SearchClause(required_tags=clause.required_tags, forbidden_tags=clause.forbidden_tags,
+                               required_text=clause.required_text, forbidden_text=clause.forbidden_text,
+                               required_properties=clause.required_properties + (condition,),
+                               forbidden_properties=clause.forbidden_properties[:index]
+                               + clause.forbidden_properties[index + 1:])
+        if finds_visible_note(_clause_search(removed)):
+            shown.append(f"-{condition.format()}")
         else:
             excluded_withheld = True
     if excluded_withheld:

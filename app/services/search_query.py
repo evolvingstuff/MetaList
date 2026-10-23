@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass
 from typing import FrozenSet, List, Optional, Set, Tuple
 from app.services.input_errors import InputRejected
+from app.services.tag_properties import PropertyCondition, is_property_term, parse_property_term
 
 
 @dataclass(frozen=True, slots=True)
@@ -12,6 +13,32 @@ class SearchClause:
     forbidden_tags: FrozenSet[str]
     required_text: Tuple[str, ...]
     forbidden_text: Tuple[str, ...]
+    # Property terms (docs/design/tag-properties.md): jogging:miles>2, -jogging:miles?.
+    required_properties: Tuple[PropertyCondition, ...]
+    forbidden_properties: Tuple[PropertyCondition, ...]
+
+    @property
+    def has_extreme_terms(self) -> bool:
+        """jogging:miles=MAX or =MIN, decided across the notes the clause finds."""
+        return any(condition.is_extreme for condition in self.required_properties + self.forbidden_properties)
+
+    def requiring(self, condition: PropertyCondition) -> SearchClause:
+        """This clause with an excluded property term required instead: the notes the
+        exclusion removes (for -jogging:miles=MAX, the longest among those found)."""
+        if condition not in self.forbidden_properties:
+            raise ValueError("Only an excluded property term can be required instead")
+        return SearchClause(
+            required_tags=self.required_tags, forbidden_tags=self.forbidden_tags,
+            required_text=self.required_text, forbidden_text=self.forbidden_text,
+            required_properties=self.required_properties + (condition,),
+            forbidden_properties=tuple(other for other in self.forbidden_properties if other != condition),
+        )
+
+    @property
+    def has_property_terms(self) -> bool:
+        if self.required_properties:
+            return True
+        return len(self.forbidden_properties) > 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,12 +58,16 @@ def _build_clause(
     forbidden_tags: Set[str],
     required_text: List[str],
     forbidden_text: List[str],
+    required_properties: List[PropertyCondition],
+    forbidden_properties: List[PropertyCondition],
 ) -> SearchClause:
     return SearchClause(
         required_tags=frozenset(required_tags),
         forbidden_tags=frozenset(forbidden_tags),
         required_text=tuple(required_text),
         forbidden_text=tuple(forbidden_text),
+        required_properties=tuple(required_properties),
+        forbidden_properties=tuple(forbidden_properties),
     )
 
 
@@ -53,6 +84,8 @@ def parse_search_query(normalized_text: str) -> ParsedSearchQuery:
                     forbidden_tags=frozenset(),
                     required_text=(),
                     forbidden_text=(),
+                    required_properties=(),
+                    forbidden_properties=(),
                 ),
             ),
         )
@@ -62,6 +95,8 @@ def parse_search_query(normalized_text: str) -> ParsedSearchQuery:
     forbidden_tags: Set[str] = set()
     required_text: List[str] = []
     forbidden_text: List[str] = []
+    required_properties: List[PropertyCondition] = []
+    forbidden_properties: List[PropertyCondition] = []
     clause_term_count = 0
 
     index = 0
@@ -125,13 +160,26 @@ def parse_search_query(normalized_text: str) -> ParsedSearchQuery:
                     forbidden_tags=forbidden_tags,
                     required_text=required_text,
                     forbidden_text=forbidden_text,
+                    required_properties=required_properties,
+                    forbidden_properties=forbidden_properties,
                 )
             )
             required_tags = set()
             forbidden_tags = set()
             required_text = []
             forbidden_text = []
+            required_properties = []
+            forbidden_properties = []
             clause_term_count = 0
+            continue
+
+        if is_property_term(token):
+            condition = parse_property_term(token)
+            if prefix == "-":
+                forbidden_properties.append(condition)
+            else:
+                required_properties.append(condition)
+            clause_term_count += 1
             continue
 
         if prefix == "-":
@@ -148,6 +196,8 @@ def parse_search_query(normalized_text: str) -> ParsedSearchQuery:
             forbidden_tags=forbidden_tags,
             required_text=required_text,
             forbidden_text=forbidden_text,
+            required_properties=required_properties,
+            forbidden_properties=forbidden_properties,
         )
     )
     return ParsedSearchQuery(clauses=tuple(clauses))
@@ -175,6 +225,8 @@ def format_search_query(parsed: ParsedSearchQuery) -> str:
         terms += [format_search_term(tag, is_phrase=False, is_excluded=True) for tag in sorted(clause.forbidden_tags)]
         terms += [format_search_term(phrase, is_phrase=True, is_excluded=False) for phrase in clause.required_text]
         terms += [format_search_term(phrase, is_phrase=True, is_excluded=True) for phrase in clause.forbidden_text]
+        terms += [condition.format() for condition in clause.required_properties]
+        terms += [f"-{condition.format()}" for condition in clause.forbidden_properties]
         clauses_text.append(" ".join(terms))
     return " OR ".join(clauses_text)
 

@@ -45,6 +45,7 @@ import {checkSearchSuggestions} from './browser-search-suggestion-regressions.mj
 import {checkTagBarSuggestions} from './browser-tag-bar-suggestion-regressions.mjs';
 import {checkInputTarget} from './browser-input-target-regressions.mjs';
 import {checkOntologySearch} from './browser-ontology-search-regressions.mjs';
+import {checkSuperTags} from './browser-super-tag-regressions.mjs';
 import {checkDiagramClicks} from './browser-diagram-click-regressions.mjs';
 import {checkFileLinkClicks} from './browser-file-link-click-regressions.mjs';
 import {checkImageResizeCaret} from './browser-image-resize-caret-regressions.mjs';
@@ -261,6 +262,10 @@ try {
     await checkFileLinkClicks(page);
     assert.deepEqual(errors, []);
     console.log(`PASS file link click regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'super-tags') {
+    await checkSuperTags(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS super tag regressions in ${await browser.version()}`);
   } else if (process.env.BROWSER_TEST_SUITE === 'ontology-search') {
     await checkOntologySearch(page);
     assert.deepEqual(errors, []);

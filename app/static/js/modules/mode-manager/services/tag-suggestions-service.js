@@ -167,7 +167,20 @@ function requireSuggestionReasons(reasonsByTag, tag) {
     return reasons;
 }
 
-function renderSuggestions(tagBarInput, builtForText, suggestions, reasonsByTag) {
+// What the list shows for a suggestion: a tag as it is, a property's name or unit
+// alone (miles= for jogging:miles=), as the server labels it.
+function requireSuggestionLabel(labelsBySuggestion, suggestion) {
+    if (!Object.hasOwn(labelsBySuggestion, suggestion)) {
+        throw new Error(`Tag suggestion ${suggestion} has no label`);
+    }
+    const label = labelsBySuggestion[suggestion];
+    if (typeof label !== 'string' || label.length === 0) {
+        throw new Error(`Tag suggestion ${suggestion} has an empty label`);
+    }
+    return label;
+}
+
+function renderSuggestions(tagBarInput, builtForText, suggestions, reasonsByTag, labelsBySuggestion) {
     if (typeof builtForText !== 'string') {
         throw new Error('renderSuggestions requires the text the list was built for');
     }
@@ -192,7 +205,7 @@ function renderSuggestions(tagBarInput, builtForText, suggestions, reasonsByTag)
         button.className = 'note-tag-suggestion';
         button.dataset.tag = tag;
         button.dataset.reasons = JSON.stringify(requireSuggestionReasons(reasonsByTag, tag));
-        button.textContent = tag;
+        button.textContent = requireSuggestionLabel(labelsBySuggestion, tag);
         button.addEventListener('mousedown', (event) => {
             // Any button keeps the cursor in the tag bar, so the list stays
             // open: a right-click (Control-click on a Mac) opens the tag menu
@@ -300,10 +313,13 @@ export function updateTagSuggestions(tagBarInput) {
         if (!response.reasons || typeof response.reasons !== 'object') {
             throw new Error('Tag suggestions response requires reasons');
         }
+        if (!response.labels || typeof response.labels !== 'object') {
+            throw new Error('Tag suggestions response requires labels');
+        }
         if (requestId !== moduleState.requestSerial) {
             return;
         }
-        renderSuggestions(tagBarInput, rawValue, response.suggestions, response.reasons);
+        renderSuggestions(tagBarInput, rawValue, response.suggestions, response.reasons, response.labels);
     }, SUGGESTION_DEBOUNCE_MS);
 }
 

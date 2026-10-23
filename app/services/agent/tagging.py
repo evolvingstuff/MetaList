@@ -8,7 +8,8 @@ from dataclasses import dataclass
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.services.agent.token_estimation import estimate_input_tokens
-from app.services.tag_ontology import is_valid_tag_token
+from app.services.tag_ontology import is_valid_proposal_token, is_valid_tag_token
+from app.services.tag_properties import tag_part_of_token
 
 
 TAGGING_POLICY_KEY = "pref.ai.tagging.vocabulary"
@@ -59,7 +60,9 @@ def make_batch(trees: tuple[dict, ...]) -> TagBatch:
     notes = [note for tree in trees for note in tree_notes(tree)]
     vocabulary = {}
     for note in notes:
-        for tag in note["tags"]:
+        for token in note["tags"]:
+            # A super tag's tag (jogging for jogging:miles=3) is vocabulary; its values are not.
+            tag = tag_part_of_token(token)
             if is_valid_tag_token(tag) and not tag.startswith("@"):
                 if tag.casefold() not in vocabulary:
                     vocabulary[tag.casefold()] = tag
@@ -204,9 +207,10 @@ def invalid_tag_reason(
     visible_vocabulary: dict[str, str],
     policy: str,
 ) -> str:
-    if not is_valid_tag_token(tag) or tag.startswith("@"):
-        return f"Invalid classification tag: {tag!r}"
-    key = tag.casefold()
+    if not is_valid_proposal_token(tag):
+        return f"Invalid classification tag or super tag: {tag!r}"
+    # The pass's policy is about the tag; a super tag's values are not tags.
+    key = tag_part_of_token(tag).casefold()
     if policy == "existing" and key not in visible_vocabulary:
         return f"Tag does not exist in the vault: {tag!r}"
     if policy == "new_only" and key in visible_vocabulary:

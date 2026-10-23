@@ -21,7 +21,8 @@ from app.services.tag_term_matching import list_significant_content_match_segmen
 from app.utils.not_found import NOT_FOUND
 from app.services.note_store import store as note_store
 from app.services.sync import generate_new_uuid
-from app.services.tag_ontology import RegexAtom, TagAtom, TextAtom, parse_rules_text
+from app.services.tag_properties import PROPERTY_SUGGESTIONS_IN_RULE, is_property_term
+from app.services.tag_ontology import PropertyAtom, RegexAtom, TagAtom, TextAtom, parse_rules_text, rule_text_tests_values
 from app.services.ontology_rules_store import (
     build_direct_edge_rule_map,
     create_rule_line,
@@ -97,6 +98,10 @@ def _collect_candidate_note_ids_for_rules(rules: list) -> set[str]:
         tags: list[str] = []
         phrases: list[str] = []
         regexes: list[re.Pattern[str]] = []
+        # A rule testing super tag values changes notes' own tags: _refresh_note_tags
+        # rebuilds every note's, so it needs no candidates.
+        if any(isinstance(atom, PropertyAtom) for atom in rule.lhs):
+            continue
         for atom in rule.lhs:
             if isinstance(atom, TagAtom):
                 tags.append(atom.tag)
@@ -131,6 +136,32 @@ def _collect_candidate_note_ids_for_rules(rules: list) -> set[str]:
 
         candidates.update(note_ids)
     return candidates
+
+
+def _rule_warnings(text: str) -> list[str]:
+    """What looks wrong in a saved rule: a super tag term no note can match, most likely
+    a typo (jogging:mile>10 where notes say miles)."""
+    warnings: list[str] = []
+    for rule in parse_rules_text(text=f"{text}\n", filename="ontology_rules:warnings"):
+        for atom in rule.lhs:
+            if not isinstance(atom, PropertyAtom):
+                continue
+            condition = atom.condition
+            if search_index.uses_property(tag=condition.tag, property_name=condition.name):
+                continue
+            warnings.append(f"No note has {condition.tag}:{condition.name} yet; check the spelling.")
+    return warnings
+
+
+def _refresh_note_tags(candidate_note_ids: set[str], *, rule_texts: list[str]) -> None:
+    """After a rule changed: the candidate notes' tags. A rule testing super tag values
+    refreshes the notes it can concern, with their children and the notes referencing
+    them, since the tags it gives pass to those (NoteStore.refresh_tags_for_value_rules)."""
+    if any(rule_text_tests_values(text) for text in rule_texts):
+        note_store.refresh_tags_for_value_rules(rule_texts=[text for text in rule_texts if rule_text_tests_values(text)])
+        if all(rule_text_tests_values(text) for text in rule_texts):
+            return
+    note_store.rebuild_search_index_tag_terms_for_notes(candidate_note_ids)
 
 
 def _collect_candidate_note_ids_for_texts(texts: list[str], *, filename: str) -> set[str]:
@@ -181,10 +212,10 @@ def create_rule(request: Request, payload: RuleTextRequest) -> dict:
     token = _maybe_bearer_token(request)
     rule_id, normalized = create_rule_line(text=text, token=token)
     if note_store.loaded:
-        note_store.rebuild_search_index_tag_terms_for_notes(candidate_note_ids)
+        _refresh_note_tags(candidate_note_ids, rule_texts=[text])
         update_uuid = generate_new_uuid()
-        return {"id": rule_id, "text": normalized, "updateUUID": update_uuid}
-    return {"id": rule_id, "text": normalized}
+        return {"id": rule_id, "text": normalized, "updateUUID": update_uuid, "warnings": _rule_warnings(normalized)}
+    return {"id": rule_id, "text": normalized, "warnings": []}
 
 
 @router.put("/rules/{rule_id}")
@@ -210,18 +241,19 @@ def update_rule(request: Request, rule_id: int, payload: RuleTextRequest) -> dic
                 break
         if old_text is None:
             raise RuntimeError("Expected rule text for update")
+        rule_texts = [old_text, text]
         candidate_note_ids = _collect_candidate_note_ids_for_texts(
-            [old_text, text],
+            rule_texts,
             filename=f"ontology_rules:{rule_id}",
         )
 
     token = _maybe_bearer_token(request)
     updated_id, normalized = update_rule_line(rule_id=rule_id, text=text, token=token)
     if note_store.loaded:
-        note_store.rebuild_search_index_tag_terms_for_notes(candidate_note_ids)
+        _refresh_note_tags(candidate_note_ids, rule_texts=rule_texts)
         update_uuid = generate_new_uuid()
-        return {"id": updated_id, "text": normalized, "updateUUID": update_uuid}
-    return {"id": updated_id, "text": normalized}
+        return {"id": updated_id, "text": normalized, "updateUUID": update_uuid, "warnings": _rule_warnings(normalized)}
+    return {"id": updated_id, "text": normalized, "warnings": []}
 
 
 @router.delete("/rules/{rule_id}")
@@ -241,14 +273,15 @@ def delete_rule(rule_id: int) -> dict:
                 break
         if old_text is None:
             raise RuntimeError("Expected rule text for delete")
+        rule_texts = [old_text]
         candidate_note_ids = _collect_candidate_note_ids_for_texts(
-            [old_text],
+            rule_texts,
             filename=f"ontology_rules:{rule_id}",
         )
 
     delete_rule_line(rule_id=rule_id)
     if note_store.loaded:
-        note_store.rebuild_search_index_tag_terms_for_notes(candidate_note_ids)
+        _refresh_note_tags(candidate_note_ids, rule_texts=rule_texts)
         update_uuid = generate_new_uuid()
         return {"ok": True, "updateUUID": update_uuid}
     return {"ok": True}
@@ -306,6 +339,8 @@ def focus_view(tag: str) -> dict:
             return "text", f'"{escaped}"'
         if isinstance(atom, RegexAtom):
             return "regex", f"/{atom.pattern}/{atom.flags}"
+        if isinstance(atom, PropertyAtom):
+            return "value", atom.condition.format()
         raise TypeError(f"Unknown atom: {type(atom)}")
 
     def atom_payload(atom: object) -> dict:
@@ -316,6 +351,10 @@ def focus_view(tag: str) -> dict:
             return {"kind": kind, "text": display}
         if kind == "regex":
             return {"kind": kind, "regex": display}
+        if kind == "value":
+            # A super tag term: its tag is a chip like any tag, the rest is shown as written.
+            assert isinstance(atom, PropertyAtom)
+            return {"kind": kind, "value": display, "tag": atom.condition.tag}
         raise RuntimeError(f"Unexpected atom kind: {kind}")
 
     def format_atom_for_edit(atom: object) -> str:
@@ -327,6 +366,8 @@ def focus_view(tag: str) -> dict:
         if isinstance(atom, RegexAtom):
             escaped = atom.pattern.replace("\\", "\\\\").replace("/", "\\/")
             return f"/{escaped}/{atom.flags}"
+        if isinstance(atom, PropertyAtom):
+            return atom.condition.format()
         raise TypeError(f"Unknown atom: {type(atom)}")
 
     def record_equality_rule_ids(rules: list, rule_id: int) -> bool:
@@ -555,6 +596,18 @@ def list_tags(q: str, limit: int, focus: str, relation: str) -> dict:
     if (relation == "none") != (focus == ""):
         raise ValueError("A focus tag goes with a relation, and only with one")
 
+    # A super tag term in an incoming condition (jogging:mi, drug:dosage>5): its property
+    # names, units and values, as a rule reads them (docs/design/tag-properties.md).
+    if relation == "incoming" and is_property_term(q):
+        suggestions = search_index.suggest_property_completions(typed=q, place=PROPERTY_SUGGESTIONS_IN_RULE, limit=limit)
+        return {
+            "totalCount": len(suggestions),
+            "tags": [
+                {"tag": suggestion.replacement, "count": suggestion.note_count, "label": suggestion.label}
+                for suggestion in suggestions
+            ],
+        }
+
     ontology = get_ontology()
     # A tag only the rules name is on no note yet.
     tag_counts = {tag: 0 for tag in extract_ontology_tags(ontology)}
@@ -568,12 +621,12 @@ def list_tags(q: str, limit: int, focus: str, relation: str) -> dict:
             ordered.extend(tag for tag in group if needle == "" or _match_rank(needle=needle, tag=tag) != NOT_FOUND)
         rest = [(_match_rank(needle=needle, tag=tag), index, tag) for index, tag in enumerate(order.by_use)]
         ordered.extend(tag for rank, _index, tag in sorted(rest) if needle == "" or rank != NOT_FOUND)
-        payload = [{"tag": tag, "count": tag_counts[tag]} for tag in ordered[:limit]]
+        payload = [{"tag": tag, "count": tag_counts[tag], "label": tag} for tag in ordered[:limit]]
         return {"totalCount": len(tag_counts), "tags": payload}
 
     if needle == "":
         ordered = sorted(tag_counts, key=lambda tag: (-tag_counts[tag], tag))[:limit]
-        return {"totalCount": len(tag_counts), "tags": [{"tag": tag, "count": tag_counts[tag]} for tag in ordered]}
+        return {"totalCount": len(tag_counts), "tags": [{"tag": tag, "count": tag_counts[tag], "label": tag} for tag in ordered]}
 
     matches: list[tuple[int, int, str]] = []
     for tag in tag_counts:
@@ -582,5 +635,5 @@ def list_tags(q: str, limit: int, focus: str, relation: str) -> dict:
             matches.append((rank, -tag_counts[tag], tag))
     # By rank, then most used, then name.
     matches.sort()
-    payload = [{"tag": tag, "count": tag_counts[tag]} for _rank, _negative_count, tag in matches[:limit]]
+    payload = [{"tag": tag, "count": tag_counts[tag], "label": tag} for _rank, _negative_count, tag in matches[:limit]]
     return {"totalCount": len(tag_counts), "tags": payload}

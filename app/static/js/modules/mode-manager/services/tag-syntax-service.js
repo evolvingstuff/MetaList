@@ -129,6 +129,128 @@ function enforceTagToken(rawToken) {
     return enforceTagTokenInternal(rawToken, false);
 }
 
+// Tag properties (docs/design/tag-properties.md): jogging:miles=3:duration=30. The tag is
+// everything before the first colon. After it, a colon followed by a letter starts the
+// next property and any other colon belongs to the value (start=10:30pm). Meta tags and
+// tags inside scopes have no properties: their colons are removed as before.
+const PROPERTY_SEPARATOR = ':';
+const PROPERTY_ASSIGNMENT = '=';
+const PROPERTY_NAME_START_RE = /^[A-Za-z]$/;
+
+function hasPropertySyntax(token) {
+    return token.indexOf(PROPERTY_SEPARATOR) > 0 && !token.startsWith('@');
+}
+
+/** The tag a token names: jogging for jogging:miles=3, the token itself otherwise. */
+export function tagPartOfToken(token) {
+    if (typeof token !== 'string') {
+        throw new Error('tagPartOfToken expects a string');
+    }
+    if (!hasPropertySyntax(token)) {
+        return token;
+    }
+    return token.slice(0, token.indexOf(PROPERTY_SEPARATOR));
+}
+
+// The tag's name without a value: jogging for jogging=3 and for jogging:miles=3.
+function tagNameOfToken(token) {
+    return tagPartOfToken(token).split(PROPERTY_ASSIGNMENT)[0];
+}
+
+// The text after the tag, split where a colon is followed by a letter (or ends it).
+function splitPropertySegments(text) {
+    const segments = [];
+    let current = '';
+    for (let index = 0; index < text.length; index += 1) {
+        const char = text[index];
+        const isLast = index === text.length - 1;
+        if (char === PROPERTY_SEPARATOR && (isLast || PROPERTY_NAME_START_RE.test(text[index + 1]))) {
+            segments.push(current);
+            current = '';
+            continue;
+        }
+        current += char;
+    }
+    segments.push(current);
+    return segments;
+}
+
+// The characters a property's name or value keeps ({ allowsColon }: a value's can hold a colon).
+function keepAllowedChars(text, options) {
+    if (options === null || typeof options !== 'object' || typeof options.allowsColon !== 'boolean') {
+        throw new Error('keepAllowedChars requires { allowsColon } boolean');
+    }
+    const allowsColon = options.allowsColon;
+    let out = '';
+    for (const char of text) {
+        if (!isAsciiPrintable(char)) {
+            continue;
+        }
+        if (char === PROPERTY_SEPARATOR && allowsColon) {
+            out += char;
+            continue;
+        }
+        if (TAG_CONTAINS_DISALLOWED.has(char)) {
+            continue;
+        }
+        out += char;
+    }
+    return out;
+}
+
+// One property: a name starting with a letter, then = and its value (null before the =).
+function enforcePropertySegment(segment) {
+    let start = 0;
+    while (start < segment.length && !PROPERTY_NAME_START_RE.test(segment[start])) {
+        start += 1;
+    }
+    const text = segment.slice(start);
+    const assignmentIndex = text.indexOf(PROPERTY_ASSIGNMENT);
+    if (assignmentIndex === -1) {
+        return { name: keepAllowedChars(text, { allowsColon: false }), value: null };
+    }
+    return {
+        name: keepAllowedChars(text.slice(0, assignmentIndex), { allowsColon: false }),
+        value: keepAllowedChars(text.slice(assignmentIndex + 1), { allowsColon: true }),
+    };
+}
+
+// While typing ({ isEditing: true }) properties stay as typed, unfinished ones too;
+// otherwise a property without a value, and a repeated one, are removed.
+function enforcePropertyTagToken(rawToken, options) {
+    if (options === null || typeof options !== 'object' || typeof options.isEditing !== 'boolean') {
+        throw new Error('enforcePropertyTagToken requires { isEditing } boolean');
+    }
+    const colonIndex = rawToken.indexOf(PROPERTY_SEPARATOR);
+    const tag = enforceTagTokenInternal(rawToken.slice(0, colonIndex), false);
+    if (tag.length === 0 || tag.startsWith('@')) {
+        return enforceTagTokenInternal(rawToken, false);
+    }
+    const segments = splitPropertySegments(rawToken.slice(colonIndex + 1)).map(enforcePropertySegment);
+    if (options.isEditing) {
+        const typed = segments
+            .filter((segment, index) => segment.name.length > 0 || index === segments.length - 1)
+            .map((segment) => (segment.value === null || segment.name.length === 0
+                ? segment.name
+                : `${segment.name}${PROPERTY_ASSIGNMENT}${segment.value}`));
+        return `${tag}${PROPERTY_SEPARATOR}${typed.join(PROPERTY_SEPARATOR)}`;
+    }
+    const seenNames = new Set();
+    const kept = [];
+    for (const segment of segments) {
+        const isComplete = segment.name.length > 0 && segment.value !== null && segment.value.length > 0;
+        if (!isComplete || seenNames.has(segment.name.toLowerCase())) {
+            continue;
+        }
+        seenNames.add(segment.name.toLowerCase());
+        kept.push(`${segment.name}${PROPERTY_ASSIGNMENT}${segment.value}`);
+    }
+    if (kept.length === 0) {
+        return tag;
+    }
+    return `${tag}${PROPERTY_SEPARATOR}${kept.join(PROPERTY_SEPARATOR)}`;
+}
+
 function enforceWrappedTagTokenInternal(
     rawToken,
     preserveTrailingSpaceWhenUnclosed,
@@ -150,6 +272,10 @@ function enforceWrappedTagTokenInternal(
 
     const opener = rawToken[0];
     if (!TAG_WRAPPER_OPENERS.has(opener)) {
+        if (hasPropertySyntax(rawToken)) {
+            // Only the editing path keeps trailing spaces: it is the one typing.
+            return enforcePropertyTagToken(rawToken, { isEditing: preserveTrailingSpaceWhenUnclosed });
+        }
         return enforceTagTokenInternal(rawToken, allowTrailingAssignmentSeparator);
     }
 
@@ -556,6 +682,10 @@ export function analyzeTagBarInput(rawInput) {
         }
     }
     let hasReservedOrTag = false;
+    // A note has each tag once when one of its tokens has properties: jogging beside
+    // jogging:miles=3 is refused. By tag name (lowercase), whether its token has them.
+    const tagNamesWithProperties = new Map();
+    let refusedTagName = null;
 
     const sanitizedSegments = [];
     const normalizedSegments = [];
@@ -601,6 +731,17 @@ export function analyzeTagBarInput(rawInput) {
                 sanitizedToken = `${prefix}${retainedTerms.join(' ')}${suffix}`;
             } else if (!isSupportedMetaTag(segment.text)) {
                 continue;
+            } else if (!segment.text.startsWith('@')) {
+                const name = tagNameOfToken(segment.text);
+                const key = name.toLowerCase();
+                const hasProperties = hasPropertySyntax(segment.text);
+                if (tagNamesWithProperties.has(key) && (hasProperties || tagNamesWithProperties.get(key))) {
+                    if (refusedTagName === null) {
+                        refusedTagName = name;
+                    }
+                    continue;
+                }
+                tagNamesWithProperties.set(key, hasProperties);
             } else {
                 const renderer = segment.text.toLowerCase();
                 if (isRendererTag(renderer)) {
@@ -626,9 +767,12 @@ export function analyzeTagBarInput(rawInput) {
     const errorMessage = shouldWarnUnclosedComment
         ? 'Close comment with */'
         : (hasReservedOrTag ? 'OR is reserved for search' : null);
-    const reminderMessage = unclosedWrapperSuffix
-        ? `Close scope with ${unclosedWrapperSuffix}`
-        : '';
+    let reminderMessage = '';
+    if (unclosedWrapperSuffix) {
+        reminderMessage = `Close scope with ${unclosedWrapperSuffix}`;
+    } else if (refusedTagName !== null) {
+        reminderMessage = `${refusedTagName} is already on this note`;
+    }
 
     return {
         isValid: errorMessage === null,
@@ -739,11 +883,16 @@ export function parseTagBarSuggestionContext(rawInput, cursorIndex) {
             break;
         }
     }
+    // Typing a property (after jogging:): the server suggests its names and units from
+    // the token typed so far, replacing it whole.
+    const isTypingProperty = Boolean(currentAtom) && hasPropertySyntax(currentAtom.text)
+        && cursorIndex > currentAtom.start + currentAtom.text.indexOf(PROPERTY_SEPARATOR);
 
+    // A tag with properties counts as its tag: jogging:miles=3 is jogging.
     const explicitTags = [];
     for (const atom of atoms) {
         if (atom.text.length > 0) {
-            explicitTags.push(atom.text);
+            explicitTags.push(tagPartOfToken(atom.text));
         }
     }
 
@@ -753,7 +902,7 @@ export function parseTagBarSuggestionContext(rawInput, cursorIndex) {
             continue;
         }
         if (atom.text.length > 0) {
-            anchors.push(atom.text);
+            anchors.push(tagPartOfToken(atom.text));
         }
     }
 
@@ -771,7 +920,8 @@ export function parseTagBarSuggestionContext(rawInput, cursorIndex) {
         explicitTags,
         prefix,
         replaceStart,
-        replaceEnd
+        replaceEnd,
+        isTypingProperty,
     };
 }
 
@@ -826,7 +976,8 @@ export function findTagAtIndexInTagBar(rawInput, cursorIndex) {
             continue;
         }
 
-        const enforced = enforceTagToken(token.text);
+        // Anywhere on jogging:miles=3 is the tag jogging.
+        const enforced = enforceTagToken(tagPartOfToken(token.text));
         if (enforced.length > 0) {
             atoms.push({ text: enforced, start: token.start, end: token.end });
         }

@@ -8,6 +8,7 @@ import { CommandGate } from '../mode-manager/services/command-gate-service.js';
 import { buildSessionHeaders } from '../session-auth.js';
 import { handleDictationPasteEvent } from '../mode-manager/services/dictation-paste-service.js';
 import { escapeHtml } from '../html-escape.js';
+import { MS_PER_SECOND } from '../time-units.js';
 
 const ONTOLOGY_BASE = '/api2/ontology';
 const TAG_LIMIT = 20;
@@ -122,7 +123,9 @@ export function parseDialogSuggestionContext(rawValue, cursorIndex) {
             continue;
         }
 
-        if (isSuggestionSeparator(ch)) {
+        // Inside a super tag term (jogging:miles>10) = > < are part of the word.
+        const isInSuperTagTerm = rawValue.slice(wordStart, index).includes(':') && /[=<>]/.test(ch);
+        if (isSuggestionSeparator(ch) && !isInSuperTagTerm) {
             wordStart = index + 1;
             wordIsQuoteOrRegex = false;
             index += 1;
@@ -142,6 +145,10 @@ export function parseDialogSuggestionContext(rawValue, cursorIndex) {
         return null;
     }
     const token = rawValue.slice(wordStart, cursorIndex);
+    // A super tag term being typed: the server suggests its property names, units and values.
+    if (token.indexOf(':') > 0 && !token.startsWith('@')) {
+        return { partialPrefix: token, replaceStart: wordStart, replaceEnd: cursorIndex };
+    }
     if (!isValidTagPrefix(token)) {
         return null;
     }
@@ -303,6 +310,20 @@ function renderIncomingAtoms(atoms) {
             continue;
         }
 
+        // A super tag term (jogging:miles>10): its tag is a chip like any tag, then the
+        // property and comparison as written (docs/design/tag-properties.md).
+        if (kind === 'value') {
+            const value = atom.value;
+            const tag = atom.tag;
+            if (typeof value !== 'string' || typeof tag !== 'string' || !value.startsWith(tag)) {
+                throw new Error('incoming value atom needs its term and its tag');
+            }
+            parts.push(
+                `<span class="ontology-atom ontology-atom-value"><button class="ontology-atom ontology-atom-tag" data-action="focus" data-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</button>${escapeHtml(value.slice(tag.length))}</span>`
+            );
+            continue;
+        }
+
         throw new Error(`Unknown incoming atom kind: ${kind}`);
     }
 
@@ -312,6 +333,23 @@ function renderIncomingAtoms(atoms) {
         return parts[0];
     }
     return `<span class="ontology-atom-group">${parts.join('')}</span>`;
+}
+
+// A saved rule that looks wrong (a super tag term no note can match) says so in a
+// floating message; the rule is saved all the same.
+const RULE_WARNING_SECONDS = 8;
+
+async function showRuleWarnings(payload) {
+    if (!payload || !Array.isArray(payload.warnings)) {
+        throw new Error('Rule response missing warnings');
+    }
+    if (payload.warnings.length === 0) {
+        return;
+    }
+    // Loaded when needed: it sets a window global as it loads, and this modal also loads
+    // where there is no window (its unit tests).
+    const { ErrorHandler } = await import('../error-handler.js');
+    ErrorHandler.showInfoBanner(payload.warnings.join(' '), RULE_WARNING_SECONDS * MS_PER_SECOND);
 }
 
 function buildAuthHeaders() {
@@ -1340,20 +1378,25 @@ export class OntologyModal extends BaseModal {
 
         const rows = tags.map((entry) => {
             if (typeof entry === 'string') {
-                return { tag: entry, count: null };
+                return { tag: entry, count: null, label: entry };
             }
             if (!entry || typeof entry !== 'object') {
                 throw new Error('Ontology dialog suggestion entry must be string or object');
             }
             const tag = entry.tag;
             const count = entry.count;
+            // What the row shows: the tag, or a super tag term's name or unit alone.
+            const label = entry.label;
             if (typeof tag !== 'string' || tag.trim() === '') {
                 throw new Error('Ontology dialog suggestion missing tag');
             }
             if (!Number.isInteger(count) || count < 0) {
                 throw new Error('Ontology dialog suggestion missing count');
             }
-            return { tag, count };
+            if (typeof label !== 'string' || label === '') {
+                throw new Error('Ontology dialog suggestion missing label');
+            }
+            return { tag, count, label };
         });
 
         elements.suggestions.innerHTML = rows
@@ -1362,7 +1405,7 @@ export class OntologyModal extends BaseModal {
                 if (row.count !== null) countBadge = `<span class="ontology-dialog-suggestion-count">${row.count}</span>`;
                 return (
                     `<button type="button" class="ontology-dialog-suggestion" data-tag="${escapeHtml(row.tag)}">` +
-                    `<span class="ontology-dialog-suggestion-label">${escapeHtml(row.tag)}</span>` +
+                    `<span class="ontology-dialog-suggestion-label">${escapeHtml(row.label)}</span>` +
                     `${countBadge}` +
                     `</button>`
                 );
@@ -2000,6 +2043,9 @@ export class OntologyModal extends BaseModal {
                         if (atom.kind === 'regex' && typeof atom.regex === 'string') {
                             return atom.regex;
                         }
+                        if (atom.kind === 'value' && typeof atom.value === 'string') {
+                            return atom.value;
+                        }
                     }
                 }
                 if (typeof display === 'string') {
@@ -2239,6 +2285,7 @@ export class OntologyModal extends BaseModal {
         if (!Number.isInteger(id) || id < 0) {
             throw new Error('Invalid create rule response');
         }
+        await showRuleWarnings(payload);
     }
 
     async _editTagRelation(ruleId, relatedTag, relationKind) {
@@ -2343,7 +2390,7 @@ export class OntologyModal extends BaseModal {
             throw new Error('incoming rule editValue missing');
         }
 
-        if (kind !== 'tag' && kind !== 'text' && kind !== 'regex' && kind !== 'and') {
+        if (!['tag', 'text', 'regex', 'value', 'and'].includes(kind)) {
             throw new Error(`Unknown incoming rule kind: ${kind}`);
         }
 
@@ -2381,6 +2428,7 @@ export class OntologyModal extends BaseModal {
         if (payload === null) {
             return;
         }
+        await showRuleWarnings(payload);
 
         const focusTag = state.focusTag;
         if (typeof focusTag === 'string' && focusTag.trim() !== '') {

@@ -1366,7 +1366,8 @@ body.ontology-modal-open #ontology-modal {
 }
 
 .ontology-atom-text,
-.ontology-atom-regex {
+.ontology-atom-regex,
+.ontology-atom-value {
     color: rgba(255, 255, 255, 0.78);
 }
 

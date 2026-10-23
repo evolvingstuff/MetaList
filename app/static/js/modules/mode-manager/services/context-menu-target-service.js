@@ -17,7 +17,8 @@ function resolveSuggestionTarget(element, selector, source) {
 
     return {
         kind: 'tag-suggestion',
-        tag,
+        // A property suggestion (jogging:miles=, drug:dosage>5mg) is about its tag.
+        tag: tag.split(/[:<>]/)[0],
         source,
         reasons: readSuggestionReasons(suggestion, source),
     };

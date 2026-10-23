@@ -26,7 +26,7 @@ from dataclasses import dataclass
 
 from app.services.agent.cloud_privacy import CloudPrivacyBoundary
 from app.services.agent.cloud_privacy import cloud_privacy_evaluator
-from app.services.agent.cloud_privacy import visible_tag_counts
+from app.services.agent.cloud_privacy import visible_super_tag_examples, visible_tag_counts
 from app.services.agent.inference import InferenceAdapter
 from app.services.agent.skill_settings import AgentSkill
 from app.services.agent.tagging import TagBatch
@@ -37,7 +37,8 @@ from app.services.agent.token_estimation import estimate_input_tokens
 from app.services.agent.web_settings import AgentWebSettings
 from app.services.content_formatting import extract_note_text_for_agent
 from app.services.note_store import store as note_store
-from app.services.search_index import extract_ordered_tags_for_search
+from app.services.search_index import extract_ordered_tags_for_agent, extract_ordered_tags_for_search
+from app.services.tag_properties import tag_part_of_token
 from app.services.search_index import search_index
 from app.services.tag_suggestions import suggest_tags_for_note
 from app.contracts import preserves, produces, requires
@@ -88,6 +89,8 @@ class NoteTagRequest:
     tag_skill: AgentSkill
     # The tags on notes the AI may see (cloud_privacy.visible_tag_counts).
     visible_vocabulary: dict[str, str]
+    # One example of each property in use there (cloud_privacy.visible_super_tag_examples).
+    super_tag_examples: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -123,7 +126,7 @@ def _note_text(note_id: str) -> dict[str, object]:
     record = note_store.get_note(note_id)
     content, redacted = extract_note_text_for_agent(content_html=record.content, tags=record.tags)
     assert not redacted, "A note the AI may see is never password protected"
-    return {"content_text": content, "tags": list(extract_ordered_tags_for_search(record.tags))}
+    return {"content_text": content, "tags": list(extract_ordered_tags_for_agent(record.tags))}
 
 
 def _note_node(note_id: str) -> dict[str, object]:
@@ -212,6 +215,7 @@ def build_note_tag_request(
         ancestors_by_batch=tuple(context for _trees, context in groups),
         vocabulary=vocabulary, rules=rules, tag_skill=tag_skill,
         visible_vocabulary=visible_tag_counts(boundary)[0],
+        super_tag_examples=visible_super_tag_examples(boundary),
     ), "cloud_disclosable")
 
 
@@ -226,6 +230,7 @@ def request_messages(request: NoteTagRequest, index: int, prior_batch_new_tags: 
         "accepted_vocabulary": [tag for tag, _count in request.vocabulary],
         "accepted_vocabulary_note_counts": [count for _tag, count in request.vocabulary],
         "prior_batch_new_tags": list(prior_batch_new_tags),
+        "super_tag_properties": list(request.super_tag_examples),
     }
     messages = tag_batch_messages(
         tag_skill=request.tag_skill, vocabulary_scope=_VOCABULARY_SCOPE, focus="both", user_payload=user_payload,
@@ -240,7 +245,8 @@ def keep_new_tags_up_to_limit(*, tags: tuple[str, ...], visible_vocabulary: dict
     kept = []
     new_count = 0
     for tag in tags:
-        if tag.casefold() not in visible_vocabulary:
+        # A super tag is new when its tag is (jogging:miles=3 on an existing jogging is not).
+        if tag_part_of_token(tag).casefold() not in visible_vocabulary:
             if new_count == MAX_NEW_TAGS:
                 continue
             new_count += 1

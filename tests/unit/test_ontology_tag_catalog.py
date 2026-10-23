@@ -42,8 +42,8 @@ def test_catalog_query_honors_a_positive_result_limit(monkeypatch) -> None:
     assert payload == {
         "totalCount": 3,
         "tags": [
-            {"tag": "journal", "count": 8},
-            {"tag": "project", "count": 3},
+            {"tag": "journal", "count": 8, "label": "journal"},
+            {"tag": "project", "count": 3, "label": "project"},
         ],
     }
 

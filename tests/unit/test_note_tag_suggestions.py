@@ -330,7 +330,7 @@ def test_adding_proposals_skips_tags_the_note_has_or_already_proposes(live_datab
     assert (second["status"], second["added"]) == ("unchanged", {})
     assert len(undo_records) == 1
 
-    with pytest.raises(ValueError, match="plain tags"):
+    with pytest.raises(ValueError, match="tags or super tags"):
         add({"trip": ("@markdown",)})
 
 

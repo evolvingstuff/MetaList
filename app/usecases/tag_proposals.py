@@ -8,7 +8,18 @@ from app.services.note_store import store as note_store
 from app.services.ontology_rules_store import get_ontology
 from app.services.search_history import current_local_date, record_explicit_tag_additions
 from app.services.sync import generate_new_uuid
-from app.services.tag_ontology import is_valid_tag_token
+import re
+
+from app.services.content_formatting import _unwrap_tag_token
+from app.services.search_index import tag_bar_values
+from app.services.tag_ontology import is_valid_proposal_token
+from app.services.tag_properties import (
+    PROPERTY_ASSIGNMENT,
+    PROPERTY_SEPARATOR,
+    has_property_syntax,
+    split_property_segments,
+    tag_part_of_token,
+)
 from app.services.tag_plural_variants import PluralSpellings
 from app.services.undo_state import record_collapse_batch
 from app.services.undo_state import record_tag_sources
@@ -24,8 +35,8 @@ def _proposal_tokens(proposed_tags: str) -> tuple[str, ...]:
         raise TypeError("proposed_tags must be a string")
     tokens = tuple(proposed_tags.split())
     for token in tokens:
-        if not is_valid_tag_token(token):
-            raise RuntimeError(f"Stored proposal is not a valid plain tag token: {token!r}")
+        if not is_valid_proposal_token(token):
+            raise RuntimeError(f"Stored proposal is not a valid tag or super tag: {token!r}")
     return tokens
 
 
@@ -54,6 +65,68 @@ def is_new_proposal(*, tag: str, seen: set[str]) -> bool:
     in any case or as its singular or plural (`eggs` beside `egg`)."""
     assert all(key == key.casefold() for key in seen)
     return tag.casefold() not in seen and not PluralSpellings(seen).covers(tag)
+
+
+def _tag_name(token: str) -> str:
+    """The tag a token names, without values, casefolded: jogging for jogging=3:miles=3."""
+    return tag_part_of_token(token).split(PROPERTY_ASSIGNMENT, 1)[0].casefold()
+
+
+def proposal_says_something_new(*, proposal: str, seen: set[str], pending: list[str], tags: str) -> bool:
+    """Whether a proposal adds to a note (docs/design/tag-properties.md). A plain tag as
+    is_new_proposal says. A super tag (jogging:miles=3) when it gives a value the note's
+    own token for that tag lacks, and no proposal for that tag is pending."""
+    if not has_property_syntax(proposal):
+        return is_new_proposal(tag=proposal, seen=seen)
+    name = _tag_name(proposal)
+    if any(_tag_name(token) == name for token in pending):
+        return False
+    _own_names, own_values = tag_bar_values(tags)
+    _proposal_names, proposal_values = tag_bar_values(proposal)
+    return any(key not in own_values for key in proposal_values)
+
+
+def merge_accepted_proposals(tags: str, proposals: tuple[str, ...]) -> str:
+    """The tag bar with accepted proposals in it. A tag the note carries is not added
+    again: a super tag's new values join the note's token for its tag (jogging becomes
+    jogging:miles=3), values it has stay as they are; anything else is appended."""
+    next_tags = tags
+    for proposal in proposals:
+        own = _own_token_for_tag(next_tags, _tag_name(proposal))
+        if own is None:
+            next_tags = " ".join(part for part in (next_tags.strip(), proposal) if part)
+            continue
+        if not has_property_syntax(proposal):
+            continue
+        _own_names, own_values = tag_bar_values(own)
+        additions = [
+            segment for segment in split_property_segments(proposal[len(tag_part_of_token(proposal)) + 1:])
+            if (_tag_name(own), segment.partition(PROPERTY_ASSIGNMENT)[0].casefold()) not in own_values
+        ]
+        if additions:
+            next_tags = _replace_own_token(next_tags, own, PROPERTY_SEPARATOR.join([own, *additions]))
+    return next_tags
+
+
+_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)
+
+
+def _replace_own_token(tags: str, own: str, merged: str) -> str:
+    """The tag bar with its token `own` (outside /* comments */) written as `merged`."""
+    comments = [match.span() for match in _COMMENT_RE.finditer(tags)]
+    for match in re.finditer(rf"(?<!\S){re.escape(own)}(?!\S)", tags):
+        if not any(start <= match.start() < end for start, end in comments):
+            return tags[: match.start()] + merged + tags[match.end():]
+    raise RuntimeError(f"The tag bar's token {own!r} was not found to merge into")
+
+
+def _own_token_for_tag(tags: str, name: str) -> str | None:
+    """The tag bar's own token for a tag (plain, valued or super), or None."""
+    for token in _tokenize_tag_bar(tags):
+        base, wrapper = _unwrap_tag_token(token)
+        if wrapper is None and not base.startswith("@") and _tag_name(base) == name:
+            return base
+    return None
 
 
 def _find_proposal_token(*, proposed_tags: str, requested_proposal: str) -> str:
@@ -90,14 +163,7 @@ class CmdAcceptTagProposal(QueryCommand):
             for token in _proposal_tokens(record.proposed_tags)
             if token.casefold() != proposal.casefold()
         )
-        accepted_tokens = tuple(_tokenize_tag_bar(record.tags))
-        accepted_keys = {token.casefold() for token in accepted_tokens}
-        if proposal.casefold() in accepted_keys:
-            next_tags = record.tags
-        elif record.tags.strip() == "":
-            next_tags = proposal
-        else:
-            next_tags = f"{record.tags.strip()} {proposal}"
+        next_tags = merge_accepted_proposals(record.tags, (proposal,))
         next_proposed_tags = _join_proposal_tokens(remaining)
 
         apply_update_note_sources(
@@ -201,17 +267,17 @@ class CmdAddTagProposals(QueryCommand):
             if not note_store.has_note(target_id):
                 raise KeyError(f"Proposal target note not found: {target_id}")
             for tag in tags:
-                if not is_valid_tag_token(tag) or tag.startswith("@"):
-                    raise ValueError(f"AI tag proposals must be plain tags: {tag!r}")
+                if not is_valid_proposal_token(tag):
+                    raise ValueError(f"AI tag proposals must be tags or super tags: {tag!r}")
         changes = []
         added: Dict[str, list[str]] = {}
         for target_id, tags in self.proposals.items():
             record = note_store.get_note(target_id)
             pending = list(_proposal_tokens(record.proposed_tags))
             seen = {token.casefold() for token in pending} | _effective_accepted_tag_keys(target_id)
-            new_tags = []
+            new_tags: list[str] = []
             for tag in tags:
-                if is_new_proposal(tag=tag, seen=seen):
+                if proposal_says_something_new(proposal=tag, seen=seen, pending=[*pending, *new_tags], tags=record.tags):
                     new_tags.append(tag)
                     seen.add(tag.casefold())
             if not new_tags:
@@ -345,10 +411,7 @@ class CmdResolveRobotProposals(QueryCommand):
                 continue
             next_tags = record.tags
             if self.action == "accept":
-                accepted_keys = {token.casefold() for token in _tokenize_tag_bar(record.tags)}
-                additions = [token for token in pending if token.casefold() not in accepted_keys]
-                if additions:
-                    next_tags = " ".join(part for part in (record.tags.strip(), *additions) if part)
+                next_tags = merge_accepted_proposals(record.tags, pending)
             changes.append({
                 "note_id": note_id,
                 "before_tags": record.tags, "before_proposed_tags": record.proposed_tags,
