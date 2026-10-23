@@ -102,6 +102,7 @@ import {
 } from '../mode-manager/services/search-input-service.js';
 import { isViewingReferenceSource } from '../mode-manager/services/reference-source-navigation-service.js';
 import { CommandGate } from '../mode-manager/services/command-gate-service.js';
+import { openFindBar } from '../mode-manager/services/find-in-list-service.js';
 import { cancelDebouncedSearchExecution } from '../mode-manager/services/search-debounce-service.js';
 import { attachPickedFileToCurrentNote, pickFileForAttachment } from '../mode-manager/services/file-reference-service.js';
 import { isRootReorderLocked, normalizeRootSortMode } from '../mode-manager/services/root-sort-service.js';
@@ -124,6 +125,7 @@ import { buildCommandPaletteEndpoints } from './endpoint-registry.js';
 import { PreferencesStore } from './preferences-store.js';
 import {
     collectCommandPaletteTags,
+    withLabelWords,
     findNearMissTags,
     loadCommandPaletteTagMap,
     validateCommandPaletteTagMappings,
@@ -410,6 +412,7 @@ class CommandPaletteController {
                 openRemovePassword: this.openRemovePassword.bind(this),
                 openSessionTimeoutSettings: this.openSessionTimeoutSettings.bind(this),
                 openOntologyEditor: this.openOntologyEditor.bind(this),
+                openFindBar: () => openFindBar(),
                 createBackup: this.createBackup.bind(this),
                 openBackupRestore: this.openBackupRestore.bind(this),
                 logout: this.logout.bind(this),
@@ -487,6 +490,8 @@ class CommandPaletteController {
 
     _mergeAndValidateTags() {
         validateCommandPaletteTagMappings(this._endpoints, this._tagMap);
+        this._tagMap = withLabelWords(this._tagMap, this._endpoints);
+        this._allTags = collectCommandPaletteTags(this._tagMap);
         for (const endpoint of this._endpoints) {
             endpoint.tags = this._tagMap.get(endpoint.id);
         }

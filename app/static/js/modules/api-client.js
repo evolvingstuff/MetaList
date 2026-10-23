@@ -701,6 +701,7 @@ export const NotesAPI = {
         const payload = {
             clientId: ModeContext.clientId,
             editingNoteId: noteId,
+            findRevealNoteId: ModeContext.findRevealNoteId,
             search: searchQuery,
             tabId,
             isUntaggedView: ModeContext.isUntaggedView,
@@ -720,6 +721,27 @@ export const NotesAPI = {
         });
 
         return response;
+    },
+
+    // One step of find in the list (docs/ui/find.md): the notes text occurs in, from a
+    // root position forward or before it backward.
+    async findInList({ tabId, search, isUntaggedView, text, fromRootIndex, direction }) {
+        if (typeof tabId !== 'string' || tabId.length === 0) {
+            throw new Error('NotesAPI.findInList requires tabId');
+        }
+        if (typeof text !== 'string' || text.trim() === '') {
+            throw new Error('NotesAPI.findInList requires text');
+        }
+        if (!Number.isInteger(fromRootIndex) || fromRootIndex < 0) {
+            throw new Error('NotesAPI.findInList requires a root index');
+        }
+        if (direction !== 'forward' && direction !== 'backward') {
+            throw new Error('NotesAPI.findInList direction must be forward or backward');
+        }
+        return this._apiCall(CONFIG.API.NOTES.FIND, {
+            method: 'POST',
+            body: JSON.stringify({ tabId, search, isUntaggedView, text, fromRootIndex, direction }),
+        });
     },
 
     async fetchSearchSuggestions(query, windowDays) {

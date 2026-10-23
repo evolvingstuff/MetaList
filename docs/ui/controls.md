@@ -52,6 +52,7 @@ What happens on screen after each action (where things stay, when the page may s
 |----------|--------|
 | `Enter` | Add new note at top (when not editing) |
 | `⌘ + /` | Open command palette |
+| `⌘ + F` | Find in the list: the find bar finds text in the notes the list shows, also far below what is loaded and inside folded notes, and marks each match. `Enter` / `⌘ + G` goes to the next match, `⇧ + Enter` / `⇧ + ⌘ + G` to the previous one, `Esc` closes it. While editing, it saves and leaves the note first; in a dialog it stays the browser's find. See `docs/ui/find.md`. |
 | `Tab` | Focus the search input and select its full query (view mode only) |
 | `?` | Open keyboard shortcuts / cheatsheet (idle mode) |
 | `⌘ + Z` | Undo |

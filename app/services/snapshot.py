@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Tuple, Set
 
 from loguru import logger
 
-from app.services.content_formatting import find_list_style
+from app.services.content_formatting import COMMENT_CLOSE, COMMENT_OPEN, find_list_style
 from app.services.content_formatting import recording_link_title_fetches
 from app.services.content_formatting import replay_link_title_fetches
 from app.services.embedded_references import EmbedRenderContext
@@ -21,6 +21,7 @@ from app.services.embedded_references import render_collapsed_note_content_with_
 from app.services.embedded_references import render_note_content_with_embeds
 from app.services.file_registry import file_registry
 from app.services.file_storage import get_file_reference_record
+from app.services.find_text import count_occurrences, read_comment_text, read_visible_text
 from app.services.link_titles import link_title_store
 from app.services.note_store import NoteRecord, store as note_store
 from app.services.ontology_rules_store import get_ontology_if_ready
@@ -497,7 +498,7 @@ class _SnapshotTraversalCache:
 
     def __init__(self) -> None:
         self._children_by_parent: Dict[Optional[str], List[str]] = {}
-        self._record_by_id: Dict[str, object] = {}
+        self._record_by_id: Dict[str, NoteRecord] = {}
         self._proposal_subtree_count_by_id: Dict[str, int] = {}
 
     def get_children(self, parent_id: Optional[str]) -> List[str]:
@@ -505,7 +506,7 @@ class _SnapshotTraversalCache:
             self._children_by_parent[parent_id] = note_store.get_children(parent_id)
         return self._children_by_parent[parent_id]
 
-    def get_note(self, note_id: str) -> object:
+    def get_note(self, note_id: str) -> NoteRecord:
         if note_id not in self._record_by_id:
             self._record_by_id[note_id] = note_store.get_note(note_id)
         return self._record_by_id[note_id]
@@ -561,8 +562,19 @@ def _share_neighbour_timestamp(
     return shared
 
 
+def _ancestor_ids(note_id: str, traversal_cache: _SnapshotTraversalCache) -> Set[str]:
+    ancestor_ids: Set[str] = set()
+    current = traversal_cache.get_note(note_id)
+    while current.parent_id is not None:
+        if current.parent_id in ancestor_ids:
+            raise RuntimeError("Cycle in note ancestry")
+        ancestor_ids.add(current.parent_id)
+        current = traversal_cache.get_note(current.parent_id)
+    return ancestor_ids
+
+
 def _select_view(
-    *, editing_note_id: str | None, search: str | None, sort_mode: str,
+    *, editing_note_id: str | None, find_reveal_note_id: str | None, search: str | None, sort_mode: str,
     client_known_note_ids: Set[str], previous_root_ids: List[str], visible_top_root_id: str | None,
     visible_bottom_root_id: str | None, is_untagged_view: bool, start_at_list_end: bool,
     traversal_cache: _SnapshotTraversalCache,
@@ -593,12 +605,11 @@ def _select_view(
 
     forced_open_ids: Set[str] = set()
     if editing_note_id is not None and note_store.has_note(editing_note_id):
-        current = traversal_cache.get_note(editing_note_id)
-        while current.parent_id is not None:
-            if current.parent_id in forced_open_ids:
-                raise RuntimeError("Cycle in editing note ancestry")
-            forced_open_ids.add(current.parent_id)
-            current = traversal_cache.get_note(current.parent_id)
+        forced_open_ids |= _ancestor_ids(editing_note_id, traversal_cache)
+    # Find shows a match folded away by opening the note and the notes above it for
+    # this view only; their saved collapse stays (docs/ui/find.md).
+    if find_reveal_note_id is not None and note_store.has_note(find_reveal_note_id):
+        forced_open_ids |= _ancestor_ids(find_reveal_note_id, traversal_cache) | {find_reveal_note_id}
 
     roots = ordered_root_ids
     if search_scope.search_active:
@@ -827,6 +838,31 @@ def _sort_key_before_window(selection: _ViewSelection) -> str:
     return buckets[selection.root_before_window]["key"]
 
 
+def _is_shown_collapsed(rec: NoteRecord, context: EmbedRenderContext) -> bool:
+    """Whether the list shows the note folded. A note that is only a reference shows its
+    source's collapse (it folds as the source does, wherever that is folded)."""
+    shown_state_id = resolve_held_source(
+        rec.id, has_note=context.has_note,
+        content_of=lambda note_id: context.get_note(note_id).content,
+    )
+    if shown_state_id != rec.id:
+        return bool(context.get_note(shown_state_id).is_collapsed)
+    return bool(rec.is_collapsed)
+
+
+def _render_note_content_html(rec: NoteRecord, *, is_collapsed: bool, context: EmbedRenderContext) -> str:
+    """A note's content as the list shows it when it is not being edited."""
+    if type(rec) is NoteRecord and _is_render_cacheable(rec.content):
+        # Identity keys are exact only for immutable records; any other record
+        # type (e.g. test doubles) could change in place and renders directly.
+        return _cached_note_view_html(
+            rec=rec, is_collapsed=is_collapsed, has_backlinks=note_store.has_backlinks(rec.id), context=context,
+        )
+    return _render_note_view_html(
+        rec=rec, is_collapsed=is_collapsed, has_backlinks=note_store.has_backlinks(rec.id), context=context,
+    )
+
+
 def _render_view_note(
     rec: NoteRecord, *, editing_note_id: str | None, is_search_redacted: bool,
     force_uncollapsed_ids: Set[str], filter_active: bool,
@@ -841,17 +877,8 @@ def _render_view_note(
     is_collapsible = has_children
     if content_is_collapsible:
         is_collapsible = True
-    # A note that is only a reference shows its source's collapse (it folds as
-    # the source does, wherever that is folded).
-    shown_state_id = resolve_held_source(
-        rec.id, has_note=embed_render_context.has_note,
-        content_of=lambda note_id: embed_render_context.get_note(note_id).content,
-    )
-    shown_collapsed = bool(rec.is_collapsed)
-    if shown_state_id != rec.id:
-        shown_collapsed = bool(embed_render_context.get_note(shown_state_id).is_collapsed)
     flags = {
-        "isCollapsed": shown_collapsed,
+        "isCollapsed": _is_shown_collapsed(rec, embed_render_context),
         "isEditing": bool(editing_note_id == rec.id),
         "hasChildren": has_children,
         "isCollapsible": is_collapsible,
@@ -885,25 +912,36 @@ def _render_view_note(
         rendered_content = rec.content
         # The editor shows each image at its size from the start (docs/ui/content-formatting.md).
         flags["editingImageSizes"] = editing_image_size_factors(content_html=rec.content, tags=rec.tags)
-    elif type(rec) is NoteRecord and _is_render_cacheable(rec.content):
-        # Identity keys are exact only for immutable records; any other record
-        # type (e.g. test doubles) could change in place and renders directly.
-        rendered_content = _cached_note_view_html(
-            rec=rec, is_collapsed=bool(flags["isCollapsed"]),
-            has_backlinks=note_store.has_backlinks(rec.id), context=embed_render_context,
-        )
     else:
-        rendered_content = _render_note_view_html(
-            rec=rec, is_collapsed=bool(flags["isCollapsed"]),
-            has_backlinks=note_store.has_backlinks(rec.id), context=embed_render_context,
+        rendered_content = _render_note_content_html(
+            rec, is_collapsed=bool(flags["isCollapsed"]), context=embed_render_context,
         )
 
     return rendered_content, flags
 
 
+def _new_embed_render_context(traversal_cache: _SnapshotTraversalCache) -> EmbedRenderContext:
+    file_record_cache: Dict[str, object] = {}
+
+    def _get_file_record(file_id: str) -> object:
+        if file_id not in file_record_cache:
+            file_record_cache[file_id] = get_file_reference_record(file_id, token=None)
+        return file_record_cache[file_id]
+
+    return EmbedRenderContext(
+        has_note=note_store.has_note,
+        get_note=traversal_cache.get_note,
+        get_children=traversal_cache.get_children,
+        has_file=file_registry.has_file,
+        get_file=_get_file_record,
+        static_collapse_arrows=False,
+    )
+
+
 def build_view_state(
     *,
     editing_note_id: Optional[str],
+    find_reveal_note_id: Optional[str],
     search: Optional[str],
     sort_mode: str,
     client_known_note_ids: Set[str],
@@ -921,25 +959,11 @@ def build_view_state(
     children_by_parent: Dict[Optional[str], List[str]] = {}
     hash_by_id: Dict[str, str] = {}
 
-    file_record_cache: Dict[str, object] = {}
     traversal_cache = _SnapshotTraversalCache()
-
-    def _get_file_record(file_id: str) -> object:
-        if file_id not in file_record_cache:
-            file_record_cache[file_id] = get_file_reference_record(file_id, token=None)
-        return file_record_cache[file_id]
-
-    embed_render_context = EmbedRenderContext(
-        has_note=note_store.has_note,
-        get_note=traversal_cache.get_note,
-        get_children=traversal_cache.get_children,
-        has_file=file_registry.has_file,
-        get_file=_get_file_record,
-        static_collapse_arrows=False,
-    )
+    embed_render_context = _new_embed_render_context(traversal_cache)
 
     selection = _select_view(
-        editing_note_id=editing_note_id, search=search, sort_mode=sort_mode,
+        editing_note_id=editing_note_id, find_reveal_note_id=find_reveal_note_id, search=search, sort_mode=sort_mode,
         client_known_note_ids=client_known_note_ids, previous_root_ids=previous_root_ids,
         visible_top_root_id=visible_top_root_id,
         visible_bottom_root_id=visible_bottom_root_id, is_untagged_view=is_untagged_view,
@@ -1066,4 +1090,180 @@ def build_view_state(
         children_by_parent={key: value[:] for key, value in children_by_parent.items()},
         hash_by_id=hash_by_id,
         metadata=metadata,
+    )
+
+
+# Find in the list (docs/ui/find.md). One step reads whole roots in list order from a
+# root position and stops after the root in which this many notes had a match, so a
+# common word renders a few notes per step, never the whole list.
+FIND_WINDOW_MATCHED_NOTES = 50
+FIND_DIRECTIONS = ("forward", "backward")
+
+
+@dataclass(frozen=True, slots=True)
+class FindMatch:
+    """A note the find's text occurs in. Its occurrences, in page order, are those of its
+    content (content_count) and then of its tag-bar comments (comment_count). Shown
+    without opening anything are the first preview_count of the content's (all of them
+    unless the note is folded) and the comments', unless a note above it is folded."""
+
+    note_id: str
+    root_id: str
+    root_index: int
+    content_count: int
+    comment_count: int
+    preview_count: int
+    is_under_folded_note: bool
+
+
+@dataclass(frozen=True, slots=True)
+class FindWindow:
+    """The matches in roots [first_root_index, end_root_index), in list order."""
+
+    matches: Tuple[FindMatch, ...]
+    first_root_index: int
+    end_root_index: int
+    root_count: int
+
+
+def _tag_bar_comments(tags: str) -> List[str]:
+    """The tag bar's comments as it shows them, markers included (an unclosed one runs
+    to the end), as tag-syntax-service.js splits them."""
+    comments: List[str] = []
+    index = 0
+    while True:
+        start = tags.find(COMMENT_OPEN, index)
+        if start == -1:
+            return comments
+        end = tags.find(COMMENT_CLOSE, start + len(COMMENT_OPEN))
+        if end == -1:
+            comments.append(tags[start:])
+            return comments
+        comments.append(tags[start:end + len(COMMENT_CLOSE)])
+        index = end + len(COMMENT_CLOSE)
+
+
+def _find_candidates(find_text: str, traversal_cache: _SnapshotTraversalCache) -> Set[str]:
+    """Every note that can show the text, read without rendering: notes whose own text
+    holds each word, and the notes that reference or embed one of them or a note above
+    one (an embed shows its source's children)."""
+    words = tuple(find_text.casefold().split())
+    assert words, "find text must hold a word"
+    candidates = set(search_index.note_ids_containing_words(words))
+    pending = list(candidates)
+    reached: Set[str] = set()
+    while pending:
+        note_id = pending.pop()
+        if note_id in reached:
+            continue
+        reached.add(note_id)
+        for referrer_id in note_store.get_referrer_ids(note_id):
+            candidates.add(referrer_id)
+            pending.append(referrer_id)
+        parent_id = traversal_cache.get_note(note_id).parent_id
+        if parent_id is not None:
+            pending.append(parent_id)
+    return candidates
+
+
+def _count_find_match(
+    rec: NoteRecord, *, find_text: str, root_id: str, root_index: int, is_under_folded_note: bool,
+    context: EmbedRenderContext,
+) -> FindMatch | None:
+    content_count = count_occurrences(
+        read_visible_text(_render_note_content_html(rec, is_collapsed=False, context=context)), find_text,
+    )
+    comment_count = sum(
+        count_occurrences(read_comment_text(comment), find_text) for comment in _tag_bar_comments(rec.tags)
+    )
+    if content_count == 0 and comment_count == 0:
+        return None
+    preview_count = content_count
+    if content_count > 0 and _is_shown_collapsed(rec, context):
+        preview_count = count_occurrences(
+            read_visible_text(_render_note_content_html(rec, is_collapsed=True, context=context)), find_text,
+        )
+    return FindMatch(
+        note_id=rec.id, root_id=root_id, root_index=root_index, content_count=content_count,
+        comment_count=comment_count, preview_count=min(preview_count, content_count),
+        is_under_folded_note=is_under_folded_note,
+    )
+
+
+def _find_in_root(
+    root_id: str, root_index: int, *, find_text: str, candidates: Set[str], allowed_note_ids: frozenset[str],
+    traversal_cache: _SnapshotTraversalCache, context: EmbedRenderContext,
+) -> List[FindMatch]:
+    """The root's matches in page order: each note, then its children (folded ones
+    too; a placeholder for a note outside the search is no match, nor is what is under it)."""
+    matches: List[FindMatch] = []
+    pending: List[Tuple[str, bool]] = [(root_id, False)]
+    visited: Set[str] = set()
+    while pending:
+        note_id, is_under_folded_note = pending.pop()
+        if note_id in visited:
+            raise RuntimeError("Cycle in note hierarchy")
+        visited.add(note_id)
+        rec = traversal_cache.get_note(note_id)
+        if note_id in candidates:
+            match = _count_find_match(
+                rec, find_text=find_text, root_id=root_id, root_index=root_index,
+                is_under_folded_note=is_under_folded_note, context=context,
+            )
+            if match is not None:
+                matches.append(match)
+        children_folded = any((is_under_folded_note, _is_shown_collapsed(rec, context)))
+        child_ids = [child_id for child_id in traversal_cache.get_children(note_id) if child_id in allowed_note_ids]
+        pending.extend((child_id, children_folded) for child_id in reversed(child_ids))
+    return matches
+
+
+def find_in_view(
+    *, find_text: str, search: str, sort_mode: str, is_untagged_view: bool, from_root_index: int, direction: str,
+) -> FindWindow:
+    """One step of find through the list a view shows: forward, the roots from
+    from_root_index on; backward, the roots before it, until FIND_WINDOW_MATCHED_NOTES
+    notes matched or the list ends."""
+    if not isinstance(find_text, str) or find_text.strip() == "":
+        raise ValueError("find_text must hold text")
+    if direction not in FIND_DIRECTIONS:
+        raise ValueError(f"direction must be one of {FIND_DIRECTIONS}, got {direction!r}")
+    scope = resolve_view_scope_membership(search=search, sort_mode=sort_mode, is_untagged_view=is_untagged_view)
+    roots = scope.ordered_root_ids
+    if not isinstance(from_root_index, int) or from_root_index < 0:
+        raise ValueError(f"from_root_index must be a non-negative integer, got {from_root_index!r}")
+    # The browser's position comes from an earlier step; if the list has lost roots since
+    # (another tab deleted some), a position past its end is its end. The browser finds
+    # again whenever the list changes (docs/ui/find.md).
+    from_root_index = min(from_root_index, len(roots))
+    traversal_cache = _SnapshotTraversalCache()
+    context = _new_embed_render_context(traversal_cache)
+    candidates = _find_candidates(find_text, traversal_cache)
+    windows: List[List[FindMatch]] = []
+    matched_notes = 0
+    if direction == "forward":
+        root_indexes = range(from_root_index, len(roots))
+    else:
+        root_indexes = range(from_root_index - 1, -1, -1)
+    first_root_index = from_root_index
+    end_root_index = from_root_index
+    for root_index in root_indexes:
+        root_matches = _find_in_root(
+            roots[root_index], root_index, find_text=find_text, candidates=candidates,
+            allowed_note_ids=scope.allowed_note_ids, traversal_cache=traversal_cache, context=context,
+        )
+        windows.append(root_matches)
+        matched_notes += len(root_matches)
+        if direction == "forward":
+            end_root_index = root_index + 1
+        else:
+            first_root_index = root_index
+        if matched_notes >= FIND_WINDOW_MATCHED_NOTES:
+            break
+    if direction == "backward":
+        windows.reverse()
+    matches = tuple(match for root_matches in windows for match in root_matches)
+    assert first_root_index <= end_root_index
+    return FindWindow(
+        matches=matches, first_root_index=first_root_index, end_root_index=end_root_index, root_count=len(roots),
     )

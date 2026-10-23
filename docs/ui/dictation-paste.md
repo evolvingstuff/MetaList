@@ -13,7 +13,7 @@ only pastes.
    "slash" `/`. Superwhisper's `foo-Dash bar` (a typed `-` plus the word) and
    the variants `foo -Dash bar`, `foo - Dash bar`, `foo dash bar` all give `foo-bar`.
 3. The quote phrases ("quote" … "end quote" by default) or quote marks, straight or
-   curly, mark a phrase. Quoting applies in search and incoming-rule conditions
+   curly, mark a phrase. Quoting applies in search
    only; in tag fields the quote phrases are dropped and the words inside are
    ordinary words.
 4. At each word, the longest run of words matching an existing tag becomes that
@@ -61,10 +61,9 @@ leading or trailing "or", the exclusion phrase before an unknown word) is droppe
 | Field | Paste becomes |
 |---|---|
 | Edit Tag Relationships: search box, Add tag, Implied tag, Synonym tag, edit implied tag or synonym, Rename tag; Prioritize Tag To Front/Back; Accept or reject AI-proposed tags' tag filter | one tag: the whole paste, an existing tag when it matches (also one-word or meta tags), otherwise one new tag with its words joined by dashes ("Machine learning" gives `machine-learning`) |
-| Edit Tag Relationships: Add condition, Edit incoming rule | existing tags and quoted text (`"…"`); no "or" or exclusion, and no spoken regular expressions |
 | AI Agent Settings: whitelisted and blacklisted tags | the tag-bar rules, one tag per line |
 
-A paste into a rule-text field stays as it is.
+A paste into a condition (Edit Tag Relationships: Add condition, Edit incoming rule) or a rule-text field stays exactly as copied: a condition may hold several tags, quoted text, `/regexes/` and tags not used yet, which a dictation cleanup would drop or break (2026-10-22).
 
 ## Dictation Settings
 
@@ -106,7 +105,7 @@ twice because dictation tools such as Superwhisper drop a repeated word.
 
 - Server: `app/services/dictation_cleanup.py` `clean_dictated_paste()`, against
   `search_index.list_explicit_tag_frequencies()`; read-only endpoint
-  `POST /api2/notes/dictation-paste` `{text, target: "search"|"tags"|"tag"|"condition",
+  `POST /api2/notes/dictation-paste` `{text, target: "search"|"tags"|"tag",
   current_value, quote_open, quote_close, negate_phrase}`.
 - Browser: `dictation-paste-service.js` handles `paste` on `#search-input` and on
   `.note-tag-bar-input`. It inserts the pasted text as is, then replaces it with

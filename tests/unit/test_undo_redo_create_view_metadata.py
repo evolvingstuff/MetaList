@@ -146,7 +146,7 @@ def test_create_undo_redo_preserves_timestamp_metadata_for_next_view(
 
     # The view the notes route builds (build_view_state), as the browser receives it.
     state = snapshot.build_view_state(
-        editing_note_id=None,
+        editing_note_id=None, find_reveal_note_id=None,
         search=None,
         sort_mode=SORT_MODE_NORMAL,
         client_known_note_ids=set(),

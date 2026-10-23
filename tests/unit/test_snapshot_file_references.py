@@ -56,7 +56,7 @@ def _state_for(
     monkeypatch.setattr(snapshot_module, "get_all_locks", lambda: {})
     monkeypatch.setattr(snapshot_module, "get_file_reference_record", lambda file_id, token: file_record)
     return build_view_state(
-        editing_note_id=None,
+        editing_note_id=None, find_reveal_note_id=None,
         search=None,
         sort_mode="normal",
         client_known_note_ids=set(), previous_root_ids=[],

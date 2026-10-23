@@ -102,7 +102,6 @@ const PASTE_TARGETS = {
     search: { mode: 'search', separator: ' ' },
     tags: { mode: 'tags', separator: ' ' },
     tag: { mode: 'tag', separator: '' },
-    condition: { mode: 'condition', separator: ' ' },
     'tag-lines': { mode: 'tags', separator: '\n' },
 };
 

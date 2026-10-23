@@ -69,7 +69,7 @@ def test_untagged_view_shows_notes_without_non_meta_effective_tags(
     monkeypatch.setattr(snapshot, "get_all_locks", lambda: {})
 
     state = build_view_state(
-        editing_note_id=None,
+        editing_note_id=None, find_reveal_note_id=None,
         search="journal",
         sort_mode="normal",
         client_known_note_ids=set(), previous_root_ids=[],
@@ -128,7 +128,7 @@ def test_search_redacts_descendants_of_matching_root(monkeypatch: pytest.MonkeyP
     monkeypatch.setattr(snapshot, "get_all_locks", lambda: {})
 
     state = build_view_state(
-        editing_note_id=None,
+        editing_note_id=None, find_reveal_note_id=None,
         search="asdf",
         sort_mode="normal",
         client_known_note_ids=set(), previous_root_ids=[],
@@ -183,7 +183,7 @@ def test_search_snapshot_does_not_include_children_of_collapsed_root(monkeypatch
     monkeypatch.setattr(snapshot, "get_all_locks", lambda: {})
 
     state = build_view_state(
-        editing_note_id=None,
+        editing_note_id=None, find_reveal_note_id=None,
         search="asdf",
         sort_mode="normal",
         client_known_note_ids=set(), previous_root_ids=[],
@@ -241,7 +241,7 @@ def test_search_redacts_descendants_of_matching_non_root(monkeypatch: pytest.Mon
     monkeypatch.setattr(snapshot, "get_all_locks", lambda: {})
 
     state = build_view_state(
-        editing_note_id=None,
+        editing_note_id=None, find_reveal_note_id=None,
         search="asdf",
         sort_mode="normal",
         client_known_note_ids=set(), previous_root_ids=[],
@@ -328,7 +328,7 @@ def test_or_query_for_two_child_uuids_redacts_unrelated_same_root_sibling(
     monkeypatch.setattr(snapshot, "get_all_locks", lambda: {})
 
     state = build_view_state(
-        editing_note_id=None,
+        editing_note_id=None, find_reveal_note_id=None,
         search=f"{first_match_id} OR {second_match_id}",
         sort_mode="normal",
         client_known_note_ids=set(), previous_root_ids=[],
@@ -385,7 +385,7 @@ def test_search_does_not_force_include_nonmatching_editing_root(monkeypatch: pyt
     monkeypatch.setattr(snapshot, "get_all_locks", lambda: {})
 
     state = build_view_state(
-        editing_note_id="r2",
+        editing_note_id="r2", find_reveal_note_id=None,
         search="scratchpad",
         sort_mode="normal",
         client_known_note_ids=set(), previous_root_ids=[],

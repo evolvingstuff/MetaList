@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 from itertools import combinations
 from threading import RLock
@@ -729,6 +730,29 @@ class SearchIndex:
                 matching_counts=matching_counts, cooccurrences=cooccurrences,
             )
 
+    def count_written_tags_on_notes_with(self, term: str) -> Tuple[int, Dict[str, Tuple[int, int]]]:
+        """(notes carrying `term`, for each other tag written on them: (how many of those
+        notes it is written on, how many notes in all it is written on)).
+
+        Keys are casefolded, meta tags included; `term` itself is left out. Both counts
+        come from the same record, so the second is never below the first. Tag
+        Relationships ranks the tags linked to a focus tag by them (app/api/routes/ontology.py)."""
+        if not isinstance(term, str) or term == "":
+            raise TypeError("term must be a non-empty string")
+        term_casefold = term.casefold()
+        with self._lock:
+            if term_casefold not in self._tag_notes_casefold:
+                return 0, {}
+            notes = self._tag_notes_casefold[term_casefold]
+            shared: Counter[str] = Counter()
+            for note_int_id in notes:
+                shared.update({tag.casefold() for tag in self._note_explicit_tag_terms[note_int_id]})
+            if term_casefold in shared:
+                del shared[term_casefold]
+            return len(notes), {
+                tag: (count, self._explicit_tag_notes_casefold.count(tag)) for tag, count in shared.items()
+            }
+
     def count_tag_within_search(self, *, term: str, search: str) -> Tuple[int, int]:
         """(notes the search finds, how many of them carry the tag); a blank search finds every note."""
         if not isinstance(term, str) or term == "":
@@ -940,6 +964,21 @@ class SearchIndex:
         """Counts every change to the index, so a result kept from it can tell it is stale."""
         with self._lock:
             return self._revision
+
+    def note_ids_containing_words(self, words: Tuple[str, ...]) -> FrozenSet[str]:
+        """The notes whose searchable text holds every word, anywhere (find's first pass,
+        docs/ui/find.md): a superset of the notes whose visible text holds them, read
+        without rendering anything."""
+        if not isinstance(words, tuple) or len(words) == 0:
+            raise ValueError("note_ids_containing_words requires a non-empty tuple of words")
+        assert all(isinstance(word, str) and word.strip() == word and word != "" for word in words)
+        clause = SearchClause(
+            required_tags=frozenset(), forbidden_tags=frozenset(), required_text=words, forbidden_text=(),
+        )
+        with self._lock:
+            return frozenset(
+                self._id_to_uuid[note_int_id] for note_int_id in self._matching_note_int_ids_for_clause_locked(clause)
+            )
 
     def query_note_ids(self, search: str) -> Set[str]:
         t0 = time.perf_counter()

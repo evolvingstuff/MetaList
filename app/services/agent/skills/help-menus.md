@@ -58,6 +58,8 @@ Opening or dismissing the command palette does not clear undo/redo. Global actio
 
 ## Config
 - Tag mappings live in `app/static/config/command_palette_tags.json`.
+- `Find in list` opens the find bar, as `Cmd+F` does (`docs/ui/find.md`).
+- Any word of a command's name finds it in the palette (`edit` finds `Edit tag relationships`), besides the topic words listed for it (`ontology`, `synonym`).
 - Search `LLM` or `OpenAI` to find `AI Agent Settings` for API key and model configuration.
 - Endpoint definitions (behavior/labels) live in code.
 - Palette preferences (`pref.*`) and command usage history are persisted per namespace in the main SQLite DB via `/api2/auth/client-state*`, not in browser `localStorage`.

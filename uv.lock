@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.11, <3.15"
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -1416,7 +1416,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = "==1.2.2" },
     { name = "python-multipart", specifier = "==0.0.32" },
     { name = "rich", specifier = "==14.3.4" },
-    { name = "shockharness", marker = "extra == 'dev'", specifier = "==0.21.0" },
+    { name = "shockharness", marker = "extra == 'dev'", specifier = "==0.25.0" },
     { name = "starlette", specifier = "==1.3.1" },
     { name = "tqdm", specifier = "==4.70.0" },
     { name = "tree-sitter", specifier = "==0.25.2" },
@@ -2275,7 +2275,7 @@ wheels = [
 
 [[package]]
 name = "shockharness"
-version = "0.21.0"
+version = "0.25.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "tree-sitter" },
@@ -2283,9 +2283,9 @@ dependencies = [
     { name = "tree-sitter-javascript" },
     { name = "tree-sitter-typescript" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bc/43/f006e2f4fcb8b9bf342dcc7203acf930f0566c4b2975eb43703e7be02531/shockharness-0.21.0.tar.gz", hash = "sha256:7aaef40c4de031e30069000df77151da5fc373ed50eb75bb21d6409a653c319b", size = 3788228, upload-time = "2026-10-21T22:01:02.41Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3a/db/c544f2cbe156aa13920c9194db0c8b8829aa26619aa07cdf545492479e77/shockharness-0.25.0.tar.gz", hash = "sha256:26500ae47c35a31c441a349aeb1b34260a89eca6aa2a20e6d8b9cc411f44c904", size = 3852574, upload-time = "2026-10-22T14:22:48.417Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/96/fc/611900900545df8294164be0e7ef87c917f99abaaa0fb5c7953f5f7c879f/shockharness-0.21.0-py3-none-any.whl", hash = "sha256:9dc7745adea73b68921213cbb6d2af19fc41e200cc84dc0fb32eab113aeeac6a", size = 722807, upload-time = "2026-10-21T22:01:00.55Z" },
+    { url = "https://files.pythonhosted.org/packages/ad/7a/cc78c5acb3ad84f8c68f49ec68cc6e986495bd05a0a1dfded61f9ec84b4b/shockharness-0.25.0-py3-none-any.whl", hash = "sha256:2ec018eb199486e7abe7f2bc1db77038cbc77469e8eec3b944898d5e96b782e6", size = 745714, upload-time = "2026-10-22T14:22:46.531Z" },
 ]
 
 [[package]]

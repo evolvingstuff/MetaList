@@ -48,6 +48,12 @@
     "presentation": "dialog"
   },
   {
+    "id": "action.find_in_list",
+    "label": "Find in list",
+    "selector": "#find-in-list-bar",
+    "presentation": "dialog"
+  },
+  {
     "id": "action.edit_tag_relationships",
     "label": "Edit tag relationships",
     "selector": "#ontology-modal",

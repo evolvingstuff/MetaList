@@ -48,6 +48,8 @@ import {checkOntologySearch} from './browser-ontology-search-regressions.mjs';
 import {checkDiagramClicks} from './browser-diagram-click-regressions.mjs';
 import {checkFileLinkClicks} from './browser-file-link-click-regressions.mjs';
 import {checkImageResizeCaret} from './browser-image-resize-caret-regressions.mjs';
+import {checkTagRelationships} from './browser-tag-relationship-regressions.mjs';
+import {checkFindInList} from './browser-find-in-list-regressions.mjs';
 import {checkPictureDrag} from './browser-picture-drag-regressions.mjs';
 import {checkBackupReminder} from './browser-backup-reminder-regressions.mjs';
 import {checkReminderSurfaceWhileEditing} from './browser-reminder-surface-regressions.mjs';
@@ -201,6 +203,14 @@ try {
     await checkImageResizeCaret(page);
     assert.deepEqual(errors, []);
     console.log(`PASS image resize caret regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'tag-relationships') {
+    await checkTagRelationships(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS tag relationship regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'find-in-list') {
+    await checkFindInList(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS find in list regressions in ${await browser.version()}`);
   } else if (process.env.BROWSER_TEST_SUITE === 'tag-suggestion-menu') {
     await checkTagSuggestionMenu(page);
     assert.deepEqual(errors, []);

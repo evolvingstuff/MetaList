@@ -71,6 +71,7 @@ export function buildCommandPaletteEndpoints(deps) {
     const resetAllPreferences = requireAction(actions, 'resetAllPreferences');
     const openSearchSuggestionStatistics = requireAction(actions, 'openSearchSuggestionStatistics');
     const openOntologyEditor = requireAction(actions, 'openOntologyEditor');
+    const openFindBar = requireAction(actions, 'openFindBar');
     const openKeyboardShortcutsHelp = requireAction(actions, 'openKeyboardShortcutsHelp');
     const attachFileToCurrentNote = requireAction(actions, 'attachFileToCurrentNote');
     const addExcalidrawDiagram = requireAction(actions, 'addExcalidrawDiagram');
@@ -445,6 +446,12 @@ export function buildCommandPaletteEndpoints(deps) {
             kind: 'form',
             label: 'Generate random password',
             execute: async () => openRandomPasswordGenerator(),
+        },
+        {
+            id: 'action.find_in_list',
+            kind: 'action',
+            label: 'Find in list',
+            execute: async () => openFindBar(),
         },
         {
             id: 'action.edit_tag_relationships',
