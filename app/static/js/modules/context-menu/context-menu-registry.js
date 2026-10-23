@@ -45,6 +45,14 @@ function buildTagContextItems(context, handlers) {
     ];
 }
 
+// ⌘+ and ⌘− over a picture or diagram resize it (context-menu-events.js).
+function imageResizeShortcut(context, key) {
+    if (typeof context.isMac !== 'boolean') {
+        throw new Error('Image menu context missing isMac boolean');
+    }
+    return formatMenuShortcut({ isMac: context.isMac, mod: true, shift: false, key });
+}
+
 // Right-clicking a rendered Excalidraw diagram: edit it, resize it, zoom it, or save the .excalidraw file.
 function buildDiagramItems(context, imageContext, handlers) {
     for (const [name, handler] of Object.entries(handlers)) {
@@ -64,12 +72,14 @@ function buildDiagramItems(context, imageContext, handlers) {
         label: 'Make Bigger',
         icon: 'zoom_in',
         enabled: true,
+        shortcut: imageResizeShortcut(context, '+'),
         onSelect: () => handlers.onMakeImageBigger(imageContext),
     }, {
         id: 'make-image-smaller',
         label: 'Make Smaller',
         icon: 'zoom_out',
         enabled: true,
+        shortcut: imageResizeShortcut(context, '\u2212'),
         onSelect: () => handlers.onMakeImageSmaller(imageContext),
     }, {
         id: 'reset-image-size',
@@ -254,12 +264,14 @@ function buildNoteContextItems(context, handlers) {
             label: 'Make Bigger',
             icon: 'zoom_in',
             enabled: true,
+            shortcut: imageResizeShortcut(context, '+'),
             onSelect: () => onMakeImageBigger(imageContext),
         }, {
             id: 'make-image-smaller',
             label: 'Make Smaller',
             icon: 'zoom_out',
             enabled: true,
+            shortcut: imageResizeShortcut(context, '\u2212'),
             onSelect: () => onMakeImageSmaller(imageContext),
         }, {
             id: 'reset-image-size',
@@ -715,6 +727,28 @@ function requireViewFlag(context, name) {
 // The menu outside any note: actions about this view and workspace
 // (docs/ui/controls.md), grouped: adding, history, moving around the
 // list, how the view looks, opening things, export, and logging out.
+// All notes or Untagged notes, the current one ticked.
+function buildViewModeItem(isUntaggedView, onSetUntaggedView) {
+    if (typeof isUntaggedView !== 'boolean') {
+        throw new Error('View item requires isUntaggedView boolean');
+    }
+    return {
+        id: 'view', label: 'View', icon: 'view', enabled: true,
+        submenu: [
+            { id: 'view-all-notes', label: 'All notes', checked: !isUntaggedView, enabled: isUntaggedView, onSelect: () => onSetUntaggedView(false) },
+            { id: 'view-untagged-notes', label: 'Untagged notes', checked: isUntaggedView, enabled: !isUntaggedView, onSelect: () => onSetUntaggedView(true) },
+        ],
+    };
+}
+
+// Right-clicking the search box past what is typed: what the view shows and its order.
+function buildSearchBarContextItems(context, handlers) {
+    return [
+        buildViewModeItem(requireViewFlag(context, 'isUntaggedView'), requireViewHandler(handlers, 'onSetUntaggedView')),
+        buildSortModeItem(context.sortMode, requireViewHandler(handlers, 'onSetSortMode')),
+    ];
+}
+
 function buildViewContextItems(context, handlers) {
     if (!context || typeof context !== 'object') {
         throw new Error('buildViewContextItems requires context object');
@@ -798,13 +832,7 @@ function buildViewContextItems(context, handlers) {
     const onToggleNoteTags = requireViewHandler(handlers, 'onToggleNoteTags');
     const onSetTheme = requireViewHandler(handlers, 'onSetTheme');
     items.push(
-        {
-            id: 'view', label: 'View', icon: 'view', enabled: true, separated: true,
-            submenu: [
-                { id: 'view-all-notes', label: 'All notes', checked: !isUntaggedView, enabled: isUntaggedView, onSelect: () => onSetUntaggedView(false) },
-                { id: 'view-untagged-notes', label: 'Untagged notes', checked: isUntaggedView, enabled: !isUntaggedView, onSelect: () => onSetUntaggedView(true) },
-            ],
-        },
+        { ...buildViewModeItem(isUntaggedView, onSetUntaggedView), separated: true },
         buildSortModeItem(context.sortMode, handlers.onSetSortMode),
         {
             id: 'show', label: 'Show', icon: 'show', enabled: true,
@@ -912,6 +940,9 @@ export function buildContextMenuItems(context, handlers) {
     }
     if (kind === 'view') {
         return buildViewContextItems(context, handlers);
+    }
+    if (kind === 'search-bar') {
+        return buildSearchBarContextItems(context, handlers);
     }
 
     return [];

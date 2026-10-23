@@ -340,8 +340,8 @@ test('buildContextMenuItems prepends image actions for note image context', () =
     );
 
     assert.deepEqual(menuOutline(items).slice(0, 8), [
-        'Make Bigger',
-        'Make Smaller',
+        'Make Bigger ⌘+',
+        'Make Smaller ⌘−',
         'Reset Size',
         '— Copy Image',
         'Save Image',

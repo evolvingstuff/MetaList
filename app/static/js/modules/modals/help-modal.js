@@ -76,6 +76,7 @@ export class HelpModal extends BaseModal {
                     { keys: 'Tab', description: 'Focus search and select the current query (idle only)' },
                     { keys: `${modKey}+Z`, description: 'Undo' },
                     { keys: `${modKey}+${shiftKey}+Z / ${modKey}+Y`, description: 'Redo' },
+                    { keys: `${modKey}++ / ${modKey}+−`, description: 'Make the picture under the pointer bigger / smaller' },
                 ]
             },
             {

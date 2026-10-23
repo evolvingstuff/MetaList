@@ -97,3 +97,38 @@ export async function checkSearchInputRejected(page) {
 
   await clearSearch(page);
 }
+
+// Right-clicking the search box past what is typed (or an empty box) offers View and
+// Sort by, the background menu's two; on a typed tag it still offers the tag's own menu.
+async function rightClickSearch(page, where) {
+  const point = await page.evaluate(where => {
+    const input = document.getElementById('search-input');
+    const box = input.getBoundingClientRect();
+    const y = box.top + box.height / 2;
+    if (where === 'past-text') return {x: box.right - 40, y};
+    // On the first character of the typed text.
+    const style = getComputedStyle(input);
+    return {x: box.left + parseFloat(style.paddingLeft) + 3, y};
+  }, where);
+  await page.mouse.click(point.x, point.y, {button: 'right'});
+  await page.waitForSelector('#context-menu.is-visible');
+  const labels = await page.evaluate(() => [...document.querySelectorAll('#context-menu.is-visible .context-menu-item-label')]
+    .map(node => node.textContent.trim()));
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.querySelector('#context-menu.is-visible') === null);
+  return labels;
+}
+
+export async function checkSearchBarMenu(page) {
+  await page.reload();
+  await page.waitForSelector('[data-app-ready="true"]');
+  await idle(page);
+  assert.deepEqual(await rightClickSearch(page, 'past-text'), ['View', 'Sort by'], 'an empty search box offers View and Sort by');
+  await page.click('#search-input');
+  await page.keyboard.type('menucheck');
+  await idle(page);
+  await page.keyboard.press('Escape');
+  assert.deepEqual(await rightClickSearch(page, 'past-text'), ['View', 'Sort by'], 'past the typed tag: View and Sort by');
+  assert.deepEqual(await rightClickSearch(page, 'on-text'), ['Edit Tag Relationships'], 'on the typed tag: its own menu');
+  await clearSearch(page);
+}

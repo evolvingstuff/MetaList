@@ -1331,6 +1331,40 @@ function showLinkContextMenu(event, linkContext, referenceContext) {
     });
 }
 
+// What the view shows (All notes or Untagged) and its order: the background menu's,
+// and the search box's past what is typed.
+function buildViewAndOrderHandlers() {
+    return {
+        onSetUntaggedView: (isUntaggedView) => {
+            void CommandGate.run('contextMenu.view.untagged', async () => {
+                await CommandPalette.setIsUntaggedView(isUntaggedView);
+            });
+        },
+        onSetSortMode: (sortMode) => {
+            void CommandGate.run('contextMenu.view.sort_mode', async () => {
+                await CommandPalette.setSortMode(sortMode);
+            });
+        },
+    };
+}
+
+// Right-clicking the search box past what is typed (or an empty box): View and Sort by.
+function showSearchBarContextMenu(event) {
+    if (typeof event.clientX !== 'number' || typeof event.clientY !== 'number') {
+        throw new Error('Context menu event missing coordinates');
+    }
+    const items = buildContextMenuItems({
+        kind: 'search-bar',
+        isUntaggedView: ModeContext.isUntaggedView === true,
+        sortMode: ModeContext.activeTabSortMode,
+    }, buildViewAndOrderHandlers());
+    showContextMenu({
+        items,
+        position: { x: event.clientX, y: event.clientY },
+        onClose: null,
+    });
+}
+
 function showViewContextMenu(event) {
     if (!event) {
         throw new Error('showViewContextMenu called without event');
@@ -1390,11 +1424,7 @@ function showViewContextMenu(event) {
         onFullyCollapseAll: () => {
             void CommandPalette.fullyCollapseAll();
         },
-        onSetUntaggedView: (isUntaggedView) => {
-            void CommandGate.run('contextMenu.view.untagged', async () => {
-                await CommandPalette.setIsUntaggedView(isUntaggedView);
-            });
-        },
+        ...buildViewAndOrderHandlers(),
         onSetTheme: (theme) => {
             void CommandPalette.applyPreference('pref.theme', theme);
         },
@@ -1420,11 +1450,6 @@ function showViewContextMenu(event) {
         },
         onToggleNoteTags: (nextValue) => {
             void CommandPalette.applyPreference('pref.show_note_tags', nextValue);
-        },
-        onSetSortMode: (sortMode) => {
-            void CommandGate.run('contextMenu.view.sort_mode', async () => {
-                await CommandPalette.setSortMode(sortMode);
-            });
         },
         onAddNoteAtTop: () => {
             void CommandGate.run('contextMenu.view.add_at_top', async () => {
@@ -1519,6 +1544,12 @@ function handleContextMenu(event) {
     }
 
     if (priorityTarget?.kind === 'search-input') {
+        const input = priorityTarget.element;
+        // Past what is typed (or an empty box), with nothing selected: View and Sort by.
+        if (input.selectionStart === input.selectionEnd && isInputPointPastText(input, event.clientX)) {
+            showSearchBarContextMenu(event);
+            return;
+        }
         const tagInfo = resolveTagFromInput(
             event,
             priorityTarget.element,
@@ -1584,8 +1615,77 @@ function handleContextMenu(event) {
     }
 }
 
+// ⌘+ and ⌘− (Ctrl off a Mac) over a picture or diagram in the list make it bigger
+// or smaller, as its menu's Make Bigger and Make Smaller do, in a note being edited
+// or not. Anywhere else the keys zoom the page as usual.
+// The key is known by where it is (event.code: the +/= key and the keypad's +), so a
+// keyboard layout or a browser that reports another character still resizes; an
+// event without a code (a synthetic one) is known by its character.
+const IMAGE_RESIZE_ACTION_BY_KEY_CODE = Object.freeze({
+    Equal: 'bigger', NumpadAdd: 'bigger', Minus: 'smaller', NumpadSubtract: 'smaller',
+});
+const IMAGE_RESIZE_ACTION_BY_KEY = Object.freeze({ '=': 'bigger', '+': 'bigger', '-': 'smaller', '_': 'smaller' });
+
+// 'bigger', 'smaller', or '' for a key that resizes nothing.
+function imageResizeActionForKey(event) {
+    if (Object.hasOwn(IMAGE_RESIZE_ACTION_BY_KEY_CODE, event.code)) {
+        return IMAGE_RESIZE_ACTION_BY_KEY_CODE[event.code];
+    }
+    if (event.code === '' && Object.hasOwn(IMAGE_RESIZE_ACTION_BY_KEY, event.key)) {
+        return IMAGE_RESIZE_ACTION_BY_KEY[event.key];
+    }
+    return '';
+}
+
+// Where the pointer last was: the picture under it is found from here when a key
+// is pressed, since :hover is not set on a picture re-rendered under a still pointer.
+const imageResizePointerState = ApplicationState.createFields('image-resize-pointer', {
+    clientX: null,
+    clientY: null,
+});
+
+function rememberPointerForImageResize(event) {
+    if (imageResizePointerState.clientX !== event.clientX) imageResizePointerState.clientX = event.clientX;
+    if (imageResizePointerState.clientY !== event.clientY) imageResizePointerState.clientY = event.clientY;
+}
+
+function imageUnderPointer() {
+    if (imageResizePointerState.clientX === null || imageResizePointerState.clientY === null) {
+        return null;
+    }
+    const element = document.elementFromPoint(imageResizePointerState.clientX, imageResizePointerState.clientY);
+    if (!(element instanceof HTMLImageElement) || element.closest('#notes-container') === null) {
+        return null;
+    }
+    return element;
+}
+
+function handleImageResizeShortcut(event) {
+    const hasCommandKey = isMacPlatform() ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
+    const action = imageResizeActionForKey(event);
+    if (!hasCommandKey || event.altKey || action === '') {
+        return;
+    }
+    const image = imageUnderPointer();
+    if (image === null) {
+        return;
+    }
+    const imageContext = resolveImageContextFromElement(image);
+    if (imageContext === null) {
+        return;
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    void CommandGate.run(`keyboard.image.${action}`, async () => {
+        await resizeImageFromContext(imageContext, action);
+    });
+}
+
 export function initContextMenuEvents() {
     initContextMenuService();
+    document.addEventListener('mousemove', rememberPointerForImageResize, { capture: true, passive: true });
+    // On window, before the page (and the browser's zoom) sees the key.
+    window.addEventListener('keydown', unlessDiagramEditorOpen(handleImageResizeShortcut), { capture: true });
     // Before the browser may select the word under the pointer (macOS).
     document.addEventListener('mousedown', rememberSelectionAtRightPress, { capture: true });
     // Firefox moves the caret at pointerdown, before mousedown.
