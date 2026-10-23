@@ -91,7 +91,13 @@ async function reloadAtTop(page) {
   await page.reload();
   await page.waitForSelector('[data-app-ready="true"]');
   await idle(page);
-  await page.evaluate(() => window.scrollTo(0, 0));
+  // The reload brings back the saved place, and only the notes near it are loaded, so
+  // scroll position 0 can still be far below the first note (the notes above load in and
+  // the view stays put). The up arrow loads the start of the list, as a person would, and
+  // dims once the first note is at the top.
+  if (!await page.$eval('#scroll-to-top-button', button => button.disabled)) await page.click('#scroll-to-top-button');
+  await page.waitForSelector('#scroll-to-top-button:disabled');
+  await idle(page);
   await pause(SCROLL_SETTLE_MS);
 }
 
