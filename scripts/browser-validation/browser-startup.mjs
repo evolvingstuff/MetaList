@@ -166,7 +166,7 @@ async function checkNamespaceSwitchStaysInTab(context, page) {
       const url = new URL(args[0] instanceof Request ? args[0].url : String(args[0]), location.href);
       if (url.pathname !== '/api2/auth/login-namespaces/open') return originalFetch(...args);
       if (answer === 'refuse') {
-        return new Response(JSON.stringify({detail: 'Namespace switch-check is not available'}),
+        return new Response(JSON.stringify({detail: 'Vault switch-check is not available'}),
           {status: 400, headers: {'Content-Type': 'application/json'}});
       }
       await new Promise(resolve => setTimeout(resolve, 1500));
@@ -185,7 +185,7 @@ async function checkNamespaceSwitchStaysInTab(context, page) {
     await page.waitForFunction(() => document.getElementById('login-namespace-status').dataset.state === 'error', {timeout: 10000});
     const refused = await loginState();
     assert.deepEqual(openedTargets, [], 'Switching namespace must not open a tab');
-    assert.equal(refused.status, 'Failed to open namespace: Namespace switch-check is not available');
+    assert.equal(refused.status, 'Failed to open vault: Vault switch-check is not available');
     assert.equal(refused.selected, before.selected, 'A refused switch must put the dropdown back');
     assert.equal(refused.disabled, false);
     assert.deepEqual([refused.formShown, refused.loadingShown], [true, false], 'A refused switch must leave the form in place');
