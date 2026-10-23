@@ -29,8 +29,10 @@ DATE_RANGE_NONE = "none"
 DATE_RANGE_KINDS = frozenset({
     DATE_RANGE_TODAY, DATE_RANGE_LAST_7_DAYS, DATE_RANGE_LAST_30_DAYS, DATE_RANGE_THIS_YEAR, DATE_RANGE_CUSTOM,
 })
-# How many days back a relative range reaches, today included.
-_DAYS_BACK = {DATE_RANGE_TODAY: 0, DATE_RANGE_LAST_7_DAYS: 6, DATE_RANGE_LAST_30_DAYS: 29}
+# How many days a relative range spans, today included.
+_WEEK_DAYS = 7
+_MONTH_DAYS = 30
+_DAYS_SPANNED = {DATE_RANGE_TODAY: 1, DATE_RANGE_LAST_7_DAYS: _WEEK_DAYS, DATE_RANGE_LAST_30_DAYS: _MONTH_DAYS}
 _FIRST_MONTH = 1
 _FIRST_DAY = 1
 _MONTHS_IN_YEAR = 12
@@ -121,7 +123,8 @@ def date_filter_bounds(date_filter: RootDateFilter, *, today: date) -> tuple[dat
         return _custom_end(date_filter.from_date), _custom_end(date_filter.to_date)
     if date_filter.range_kind == DATE_RANGE_THIS_YEAR:
         return date(today.year, _FIRST_MONTH, _FIRST_DAY), today
-    return today - timedelta(days=_DAYS_BACK[date_filter.range_kind]), today
+    # The range ends today, so it starts one day fewer than it spans before it.
+    return today - timedelta(days=_DAYS_SPANNED[date_filter.range_kind] - 1), today
 
 
 def filter_root_ids_by_date(root_ids: List[str], date_filter: RootDateFilter, *, today: date) -> List[str]:

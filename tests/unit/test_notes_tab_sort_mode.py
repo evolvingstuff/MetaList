@@ -136,10 +136,12 @@ def _date_filter_request(**overrides: str) -> dict[str, str]:
 def test_update_tab_date_filter_sets_the_range_and_resets_undo_when_changed(monkeypatch: pytest.MonkeyPatch) -> None:
     stored: list[object] = []
     resets: list[tuple[str, str]] = []
-    monkeypatch.setattr(
-        notes_route.tab_state_store, "set_date_filter",
-        lambda *, tab_id, date_filter: stored.append((tab_id, date_filter)) or {"changed": True},  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append returns None)"
-    )
+
+    def set_date_filter(*, tab_id: str, date_filter: object) -> dict[str, bool]:
+        stored.append((tab_id, date_filter))
+        return {"changed": True}
+
+    monkeypatch.setattr(notes_route.tab_state_store, "set_date_filter", set_date_filter)
     monkeypatch.setattr(notes_route, "reset_undo_stack", lambda client_id, undo_context: resets.append((client_id, undo_context)))
 
     notes_route.update_tab_date_filter(_date_filter_request())

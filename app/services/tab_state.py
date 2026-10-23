@@ -122,6 +122,13 @@ def _normalize_reference_views(
     return normalized
 
 
+def _saved_map(parsed: Dict[str, object], key: str) -> object:
+    """A map saved with the tabs, or an empty one in tab state saved before it existed."""
+    if key in parsed:
+        return parsed[key]
+    return {}
+
+
 def _normalize_date_filters(
     filters: object,
     tabs: Dict[str, Dict[str, object]],
@@ -483,20 +490,14 @@ class TabStateStore:
             raise RuntimeError("tab-state JSON version must be a non-negative integer")
         if not isinstance(tab_order, list):
             raise RuntimeError("tab-state JSON tabOrder must be a list")
-        # Tab state saved before reference views (or date filters) were kept with the
-        # tabs has none.
-        reference_views: object = {}
-        if "referenceViews" in parsed:
-            reference_views = parsed["referenceViews"]
-        date_filters: object = {}
-        if "dateFilters" in parsed:
-            date_filters = parsed["dateFilters"]
         return {
             "activeTabId": active_tab_id,
             "tabs": self._normalize_tabs(tabs, from_storage=True),
             "tabOrder": [str(entry) for entry in tab_order],
-            "referenceViews": reference_views,
-            "dateFilters": date_filters,
+            # Tab state saved before reference views (or date filters) were kept with
+            # the tabs has none.
+            "referenceViews": _saved_map(parsed, "referenceViews"),
+            "dateFilters": _saved_map(parsed, "dateFilters"),
             "version": version,
         }
 

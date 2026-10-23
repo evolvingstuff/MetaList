@@ -1,5 +1,4 @@
 import { ApplicationState } from '../../application-state.js';
-import { localDateText } from '../../local-date-text.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import { showSearchInputChip } from './search-input-chip-service.js';
 import { DATE_RANGE_FIELDS, DATE_RANGE_KINDS, OPEN_DATE } from './date-range-kinds.js';
@@ -104,7 +103,8 @@ function parseIsoDate(text) {
     if (match === null) {
         throw new Error(`A date range end must be YYYY-MM-DD, not ${text}`);
     }
-    return new Date(Number(match[1]), Number(match[2]) - MONTH_INDEX_OFFSET, Number(match[3]));
+    const [, year, month, day] = match;
+    return new Date(Number(year), Number(month) - MONTH_INDEX_OFFSET, Number(day));
 }
 
 function formatDay(day, options) {
@@ -149,11 +149,6 @@ export function getDateRangeTooltip(filter) {
         return `${FIELD_TOOLTIP_LABELS[filter.field]} ${describeCustomRange(filter, 'long')}`;
     }
     return `${FIELD_TOOLTIP_LABELS[filter.field]} ${PRESET_CHIP_TEXT[filter.rangeKind]}`;
-}
-
-/** Today as the custom range dialog starts its To date. */
-export function todayDateText() {
-    return localDateText(new Date());
 }
 
 /** The chip inside the search input: shown while the active tab has a date range. */
