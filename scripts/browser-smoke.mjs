@@ -670,7 +670,7 @@ try {
       executed: window.__auditXss === 1,
     };
   });
-  assert.equal(vendorChecks.purifier, '3.4.16');
+  assert.equal(vendorChecks.purifier, '3.4.17');
   assert(vendorChecks.clean && vendorChecks.mermaid && !vendorChecks.executed);
   console.log('PASS actual vendored sanitization and Mermaid rendering');
 
