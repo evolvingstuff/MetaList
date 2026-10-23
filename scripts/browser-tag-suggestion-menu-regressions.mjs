@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 
 import {runThenCleanUp} from './suite-outcome.mjs';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
+
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 
 // Right-clicking an entry in the tag bar's suggestion list (docs/ui/tag-bar.md,
 // docs/ui/interaction-principles.md): the tag menu opens for that entry, saying
@@ -19,8 +22,7 @@ const TARGET_REASONS = ['Why suggested', `Matches what you typed: "${TYPED}"`, "
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: 300});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 // Top to bottom: the edited note, two notes giving the tags their use, then

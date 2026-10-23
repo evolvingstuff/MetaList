@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
 
 // Image sizes from the note menu while editing (docs/ui/content-formatting.md,
 // docs/ui/interaction-principles.md): right-clicking an image in the note being
@@ -9,8 +9,8 @@ import { waitForAppIdle } from './browser-app-idle.mjs';
 // the size, then the typing.
 
 const SETTLE_MS = 400;
-// Quiet network for this long counts as idle.
-const NETWORK_IDLE_MS = 300;
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 // Halfway across or down a box: its middle.
 const MIDDLE = 0.5;
 // Positions are compared to the pixel; 1px covers sub-pixel rounding only.
@@ -27,8 +27,7 @@ const WIDE_IMAGE_PX = 2000;
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 async function reloadApp(page) {

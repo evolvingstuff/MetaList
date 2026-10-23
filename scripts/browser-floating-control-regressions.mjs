@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { runThenCleanUp } from './suite-outcome.mjs';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
 
 // Floating controls pressed while a note is being edited (docs/ui/interaction-principles.md):
 // - the error banner's × closes it on the first press and leaves the note in edit mode,
@@ -9,8 +9,8 @@ import { waitForAppIdle } from './browser-app-idle.mjs';
 //   (principle 6), and its × then closes it on the first press.
 
 const SETTLE_MS = 400;
-// The network counts as idle after this long without a request.
-const NETWORK_IDLE_MS = 300;
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 // Where in the image the menu is opened: its middle.
 const MIDDLE = 0.5;
 // A 48×48 red PNG (as in browser-image-menu-regressions.mjs).
@@ -18,8 +18,7 @@ const PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAAQklEQVR4nO3O
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 function modeState(page) {

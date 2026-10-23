@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 
 import {runThenCleanUp} from './suite-outcome.mjs';
-import {waitForAppIdle} from './browser-app-idle.mjs';
+import {waitForAppQuiet} from './browser-app-idle.mjs';
+
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 
 // Find in the list (docs/ui/find.md), each agreed case at exact positions:
 // - Ctrl/Cmd+F opens the bar just under the search controls and moves nothing; while
@@ -33,8 +36,7 @@ const ROOT_COUNT = 250;
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: 300});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 // Roots top to bottom: the first match in view; two near ones; fillers; one below the

@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { runThenCleanUp } from './suite-outcome.mjs';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
 
 // Switching tabs: after each switch, the notes shown, the search box and the
 // server's active tab all belong to the tab that was picked.
 
 const SETTLE_MS = 400;
-// The network counts as idle after this long without a request.
-const NETWORK_IDLE_MS = 300;
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 // Each tab is switched to and from this many times.
 const ROUND_TRIPS = 4;
 const TAB_QUERIES = ['scratchpad', 'todo'];
@@ -16,8 +16,7 @@ const MARKUP_QUERY = '"<b>x</b>"';
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 async function createNotes(page) {

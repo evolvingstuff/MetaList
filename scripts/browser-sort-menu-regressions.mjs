@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import {waitForPageSettled} from './browser-app-idle.mjs';
+import {waitForAppQuiet, waitForPageSettled} from './browser-app-idle.mjs';
+
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 100;
 
 async function openSortMenu(page) {
   // A menu click while a command runs is dropped (CommandGate), and the check before
@@ -67,7 +70,7 @@ export async function checkBackgroundSortMenu(page) {
           await switchToTabContext(originalTabId, {animateNoteChanges: false});
         });
       });
-      await page.waitForNetworkIdle({idleTime:100});
+      await waitForAppQuiet(page, REQUESTS_QUIET_MS);
       await waitForSortMode(page, nextMode);
     }
     currentMode = nextMode;

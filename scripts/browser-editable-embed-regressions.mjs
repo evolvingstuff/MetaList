@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
 
 // Embeds (docs/ui/references.md): a note whose only content is a reference,
 // [[UUID]], shows its source in place. An embed is a window onto its source:
@@ -11,16 +11,15 @@ import { waitForAppIdle } from './browser-app-idle.mjs';
 // an embed has its own arrow, which folds that note everywhere.
 
 const SETTLE_MS = 400;
-// The network counts as idle after this long without a request.
-const NETWORK_IDLE_MS = 300;
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 const SEARCH_TAG = 'zz-embed-search';
 // A host excluded from the search while its parent matches is shown redacted.
 const EXCLUDED_TAG = 'zz-embed-hidden';
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 async function reloadApp(page) {

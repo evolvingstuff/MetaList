@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
 
 // Pasting a copied note's reference (docs/ui/controls.md, docs/ui/references.md):
 // ⌘C while editing a note (no text selected) remembers that note. A reference
@@ -12,8 +12,8 @@ import { waitForAppIdle } from './browser-app-idle.mjs';
 const SETTLE_MS = 400;
 // Clicks this far inside a note's border land on its padding.
 const PADDING_PX = 4;
-// The network counts as idle after this long without a request.
-const NETWORK_IDLE_MS = 300;
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 // Typing into the command palette, and a submenu opening on hover.
 const PALETTE_OPEN_MS = 400;
 const PALETTE_FILTER_MS = 300;
@@ -26,8 +26,7 @@ const BLOCKED_MESSAGE = 'sort order';
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 async function reloadApp(page) {

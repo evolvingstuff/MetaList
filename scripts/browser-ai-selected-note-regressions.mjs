@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict';
+import {waitForAppQuiet} from './browser-app-idle.mjs';
+
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 100;
 
 // Frames a moved button must hold still before it is clicked.
 const TOGGLE_SETTLED_FRAMES = 5;
@@ -18,7 +22,7 @@ export async function checkAiSelectedNote(page) {
     });
     await page.reload();
     await page.waitForSelector('[data-app-ready="true"]');
-    await page.waitForNetworkIdle({idleTime: 100});
+    await waitForAppQuiet(page, REQUESTS_QUIET_MS);
     await page.evaluate(async () => {
         const {AiChatPanel} = await import('/static/js/modules/ai-chat/ai-chat-panel-controller.js');
         const {stateValuesEqual} = await import('/static/js/modules/application-state.js');

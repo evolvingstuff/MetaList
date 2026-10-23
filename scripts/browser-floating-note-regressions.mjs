@@ -1,15 +1,17 @@
 import assert from 'node:assert/strict';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
 
-// The view has settled: no command running, the network idle, and the scroll
+// The view has settled: no command running, requests quiet, and the scroll
 // position unchanged for a few frames. Any scroll closes an open context menu,
 // so a right-click waits for the scroll restored after a reload to land.
 const SETTLED_FRAMES = 5;
-const NETWORK_IDLE_MS = 300;
+const SETTLED_QUIET_MS = 300;
+// After a floating window opens: requests quiet this long (the window asks for its
+// note every 500 ms, so this must stay shorter).
+const REQUESTS_QUIET_MS = 100;
 
 async function settled(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
+  await waitForAppQuiet(page, SETTLED_QUIET_MS);
   await page.evaluate(frames => new Promise(resolve => {
     let last = window.scrollY;
     let still = 0;
@@ -98,14 +100,14 @@ export async function checkFloatingNotes(page) {
   await waitForWindowText(page, first, 'Floating child original');
   assert.equal(await page.$eval('.floating-note-window', host => host.shadowRoot.textContent.includes('Floating parent excluded')), false);
   assert.equal(await page.$eval('.floating-note-window', host => host.shadowRoot.querySelectorAll('.note').length), 3);
-  await page.waitForNetworkIdle({idleTime: 100});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
   const second = await page.evaluate(async root => {
     const {openFloatingNote} = await import('/static/js/modules/mode-manager/services/floating-note-service.js');
     const {CommandGate} = await import('/static/js/modules/mode-manager/services/command-gate-service.js');
     return CommandGate.run('smoke.floating-second', () => openFloatingNote(root));
   }, fixture.child);
   await waitForWindowText(page, second, 'Floating child original');
-  await page.waitForNetworkIdle({idleTime: 100});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 
   // Real pointer drags move and resize independently of document scrolling.
   const before = await readRect(page, second);

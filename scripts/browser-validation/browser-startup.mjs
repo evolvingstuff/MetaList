@@ -85,6 +85,10 @@ async function checkPage(context, origin, coldRun) {
       } finally {
         navigationInProgress = false;
       }
+      // Network idle is the condition here: every startup asset (scripts, styles, fonts,
+      // images, not only fetches) has loaded, so the checks below see all of them. This
+      // page has no request interception, so puppeteer's count cannot lose an aborted
+      // request (the reason the browser suites wait with waitForAppQuiet instead).
       await page.waitForNetworkIdle({idleTime: 500, timeout: 30000});
       assert(scripts.size > 20, `Expected a real module graph, received ${scripts.size} script URLs`);
       assert.deepEqual(errors, [], `Startup failed for ${origin}`);

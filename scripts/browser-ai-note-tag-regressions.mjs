@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
+
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 
 // Suggest Tags with AI (docs/ui/tag-bar.md, docs/ui/interaction-principles.md):
 // the edited note's right-click menu, and a right-click past the tags in its
@@ -23,8 +26,7 @@ const PRIVATE_TAG = 'zorb-private';
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: 300});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 const LONG_TEXT = Array.from({length: 60}, (_, index) => `<p>Line ${index + 1} of a long note about Kyoto.</p>`).join('');

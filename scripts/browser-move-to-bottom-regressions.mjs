@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 
 import {runThenCleanUp} from './suite-outcome.mjs';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
+
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 
 // Move to Bottom keeps the view still (docs/ui/interaction-principles.md): the
 // notes above stay put and the ones below close the gap; nothing scrolls. In a
@@ -22,8 +25,7 @@ function paragraphs(label, count) {
 }
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: 300});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 async function reload(page) {

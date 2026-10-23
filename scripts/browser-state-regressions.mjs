@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict';
+import {waitForAppQuiet} from './browser-app-idle.mjs';
+
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 100;
 
 export async function checkAdditionalStateTransitions(page) {
   await page.evaluate(async () => {
@@ -18,10 +22,10 @@ export async function checkAdditionalStateTransitions(page) {
     const {CommandPalette} = await import('/static/js/modules/command-palette/command-palette-controller.js');
     await CommandPalette.openOntologyEditor();
   });
-  await page.waitForNetworkIdle({idleTime:100});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
   await page.click('#ontology-search-input');
   await page.keyboard.type('state-audit');
-  await page.waitForNetworkIdle({idleTime:100});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
   for (let count = 0; count < 2; count += 1) {
     await page.click('[data-action="add-tag"]');
     await page.waitForSelector('#ontology-dialog-overlay.is-visible');
@@ -33,16 +37,16 @@ export async function checkAdditionalStateTransitions(page) {
       await page.click('[data-action="dialog-submit"]');
     }
     await page.waitForSelector('#ontology-dialog-overlay.is-visible', {hidden:true});
-    await page.waitForNetworkIdle({idleTime:100});
+    await waitForAppQuiet(page, REQUESTS_QUIET_MS);
   }
   await page.click('[data-action="add-right"]');
   await page.waitForSelector('#ontology-dialog-overlay.is-visible');
   await page.click('#ontology-dialog-input');
   await page.keyboard.type('state-audit-two');
-  await page.waitForNetworkIdle({idleTime:100});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
   await page.click('[data-action="dialog-submit"]');
   await page.waitForSelector('#ontology-dialog-overlay.is-visible', {hidden:true});
-  await page.waitForNetworkIdle({idleTime:100});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
   await page.click('#ontology-search-input');
   await page.keyboard.type('state-audit');
   await page.waitForSelector('.ontology-search-result');
@@ -50,9 +54,9 @@ export async function checkAdditionalStateTransitions(page) {
     await page.keyboard.press(key);
   }
   await page.keyboard.press('Enter');
-  await page.waitForNetworkIdle({idleTime:100});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
   await page.click('#ontology-middle-list .ontology-tag');
-  await page.waitForNetworkIdle({idleTime:100});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
   await page.keyboard.press('Escape');
   console.log('PASS ontology typing, dialog cancellation/reopening, relationship creation, repeated focus, and arrow boundaries');
 
