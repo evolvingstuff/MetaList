@@ -77,8 +77,15 @@ A value is read as the first type it parses as:
 | Number | `3`, `3.5`, `-2`, `1500` | numerically (`3` = `3.0`) |
 | Date | `2026`, `2026-10`, `2026-10-23` | by its first day: `2026-10` is 2026-10-01 |
 | Date-time | `2026-10-23T10:30`, `2026-10-23T10:30:15` | by the moment |
-| Time **(Proposed)** | `10:30`, `10:30:15` | by time of day |
+| Time | `10:30`, `10:30:15`, `10:30am`, `10:30pm`, `10am` | by time of day |
 | Text | anything else | case-insensitively, alphabetically |
+
+- **Times** are written as a 24-hour clock (`22:30`) or with `am`/`pm`. Values have
+  no spaces, so the suffix is attached: `10:30am`, `10:30pm`, `10am`.
+  `22:30` and `10:30pm` are the same time, so `start>9pm` finds both.
+  `12am` is midnight and `12pm` noon.
+- **Proposed:** `am`/`pm` in any case, with or without periods (`10:30PM`,
+  `10:30p.m.`); written values keep the user's form, only comparisons convert.
 
 - **Mixed types are skipped, not errors.** A comparison applies only to values of its
   own type: `jogging:miles>2` ignores a note with `miles=far`. Keeping one property
