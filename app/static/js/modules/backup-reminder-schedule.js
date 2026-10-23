@@ -59,7 +59,7 @@ export function isBackupReminderDue({ frequency, newestBackupAt, hiddenUntil, no
 export function backupReminderMessage({ newestBackupAt, now }) {
     requireMoment(now, 'now');
     if (newestBackupAt === null) {
-        return 'Time to back up: this namespace has no backup yet.';
+        return 'Time to back up: this vault has no backup yet.';
     }
     requireMoment(newestBackupAt, 'newestBackupAt');
     const days = Math.floor((now.getTime() - newestBackupAt.getTime()) / MS_PER_DAY);

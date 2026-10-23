@@ -125,14 +125,14 @@ def schedule_self_update(
         message=(
             f"Updating MetaList from v{current_version} to v{target_version}. "
             f"Stopped {stopped_process_count} MetaList process(es); "
-            f"created and verified {len(backup_paths)} namespace backup(s); "
+            f"created and verified {len(backup_paths)} vault backup(s); "
             "the updater will finish installation and restart MetaList."
         ),
     )
 
 
 def _back_up_namespaces_before_update() -> tuple[Path, ...]:
-    print("Backing up all namespaces before updating MetaList...", flush=True)
+    print("Backing up all vaults before updating MetaList...", flush=True)
     backup_capture = CapturedExceptionContext(
         OSError, sqlite3.Error, tarfile.TarError, ValueError, RuntimeError,
     boundary='app/services/self_update.py:_back_up_namespaces_before_update:backup_capture')

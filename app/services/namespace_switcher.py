@@ -278,11 +278,11 @@ def open_or_launch_namespace(
         )
         if saved_for_next_launch:
             message = (
-                f"Namespace {normalized_namespace} is already running. "
+                f"Vault {normalized_namespace} is already running. "
                 "Saved the new ports for the next launch."
             )
         else:
-            message = f"Namespace {normalized_namespace} is already running."
+            message = f"Vault {normalized_namespace} is already running."
         return NamespaceOpenResult(
             namespace=normalized_namespace,
             action="opened-running",
@@ -310,7 +310,7 @@ def open_or_launch_namespace(
                 url=running_url,
                 saved_profile=chosen_profile,
                 saved_for_next_launch=False,
-                message=f"Namespace {normalized_namespace} is already running with a warm cache.",
+                message=f"Vault {normalized_namespace} is already running with a warm cache.",
             )
         _restart_running_namespace_process(
             environ=environ,
@@ -326,7 +326,7 @@ def open_or_launch_namespace(
             url=running_url,
             saved_profile=chosen_profile,
             saved_for_next_launch=saved_for_next_launch,
-            message=f"Restarted namespace {normalized_namespace}.",
+            message=f"Restarted vault {normalized_namespace}.",
         )
     _assert_ports_are_available_for_launch(
         environ=environ,
@@ -352,7 +352,7 @@ def open_or_launch_namespace(
         url=launched_url,
         saved_profile=chosen_profile,
         saved_for_next_launch=saved_for_next_launch,
-        message=f"Started namespace {normalized_namespace}.",
+        message=f"Started vault {normalized_namespace}.",
     )
 
 
@@ -366,7 +366,7 @@ def open_or_launch_all_namespaces(
     )
     raw_namespaces = catalog["namespaces"]
     if not isinstance(raw_namespaces, list):
-        raise NamespaceInputRejected("Namespace catalog missing namespaces")
+        raise NamespaceInputRejected("Vault catalog missing vaults")
 
     profiles = _resolve_conflict_free_profiles_for_all_namespaces(
         raw_namespaces=raw_namespaces,
@@ -374,7 +374,7 @@ def open_or_launch_all_namespaces(
     saved_profiles = _load_saved_profiles_by_namespace()
     for profile in profiles:
         if profile.namespace not in saved_profiles:
-            raise NamespaceInputRejected(f"Namespace {profile.namespace} launch profile disappeared")
+            raise NamespaceInputRejected(f"Vault {profile.namespace} launch profile disappeared")
         saved_profile = saved_profiles[profile.namespace]
         if saved_profile == profile:
             continue
@@ -385,7 +385,7 @@ def open_or_launch_all_namespaces(
             mcp_port=profile.mcp_port,
         )
         print(
-            f"[startup] WARNING: adjusted namespace {profile.namespace} ports to resolve "
+            f"[startup] WARNING: adjusted vault {profile.namespace} ports to resolve "
             f"a saved conflict: HTTP {saved_profile.port} -> {profile.port}, "
             f"HTTPS {saved_profile.https_port} -> {profile.https_port}.",
             file=sys.stderr,
@@ -434,9 +434,9 @@ def open_or_launch_all_namespaces(
         url = _build_browser_url(environ=environ, port=plan.chosen_profile.port)
         assert url is not None
         if plan.running_port is None:
-            action, message = "launched", f"Started namespace {plan.namespace}."
+            action, message = "launched", f"Started vault {plan.namespace}."
         else:
-            action, message = "restarted", f"Restarted namespace {plan.namespace}."
+            action, message = "restarted", f"Restarted vault {plan.namespace}."
         results.append(NamespaceOpenResult(
             namespace=plan.namespace,
             action=action,
@@ -740,7 +740,7 @@ def build_login_namespace_catalog(
     for entry in raw_namespaces:
         if not isinstance(entry, dict):
             raise RuntimeError("Namespace catalog entry must be an object")
-        namespace = _catalog_field(entry, "namespace", owner="Namespace catalog entry")
+        namespace = _catalog_field(entry, "namespace", owner="Vault catalog entry")
         if not isinstance(namespace, str) or namespace == "":
             raise RuntimeError("Namespace catalog entry missing namespace")
         if namespace in seen_namespaces:
@@ -788,13 +788,13 @@ def rename_current_namespace(
     normalized_source = validate_namespace(namespace=current_namespace)
     normalized_target = validate_namespace(namespace=target_namespace)
     if normalized_target == normalized_source:
-        raise NamespaceInputRejected("New namespace name must differ from the current name")
+        raise NamespaceInputRejected("New vault name must differ from the current name")
     target_directory = server_runtime.resolve_namespace_directory(namespace=normalized_target)
     if target_directory.exists():
-        raise NamespaceInputRejected(f"Namespace {normalized_target} already exists")
+        raise NamespaceInputRejected(f"Vault {normalized_target} already exists")
     source_directory = server_runtime.resolve_namespace_directory(namespace=normalized_source)
     if not source_directory.is_dir():
-        raise NamespaceInputRejected(f"Namespace {normalized_source} is unavailable")
+        raise NamespaceInputRejected(f"Vault {normalized_source} is unavailable")
 
     current_profile = _build_current_profile(
         environ=environ,
@@ -834,7 +834,7 @@ def rename_current_namespace(
         target_namespace=normalized_target,
         redirect_url=redirect_url,
         rename_job_id=job_record["job_id"],
-        message=f"Renaming namespace {normalized_source} to {normalized_target}.",
+        message=f"Renaming vault {normalized_source} to {normalized_target}.",
     )
 
 
@@ -916,7 +916,7 @@ def _delete_active_namespace(
     else:
         if normalized_redirect_namespace not in remaining_namespaces:
             raise RuntimeError(
-                f"Redirect namespace must be one of: {', '.join(sorted(remaining_namespaces))}"
+                f"Redirect vault must be one of: {', '.join(sorted(remaining_namespaces))}"
             )
         replacement_profile = _resolve_fallback_profile(
             environ=environ,
@@ -952,8 +952,8 @@ def _delete_active_namespace(
         delete_job_id=job_record["job_id"],
         active_namespace_deleted=True,
         message=(
-            f"Deleting namespace {normalized_namespace}. "
-            "Opening the namespace removal page."
+            f"Deleting vault {normalized_namespace}. "
+            "Opening the vault removal page."
         ),
     )
 
@@ -971,7 +971,7 @@ def _delete_inactive_namespace(
 
     namespace_directory = server_runtime.resolve_namespace_directory(namespace=normalized_namespace)
     if not namespace_directory.exists():
-        raise NamespaceInputRejected(f"Namespace {normalized_namespace} is unavailable")
+        raise NamespaceInputRejected(f"Vault {normalized_namespace} is unavailable")
     if not namespace_directory.is_dir():
         raise RuntimeError(f"Namespace path is not a directory: {namespace_directory}")
 
@@ -982,14 +982,14 @@ def _delete_inactive_namespace(
     shutil.rmtree(namespace_directory)
     if namespace_directory.exists():
         raise RuntimeError(
-            f"Namespace {normalized_namespace} directory still exists after deletion"
+            f"Vault {normalized_namespace} directory still exists after deletion"
         )
     return NamespaceDeleteResult(
         deleted_namespace=normalized_namespace,
         redirect_url="",
         delete_job_id="",
         active_namespace_deleted=False,
-        message=f"{normalized_namespace} namespace successfully deleted.",
+        message=f"{normalized_namespace} vault successfully deleted.",
     )
 
 
@@ -1000,7 +1000,7 @@ def _assert_namespace_deletion_confirmation(
 ) -> None:
     normalized_namespace = validate_namespace(namespace=namespace)
     if confirmed_namespace.strip() != normalized_namespace:
-        raise NamespaceInputRejected(f"Type '{normalized_namespace}' to confirm namespace deletion")
+        raise NamespaceInputRejected(f"Type '{normalized_namespace}' to confirm vault deletion")
 
 
 def _stop_processes_for_namespace_profile(*, profile: NamespaceLaunchProfile) -> None:
@@ -1074,19 +1074,19 @@ def _catalog_default_profile(*, entry: object) -> NamespaceLaunchProfile:
     if not isinstance(entry, dict):
         raise RuntimeError("Namespace catalog entry must be an object")
 
-    namespace = _catalog_field(entry, "namespace", owner="Namespace catalog entry")
+    namespace = _catalog_field(entry, "namespace", owner="Vault catalog entry")
     if not isinstance(namespace, str) or namespace == "":
         raise RuntimeError("Namespace catalog entry missing namespace")
 
-    raw_profile = _catalog_field(entry, "default_profile", owner=f"Namespace {namespace}")
+    raw_profile = _catalog_field(entry, "default_profile", owner=f"Vault {namespace}")
     if not isinstance(raw_profile, dict):
         raise RuntimeError(f"Namespace {namespace} is missing default profile")
 
-    port = _catalog_field(raw_profile, "port", owner=f"Namespace {namespace} profile")
+    port = _catalog_field(raw_profile, "port", owner=f"Vault {namespace} profile")
     if not isinstance(port, int):
         raise RuntimeError(f"Namespace {namespace} profile missing port")
 
-    https_port = _catalog_field(raw_profile, "https_port", owner=f"Namespace {namespace} profile")
+    https_port = _catalog_field(raw_profile, "https_port", owner=f"Vault {namespace} profile")
     if https_port is not None and not isinstance(https_port, int):
         raise RuntimeError(f"Namespace {namespace} profile has invalid https_port")
 
@@ -1101,14 +1101,14 @@ def _catalog_default_profile(*, entry: object) -> NamespaceLaunchProfile:
 def _assert_catalog_entry_has_launch_profile(*, entry: object) -> None:
     if not isinstance(entry, dict):
         raise RuntimeError("Namespace catalog entry must be an object")
-    namespace = _catalog_field(entry, "namespace", owner="Namespace catalog entry")
+    namespace = _catalog_field(entry, "namespace", owner="Vault catalog entry")
     if not isinstance(namespace, str) or namespace == "":
         raise RuntimeError("Namespace catalog entry missing namespace")
-    if _catalog_field(entry, "has_launch_profile", owner=f"Namespace {namespace}") is True:
+    if _catalog_field(entry, "has_launch_profile", owner=f"Vault {namespace}") is True:
         return
     raise RuntimeError(
-        f"Namespace {namespace} has no launch profile. "
-        "Configure its HTTP/HTTPS ports from Manage namespace ports, "
+        f"Vault {namespace} has no launch profile. "
+        "Configure its HTTP/HTTPS ports from Manage vault ports, "
         "or launch it once with an explicit --port value."
     )
 
@@ -1390,7 +1390,7 @@ def _assert_profile_is_conflict_free(
             other_service = seen_ports[port]
             raise RuntimeError(
                 f"{service.upper()} port {port} conflicts with {other_service.upper()} port "
-                f"for namespace {chosen_profile.namespace}"
+                f"for vault {chosen_profile.namespace}"
             )
         seen_ports[port] = service
     reservations = _reserved_ports(
@@ -1407,7 +1407,7 @@ def _assert_profile_is_conflict_free(
         reservation = conflicts_by_port[port]
         raise RuntimeError(
             f"{service.upper()} port {port} conflicts with "
-            f"{reservation.service.upper()} port reserved for namespace {reservation.namespace}"
+            f"{reservation.service.upper()} port reserved for vault {reservation.namespace}"
         )
 
 
@@ -1437,8 +1437,8 @@ def _assert_requested_profiles_are_conflict_free(
             if port in requested_ports:
                 other_namespace, other_service = requested_ports[port]
                 raise RuntimeError(
-                    f"{service.upper()} port {port} for namespace {profile.namespace} conflicts with "
-                    f"{other_service.upper()} port for namespace {other_namespace}"
+                    f"{service.upper()} port {port} for vault {profile.namespace} conflicts with "
+                    f"{other_service.upper()} port for vault {other_namespace}"
                 )
             requested_ports[port] = (profile.namespace, service)
 
@@ -1457,8 +1457,8 @@ def _assert_requested_profiles_are_conflict_free(
                 if reservation.port != port:
                     continue
                 raise RuntimeError(
-                    f"{service.upper()} port {port} for namespace {profile.namespace} conflicts with "
-                    f"{reservation.service.upper()} port reserved for namespace {reservation.namespace}"
+                    f"{service.upper()} port {port} for vault {profile.namespace} conflicts with "
+                    f"{reservation.service.upper()} port reserved for vault {reservation.namespace}"
                 )
             if current_profile is None or current_profile.namespace == profile.namespace:
                 continue
@@ -1466,8 +1466,8 @@ def _assert_requested_profiles_are_conflict_free(
                 if current_port != port:
                     continue
                 raise RuntimeError(
-                    f"{service.upper()} port {port} for namespace {profile.namespace} conflicts with "
-                    f"{current_service.upper()} port used by current namespace {current_profile.namespace}"
+                    f"{service.upper()} port {port} for vault {profile.namespace} conflicts with "
+                    f"{current_service.upper()} port used by current vault {current_profile.namespace}"
                 )
 
 
@@ -1889,7 +1889,7 @@ def _poll_namespace_readiness(
     while time.monotonic() < deadline:
         now = time.monotonic()
         if now >= next_progress:
-            print(f"Still starting namespace {namespace} ({now - started_at:.0f}s elapsed)...", flush=True)
+            print(f"Still starting vault {namespace} ({now - started_at:.0f}s elapsed)...", flush=True)
             next_progress = now + _LAUNCH_PROGRESS_INTERVAL_SECONDS
         exit_code = launched_process.process.poll()
         if exit_code is not None:
@@ -1898,7 +1898,7 @@ def _poll_namespace_readiness(
                 log_start_offset=launched_process.log_start_offset,
             )
             raise RuntimeError(
-                f"Namespace {namespace} process exited with code {exit_code}. "
+                f"Vault {namespace} process exited with code {exit_code}. "
                 f"Child log: {launched_process.log_path}\n{log_tail}"
             )
         status_payload = _probe_namespace_status(
@@ -1914,7 +1914,7 @@ def _poll_namespace_readiness(
         log_start_offset=launched_process.log_start_offset,
     )
     raise RuntimeError(
-        f"Timed out waiting for namespace {namespace} on port {port}. "
+        f"Timed out waiting for vault {namespace} on port {port}. "
         f"Child log: {launched_process.log_path}\n{log_tail}"
     )
 
@@ -2015,7 +2015,7 @@ def _resolve_catalog_profile(
     for entry in namespaces:
         if not isinstance(entry, dict):
             continue
-        if _catalog_field(entry, "namespace", owner="Namespace catalog entry") != normalized_namespace:
+        if _catalog_field(entry, "namespace", owner="Vault catalog entry") != normalized_namespace:
             continue
         _assert_catalog_entry_has_launch_profile(entry=entry)
         return _catalog_default_profile(entry=entry)

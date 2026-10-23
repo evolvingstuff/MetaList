@@ -55,7 +55,7 @@ def inspect_namespace_runtime_legitimacy(*, namespace: str) -> NamespaceRuntimeL
         return NamespaceRuntimeLegitimacy(
             is_legitimate=False,
             failure_reason=(
-                f"Namespace {normalized_namespace} database is missing: {database_path}"
+                f"Vault {normalized_namespace} database is missing: {database_path}"
             ),
         )
 
@@ -67,21 +67,21 @@ def inspect_namespace_runtime_legitimacy(*, namespace: str) -> NamespaceRuntimeL
         return NamespaceRuntimeLegitimacy(
             is_legitimate=False,
             failure_reason=(
-                f"Namespace {normalized_namespace} database check failed with "
+                f"Vault {normalized_namespace} database check failed with "
                 f"{type(database_capture.captured_exception).__name__}"
             ),
         )
     if row is None:
         return NamespaceRuntimeLegitimacy(
             is_legitimate=False,
-            failure_reason=f"Namespace {normalized_namespace} launch profile is missing",
+            failure_reason=f"Vault {normalized_namespace} launch profile is missing",
         )
     stored_namespace = str(row[0])
     if stored_namespace != normalized_namespace:
         return NamespaceRuntimeLegitimacy(
             is_legitimate=False,
             failure_reason=(
-                f"Namespace runtime identity mismatch: expected {normalized_namespace}, "
+                f"Vault runtime identity mismatch: expected {normalized_namespace}, "
                 f"found {stored_namespace}"
             ),
         )
@@ -106,7 +106,7 @@ def _run_namespace_runtime_guard(
         if legitimacy.is_legitimate:
             continue
         logger.critical(
-            "[namespace-guard] namespace legitimacy check failed; terminating "
+            "[namespace-guard] vault legitimacy check failed; terminating "
             "namespace={namespace} reason={reason}",
             namespace=namespace,
             reason=legitimacy.failure_reason,

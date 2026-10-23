@@ -192,7 +192,7 @@ async function checkReminderCases(page, noteId) {
   await reloadApp(page);
   const opening = await cardAt(page);
   assertAtStackCorner(opening, 'app opens with no backup (Weekly by default)');
-  assert.equal(opening.text, 'Time to back up: this namespace has no backup yet.');
+  assert.equal(opening.text, 'Time to back up: this vault has no backup yet.');
   assert.deepEqual(await attention(page, noteId), withoutCard, 'app opens: nothing moves and focus stays put');
 
   // 9. A backup older than the period names its age.

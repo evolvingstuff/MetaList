@@ -807,7 +807,7 @@ function buildViewContextItems(context, handlers) {
     const onLogOut = requireViewHandler(handlers, 'onLogOut');
     items.push(
         { id: 'new-tab', label: 'New Tab', icon: 'tabs', enabled: true, separated: true, onSelect: () => onNewTab() },
-        { id: 'open-namespace', label: 'Open/Switch Namespace…', icon: 'namespace', enabled: true, onSelect: () => onOpenNamespace() },
+        { id: 'open-namespace', label: 'Open/Switch Vault…', icon: 'namespace', enabled: true, onSelect: () => onOpenNamespace() },
         { id: 'reminders', label: 'Reminders…', icon: 'reminder', enabled: true, onSelect: () => onOpenReminders() },
         { id: 'export-view-html', label: 'Export View as HTML', icon: 'download', enabled: true, separated: true, onSelect: () => onExportViewHtml() },
         { id: 'print-view', label: 'Print View', icon: 'print', enabled: true, onSelect: () => onPrintView() },

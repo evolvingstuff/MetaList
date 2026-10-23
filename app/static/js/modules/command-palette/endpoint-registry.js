@@ -387,31 +387,31 @@ export function buildCommandPaletteEndpoints(deps) {
         {
             id: 'form.open_namespace',
             kind: 'form',
-            label: 'Open/Switch namespace',
+            label: 'Open/Switch vault',
             execute: async () => openOpenNamespace(),
         },
         {
             id: 'form.create_namespace',
             kind: 'form',
-            label: 'Create namespace',
+            label: 'Create vault',
             execute: async () => openCreateNamespace(),
         },
         {
             id: 'form.manage_namespace_ports',
             kind: 'form',
-            label: 'Manage namespace ports',
+            label: 'Manage vault ports',
             execute: async () => openManageNamespacePorts(),
         },
         {
             id: 'form.rename_current_namespace',
             kind: 'form',
-            label: 'Rename current namespace',
+            label: 'Rename current vault',
             execute: async () => openRenameCurrentNamespace(),
         },
         {
             id: 'form.delete_current_namespace',
             kind: 'form',
-            label: 'Delete namespace',
+            label: 'Delete vault',
             execute: async () => openDeleteCurrentNamespace(),
         },
         {

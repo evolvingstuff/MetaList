@@ -301,7 +301,7 @@ def _normalize_selected_namespaces(*, selected_namespaces: list[str]) -> list[st
         raise TypeError("selected_namespaces must be a list")
     normalized_selected_namespaces = _order_namespaces(namespaces=selected_namespaces)
     if len(normalized_selected_namespaces) == 0:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Select at least one namespace to back up")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Select at least one vault to back up")
     return normalized_selected_namespaces
 
 
@@ -310,7 +310,7 @@ def _require_existing_selected_namespaces(*, selected_namespaces: list[str]) -> 
     for namespace in normalized_selected_namespaces:
         database_path = resolve_namespaced_database_path(namespace=namespace)
         if not database_path.is_file():
-            raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"Selected namespace has no database yet: {namespace}")
+            raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"Selected vault has no database yet: {namespace}")
     return normalized_selected_namespaces
 
 
@@ -324,7 +324,7 @@ def _filter_deleted_selected_namespaces(*, selected_namespaces: list[str]) -> li
     if len(existing_selected_namespaces) == 0:
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST,
-            detail="None of the selected backup namespaces still exist",
+            detail="None of the selected backup vaults still exist",
         )
     return existing_selected_namespaces
 
@@ -583,7 +583,7 @@ def _verify_target_namespace_password(*, target_namespace: str, password: str) -
     if not _target_auth_settings_have_password(settings=settings):
         return
     if password == "":
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Target namespace password is required")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Target vault password is required")
 
     assert settings is not None
     auth_salt = settings["auth_salt"]
@@ -610,7 +610,7 @@ def _verify_target_namespace_password(*, target_namespace: str, password: str) -
         parallelism,
     ).hex()
     if not secrets.compare_digest(candidate, auth_verifier):
-        raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Target namespace password is incorrect")
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Target vault password is incorrect")
 
 
 def _collect_import_profile_port_conflicts(
@@ -633,7 +633,7 @@ def _collect_import_profile_port_conflicts(
             continue
         conflict_namespace, conflict_service = occupied_ports[port]
         conflicts.append(
-            f"{service} port {port} conflicts with {conflict_service} port reserved for namespace {conflict_namespace}"
+            f"{service} port {port} conflicts with {conflict_service} port reserved for vault {conflict_namespace}"
         )
     return conflicts
 
@@ -959,7 +959,7 @@ def restore_backup_preflight(
 
     folder_namespace, folder_filename = _parse_folder_backup_id(payload.backup_id)
     if folder_namespace != backup_namespace:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="folder backup namespace does not match payload")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="folder backup vault does not match payload")
     if folder_filename != payload.backup_filename:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="folder backup filename does not match payload")
     settings = load_backup_settings(token=token)
@@ -1030,7 +1030,7 @@ def restore_backup(
 
     folder_namespace, folder_filename = _parse_folder_backup_id(payload.backup_id)
     if folder_namespace != backup_namespace:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="folder backup namespace does not match payload")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="folder backup vault does not match payload")
     if folder_filename != payload.backup_filename:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="folder backup filename does not match payload")
     settings = load_backup_settings(token=token)
@@ -1101,7 +1101,7 @@ def import_backup(
     if target_exists and not payload.overwrite_existing_target:
         raise HTTPException(
             status_code=HTTPStatus.CONFLICT,
-            detail=f"Target namespace already exists: {target_namespace}",
+            detail=f"Target vault already exists: {target_namespace}",
         )
     if target_exists:
         _verify_target_namespace_password(
@@ -1112,7 +1112,7 @@ def import_backup(
     target_database_path = resolve_namespaced_database_path(namespace=target_namespace)
     folder_namespace, folder_filename = _parse_folder_backup_id(payload.backup_id)
     if folder_namespace != backup_namespace:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="folder backup namespace does not match payload")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="folder backup vault does not match payload")
     if folder_filename != payload.backup_filename:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="folder backup filename does not match payload")
     settings = load_backup_settings(token=token)

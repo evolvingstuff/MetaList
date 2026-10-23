@@ -255,7 +255,7 @@ export class BackupRestoreModal extends BaseModal {
                 <div class="modal-content backup-restore-modal-content">
                     <h3>Restore Complete</h3>
                     <p>Backup restored successfully: <span class="backup-filename">${escapeHtml(restoredFilename)}</span></p>
-                    <p>Restored into namespace <strong>${escapeHtml(restoredTargetNamespace)}</strong>.</p>
+                    <p>Restored into vault <strong>${escapeHtml(restoredTargetNamespace)}</strong>.</p>
                     <p>${openNamespaceSuggested ? 'Use the namespace switcher to open it.' : 'You can continue using it now.'}</p>
                 </div>
             `;
@@ -298,9 +298,9 @@ export class BackupRestoreModal extends BaseModal {
         const targetRequiresPassword = Boolean(preflight && preflight.target_requires_password === true);
         const overwriteWarningHtml = confirming && isImport && targetExists ? `
             <div class="namespace-delete-warning backup-restore-danger-warning">
-                <p><strong>BIG WARNING:</strong> this will overwrite existing namespace <span class="namespace-delete-namespace">${escapeHtml(targetNamespaceText.trim())}</span> with backup data from <span class="namespace-delete-namespace">${escapeHtml(selectedNamespace)}</span>.</p>
+                <p><strong>BIG WARNING:</strong> this will overwrite existing vault <span class="namespace-delete-namespace">${escapeHtml(targetNamespaceText.trim())}</span> with backup data from <span class="namespace-delete-namespace">${escapeHtml(selectedNamespace)}</span>.</p>
                 <p>This is not the normal same-name restore path. Type <strong>${escapeHtml(targetNamespaceText.trim())}</strong> to enable the import.</p>
-                <input type="text" id="backup-overwrite-confirmation" value="${escapeHtml(overwriteConfirmText)}" placeholder="Type target namespace">
+                <input type="text" id="backup-overwrite-confirmation" value="${escapeHtml(overwriteConfirmText)}" placeholder="Type target vault">
                 ${targetRequiresPassword ? `
                     <label class="backup-restore-target-password-label" for="backup-target-password">Target namespace password</label>
                     <input type="password" id="backup-target-password" value="${escapeHtml(targetPassword)}" autocomplete="current-password" placeholder="Password for ${escapeHtml(targetNamespaceText.trim())}">
@@ -309,7 +309,7 @@ export class BackupRestoreModal extends BaseModal {
         ` : '';
         let restoreButtonLabel = 'Restore Selected Backup';
         if (confirming && isImport && targetExists) {
-            restoreButtonLabel = 'Import And Overwrite Namespace';
+            restoreButtonLabel = 'Import And Overwrite Vault';
         } else if (confirming && isImport) {
             restoreButtonLabel = 'Confirm Import';
         } else if (confirming) {
@@ -318,7 +318,7 @@ export class BackupRestoreModal extends BaseModal {
         const restoreButtonClass = confirming && isImport && targetExists ? 'danger-btn' : 'primary-btn';
         const emptyBackupsHtml = !loading && backups.length === 0 ? `
             <div class="backup-restore-empty-state">
-                <p>No backups are available from this namespace's configured backup folder.</p>
+                <p>No backups are available from this vault's configured backup folder.</p>
                 <p>Choose the folder containing your MetaList backup archives.</p>
                 <button type="button" class="secondary-btn" id="backup-restore-choose-folder-btn" ${choosingFolder ? 'disabled' : ''}>${choosingFolder ? 'Choosing...' : 'Choose Backup Folder...'}</button>
             </div>
@@ -330,20 +330,20 @@ export class BackupRestoreModal extends BaseModal {
             }
             let confirmationSummaryHtml = '';
             if (isImport) {
-                const targetStatus = targetExists ? 'existing namespace' : 'new namespace';
+                const targetStatus = targetExists ? 'existing vault' : 'new vault';
                 confirmationSummaryHtml = `
                     <p>Import backup <span class="backup-filename">${escapeHtml(selectedBackup.filename)}</span></p>
-                    <p>From namespace <strong>${escapeHtml(selectedNamespace)}</strong> into ${targetStatus} <strong>${escapeHtml(targetNamespaceText.trim())}</strong>.</p>
+                    <p>From vault <strong>${escapeHtml(selectedNamespace)}</strong> into ${targetStatus} <strong>${escapeHtml(targetNamespaceText.trim())}</strong>.</p>
                 `;
             } else {
                 confirmationSummaryHtml = `
                     <p>Restore backup <span class="backup-filename">${escapeHtml(selectedBackup.filename)}</span></p>
-                    <p>This will overwrite namespace <strong>${escapeHtml(targetNamespaceText.trim())}</strong>.</p>
+                    <p>This will overwrite vault <strong>${escapeHtml(targetNamespaceText.trim())}</strong>.</p>
                 `;
             }
             const sameNamespaceWarningHtml = !isImport ? `
                 <div class="namespace-delete-warning backup-restore-danger-warning">
-                    <p><strong>Warning:</strong> this restore overwrites the target namespace.</p>
+                    <p><strong>Warning:</strong> this restore overwrites the target vault.</p>
                 </div>
             ` : '';
             modalElement.innerHTML = `
@@ -370,7 +370,7 @@ export class BackupRestoreModal extends BaseModal {
             <div class="modal-content backup-restore-modal-content">
                 <h3>Restore From Backup</h3>
                 <p>Select a backup snapshot and restore the workspace data.</p>
-                <p>Same-name restores overwrite that namespace. Different-name imports create a namespace unless the target already exists.</p>
+                <p>Same-name restores overwrite that vault. Different-name imports create a vault unless the target already exists.</p>
                 ${emptyBackupsHtml}
 
                 <div class="form-group">
@@ -381,11 +381,11 @@ export class BackupRestoreModal extends BaseModal {
                 </div>
 
                 <div class="form-group">
-                    <label for="backup-target-namespace">Target namespace</label>
+                    <label for="backup-target-namespace">Target vault</label>
                     <input type="text" id="backup-target-namespace" value="${escapeHtml(targetNamespaceText)}" ${loading || restoring || confirming || backups.length === 0 ? 'disabled' : ''}>
                 </div>
 
-                <p>${selectedNamespace ? `Backup namespace: ${escapeHtml(selectedNamespace)}` : ''}</p>
+                <p>${selectedNamespace ? `Backup vault: ${escapeHtml(selectedNamespace)}` : ''}</p>
 
                 <div class="form-actions">
                     <button type="button" class="${restoreButtonClass}" id="restore-backup-btn" ${loading || restoring || backups.length === 0 ? 'disabled' : ''}>${restoreButtonLabel}</button>

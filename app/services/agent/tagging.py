@@ -208,7 +208,7 @@ def invalid_tag_reason(
         return f"Invalid classification tag: {tag!r}"
     key = tag.casefold()
     if policy == "existing" and key not in visible_vocabulary:
-        return f"Tag does not exist in the namespace: {tag!r}"
+        return f"Tag does not exist in the vault: {tag!r}"
     if policy == "new_only" and key in visible_vocabulary:
         return f"Model proposed an existing tag during a new-tags-only pass: {tag!r}"
     return ""

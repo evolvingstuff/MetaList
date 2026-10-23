@@ -31,7 +31,7 @@ def _run_checked(command: list[str], *, environ: Mapping[str, str], directory: P
     )
     if completed.returncode != 0:
         raise RuntimeError(
-            "Update preflight failed; the current installation and running namespaces "
+            "Update preflight failed; the current installation and running vaults "
             f"were not changed.\n{completed.stdout}\n{completed.stderr}"
         )
     return completed.stdout

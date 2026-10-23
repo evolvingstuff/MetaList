@@ -17,7 +17,7 @@ HELP_TOPICS = {
     'reminders': ('Reminders', 'Creating, editing, snoozing and recurrence.'),
     'ai': ('AI and tag proposals', 'OpenAI settings, context limits, prompts/skills, history export, and AI tag proposals: generation, acceptance, rejection/removal and bulk undo limits. This topic alone covers proposal workflow explanations.'),
     'privacy': ('Privacy and security', 'Cloud disclosure, gray notes when hovering chat, password exclusion, encryption and credentials.'),
-    'data': ('Namespaces and backups', 'Namespaces, backup/restore, HTML export, ports and updates.'),
+    'data': ('Vaults and backups', 'Vaults, backup/restore, HTML export, ports and updates.'),
     'dictation': ('Dictation (speech to text)', 'Pasting dictated text from speech-to-text tools such as Superwhisper into the search bar, tag bar or a note: how words become tags, spoken dash/quote/or/not, "at to do" meta tags, the "start tags" phrase in notes, undo, and Dictation Settings.'),
     'releases': ('Release notes', 'What changed in each MetaList version (what is new, when a feature or fix arrived).'),
 }

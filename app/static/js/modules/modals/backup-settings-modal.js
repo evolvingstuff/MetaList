@@ -164,7 +164,7 @@ export class BackupSettingsModal extends BaseModal {
                     </label>
                 `;
             }).join('')
-            : `<p class="backup-settings-single-namespace"><strong>Namespace:</strong> ${escapeHtml(singleNamespaceLabel)}</p>`;
+            : `<p class="backup-settings-single-namespace"><strong>Vault:</strong> ${escapeHtml(singleNamespaceLabel)}</p>`;
 
         let effectiveStatusMessage = statusMessage;
         if (effectiveStatusMessage.length === 0 && loading) {
@@ -174,7 +174,7 @@ export class BackupSettingsModal extends BaseModal {
         modalElement.innerHTML = `
             <div class="modal-content backup-retention-modal-content">
                 <h3 class="backup-settings-modal-title">Backup Settings</h3>
-                <p>Choose one backup folder and how many snapshots to keep for each selected namespace.</p>
+                <p>Choose one backup folder and how many snapshots to keep for each selected vault.</p>
 
                 <div class="form-group">
                     <label for="backup-settings-folder-path">Folder path</label>
@@ -187,12 +187,12 @@ export class BackupSettingsModal extends BaseModal {
                 </div>
 
                 <div class="form-group">
-                    <label>Namespaces to include</label>
+                    <label>Vaults to include</label>
                     ${namespaceSelectionHtml}
                 </div>
 
                 <div class="form-group">
-                    <label for="backup-settings-retention-count">Backups to retain per namespace</label>
+                    <label for="backup-settings-retention-count">Backups to retain per vault</label>
                     <input type="number" id="backup-settings-retention-count" min="1" step="1" value="${escapeHtml(retentionCountText)}" ${loading || saving ? 'disabled' : ''}>
                 </div>
 
@@ -508,7 +508,7 @@ export class BackupSettingsModal extends BaseModal {
         }
         if (selectedNamespaces.length === 0) {
             this.updateModalState({
-                error: 'Select at least one namespace to back up.',
+                error: 'Select at least one vault to back up.',
             });
             this.renderModalContent();
             return;

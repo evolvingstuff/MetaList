@@ -56,9 +56,9 @@ The browser keeps an in-memory mirror only so it can surface due reminders witho
 
 ## Persistence
 
-Reminders are namespace-local.
+Reminders are vault-local.
 
-Rows live in the `reminders` table, but the payload is loaded into the in-memory reminder store at startup or after encrypted hydration. When namespace encryption is enabled, the full reminder JSON payload is encrypted at rest like other namespace-owned data.
+Rows live in the `reminders` table, but the payload is loaded into the in-memory reminder store at startup or after encrypted hydration. When vault encryption is enabled, the full reminder JSON payload is encrypted at rest like other namespace-owned data.
 
 Reminder ids are server-generated UUID strings. The client treats them as opaque ids.
 
@@ -119,7 +119,7 @@ The popup surface is intentionally compact:
 - `Got it` acknowledges the current visible occurrence.
 - When at least one popup is waiting for `Got it`, a bell plus up/down arrow appears below the stack.
 - The arrow collapses or expands the stack; no arrow appears when nothing is waiting for `Got it`.
-- The expanded/collapsed state is stored as the namespace-scoped `pref.reminder_surface_expanded` client preference in the main database, not in browser storage.
+- The expanded/collapsed state is stored as the vault-scoped `pref.reminder_surface_expanded` client preference in the main database, not in browser storage.
 - Existing waiting popups use that stored state after browser refresh; a newly surfaced reminder automatically expands the stack and persists the expanded state.
 - Popup items animate when they appear, disappear, and when the user manually expands/collapses the stack.
 

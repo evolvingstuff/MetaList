@@ -1081,4 +1081,4 @@ def test_agent_tag_review_with_nothing_to_change_asks_nothing(monkeypatch):
 
     events = asyncio.run(collect_events())
     assert [event["type"] for event in events] == ["bulk_complete", "content_delta", "done"]
-    assert events[1]["text"] == "There are no pending tag proposals in the whole namespace. Nothing changed."
+    assert events[1]["text"] == "There are no pending tag proposals in the whole vault. Nothing changed."

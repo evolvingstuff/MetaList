@@ -64,12 +64,12 @@ that the value has not been changed automatically.
 Proposed tags are separate from accepted tags. Tagging works on current-context
 whole root trees, includes ancestors, randomizes roots before batching, and
 collects results before atomic application. The vocabulary selector offers
-existing only, new only, or both. Existing namespace vocabulary is shared across
+existing only, new only, or both. Existing vault vocabulary is shared across
 batches; tags proposed in earlier batches are optional reuse vocabulary but
 remain unaccepted. Existing pending proposals are not generated again. Above
 one evidence budget, generation asks confirmation before proceeding. Tagging
 batch size is independently configurable. Bulk accept/remove can target current
-context or the namespace, optionally an exact tag. Asked in chat, accept/remove
+context or the vault, optionally an exact tag. Asked in chat, accept/remove
 first shows a Yes/No box with exactly what will change (how many proposals, of
 which tag, across how many notes, where) and changes nothing without Yes. Successful bulk changes clear
 undo/redo and create no bulk undo entry. There is no persistent rejection memory
@@ -138,7 +138,7 @@ concurrent requests and report percentages and cached-token usage.
 Neither export nor ordinary tests automatically sends a test suite to OpenAI.
 
 The estimated spend display is hidden by default; the $ button in the chat
-header shows or hides it (remembered per namespace) and it keeps counting while
+header shows or hides it (remembered per vault) and it keeps counting while
 hidden. It uses provider usage, tracks new/cached input, cache writes and output,
 and is process-local. Resetting it does not affect billing.
 Clear Chat does not reset costs. Interrupted calls with no final usage may be

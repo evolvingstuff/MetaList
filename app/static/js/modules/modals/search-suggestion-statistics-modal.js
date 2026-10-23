@@ -263,7 +263,7 @@ export class SearchSuggestionStatisticsModal extends BaseModal {
                     <h3>Reset Suggestion Activity?</h3>
                 </div>
                 <div class="alphabetize-root-notes-warning">
-                    <p>Delete all learned search-suggestion tag activity for this namespace?</p>
+                    <p>Delete all learned search-suggestion tag activity for this vault?</p>
                     <p>Notes, tabs, saved searches, and the settings in this modal will not be changed.</p>
                 </div>
                 <div class="form-actions alphabetize-root-notes-actions">

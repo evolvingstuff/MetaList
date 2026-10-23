@@ -204,7 +204,7 @@ export class BackupResultModal extends BaseModal {
                     <table class="backup-result-table">
                         <thead>
                             <tr>
-                                <th scope="col">Namespace</th>
+                                <th scope="col">Vault</th>
                                 <th scope="col">Status</th>
                                 <th scope="col">Archive</th>
                                 <th scope="col">Size</th>

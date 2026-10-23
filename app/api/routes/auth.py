@@ -1024,7 +1024,7 @@ def namespace_delete_job_status(
         exc = job_record_capture.captured_exception
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)) from exc
     if job_record is None:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Namespace deletion job not found: {job_id}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Vault deletion job not found: {job_id}")
     return job_record
 
 
@@ -1038,7 +1038,7 @@ def namespace_rename_job_status(job_id: str):
         exc = job_record_capture.captured_exception
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)) from exc
     if job_record is None:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Namespace rename job not found: {job_id}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Vault rename job not found: {job_id}")
     return job_record
 
 

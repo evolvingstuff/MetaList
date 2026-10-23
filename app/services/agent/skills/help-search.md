@@ -147,7 +147,7 @@ Ontology rules also add **inferred tags** before search matching:
 - Searches themselves never earn credit. Intentional note engagements—edit selection, manual expansion, full-screen view, shell/todo command execution—increment the note's raw explicit/inherited searchable tags once per active tab/search flow. Leaving for another tab or executed search and later returning starts a new flow, so a later shell run can count again. Successfully adding explicit tags separately credits only those newly added tags; removals and case-only changes are neutral. Accepting a search suggestion by mouse or keyboard credits that selected tag once, with no engagement-flow deduplication. Clicking a search-context tab credits each known positive tag term in its executed query once; excluded tags and quoted text are ignored. Programmatic tab restoration/switching, collapse, search execution, hover, render, and scroll are neutral.
 - After one or more completed tags, the remaining suggestions (only tags that still leave results) are ordered by how closely their notes overlap with the notes matching the tags already typed, so specific companions come before tags that are common everywhere.
 - Activity uses sparse per-calendar-day counts. A window sums the relevant daily buckets, selects its highest-count matching tag, and excludes tags chosen by earlier windows. No decay calculation or all-time score exists. The latest 365 populated days are retained, so unused calendar days consume no buckets.
-- In password-protected namespaces, all retained daily buckets live together in one authenticated encrypted payload. The database exposes only one random row UUID, ciphertext, nonce, and authentication tag—never dates, tag names, counts, queries, or changed-tag metadata.
+- In password-protected vaults, all retained daily buckets live together in one authenticated encrypted payload. The database exposes only one random row UUID, ciphertext, nonce, and authentication tag—never dates, tag names, counts, queries, or changed-tag metadata.
 - A typed prefix can match either the start of the full tag or the start of any connector-separated segment.
   - Example: `wor` suggests `workspaces` and `databricks-workspaces`.
   - Example: `orksp` suggests neither.
@@ -161,7 +161,7 @@ Ontology rules also add **inferred tags** before search matching:
 - New notes created while a positive tag search is active are initialized from
   the positive tags and text terms in the **first clause only**. Later `OR`
   clauses are not copied into the new note.
-- If an existing case-equivalent tag spelling is already common in the namespace, that spelling is used for the new note. Example: searching `ml3` adds `ML3` when existing notes use `ML3`.
+- If an existing case-equivalent tag spelling is already common in the vault, that spelling is used for the new note. Example: searching `ml3` adds `ML3` when existing notes use `ML3`.
 - If the new note already inherits a case-equivalent non-meta tag from an ancestor, the inherited tag is treated as satisfying the search and is not duplicated.
 
 ### Text Terms (quoted)
@@ -180,7 +180,7 @@ Text matching is:
   MetaList has already fetched and stored. Titles are fetched when a URL on its own
   line is first displayed, so a note matches by title once its title has been
   fetched; a title fetched later makes the note match from then on. Titles are not
-  available while the namespace is locked. The URL itself remains searchable.
+  available while the vault is locked. The URL itself remains searchable.
 - A space at the edge of the quotes marks a word boundary on that side: `"fat "` needs
   the word to end there (a space, punctuation or the end of the text follows), so it
   matches "fat cat" and "fat." but not "father"; `" fat"` needs it to start there, so
@@ -282,7 +282,7 @@ From docs/ui/controls.md.
 - Successfully adding one or more explicit tags awards one credit to each newly added tag. It does not re-credit tags already present or inherited from ancestors; removals and case-only changes award nothing.
 - Accepting a search suggestion by click or `Enter` awards one credit to the selected tag every time. Clicking a search-context tab awards one credit to each known positive tag term in that tab's executed query; excluded tags and quoted text do not earn credit.
 - Counts are stored in sparse daily buckets. Days without activity have no bucket and do not consume retention capacity; the latest 365 populated days are retained.
-- Each configured window chooses its highest-count matching tag, excluding tags already chosen by earlier windows. The remaining suggestions retain normal namespace-frequency ordering.
+- Each configured window chooses its highest-count matching tag, excluding tags already chosen by earlier windows. The remaining suggestions retain normal vault-frequency ordering.
 - `Cmd/Ctrl+/` → `Search suggestion stats & settings…` is the single place for suggestion activity controls. Changes to its ordered 1–365 day slots, default-on time-window labels, and default-on one-credit-per-note-per-search-context limit persist immediately. It also shows every retained populated date and tag-credit count and includes a confirmed `Reset activity` action. Disabling the credit limit makes every qualifying interaction count; removing every slot disables personalization.
 - Confirmations, errors, and completion notices use MetaList modals, login-state messaging, or banners; native browser `alert`, `confirm`, and `prompt` dialogs are forbidden by the development startup sanity gate.
 - While typing a partial tag token, suggestions are segment-aware for connector-separated tags: a prefix can match the start of the full tag or the start of any connector-separated segment (`-`, `_`, `.`, `/`).

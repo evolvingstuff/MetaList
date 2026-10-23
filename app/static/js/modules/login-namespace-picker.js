@@ -104,7 +104,7 @@ export function openPendingNamespaceTab(browserWindow) {
     }
     const pendingTab = browserWindow.open('about:blank', '_blank');
     if (!pendingTab || typeof pendingTab !== 'object') {
-        throw new Error('Browser blocked the namespace tab');
+        throw new Error('Browser blocked the vault tab');
     }
     pendingTab.opener = null;
     return pendingTab;

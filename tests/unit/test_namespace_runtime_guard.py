@@ -69,7 +69,7 @@ def test_namespace_runtime_guard_rejects_namespace_without_launch_profile(
     legitimacy = namespace_runtime_guard.inspect_namespace_runtime_legitimacy(namespace="work")
 
     assert legitimacy.is_legitimate is False
-    assert legitimacy.failure_reason == "Namespace work launch profile is missing"
+    assert legitimacy.failure_reason == "Vault work launch profile is missing"
 
 
 def test_namespace_runtime_guard_terminates_after_failed_check(
@@ -81,7 +81,7 @@ def test_namespace_runtime_guard_terminates_after_failed_check(
         "inspect_namespace_runtime_legitimacy",
         lambda *, namespace: namespace_runtime_guard.NamespaceRuntimeLegitimacy(
             is_legitimate=False,
-            failure_reason=f"Namespace {namespace} is gone",
+            failure_reason=f"Vault {namespace} is gone",
         ),
     )
     monkeypatch.setattr(

@@ -121,7 +121,7 @@ test('an accepted password slides the form out left and the loading view in from
 test('a login that will upgrade the database says so under OK while it runs', async () => {
     const source = await readFile(AUTH_SOURCE_URL, 'utf8');
     const template = await readFile(new URL('../../app/templates/index.html', import.meta.url), 'utf8');
-    assert.match(template, /id="login-note" class="login-note" hidden>Backing up and upgrading this namespace…</);
+    assert.match(template, /id="login-note" class="login-note" hidden>Backing up and upgrading this vault…</);
     assert.match(source, /typeof status\.database_upgrade_pending !== 'boolean'/);
     assert.match(source, /this\._requireElement\('login-note'\)\.hidden = !\(isBusy && this\._isUpgradePending\);/);
 });

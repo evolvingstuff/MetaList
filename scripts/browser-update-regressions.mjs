@@ -50,7 +50,7 @@ export async function checkAppUpdates(page, fixture) {
     await waitForAppQuiet(page, REQUESTS_QUIET_MS);
     await page.click('#app-update-notice button');
     await page.waitForSelector('#version-info-modal [data-update-action="install"]', {visible: true});
-    assert.match(await page.$eval('#version-info-modal', node => node.textContent), /restarts all namespaces/);
+    assert.match(await page.$eval('#version-info-modal', node => node.textContent), /restarts all vaults/);
     await page.keyboard.press('Escape');
     const checksBeforeRefresh = fixture.checks;
     await page.reload();

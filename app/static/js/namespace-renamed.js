@@ -33,7 +33,7 @@ function requirePageState() {
 async function fetchRenameJob(jobId) {
     const response = await fetch(`/api2/auth/namespaces/rename-jobs/${jobId}`, { cache: 'no-store' });
     if (!response.ok) {
-        throw new HttpRequestError(`Namespace rename job request failed with ${response.status}`);
+        throw new HttpRequestError(`Vault rename job request failed with ${response.status}`);
     }
     const payload = await response.json();
     if (!payload || typeof payload !== 'object' || typeof payload.status !== 'string') {
@@ -44,11 +44,11 @@ async function fetchRenameJob(jobId) {
 
 
 function showSuccess(state) {
-    requireElement('namespace-rename-title').textContent = `Namespace renamed to ${state.targetNamespace}`;
-    requireElement('namespace-rename-copy').textContent = 'The namespace data, files, backups, and saved ports moved together.';
+    requireElement('namespace-rename-title').textContent = `Vault renamed to ${state.targetNamespace}`;
+    requireElement('namespace-rename-copy').textContent = 'The vault data, files, backups, and saved ports moved together.';
     const status = requireElement('namespace-rename-status');
     status.dataset.state = 'succeeded';
-    requireElement('namespace-rename-status-text').textContent = 'Restart complete. Redirecting to the renamed namespace.';
+    requireElement('namespace-rename-status-text').textContent = 'Restart complete. Redirecting to the renamed vault.';
 }
 
 
@@ -57,7 +57,7 @@ function showFailure(state, errorText) {
     requireElement('namespace-rename-copy').textContent = 'The rename did not complete. Review the error before retrying.';
     const status = requireElement('namespace-rename-status');
     status.dataset.state = 'failed';
-    requireElement('namespace-rename-status-text').textContent = 'Namespace rename failed.';
+    requireElement('namespace-rename-status-text').textContent = 'Vault rename failed.';
     const error = requireElement('namespace-rename-error');
     error.textContent = errorText;
     error.classList.remove('hidden');

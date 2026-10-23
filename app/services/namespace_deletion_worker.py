@@ -28,7 +28,7 @@ _KILL_GRACE_SECONDS = 5.0
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Delete a namespace after its server process exits")
+    parser = argparse.ArgumentParser(description="Delete a vault after its server process exits")
     parser.add_argument("--pid", type=int, required=True)
     parser.add_argument("--namespace", required=True)
     parser.add_argument("--job-id", required=True)

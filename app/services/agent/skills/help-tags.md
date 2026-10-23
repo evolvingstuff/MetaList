@@ -207,7 +207,7 @@ Chat-requested LLM generation and menu/chat bulk acceptance or rejection use a s
 ## Add from Selected Text
 - Selecting 1–25 characters inside a note adds **Add as Tag** to that note's context menu.
 - The action always targets the note containing the selection, including when another note is being edited.
-- Existing explicit namespace tags are matched case-insensitively with spaces, `-`, `_`, `.`, and `/` treated as equivalent joiners. The most-used existing spelling and joiner style is reused.
+- Existing explicit vault tags are matched case-insensitively with spaces, `-`, `_`, `.`, and `/` treated as equivalent joiners. The most-used existing spelling and joiner style is reused.
 - If the note already has an equivalent explicit tag, the action is a no-op and does not add a duplicate.
 - If no equivalent tag exists, a new tag preserves the selection's capitalization, replaces whitespace with dashes, and removes characters disallowed by the tag-bar grammar. This preserves acronyms such as `GPT`.
 - Selections longer than 25 characters, blank selections, selections with no usable tag characters, and exact uppercase `OR` do not show the action.
