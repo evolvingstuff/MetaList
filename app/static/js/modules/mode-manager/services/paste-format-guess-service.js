@@ -39,11 +39,13 @@ const MIN_YAML_KEY_LINE_SHARE = 0.6;
 // CSV: at least this many lines, each with at least this many cells.
 const MIN_CSV_LINES = 3;
 const MIN_CSV_COLUMNS = 2;
-// Markdown: a list is at least this many items; a bare code fence is an
-// opening and a closing line; plain text needs this many kinds of signs.
+// Markdown: a list is at least this many items; a code fence is an opening
+// and a closing line; plain text needs this many kinds of signs, or this many
+// headings.
 const MIN_LIST_LINES = 2;
 const FENCE_LINES = 2;
 const MIN_MARKDOWN_SIGN_KINDS = 2;
+const MIN_OUTLINE_HEADINGS = 2;
 // YAML: at least this many `key: value` lines.
 const MIN_YAML_KEY_LINES = 3;
 
@@ -215,13 +217,18 @@ export function looksLikeCsv(text) {
 // --- Markdown ---------------------------------------------------------------
 
 const TABLE_SEPARATOR_RE = /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/;
+const HEADING_RE = /^#{1,6}\s+\S/;
+// A fence line: ``` or ~~~, with the code's language or not (```html).
+const FENCE_RE = /^(?:```|~~~)[\w+#.-]*$/;
+// A table or a fenced block is Markdown whatever else the text holds, even code inside the fence.
+const DECISIVE_MARKDOWN_KINDS = Object.freeze(['table', 'fence']);
 
 // The kinds of Markdown signs in the text: headings, lists, emphasis, inline
-// code, links, quotes, a table, a bare code fence.
+// code, links, quotes, a table, a fenced code block.
 export function markdownSignKinds(text) {
     const lines = text.split('\n');
     const kinds = new Set();
-    if (lines.some((line) => /^#{1,6}\s+\S/.test(line))) kinds.add('heading');
+    if (lines.some((line) => HEADING_RE.test(line))) kinds.add('heading');
     const listLines = lines.filter((line) => /^\s*(?:[-*+]|\d+[.)])\s+\S/.test(line));
     if (listLines.length >= MIN_LIST_LINES) kinds.add('list');
     if (/(\*\*|__)(?=\S)[^\n]*?\S\1/.test(text)) kinds.add('emphasis');
@@ -229,15 +236,20 @@ export function markdownSignKinds(text) {
     if (/!?\[[^\]\n]+\]\((?:https?:\/\/|\/|#|mailto:)[^)\s]*\)/.test(text)) kinds.add('link');
     if (lines.some((line) => /^>\s?\S/.test(line))) kinds.add('quote');
     if (lines.some((line, index) => index > 0 && TABLE_SEPARATOR_RE.test(line) && lines[index - 1].includes('|'))) kinds.add('table');
-    if (lines.filter((line) => /^```\s*$/.test(line.trim())).length >= FENCE_LINES) kinds.add('fence');
+    if (lines.filter((line) => FENCE_RE.test(line.trim())).length >= FENCE_LINES) kinds.add('fence');
     return kinds;
 }
 
-function looksLikeMarkdown(kinds) {
-    if (kinds.has('table')) {
+function isDecisiveMarkdown(kinds) {
+    return DECISIVE_MARKDOWN_KINDS.some((kind) => kinds.has(kind));
+}
+
+// Two kinds of signs, or an outline of headings over paragraphs.
+function looksLikeMarkdown(text, kinds) {
+    if (isDecisiveMarkdown(kinds) || kinds.size >= MIN_MARKDOWN_SIGN_KINDS) {
         return true;
     }
-    return kinds.size >= MIN_MARKDOWN_SIGN_KINDS;
+    return text.split('\n').filter((line) => HEADING_RE.test(line)).length >= MIN_OUTLINE_HEADINGS;
 }
 
 // --- Code -------------------------------------------------------------------
@@ -338,9 +350,9 @@ export function guessPastedFormat(plainText) {
     }
     const kinds = markdownSignKinds(text);
     const languages = guessLanguages(text);
-    // A Markdown table is unmistakable; otherwise strong code wins over a
-    // `# comment` or `- item` that only looks like Markdown.
-    if (kinds.has('table') || (looksLikeMarkdown(kinds) && languages.length === 0)) {
+    // A Markdown table or fenced block is unmistakable; otherwise strong code
+    // wins over a `# comment` or `- item` that only looks like Markdown.
+    if (isDecisiveMarkdown(kinds) || (looksLikeMarkdown(text, kinds) && languages.length === 0)) {
         return { kind: 'markdown', options: [{ tag: '@markdown', label: 'Markdown' }] };
     }
     if (languages.length > 0) {

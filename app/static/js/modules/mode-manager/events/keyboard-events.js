@@ -41,6 +41,7 @@ import {
 } from '../services/paste-format-detection-service.js';
 import { guessPastedFormat, isPlainClipboardHtml } from '../services/paste-format-guess-service.js';
 import { offerPasteFormat } from '../services/paste-format-offer-service.js';
+import { checkFormattedPaste, normalizePastedText, visibleTextOfHtml } from '../services/formatted-paste-format-service.js';
 import {
     executeEditorRedo,
     shouldExecuteEditorRedo,
@@ -1851,13 +1852,14 @@ function handleFormatGuessingPaste(event, plainText) {
     if (guess === null) {
         return false;
     }
-    const text = normalizePastedTextForGuess(plainText);
+    const text = normalizePastedText(plainText);
     const record = {
         noteId: ModeContext.currentNoteId,
         tagsBefore: getTagBarValue(noteElement),
         noteWasEmpty: isNoteOtherwiseEmptyForPaste(contentElement),
         textBeforeCaret: textBeforeSelection(contentElement),
         pastedText: text,
+        isFormatted: false,
     };
     // Offered only where applying could happen: no format yet, not inside a wrapped region.
     if (planGuessedFormat(record, guess.options[0].tag) === null) {
@@ -1904,7 +1906,8 @@ function insertFormatGuessedPasteIntoNewNote(clipboardData) {
         tagsBefore: getTagBarValue(noteElement),
         noteWasEmpty: true,
         textBeforeCaret: '',
-        pastedText: normalizePastedTextForGuess(plainText),
+        pastedText: normalizePastedText(plainText),
+        isFormatted: false,
     };
     if (planGuessedFormat(record, guess.options[0].tag) === null) {
         return null;
@@ -1913,8 +1916,44 @@ function insertFormatGuessedPasteIntoNewNote(clipboardData) {
     return { record, guess };
 }
 
-function normalizePastedTextForGuess(plainText) {
-    return plainText.replace(/\r\n?/g, '\n').replace(/^\s*\n/, '').replace(/\n\s*$/, '');
+// A paste with formatting goes in with it; when its text without the formatting
+// is a format, the card offers that format once the paste is in
+// (formatted-paste-format-service.js). Checked before the paste goes in, from
+// the place it goes to. Returns what to offer, or null.
+function planFormattedPasteOffer({ html, plainText, noteWasEmpty, textBeforeCaret }) {
+    if (html === '' || isPlainClipboardHtml(html)) {
+        return null;
+    }
+    const offer = checkFormattedPaste({ visibleText: visibleTextOfHtml(html), plainText });
+    if (offer === null) {
+        return null;
+    }
+    const record = {
+        noteId: ModeContext.currentNoteId,
+        tagsBefore: getTagBarValue(DOMUtils.getNoteById(ModeContext.currentNoteId)),
+        noteWasEmpty,
+        textBeforeCaret,
+        pastedText: offer.text,
+        isFormatted: true,
+    };
+    if (planGuessedFormat(record, offer.options[0].tag) === null) {
+        return null;
+    }
+    return { record, guess: { kind: offer.kind, options: offer.options } };
+}
+
+// The formatted paste about to go into the edited note, if it is checked there.
+function planFormattedInlinePasteOffer(html, plainText) {
+    const contentElement = DOMUtils.getNoteContent(DOMUtils.getNoteById(ModeContext.currentNoteId));
+    if (!(document.activeElement instanceof Node) || !contentElement.contains(document.activeElement)) {
+        return null;
+    }
+    return planFormattedPasteOffer({
+        html,
+        plainText,
+        noteWasEmpty: isNoteOtherwiseEmptyForPaste(contentElement),
+        textBeforeCaret: textBeforeSelection(contentElement),
+    });
 }
 
 function planGuessedFormat(record, tag) {
@@ -1943,7 +1982,15 @@ function applyGuessedFormat(pasted, tag) {
     if (plan === null) {
         throw new Error(`A guessed format ${tag} was offered where it cannot apply`);
     }
-    if (!pasted.noteWasEmpty) {
+    if (pasted.isFormatted && pasted.noteWasEmpty) {
+        // The note holds only the formatted paste: its text replaces it.
+        const range = document.createRange();
+        range.selectNodeContents(DOMUtils.getNoteContent(noteElement));
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        insertPlainTextAtCurrentSelection(plan.insertText);
+    } else if (!pasted.noteWasEmpty) {
         document.execCommand('undo');
         startSeparateUndoStep();
         insertPlainTextAtCurrentSelection(plan.insertText);
@@ -2751,6 +2798,11 @@ async function pasteExternalContentIntoNewTopNote(pasteEventSnapshot, plainText,
         if (isFormatChecked && !formatTagged) guessed = insertFormatGuessedPasteIntoNewNote(pasteEventSnapshot.clipboardData);
         let inserted = formatTagged;
         if (guessed !== null) inserted = true;
+        if (!inserted && isFormatChecked) {
+            guessed = planFormattedPasteOffer({
+                html: pasteEventSnapshot.clipboardData.getData('text/html'), plainText, noteWasEmpty: true, textBeforeCaret: '',
+            });
+        }
         if (!inserted) inserted = await sanitizeAndInsertExternalPaste(pasteEventSnapshot, null);
         if (inserted) {
             markCurrentNoteDirtyFromPaste('Content marked as dirty due to paste into new top note');
@@ -2758,7 +2810,7 @@ async function pasteExternalContentIntoNewTopNote(pasteEventSnapshot, plainText,
         if (inserted || autoTaggedPasswordPaste) {
             await actionSaveNote(newNoteId);
         }
-        if (guessed !== null && ModeContext.isEditingNote(newNoteId)) {
+        if (inserted && guessed !== null && ModeContext.isEditingNote(newNoteId)) {
             offerGuessedFormat(guessed);
         }
         return {
@@ -3028,6 +3080,10 @@ function handlePasteEvent(event) {
                 html, plainText, event.clipboardData.getData('vscode-editor-data'),
             );
             const selectionRange = getSelectionRangeSnapshot();
+            let formattedOffer = null;
+            if (shouldHandleInlinePaste && !isPlainPaste && !autoTaggedPasswordPaste) {
+                formattedOffer = planFormattedInlinePasteOffer(html, plainText);
+            }
             event.preventDefault();
             void sanitizeAndInsertExternalPaste(pasteEventSnapshot, selectionRange)
                 .then((inserted) => {
@@ -3038,6 +3094,9 @@ function handlePasteEvent(event) {
 
                     if (inserted && !ModeContext.isDirty) {
                         markCurrentNoteDirtyFromPaste('Content marked as dirty due to sanitized external paste');
+                    }
+                    if (inserted && formattedOffer !== null && ModeContext.isEditingNote(formattedOffer.record.noteId)) {
+                        offerGuessedFormat(formattedOffer);
                     }
                 })
                 .catch((error) => {

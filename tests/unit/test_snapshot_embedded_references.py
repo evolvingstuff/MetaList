@@ -336,6 +336,25 @@ def test_view_rendering_never_exposes_remote_image_source_to_browser(
     assert re.search(r"<img[^>]+\ssrc=", rendered) is None
 
 
+@pytest.mark.parametrize("invisible", ["\u200b", "\u200c", "\u200d", "\u2060", "\ufeff"])
+def test_an_invisible_character_beside_a_reference_leaves_it_the_whole_note(
+    monkeypatch: pytest.MonkeyPatch, invisible: str,
+) -> None:
+    # A zero-width space (left by ⌘B with nothing selected, or pasted) cannot be
+    # seen in the editor: the note is still only its reference, shown as an embed.
+    notes = {
+        HOST_ID: _Note(
+            HOST_ID, None, None, TARGET_ID, False, f"<div><strong>{invisible}</strong>![[{TARGET_ID}]]</div>", "",
+        ),
+        TARGET_ID: _Note(TARGET_ID, None, HOST_ID, None, False, "<div>embedded first line</div>", ""),
+    }
+    state = _state_for(monkeypatch=monkeypatch, notes=notes, children_by_parent={None: [HOST_ID, TARGET_ID]})
+
+    rendered = state.payloads[HOST_ID]["content"]
+    assert "note-embed-block" in rendered
+    assert "note-reference-link-mode" not in rendered
+
+
 @pytest.mark.parametrize("collapsed", [True, False])
 def test_a_note_that_is_only_a_reference_folds_as_its_source(
     monkeypatch: pytest.MonkeyPatch, collapsed: bool,
@@ -394,6 +413,66 @@ def test_an_embedded_child_shows_its_saved_collapse_with_an_arrow(
         f'aria-expanded="{expanded}" aria-label="{label}"></button>'
     ) in rendered
     assert ("embedded grandchild" in rendered) is not collapsed
+
+
+# A link inside another link is split apart when the HTML is read (by the
+# sanitizer and by browsers alike), leaving empty links behind.
+_EMPTY_LINK_RE = re.compile(r"<a\b[^>]*></a>")
+
+
+def test_a_collapsed_embed_of_a_note_that_is_only_a_link_shows_the_source_first_line(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # HOST embeds OTHER, which only links to TARGET: the collapsed HOST reads as
+    # TARGET's first line, in TARGET's own formatting, as a link to OTHER reads.
+    notes = {
+        HOST_ID: _Note(HOST_ID, None, None, OTHER_ID, True, f"<div>![[{OTHER_ID}]]</div>", ""),
+        OTHER_ID: _Note(OTHER_ID, None, HOST_ID, TARGET_ID, True, f"<div>[[{TARGET_ID}]]</div>", ""),
+        TARGET_ID: _Note(
+            TARGET_ID, None, OTHER_ID, None, True,
+            "<div>The Living Labyrinth</div><div>hidden line</div>", "@heading @green",
+        ),
+    }
+    state = _state_for(
+        monkeypatch=monkeypatch, notes=notes, children_by_parent={None: [HOST_ID, OTHER_ID, TARGET_ID]},
+    )
+
+    rendered = state.payloads[HOST_ID]["content"]
+    assert _EMPTY_LINK_RE.search(rendered) is None
+    assert (
+        '<span class="note-reference-link-title">'
+        '<span class="meta-global meta-green meta-heading"><div>The Living Labyrinth</div></span></span>'
+    ) in rendered
+    assert "hidden line" not in rendered
+    assert f'data-ref-note-id="{OTHER_ID}"' in rendered
+
+
+def test_a_collapsed_embed_whose_first_line_holds_a_link_keeps_one_line(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The source's first line links to another note: the embed shows that line
+    # as the source shows it, without a link nested inside its own.
+    notes = {
+        HOST_ID: _Note(HOST_ID, None, None, OTHER_ID, True, f"<div>![[{OTHER_ID}]]</div>", ""),
+        OTHER_ID: _Note(
+            OTHER_ID, None, HOST_ID, TARGET_ID, True,
+            f"<div>See [[{TARGET_ID}]] here</div><div>hidden line</div>", "@green",
+        ),
+        TARGET_ID: _Note(TARGET_ID, None, OTHER_ID, None, False, "<div>The Living Labyrinth</div>", ""),
+    }
+    state = _state_for(
+        monkeypatch=monkeypatch, notes=notes, children_by_parent={None: [HOST_ID, OTHER_ID, TARGET_ID]},
+    )
+
+    rendered = state.payloads[HOST_ID]["content"]
+    assert _EMPTY_LINK_RE.search(rendered) is None
+    title = re.search(
+        r'<span class="note-reference-link-title"><span class="meta-global meta-green"><div>See (?P<link>.*) here</div></span></span>',
+        rendered,
+    )
+    assert title is not None
+    assert "The Living Labyrinth" in title.group("link")
+    assert "hidden line" not in rendered
 
 
 def test_collapsed_host_renders_note_embed_as_link_only(monkeypatch: pytest.MonkeyPatch) -> None:

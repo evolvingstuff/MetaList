@@ -396,6 +396,9 @@ _EDITOR_WRAPPER_TAG_RE = re.compile(r"</?(?:div|p|span|b|strong|i|em|u|s)\b[^>]*
 _TRAILING_BLOCK_BREAK_RE = re.compile(r"(?<=[^>\s])\s*<br\s*/?>(?=\s*</(?:div|p)>)", re.IGNORECASE)
 # Stands in for the reference while checking what else the note holds.
 _SOLE_REFERENCE_MARK = "\x00"
+# Characters with no width, unseen in the editor (a zero-width space left by ⌘B
+# with nothing selected, a pasted byte-order mark): they are not content.
+_INVISIBLE_CHARACTERS_RE = re.compile("[\u200b-\u200d\u2060\ufeff]")
 
 
 def sole_reference_token(content_html: str) -> Optional[ReferenceToken]:
@@ -412,7 +415,7 @@ def sole_reference_token(content_html: str) -> Optional[ReferenceToken]:
     token = tokens[0]
     marked = content_html[:token.start] + _SOLE_REFERENCE_MARK + content_html[token.end:]
     unwrapped = _EDITOR_WRAPPER_TAG_RE.sub("", _TRAILING_BLOCK_BREAK_RE.sub("", marked))
-    if html.unescape(unwrapped).strip() != _SOLE_REFERENCE_MARK:
+    if _INVISIBLE_CHARACTERS_RE.sub("", html.unescape(unwrapped)).strip() != _SOLE_REFERENCE_MARK:
         return None
     return token
 
@@ -748,8 +751,15 @@ def _render_collapsed_embed_body(
     redact_credentials: bool,
 ) -> str:
     """A collapsed embed: the source's first line drawn as a collapsed note draws it,
-    in the source's own formatting (a heading, a colour), with the source icon."""
-    record = context.get_note(reference_note_id)
+    in the source's own formatting (a heading, a colour), with the source icon.
+
+    A source that is only a reference is followed to the note it shows, as a
+    link to it reads. The line is held in a span, not a link: a link on that
+    line inside another link would be split apart, leaving an empty line."""
+    shown_note_id = resolve_held_source(
+        reference_note_id, has_note=context.has_note, content_of=_context_content(context),
+    )
+    record = context.get_note(shown_note_id)
     source_content = getattr(record, "content")
     source_tags = getattr(record, "tags")
     if not isinstance(source_content, str) or not isinstance(source_tags, str):
@@ -775,7 +785,7 @@ def _render_collapsed_embed_body(
             show_media=True,
         )
     preview_html = render_collapsed_note_content_with_embeds(
-        note_id=reference_note_id,
+        note_id=shown_note_id,
         content_html=source_content,
         tags=source_tags,
         context=context,
@@ -786,10 +796,10 @@ def _render_collapsed_embed_body(
         return f'<span class="note-reference-link note-reference-link-static">{preview_html}</span>'
     escaped_note_id = html.escape(reference_note_id, quote=True)
     return (
-        f'<a href="#" class="note-reference-link" data-ref-note-id="{escaped_note_id}">'
+        f'<span class="note-reference-link" data-ref-note-id="{escaped_note_id}">'
         '<span class="note-reference-link-icon note-reference-icon" aria-hidden="true" title="Go to source note"></span>'
         f'<span class="note-reference-link-title">{preview_html}</span>'
-        "</a>"
+        "</span>"
     )
 
 

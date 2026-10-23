@@ -29,6 +29,32 @@ test('Markdown-like text needs two kinds of signs, or a table', () => {
     assert.equal(offered('A plain paragraph of text.\n\nAnother one.'), null);
 });
 
+// An answer copied from an AI chat: prose, a heading, and a fenced app.
+const HTML_APP = [
+    '<!DOCTYPE html>', '<html>', '<head>', '  <title>Labyrinth</title>', '  <style>', '    body { margin: 0; }', '  </style>',
+    '</head>', '<body>', '  <canvas id="c"></canvas>', '  <script>', '    const c = document.getElementById("c");',
+    '    function draw() {', '      requestAnimationFrame(draw);', '    }', '  </script>', '</body>', '</html>',
+].join('\n');
+
+// (A fence naming its language is tagged at once by paste-format-detection-service.js;
+// the guess agrees when it is asked.)
+test('a fenced code block is Markdown, whatever the code inside it', () => {
+    const markdown = { kind: 'markdown', tags: ['@markdown'] };
+    assert.deepEqual(offered(`Here is the app.\n\n## The Living Labyrinth\n\n\`\`\`html\n${HTML_APP}\n\`\`\`\n\nSave it and open it.`), markdown);
+    assert.deepEqual(offered('Here is how.\n\n```python\ndef double(x):\n    return x * 2\n```\n\nThat prints 6.'), markdown);
+    assert.deepEqual(offered('Run this:\n\n```\nmake build\nmake test\n```'), markdown);
+    assert.equal(offered('Use ``` to start a code block.'), null, 'one fence line is not a block');
+});
+
+test('headings over paragraphs are Markdown; comments in code are not', () => {
+    assert.deepEqual(
+        offered('## Overview\n\nThe app draws a maze that changes as you walk.\n\n## How it works\n\nEach step moves the walls.'),
+        { kind: 'markdown', tags: ['@markdown'] },
+    );
+    assert.equal(offered('# Groceries\n\nMilk and eggs.'), null, 'one heading is an ordinary note');
+    assert.equal(offered('#!/bin/bash\n# build\nmake\n# test\nmake test').tags[0], '@code=bash');
+});
+
 const SNIPPETS = {
     '@code=sql': 'SELECT name, COUNT(*) AS notes\nFROM tags\nWHERE name LIKE \'py%\'\nGROUP BY name;',
     '@code=python': 'def greet(name):\n    # say hello\n    return f"Hello, {name}!" if name else None',

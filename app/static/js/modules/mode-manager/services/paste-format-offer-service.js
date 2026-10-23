@@ -136,7 +136,7 @@ export function offerPasteFormat({ noteId, contentElement, kind, options, onAppl
     if (typeof noteId !== 'string' || noteId === '' || !(contentElement instanceof HTMLElement)) {
         throw new Error('offerPasteFormat requires noteId and contentElement');
     }
-    if (!['csv', 'markdown', 'code'].includes(kind) || !Array.isArray(options) || options.length === 0) {
+    if (!['csv', 'markdown', 'code', 'format'].includes(kind) || !Array.isArray(options) || options.length === 0) {
         throw new Error('offerPasteFormat requires a kind and options');
     }
     if (typeof onApply !== 'function') {
