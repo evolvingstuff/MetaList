@@ -1,8 +1,10 @@
-"""Run the COMMIT FEATURE checks (AGENTS.md, "COMMIT FEATURE") in the order that is fastest
-and safe on one machine: the browser suite first and alone (it fills 8 cores; anything beside
-it times its runs out), then every other check at once.
+"""Run the full checks in the order that is fastest and safe on one machine: the browser suite
+first and alone (it fills 8 cores; anything beside it times its runs out), then every other
+check at once. COMMIT FEATURE runs them without the browser suite, which runs before a push
+(AGENTS.md, "COMMIT FEATURE" and "Before pushing main").
 
-    .venv/bin/python scripts/full_checks.py             # against main
+    .venv/bin/python scripts/full_checks.py --no-browser   # COMMIT FEATURE, against main
+    .venv/bin/python scripts/full_checks.py                # everything
     .venv/bin/python scripts/full_checks.py --base v0.22.0
 
 The ShockHarness gate and the Windows-style clone read commits, so the working tree must be
@@ -152,7 +154,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--base", default="main", help="revision the ShockHarness gate compares against")
     parser.add_argument("--no-browser", action="store_true",
-                        help="skip the browser suite (for a quick look only: COMMIT FEATURE needs it)")
+                        help="skip the browser suite (COMMIT FEATURE; the whole browser suite runs before a push)")
     options = parser.parse_args()
 
     if _git("status", "--porcelain"):

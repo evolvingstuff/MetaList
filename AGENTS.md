@@ -191,10 +191,15 @@ If the code works, suggest committing. There are two types:
 - The entire feature has been tested by the user and is working as expected.
 - Update any relevant Markdown in `docs/` to reflect the feature. If the right document does not exist yet, ask the user whether to create a new one (and create `docs/` or subfolders when necessary). Suggest renames to keep docs organized when appropriate.
 - Remove PLAN.md as part of this workflow.
-- Run the full checks once, here (not at checkpoints), after committing to the feature branch: `.venv/bin/python scripts/full_checks.py`. It runs the full browser smoke alone, then at once the Python unit suite on the local version and on every supported version (3.11 and 3.14), the Windows-style clone, the JS unit tests, the type check, the supply-chain check, the startup sanity gates and the ShockHarness gate against `main`, and prints one line per check (logs in `logs/checks/`). Fix any failure before merging.
+- Run the quick full checks once, here (not at checkpoints), after committing to the feature branch: `.venv/bin/python scripts/full_checks.py --no-browser` (about 2 minutes). It runs at once the Python unit suite on the local version and on every supported version (3.11 and 3.14), the Windows-style clone, the JS unit tests, the type check, the supply-chain check, the startup sanity gates and the ShockHarness gate against `main`, and prints one line per check (logs in `logs/checks/`). Also run, alone, each browser suite the feature touches (`BROWSER_TEST_BROWSER=chrome BROWSER_TEST_SUITE=<suite> npm run test:browser`). The whole browser suite does not run here; it runs before a push (below). Fix any failure before merging.
 - Commit the changes to the feature branch.
 - Merge the branch into main.
 - Delete the feature branch.
+
+**Before pushing main**
+- Merging into `main` stays on this machine; the user pushes `main` to GitHub when they choose, often several merges at once, and that push starts the full Windows/macOS/Linux CI matrix.
+- When the user is about to push, run the whole browser suite once on `main`: `npm run test:browser:all` (all suites in parallel, about 5 minutes). Run nothing else heavy beside it, and keep the Mac on power: browsers closing mid-test on battery is power, not code. Fix any failure in a new feature before the push.
+- Never push yourself (see "git" below).
 
 **COMMIT** (without qualifier)
 - If the user just says COMMIT, ask for clarification:
