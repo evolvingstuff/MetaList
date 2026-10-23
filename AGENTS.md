@@ -38,6 +38,14 @@ This document defines standardized workflows triggered by action commands in ALL
 - All Python work happens inside the `.venv` virtual environment; activate it (e.g. `source .venv/bin/activate`) or call `.venv/bin/python` directly when running tooling or scripts.
 - Before writing, fixing, refactoring or reviewing code, read the matching ShockHarness skill in .claude/skills/<name>/SKILL.md (write-compliant-code, fix-violations, refactor-complexity, pre-commit-review, verification-integrity, async-lifecycle, property-contracts, adopt-shockharness). After a ShockHarness upgrade, refresh them with `shockharness skills update --agent claude`.
 
+## CRITICAL: Never Work in a Git Worktree
+
+Work only in the repository's main checkout (`/Users/thomaslahore/Desktop/MetaList3`), never in a git worktree. The user tries every change in their own running MetaList, which serves the main checkout's files live; a worktree hides the change from them until it is copied or merged.
+
+- Never create or use a worktree: no `git worktree add`, no `EnterWorktree`, no agent or session started with worktree isolation (`use_worktree: true`, `isolation: "worktree"`). Sessions you start run in the main checkout.
+- Feature branches live in the main checkout (`git switch -c feature/...` there).
+- If you find yourself in a worktree (a path under `.claude/worktrees/`), stop before changing anything and tell the user, so they can start the session from the main checkout.
+
 ## CRITICAL: Backup Immutability
 
 Existing backup files are immutable recovery artifacts.
