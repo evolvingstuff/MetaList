@@ -12,9 +12,9 @@ const template = readFileSync(new URL('../../app/templates/index.html', import.m
 const mouseEvents = readFileSync(new URL('../../app/static/js/modules/mode-manager/events/mouse-events.js', import.meta.url), 'utf8');
 
 function viewIndicatorIds() {
-    const start = template.indexOf('class="view-indicators"');
-    assert.notEqual(start, -1, 'view indicators container missing');
-    const section = template.slice(start, template.indexOf('<!--', start));
+    const start = template.indexOf('class="search-input-chips"');
+    assert.notEqual(start, -1, 'search input chips container missing');
+    const section = template.slice(start, template.indexOf('id="reference-source-indicator"', start));
     return [...section.matchAll(/<div id="([a-z-]+-indicator)" class="[a-z- ]*indicator[a-z- ]*"/g)].map((match) => match[1]);
 }
 
@@ -26,9 +26,11 @@ function editExitExclusions() {
 
 test('every view indicator pill is pressed without ending the edit', () => {
     const ids = viewIndicatorIds();
-    assert.deepEqual(ids, ['reference-source-indicator', 'root-sort-indicator', 'untagged-view-indicator']);
+    assert.deepEqual(ids, ['untagged-view-indicator', 'root-sort-indicator']);
+    // A reference view's chip, centered in the search bar.
+    assert.match(template, /<div id="reference-source-indicator" class="reference-view-chip"/);
     const exclusions = editExitExclusions();
-    for (const id of ids) {
+    for (const id of [...ids, 'reference-source-indicator']) {
         assert.ok(exclusions.includes(id), `#${id} must not end editing on mousedown`);
     }
 });

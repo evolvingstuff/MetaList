@@ -85,8 +85,8 @@ test('buildContextMenuItems prepends source action for a reference context', () 
         },
         {
             id: 'open-reference-source',
-            label: 'Go to Source',
-            icon: 'external',
+            label: 'Go to Source Note',
+            icon: 'note_reference',
             enabled: true,
         },
     );
@@ -496,7 +496,7 @@ function buildViewContext(overrides) {
 }
 
 const VIEW_HANDLER_NAMES = [
-    'onAddNoteAtTop', 'onPasteNoteAtTop', 'onUndo', 'onRedo', 'onGoToTop', 'onGoToBottom', 'onFullyExpandAll',
+    'onAddNoteAtTop', 'onPasteNoteAtTop', 'onPasteReferenceAtTop', 'onUndo', 'onRedo', 'onGoToTop', 'onGoToBottom', 'onFullyExpandAll',
     'onFullyCollapseAll', 'onSetUntaggedView', 'onSetSortMode', 'onToggleAiChat', 'onToggleTabs',
     'onToggleNoteTags', 'onSetTheme', 'onNewTab', 'onOpenNamespace', 'onOpenReminders',
     'onExportViewHtml', 'onPrintView', 'onLogOut',
@@ -515,6 +515,7 @@ test('the background menu groups adding, history, the list, the view, opening, e
     assert.deepEqual(describeMenu(items), [
         'Add Note at Top ↩',
         'Paste Note at Top ⌘V',
+        'Paste Note as Reference at Top ⌘R',
         '— Undo ⌘Z',
         'Redo ⇧⌘Z',
         '— Go to Top',
@@ -538,6 +539,7 @@ test('background items that do not apply are hidden, not greyed', () => {
     const atTop = buildContextMenuItems(buildViewContext({}), buildViewHandlers([]));
     const ids = atTop.map((item) => item.id);
     assert.ok(!ids.includes('paste-note-at-top'));
+    assert.ok(!ids.includes('paste-reference-at-top'));
     assert.ok(!ids.includes('go-to-top'));
     assert.ok(!ids.includes('go-to-bottom'));
     assert.equal(atTop.find((item) => item.id === 'fully-expand-all').separated, true);
@@ -546,7 +548,7 @@ test('background items that do not apply are hidden, not greyed', () => {
     // While a note is edited, Enter, ⌘V and ⌘Z belong to the editor.
     const editing = buildContextMenuItems(buildViewContext({ isEditing: true, canPasteNoteAtTop: true }), buildViewHandlers([]));
     const editingIds = editing.map((item) => item.id);
-    for (const id of ['add-note-at-top', 'paste-note-at-top', 'undo', 'redo']) {
+    for (const id of ['add-note-at-top', 'paste-note-at-top', 'paste-reference-at-top', 'undo', 'redo']) {
         assert.ok(!editingIds.includes(id), id);
     }
     assert.equal(editing[0].id, 'fully-expand-all');
@@ -566,6 +568,7 @@ test('background shortcuts are written the Windows and Linux way off a Mac', () 
     assert.deepEqual(shortcuts, {
         'add-note-at-top': 'Enter',
         'paste-note-at-top': 'Ctrl+V',
+        'paste-reference-at-top': 'Ctrl+R',
         undo: 'Ctrl+Z',
         redo: 'Ctrl+Shift+Z',
     });
@@ -585,8 +588,8 @@ test('background actions call their handlers', () => {
         item.onSelect();
     }
     assert.deepEqual(calls.map((call) => call[0]), [
-        'onAddNoteAtTop', 'onPasteNoteAtTop', 'onUndo', 'onRedo', 'onGoToTop', 'onGoToBottom', 'onFullyExpandAll',
-        'onFullyCollapseAll', 'onNewTab', 'onOpenNamespace', 'onOpenReminders', 'onExportViewHtml', 'onPrintView', 'onLogOut',
+        'onAddNoteAtTop', 'onPasteNoteAtTop', 'onPasteReferenceAtTop', 'onUndo', 'onRedo', 'onGoToTop', 'onGoToBottom',
+        'onFullyExpandAll', 'onFullyCollapseAll', 'onNewTab', 'onOpenNamespace', 'onOpenReminders', 'onExportViewHtml', 'onPrintView', 'onLogOut',
     ]);
 });
 
@@ -641,16 +644,31 @@ test('view context menu no longer exposes the note timestamp visibility preferen
 
 test('background sorting offers all modes and ticks only the current mode', () => {
     const modes = ['normal', 'created', 'updated', 'alphabetical', 'content-volume'];
-    for (const currentMode of modes) {
-        const calls = [];
-        const items = buildContextMenuItems(buildViewContext({ sortMode: currentMode }), buildViewHandlers(calls));
-        const submenu = items.find((item) => item.id === 'sort-by').submenu;
-        assert.deepEqual(submenu.map((item) => item.id), modes.map((mode) => `sort-by-${mode}`));
-        assert.deepEqual(submenu.filter((item) => item.checked).map((item) => item.id), [`sort-by-${currentMode}`]);
-        assert.deepEqual(submenu.filter((item) => !item.enabled).map((item) => item.id), [`sort-by-${currentMode}`]);
-        assert.ok(submenu.every((item) => !item.label.includes('(current)')));
-        for (const item of submenu.filter((item) => item.enabled)) item.onSelect();
-        assert.deepEqual(calls.map((call) => call[1]), modes.filter((mode) => mode !== currentMode));
+    for (const isReversed of [false, true]) {
+        const direction = isReversed ? '-reversed' : '';
+        for (const currentMode of modes) {
+            const calls = [];
+            const items = buildContextMenuItems(
+                buildViewContext({ sortMode: `${currentMode}${direction}` }),
+                buildViewHandlers(calls),
+            );
+            const submenu = items.find((item) => item.id === 'sort-by').submenu;
+            assert.deepEqual(
+                submenu.map((item) => item.id),
+                [...modes.map((mode) => `sort-by-${mode}`), 'sort-by-reverse'],
+            );
+            const checked = [`sort-by-${currentMode}`, ...(isReversed ? ['sort-by-reverse'] : [])];
+            assert.deepEqual(submenu.filter((item) => item.checked).map((item) => item.id), checked);
+            assert.deepEqual(submenu.filter((item) => !item.enabled).map((item) => item.id), [`sort-by-${currentMode}`]);
+            assert.ok(submenu.every((item) => !item.label.includes('(current)')));
+            for (const item of submenu.filter((item) => item.enabled)) item.onSelect();
+            // Picking another order keeps the direction; Reverse Order flips it.
+            const flipped = isReversed ? currentMode : `${currentMode}-reversed`;
+            assert.deepEqual(
+                calls.map((call) => call[1]),
+                [...modes.filter((mode) => mode !== currentMode).map((mode) => `${mode}${direction}`), flipped],
+            );
+        }
     }
 });
 

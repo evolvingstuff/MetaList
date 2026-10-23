@@ -50,10 +50,16 @@ import {
 } from '../services/shell-output-service.js';
 import {
     navigateBackFromReferenceContext,
+    navigateToReferenceOrigin,
     openReferenceInNewTab,
     openReferenceQueryInNewTab,
     openBacklinksInNewTab,
 } from './keyboard-events.js';
+import {
+    isViewingReferenceSource,
+    showNewSearchInReferenceView,
+} from '../services/reference-source-navigation-service.js';
+import { focusSearchInputAndSelectAllText } from '../services/search-input-service.js';
 
 
 const moduleState = ApplicationState.createFields('mouse-events', {
@@ -286,6 +292,8 @@ function isMouseDownOutsideEditExclusion(target) {
             '.note-tag-bar',
             '#search-contexts-list',
             '#reference-source-indicator',
+            // The magnifier leaves edit mode itself, then opens the empty search input.
+            '#reference-view-new-search',
             '#root-sort-indicator',
             '#untagged-view-indicator',
             '#menu-button',
@@ -1943,7 +1951,7 @@ function handleAiChatOpenAllReferencesClick(event) {
         if (ModeContext.isEditing) {
             await actionDeselectNote();
         }
-        await openReferenceQueryInNewTab(referenceQuery);
+        await openReferenceQueryInNewTab(referenceQuery, 'references');
     });
     return true;
 }
@@ -2003,7 +2011,7 @@ function handleReferenceLinkClick(event) {
             if (ModeContext.isEditing) {
                 await actionDeselectNote();
             }
-            await openReferenceQueryInNewTab(referenceQuery);
+            await openReferenceQueryInNewTab(referenceQuery, 'reference');
         });
         return true;
     }
@@ -2062,6 +2070,22 @@ function handleReferenceSourceIndicatorClick(event) {
         throw new Error('Reference source indicator click missing target element');
     }
 
+    const newSearchButton = event.target.closest('#reference-view-new-search');
+    if (newSearchButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        void CommandGate.run('mouse.reference_view_new_search', async () => {
+            if (ModeContext.isEditing) {
+                await actionDeselectNote();
+            }
+            if (isViewingReferenceSource()) {
+                showNewSearchInReferenceView();
+                focusSearchInputAndSelectAllText();
+            }
+        });
+        return true;
+    }
+
     const indicator = event.target.closest('#reference-source-indicator');
     if (!indicator) {
         return false;
@@ -2071,7 +2095,8 @@ function handleReferenceSourceIndicatorClick(event) {
     event.stopPropagation();
 
     const clearButton = event.target.closest('#reference-source-indicator-clear');
-    if (!clearButton) {
+    const backButton = event.target.closest('#reference-view-chip-back');
+    if (!clearButton && !backButton) {
         return true;
     }
 
@@ -2082,8 +2107,14 @@ function handleReferenceSourceIndicatorClick(event) {
         return true;
     }
 
+    if (backButton) {
+        void CommandGate.run('mouse.reference_view_back', async () => {
+            await navigateBackFromReferenceContext();
+        });
+        return true;
+    }
     void CommandGate.run('mouse.reference_source_close', async () => {
-        await navigateBackFromReferenceContext();
+        await navigateToReferenceOrigin();
     });
     return true;
 }

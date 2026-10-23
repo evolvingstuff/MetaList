@@ -390,7 +390,7 @@ def test_password_transitions_rewrite_tab_state_rows(
         payload[tab_id]["searchQuery"] = "focus-tag"
         payload[tab_id]["scrollY"] = 75
         payload[tab_id]["anchorRootId"] = "root-77"
-        store.update(
+        store.update(reference_views={}, 
             active_tab_id=tab_id,
             tabs=payload,
             tab_order=initial["tabOrder"],

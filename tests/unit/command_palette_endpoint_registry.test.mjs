@@ -187,8 +187,9 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
     );
     assert.equal(
         endpoints.find((endpoint) => endpoint.id === 'view.sort_mode.content_volume').label,
-        'Sort order: Content volume (largest first)',
+        'Sort order: Content volume',
     );
+    assert.equal(endpointIds.has('view.sort_mode.reverse'), true);
     assert.equal(
         endpoints.find((endpoint) => endpoint.id === 'view.sort_mode.normal').getValue(),
         'Current',

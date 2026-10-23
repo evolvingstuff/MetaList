@@ -34,15 +34,16 @@ Opening or dismissing the command palette does not clear undo/redo. Global actio
 - In content-volume mode, roots are ordered largest-first by the total plain-text character count of every note in each root subtree. HTML markup does not count, and equal totals preserve manual root order. Search phrases include `character count`, `content volume`, `length`, and `longest`.
 - The server returns the ordered root window plus `sortMode`/`rootSortBuckets`; the client inserts day-separator rows between visible roots.
 - Sorted tabs limit new root notes and freeze the order while a note is edited; the full rules are in `docs/ui/controls.md` (Sorted tabs: adding and editing notes).
-- When a non-normal sort mode is active, the UI shows a floating dismissible pill above the sticky top bar so the view override is visually obvious and can be cleared in one click.
+- **Reverse Order** (a check item under the orders in the Sort by menu; `Sort order: Reverse` in the palette) combines with any order, Normal included: Z to A, the date orders oldest first, Content volume smallest first, the manual order bottom to top. Date separators flip with the notes. Picking another order keeps it. Saved as the order's name with `-reversed` (`alphabetical-reversed`); an older MetaList reads that as Normal. While reversed, root notes cannot be moved and no new root notes can be added.
+- When a non-normal sort mode is active, a gray chip at the right end inside the search input names it: `Created`, `Updated`, `A–Z`, `Size`; reversed `Created ↑`, `Updated ↑`, `Z–A`, `Size ↑`, or `Reversed` for Normal reversed. Its full name is the tooltip; its `×` returns to Normal (not reversed). The typed search stops before the chips. A chip grows in or shrinks out only when the user changes the order in that tab, never on a reload or tab switch.
 - Changing sort mode is treated as a global view-context switch: the tab scroll state resets and undo/redo history is blanked for that tab context.
-- Changing the search input resets the active tab's sort mode to Normal before executing the search.
+- Changing the search input resets the active tab's sort mode to Normal before executing the search. Leaving a tab (picking another, or opening a new or duplicated one) does the same for the tab left, and a new blank tab starts in Normal order. Following a reference and coming back keeps the sort.
 
 ## Untagged Notes View
 - `View: Untagged notes` temporarily overrides the displayed results with notes that have no non-meta effective tags while preserving the active tab and its search. Its search box is visually blank because the preserved query is not active.
-- `View: All notes` returns to the underlying tab view. The active untagged view also appears as a dismissible pill above the sticky top bar.
+- `View: All notes` returns to the underlying tab view. The active untagged view also appears as an `Untagged` chip inside the search input, before any sort chip.
 - The setting is transient and tab-agnostic: it is not persisted or inherited when a tab is duplicated.
-- Clicking any tab, changing the search input, or dismissing the pill exits the untagged view. The pill's × works with one click while a note is being edited (the note is saved and closed as the view changes); like the other view pills, pressing it does not end the edit on its own (`tests/unit/view_indicator_edit_exit.test.mjs`). Changing it resets the active display's scroll state and undo/redo context.
+- Clicking any tab, changing the search input, or dismissing the chip exits the untagged view. The chip's × works with one click while a note is being edited (the note is saved and closed as the view changes); like the other view chips, pressing it does not end the edit on its own (`tests/unit/view_indicator_edit_exit.test.mjs`). Changing it resets the active display's scroll state and undo/redo context.
 
 ## Config
 - Tag mappings live in `app/static/config/command_palette_tags.json`.

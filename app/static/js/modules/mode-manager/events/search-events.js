@@ -14,7 +14,9 @@ import { clearActiveNotesDom, clearCachedNotesDomForTab } from '../services/tab-
 import { clearActiveSortModeForSearchInput } from '../services/root-sort-indicator-service.js';
 import {
     dismissReferenceSourceModeForActiveTab,
+    isShowingNewSearchInReferenceView,
     isViewingReferenceSource,
+    restoreReferenceChipAfterEmptySearch,
 } from '../services/reference-source-navigation-service.js';
 import { handleDictationPasteEvent, isDictationRawInsertInProgress } from '../services/dictation-paste-service.js';
 import { MS_PER_SECOND } from '../../time-units.js';
@@ -87,6 +89,7 @@ export function handleSearchInput(event) {
     }
 
     // Browser input events can re-fire with the same normalized value during autofill/composition.
+    // A new search ends the sort order and the Untagged view: their chips leave.
     let viewOverridesClearPromise = null;
     if (isFreshSearchInput) {
         if (previousSearchQuery !== analysis.normalizedText) {
@@ -162,6 +165,18 @@ export function handleSearchInput(event) {
     scheduleDebouncedSearchExecution(CONFIG.SEARCH.DEBOUNCE_MS, executeSearchWhenIdle);
 }
 
+// The magnifier brought the empty input out over a reference view; leaving it
+// without typing brings the chip back.
+function handleSearchInputBlur(event) {
+    if (!isShowingNewSearchInReferenceView()) {
+        return;
+    }
+    if (event.target.value !== '') {
+        return;
+    }
+    restoreReferenceChipAfterEmptySearch();
+}
+
 export async function initializeSearchEvents() {
     const startedAt = performance.now();
     const searchInput = document.getElementById('search-input');
@@ -173,6 +188,7 @@ export async function initializeSearchEvents() {
     // Add input event listener
     searchInput.addEventListener('input', handleSearchInput);
     searchInput.addEventListener('paste', (event) => handleDictationPasteEvent(event, 'search'));
+    searchInput.addEventListener('blur', handleSearchInputBlur);
     initializeSearchSuggestions();
 
     await initializeTabStateService();
@@ -191,8 +207,15 @@ export async function initializeSearchEvents() {
     // Initialize search contexts list
     updateSearchContextsList();
 
-    // Always sync the input field to the active tab query.
-    const analysis = syncSearchInputValue(searchInput, activeTabQuery);
+    // Always sync the input field to the active tab query, except a reference view's
+    // hidden note-ID search, which runs the view but never shows in the input.
+    let analysis = null;
+    if (isViewingReferenceSource()) {
+        syncSearchInputValue(searchInput, '');
+        analysis = analyzeSearchQueryInput(activeTabQuery);
+    } else {
+        analysis = syncSearchInputValue(searchInput, activeTabQuery);
+    }
     // Tab-state hydration already seeds ModeContext.searchQuery for the active tab.
     if (ModeContext.searchQuery !== analysis.normalizedText) {
         ModeContext.setSearchQuery(analysis.normalizedText);

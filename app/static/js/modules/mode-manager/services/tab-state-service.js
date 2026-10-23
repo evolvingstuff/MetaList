@@ -7,7 +7,7 @@ import { areScrollAnchorsEqual, computeScrollAnchor } from './scroll-anchor-serv
 import { CommandGate } from './command-gate-service.js';
 import { buildSessionHeaders } from '../../session-auth.js';
 import { AuthenticationRequiredError } from '../../client-state-api.js';
-import { restoreReferenceNavigationFromSession } from './reference-source-navigation-service.js';
+import { getReferenceViewsPayload, restoreReferenceNavigation } from './reference-source-navigation-service.js';
 
 const HTTP_UNAUTHORIZED = 401;
 const TAB_STATE_ENDPOINT = CONFIG.API.NOTES.TAB_STATE;
@@ -43,7 +43,7 @@ function setTabStateVersionFromServer(version) {
 export async function initializeTabStateService() {
     const serverState = await fetchTabState();
     ModeContext.hydrateTabState(serverState, { emitUpdate: false });
-    restoreReferenceNavigationFromSession(serverState.tabs);
+    restoreReferenceNavigation(serverState);
     setTabStateVersionFromServer(serverState.version);
     recordServerSignature(serverState);
     ModeContext.setTabStateUpdateHook(handleTabStateMutation);
@@ -58,7 +58,8 @@ export async function persistTabStateSnapshot() {
     while (moduleState.pendingPersistRequest !== null) {
         await moduleState.pendingPersistRequest;
     }
-    const snapshot = ModeContext.getTabStatePayload();
+    // Which tabs are reference views goes with the tabs (docs/ui/references.md).
+    const snapshot = { ...ModeContext.getTabStatePayload(), referenceViews: getReferenceViewsPayload() };
     const signature = serializeState(canonicalizeState(snapshot));
     if (signature === moduleState.lastSignature) {
         return;
@@ -80,6 +81,7 @@ function canonicalizeState(state) {
         activeTabId: state.activeTabId,
         tabs: state.tabs,
         tabOrder: state.tabOrder,
+        referenceViews: state.referenceViews,
         version: state.version,
     };
 }

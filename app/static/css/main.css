@@ -27,10 +27,13 @@
     --note-corner-radius: 12px;
     --note-corner-radius-nested: 10px;
     /* Embeds: greys, the first level, then each embed inside an embed a shade deeper. */
-    --embed-tint-1: #f1f3f5;
-    --embed-tint-2: #e5e8eb;
-    --embed-tint-3: #d8dce0;
+    --embed-tint-1: #e4e7eb;
+    --embed-tint-2: #d5dade;
+    --embed-tint-3: #c6ccd2;
     --embed-edge: rgba(0, 0, 0, 0.12);
+    /* Several notes (an AI answer's references, all of them): two pages, one behind the other. */
+    --note-references-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 6V4a1 1 0 0 1 1-1h5l4 4v11a1 1 0 0 1-1 1h-2'/%3E%3Cpath d='M5 7a1 1 0 0 1 1-1h5l4 4v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z'/%3E%3Cpath d='M11 6v4h4'/%3E%3C/svg%3E");
+    --note-reference-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 3H7a2 2 0 0 0-2 2v6'/%3E%3Cpath d='M14 3v4a1 1 0 0 0 1 1h4'/%3E%3Cpath d='M19 8v11a2 2 0 0 1-2 2h-6'/%3E%3Cpath d='M4 21v-3a3 3 0 0 1 3-3h5'/%3E%3Cpath d='M10 12l3 3-3 3'/%3E%3C/svg%3E");
     /* The light theme's header bar (search, tabs icon, result count): black,
        with white on it, as it long was. */
     --search-shell-surface: #000000;
@@ -2439,24 +2442,6 @@ html[data-theme="dark"] .prioritize-modal-content input.prioritize-modal-tag-inp
     .random-password-modal-actions button {
         width: 100%;
     }
-
-    .controls .view-indicators {
-        top: -12px;
-        max-width: calc(100% - 16px);
-    }
-
-    .controls .reference-source-indicator,
-    .controls .root-sort-indicator,
-    .controls .untagged-view-indicator {
-        padding-left: 10px;
-        padding-right: 6px;
-    }
-
-    .controls .reference-source-indicator-label,
-    .controls .root-sort-indicator-label,
-    .controls .untagged-view-indicator-label {
-        font-size: 11px;
-    }
 }
 
 body {
@@ -4288,6 +4273,35 @@ body[data-tag-style="text"],
     margin-right: 0.35em;
 }
 
+/* The one sign for a note reference (an embed's corner button, a link's icon): a
+   page with an arrow coming into it, a shortcut to a note kept elsewhere. Drawn
+   with a mask so the notes' HTML holds no SVG; text inside (the ↗ in older copied
+   AI answers) is pushed out of sight. */
+.note-reference-icon {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.15em;
+    overflow: hidden;
+    text-indent: 1em;
+    white-space: nowrap;
+    background-color: currentColor;
+    -webkit-mask: var(--note-reference-icon) center / contain no-repeat;
+    mask: var(--note-reference-icon) center / contain no-repeat;
+}
+
+/* In a note (an embed's corner, after a link) a little larger than the text. */
+.note-content .note-reference-icon {
+    width: 1.2em;
+    height: 1.2em;
+    vertical-align: -0.25em;
+}
+
+.note-reference-icon.is-several-notes {
+    -webkit-mask-image: var(--note-references-icon);
+    mask-image: var(--note-references-icon);
+}
+
 .note-reference-link-title {
     min-width: 0;
     overflow: hidden;
@@ -5065,13 +5079,15 @@ html[data-theme="dark"] .note.collapsed:not(.editing) .note-content img.note-fil
 }
 
 /* A collapsed embed looks like any collapsed note: its first line as plain
-   text, the ↗ at the top right. A press on the text edits the note, as
-   anywhere in an embed; only the ↗ goes to the source. */
+   text, the reference icon at the top right. A press on the text edits the
+   note, as anywhere in an embed; only the icon goes to the source. */
 .note-reference-embed-first-line {
     position: relative;
 }
 
 .note-reference-embed-first-line .note-reference-link {
+    /* The padding keeps the text clear of the icon: inside the width, not past it. */
+    box-sizing: border-box;
     width: 100%;
     padding-right: 1.6em;
     color: inherit;
@@ -5083,11 +5099,19 @@ html[data-theme="dark"] .note.collapsed:not(.editing) .note-content img.note-fil
     text-decoration: none;
 }
 
+/* The source's first line comes in its own blocks (a paragraph, a heading): each
+   stays on one line and ends with … where it would run under the icon. */
+.note-reference-embed-first-line .note-reference-link-title :not(img) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .note-reference-embed-first-line .note-reference-link-icon {
     position: absolute;
     top: 0;
     right: 0;
-    width: 1em;
+    width: 1.2em;
     text-align: right;
     color: #64748b;
     pointer-events: auto;
@@ -5108,8 +5132,8 @@ html[data-theme="dark"] .note-embed-holds-embed .note-reference-block.note-embed
     background: transparent;
 }
 
-/* The go-to arrows (↗ source, ↖ backlinks) sit at the top right; only the
-   first line makes room for them. A link's ↗ follows its text. */
+/* The go-to buttons (the reference icon to the source, ↖ backlinks) sit at the
+   top right; only the first line makes room for them. A link's icon follows its text. */
 .note-embed-with-source,
 .note:not(.editing) > .note-content .note-with-backlinks,
 .note.collapsed:not(.editing) > .note-content .note-with-backlinks {
@@ -5135,7 +5159,7 @@ html[data-theme="dark"] .note-embed-holds-embed .note-reference-block.note-embed
     position: absolute;
     top: 0;
     right: 0;
-    width: 1em;
+    width: 1.2em;
     margin: 0;
     padding: 0;
     border: 0;
@@ -5156,6 +5180,11 @@ html[data-theme="dark"] .note-embed-holds-embed .note-reference-block.note-embed
 /* Above the embedded note drawn after it, so it takes the pointer. */
 .note-embed-with-source > .note-source-arrow {
     z-index: 1;
+}
+
+/* A reference view's chip reads its source note's first line without the arrows. */
+.note .note-content.is-reading-reference-title .note-source-arrow {
+    display: none;
 }
 
 .note-source-arrow:focus-visible {
@@ -6149,91 +6178,6 @@ body:not(.pref-show-search-results-count) .controls .search-results-count {
     display: none;
 }
 
-.controls .view-indicators {
-    position: absolute;
-    top: -14px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 14;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    width: max-content;
-    max-width: calc(100% - 24px);
-}
-
-.controls .reference-source-indicator,
-.controls .root-sort-indicator,
-.controls .untagged-view-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    max-width: 100%;
-    padding: 6px 8px 6px 12px;
-    border: 1px solid rgba(130, 73, 0, 0.22);
-    border-radius: 999px;
-    background: linear-gradient(135deg, #f5d57a, #ebb75d);
-    color: #2d1b00;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
-}
-
-.controls .reference-source-indicator,
-.controls .untagged-view-indicator {
-    background: linear-gradient(135deg, #b7d7ff, #74a9f5);
-    color: #06172f;
-    border-color: rgba(6, 23, 47, 0.2);
-}
-
-.controls .reference-source-indicator[hidden],
-.controls .root-sort-indicator[hidden],
-.controls .untagged-view-indicator[hidden] {
-    display: none;
-}
-
-.controls .reference-source-indicator-label,
-.controls .root-sort-indicator-label,
-.controls .untagged-view-indicator-label {
-    display: block;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-}
-
-.controls .reference-source-indicator-clear,
-.controls .root-sort-indicator-clear,
-.controls .untagged-view-indicator-clear {
-    width: 22px;
-    height: 22px;
-    border: none;
-    border-radius: 999px;
-    padding: 0;
-    background: rgba(45, 27, 0, 0.14);
-    color: inherit;
-    font-size: 15px;
-    font-weight: 700;
-    line-height: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-}
-
-.controls .reference-source-indicator-clear:hover,
-.controls .reference-source-indicator-clear:focus-visible,
-.controls .root-sort-indicator-clear:hover,
-.controls .root-sort-indicator-clear:focus-visible,
-.controls .untagged-view-indicator-clear:hover,
-.controls .untagged-view-indicator-clear:focus-visible {
-    background: rgba(45, 27, 0, 0.24);
-    outline: none;
-}
-
 .root-date-separator {
     margin: 18px 0 10px;
     padding: 8px 12px;
@@ -6295,6 +6239,283 @@ body:not(.pref-show-search-results-count) .controls .search-results-count {
     width: 16px;
     height: 16px;
     transform: translateY(-50%);
+}
+
+/* Sort order and Untagged: gray chips at the right end inside the search input,
+   Untagged first. The typed text stops before them (--search-input-chips-width,
+   search-input-chip-service.js). They grow in and shrink out only when the user
+   changes them, never on a reload or a tab switch. */
+.controls .search-input-row {
+    --search-input-chips-width: 0px;
+}
+
+.controls .search-input {
+    padding-right: calc(12px + var(--search-input-chips-width));
+}
+
+.controls .search-input-chips {
+    position: absolute;
+    top: 50%;
+    right: calc(50% - var(--search-input-half-width) + 4px);
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    max-width: calc(var(--search-input-width) - 48px);
+    transform: translateY(-50%);
+}
+
+.controls .search-input-chip {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    box-sizing: border-box;
+    min-width: 0;
+    height: 22px;
+    padding: 0 2px 0 8px;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    border-radius: 999px;
+    background: linear-gradient(135deg, #e4e6e9, #c3c8ce);
+    color: #1d2125;
+}
+
+.controls .search-input-chip.is-shown,
+.controls .search-input-chip.is-leaving {
+    display: inline-flex;
+}
+
+.controls .search-input-chip.is-growing {
+    animation: search-input-chip-grow 200ms ease-out;
+}
+
+.controls .search-input-chip.is-leaving {
+    animation: search-input-chip-shrink 200ms ease-in forwards;
+}
+
+@keyframes search-input-chip-grow {
+    from {
+        transform: scale(0.6);
+        opacity: 0;
+    }
+}
+
+@keyframes search-input-chip-shrink {
+    to {
+        transform: scale(0.6);
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    @keyframes search-input-chip-grow {
+        from {
+            opacity: 0;
+        }
+    }
+
+    @keyframes search-input-chip-shrink {
+        to {
+            opacity: 0;
+        }
+    }
+}
+
+.controls .search-input-chip-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.controls .search-input-chip-clear {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    border: none;
+    border-radius: 999px;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.1);
+    color: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.controls .search-input-chip-clear:hover,
+.controls .search-input-chip-clear:focus-visible {
+    background: rgba(0, 0, 0, 0.22);
+    outline: none;
+}
+
+/* Reference views (docs/ui/references.md): a chip, centered in the bar, takes the
+   search input's place, with a magnifier where the input began to start a new
+   search. The change animates only while a reference navigation plays it
+   (.is-chip-animating, reference-view-transition-service.js): never on a reload or
+   a tab switch. */
+.controls .reference-view-chip {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-sizing: border-box;
+    max-width: calc(var(--search-input-width) - 80px);
+    height: 30px;
+    padding: 0 4px 0 12px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 999px;
+    background: linear-gradient(135deg, #e4e6e9, #c3c8ce);
+    color: #1d2125;
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0;
+    visibility: hidden;
+}
+
+.controls .reference-view-chip:has(> .reference-view-chip-button:not([hidden]):first-child) {
+    padding-left: 4px;
+}
+
+.controls .reference-view-chip-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.controls .reference-view-chip-button {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 999px;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.1);
+    color: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.controls .reference-view-chip-button[hidden],
+.controls .reference-view-chip-icon[hidden] {
+    display: none;
+}
+
+/* A reference view's tab in the tab list starts with its chip's icon. */
+.tab-context-reference-icon {
+    margin-right: 0.35em;
+}
+
+/* A reference view's chip starts with its icon: one note, or several. */
+.controls .reference-view-chip-icon {
+    flex: none;
+    font-size: 15px;
+}
+
+.controls .reference-view-chip-button:hover,
+.controls .reference-view-chip-button:focus-visible {
+    background: rgba(0, 0, 0, 0.22);
+    outline: none;
+}
+
+.controls .reference-view-new-search {
+    position: absolute;
+    top: 50%;
+    left: calc(50% - var(--search-input-half-width) + 4px);
+    width: 32px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    background: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transform: translateY(-50%);
+    opacity: 0;
+    visibility: hidden;
+}
+
+.controls .reference-view-new-search svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: var(--search-shell-ink);
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.controls .reference-view-chip.is-shown {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+    visibility: visible;
+}
+
+.controls .search-input-row:has(> .reference-view-chip.is-shown) .reference-view-new-search {
+    opacity: 1;
+    visibility: visible;
+}
+
+.controls .search-input-row:has(> .reference-view-chip.is-shown) .search-input,
+.controls .search-input-row:has(> .reference-view-chip.is-shown) .search-input-empty-icon,
+.controls .search-input-row:has(> .reference-view-chip.is-shown) .search-input-chips {
+    opacity: 0;
+    visibility: hidden;
+}
+
+/* What disappears fades first and then stops taking clicks; what appears takes
+   them at once. */
+.controls .search-input-row.is-chip-animating .reference-view-chip,
+.controls .search-input-row.is-chip-animating .reference-view-new-search,
+.controls .search-input-row.is-chip-animating .search-input,
+.controls .search-input-row.is-chip-animating .search-input-empty-icon,
+.controls .search-input-row.is-chip-animating .search-input-chips {
+    transition: opacity 200ms ease-out, transform 200ms ease-out, visibility 0s linear 200ms;
+}
+
+.controls .search-input-row.is-chip-animating:has(> .reference-view-chip.is-shown) .reference-view-chip,
+.controls .search-input-row.is-chip-animating:has(> .reference-view-chip.is-shown) .reference-view-new-search,
+.controls .search-input-row.is-chip-animating:not(:has(> .reference-view-chip.is-shown)) .search-input,
+.controls .search-input-row.is-chip-animating:not(:has(> .reference-view-chip.is-shown)) .search-input-empty-icon,
+.controls .search-input-row.is-chip-animating:not(:has(> .reference-view-chip.is-shown)) .search-input-chips {
+    transition: opacity 200ms ease-out, transform 200ms ease-out, visibility 0s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .controls .reference-view-chip {
+        transform: translate(-50%, -50%);
+    }
+}
+
+/* The still copy of the column that slides out while the new one slides in. */
+.reference-slide-ghost {
+    position: fixed;
+    z-index: 1;
+    margin: 0;
+    background: var(--bg-color);
+    pointer-events: none;
+}
+
+html.reference-sliding,
+html.reference-sliding body {
+    overflow-x: clip;
 }
 
 /* Global Controls */
@@ -8344,21 +8565,6 @@ html[data-theme="dark"] body.pref-show-ai-chat .chat-toggle-button {
     border-color: rgba(90, 169, 255, 0.5);
     background: rgba(90, 169, 255, 0.16);
     color: var(--app-accent);
-}
-
-html[data-theme="dark"] .controls .root-sort-indicator {
-    border-color: rgba(255, 211, 122, 0.22);
-    background: linear-gradient(135deg, #f1c86d, #d99f43);
-    color: #241500;
-}
-
-html[data-theme="dark"] .controls .root-sort-indicator-clear {
-    background: rgba(36, 21, 0, 0.14);
-}
-
-html[data-theme="dark"] .controls .root-sort-indicator-clear:hover,
-html[data-theme="dark"] .controls .root-sort-indicator-clear:focus-visible {
-    background: rgba(36, 21, 0, 0.24);
 }
 
 html[data-theme="dark"] .namespace-modal-radio-row,

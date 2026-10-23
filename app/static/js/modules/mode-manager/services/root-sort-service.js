@@ -6,21 +6,43 @@ export const ROOT_SORT_MODES = Object.freeze({
     CONTENT_VOLUME: 'content-volume',
 });
 
+// Reverse Order: any order, the manual one too, read bottom to top
+// ('alphabetical-reversed' is Z to A; app/services/root_sorting.py).
+export const ROOT_SORT_REVERSED_SUFFIX = '-reversed';
+const BASE_ROOT_SORT_MODES = new Set(Object.values(ROOT_SORT_MODES));
+
 export function normalizeRootSortMode(sortMode) {
     if (typeof sortMode !== 'string') {
         throw new Error('sortMode must be a string');
     }
     const normalized = sortMode.trim().toLowerCase();
-    if (
-        normalized !== ROOT_SORT_MODES.NORMAL
-        && normalized !== ROOT_SORT_MODES.CREATED
-        && normalized !== ROOT_SORT_MODES.UPDATED
-        && normalized !== ROOT_SORT_MODES.ALPHABETICAL
-        && normalized !== ROOT_SORT_MODES.CONTENT_VOLUME
-    ) {
+    const base = normalized.endsWith(ROOT_SORT_REVERSED_SUFFIX)
+        ? normalized.slice(0, -ROOT_SORT_REVERSED_SUFFIX.length)
+        : normalized;
+    if (!BASE_ROOT_SORT_MODES.has(base)) {
         throw new Error(`Unsupported root sort mode: ${sortMode}`);
     }
     return normalized;
+}
+
+export function isRootSortModeReversed(sortMode) {
+    return normalizeRootSortMode(sortMode).endsWith(ROOT_SORT_REVERSED_SUFFIX);
+}
+
+/** The order a mode sorts by, without its direction. */
+export function baseRootSortMode(sortMode) {
+    const normalized = normalizeRootSortMode(sortMode);
+    return isRootSortModeReversed(normalized)
+        ? normalized.slice(0, -ROOT_SORT_REVERSED_SUFFIX.length)
+        : normalized;
+}
+
+export function rootSortModeWithDirection(baseSortMode, isReversed) {
+    if (typeof isReversed !== 'boolean') {
+        throw new Error('rootSortModeWithDirection requires isReversed boolean');
+    }
+    const base = baseRootSortMode(baseSortMode);
+    return isReversed ? `${base}${ROOT_SORT_REVERSED_SUFFIX}` : base;
 }
 
 export function isRootReorderLocked(sortMode) {
@@ -40,7 +62,8 @@ export function rootNoteCreationBlockMessage(sortMode, placement) {
     if (normalized === ROOT_SORT_MODES.NORMAL) {
         return null;
     }
-    if (isRootDateBucketSortMode(normalized)) {
+    // Reversed, the top of the list is not where a new note goes.
+    if (isRootDateBucketSortMode(normalized) && !isRootSortModeReversed(normalized)) {
         if (placement === 'top') {
             return null;
         }
@@ -51,28 +74,38 @@ export function rootNoteCreationBlockMessage(sortMode, placement) {
         + 'Switch to Normal order, or add a child note.';
 }
 
+// The sort order's chip in the search input, by mode: [label, tooltip]. ↑ marks
+// a reversed order that starts from the oldest or smallest.
+const ROOT_SORT_CHIP_TEXT = Object.freeze({
+    [ROOT_SORT_MODES.NORMAL]: ['', ''],
+    [ROOT_SORT_MODES.CREATED]: ['Created', 'Sorted by datetime created'],
+    [ROOT_SORT_MODES.UPDATED]: ['Updated', 'Sorted by datetime last updated'],
+    [ROOT_SORT_MODES.ALPHABETICAL]: ['A\u2013Z', 'Sorted alphabetically'],
+    [ROOT_SORT_MODES.CONTENT_VOLUME]: ['Size', 'Sorted by content volume'],
+    [`${ROOT_SORT_MODES.NORMAL}${ROOT_SORT_REVERSED_SUFFIX}`]: ['Reversed', 'Normal order, reversed'],
+    [`${ROOT_SORT_MODES.CREATED}${ROOT_SORT_REVERSED_SUFFIX}`]:
+        ['Created \u2191', 'Sorted by datetime created, oldest first'],
+    [`${ROOT_SORT_MODES.UPDATED}${ROOT_SORT_REVERSED_SUFFIX}`]:
+        ['Updated \u2191', 'Sorted by datetime last updated, oldest first'],
+    [`${ROOT_SORT_MODES.ALPHABETICAL}${ROOT_SORT_REVERSED_SUFFIX}`]:
+        ['Z\u2013A', 'Sorted alphabetically, Z to A'],
+    [`${ROOT_SORT_MODES.CONTENT_VOLUME}${ROOT_SORT_REVERSED_SUFFIX}`]:
+        ['Size \u2191', 'Sorted by content volume, smallest first'],
+});
+
+const CHIP_LABEL_INDEX = 0;
+const CHIP_TOOLTIP_INDEX = 1;
+
+export function getRootSortModeChipLabel(sortMode) {
+    return ROOT_SORT_CHIP_TEXT[normalizeRootSortMode(sortMode)][CHIP_LABEL_INDEX];
+}
+
 export function getRootSortModeIndicatorLabel(sortMode) {
-    const normalized = normalizeRootSortMode(sortMode);
-    if (normalized === ROOT_SORT_MODES.NORMAL) {
-        return '';
-    }
-    if (normalized === ROOT_SORT_MODES.CREATED) {
-        return 'Sorted by datetime created';
-    }
-    if (normalized === ROOT_SORT_MODES.UPDATED) {
-        return 'Sorted by datetime last updated';
-    }
-    if (normalized === ROOT_SORT_MODES.ALPHABETICAL) {
-        return 'Sorted alphabetically';
-    }
-    if (normalized === ROOT_SORT_MODES.CONTENT_VOLUME) {
-        return 'Sorted by content volume';
-    }
-    throw new Error(`Unsupported root sort mode: ${sortMode}`);
+    return ROOT_SORT_CHIP_TEXT[normalizeRootSortMode(sortMode)][CHIP_TOOLTIP_INDEX];
 }
 
 export function isRootDateBucketSortMode(sortMode) {
-    const normalized = normalizeRootSortMode(sortMode);
+    const normalized = baseRootSortMode(sortMode);
     if (normalized === ROOT_SORT_MODES.CREATED) {
         return true;
     }

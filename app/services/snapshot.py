@@ -47,6 +47,8 @@ from app.utils.time_units import MS_PER_SECOND
 # between half and twice this far from the visible roots, so ordinary
 # scrolling changes nothing and unloading happens far from the viewport.
 ROOT_BAND_MARGIN = 75
+# The backlinks button (↖) on notes that are referenced; see _shows_backlinks_button.
+SHOWS_BACKLINKS_BUTTON = False
 # "Between half and twice": the near edge is the margin divided by this, the
 # far edge the margin times this.
 _BAND_EDGE_HOLD_FACTOR = 2
@@ -850,16 +852,24 @@ def _is_shown_collapsed(rec: NoteRecord, context: EmbedRenderContext) -> bool:
     return bool(rec.is_collapsed)
 
 
+def _shows_backlinks_button(note_id: str) -> bool:
+    """Whether the note gets the backlinks button (↖). Off for now: an arrow pointing
+    back reads as "back to where I came from", which it is not; backlinks need
+    another visual metaphor before they return (docs/ui/references.md)."""
+    return SHOWS_BACKLINKS_BUTTON and note_store.has_backlinks(note_id)
+
+
 def _render_note_content_html(rec: NoteRecord, *, is_collapsed: bool, context: EmbedRenderContext) -> str:
     """A note's content as the list shows it when it is not being edited."""
+    has_backlinks = _shows_backlinks_button(rec.id)
     if type(rec) is NoteRecord and _is_render_cacheable(rec.content):
         # Identity keys are exact only for immutable records; any other record
         # type (e.g. test doubles) could change in place and renders directly.
         return _cached_note_view_html(
-            rec=rec, is_collapsed=is_collapsed, has_backlinks=note_store.has_backlinks(rec.id), context=context,
+            rec=rec, is_collapsed=is_collapsed, has_backlinks=has_backlinks, context=context,
         )
     return _render_note_view_html(
-        rec=rec, is_collapsed=is_collapsed, has_backlinks=note_store.has_backlinks(rec.id), context=context,
+        rec=rec, is_collapsed=is_collapsed, has_backlinks=has_backlinks, context=context,
     )
 
 

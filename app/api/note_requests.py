@@ -56,13 +56,19 @@ class Viewport(TypedDict):
     scrollY: Nonnegative
     scrollAnchor: ScrollAnchor | None
 
+# A root sort order, and the same order reversed (app/services/root_sorting.py).
+SortMode = Literal[
+    'normal', 'created', 'updated', 'alphabetical', 'content-volume',
+    'normal-reversed', 'created-reversed', 'updated-reversed', 'alphabetical-reversed', 'content-volume-reversed',
+]
+
 @with_config(ConfigDict(strict=True))
 class Tab(TypedDict):
     searchQuery: Text
     scrollY: Nonnegative
     anchorRootId: Text | None
     scrollAnchor: ScrollAnchor | None
-    sortMode: Literal['normal', 'created', 'updated', 'alphabetical', 'content-volume']
+    sortMode: SortMode
 
 @with_config(ConfigDict(strict=True))
 class ViewDiffRequest(TypedDict):
@@ -90,15 +96,31 @@ class FindInListRequest(TypedDict):
     direction: Literal['forward', 'backward']
 
 @with_config(ConfigDict(strict=True))
+class ReferenceOriginScope(TypedDict):
+    scopeTabId: Identifier
+    searchQuery: Text
+    sortMode: SortMode
+    isUntaggedView: bool
+
+# A tab showing a reference view, opened from another tab (app/services/tab_state.py).
+@with_config(ConfigDict(strict=True))
+class ReferenceView(TypedDict):
+    fromTabId: Identifier
+    referenceQuery: Text
+    viewKind: Literal['source', 'backlinks', 'reference', 'references']
+    originScope: ReferenceOriginScope
+
+@with_config(ConfigDict(strict=True))
 class UpdateTabStateRequest(TypedDict):
     activeTabId: Identifier
     tabs: dict[Identifier, Tab]
     tabOrder: list[Identifier]
+    referenceViews: dict[Identifier, ReferenceView]
 
 @with_config(ConfigDict(strict=True))
 class UpdateTabSortModeRequest(TypedDict):
     tabId: Identifier
-    sortMode: Literal['normal', 'created', 'updated', 'alphabetical', 'content-volume']
+    sortMode: SortMode
     clientId: Identifier
     undoContext: UndoContext
 

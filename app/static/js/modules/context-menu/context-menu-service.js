@@ -73,6 +73,8 @@ const CONTEXT_MENU_ICONS = {
         'M4 12h11',
         'M4 18h6',
     ],
+    // Two arrows, up and down: the order turned around.
+    reverse_order: ['M8 20V4', 'M4 8l4-4 4 4', 'M16 4v16', 'M12 16l4 4 4-4'],
     manual_order: [
         'M9 5h11',
         'M9 12h11',
@@ -137,6 +139,15 @@ const CONTEXT_MENU_ICONS = {
         'M12 4v10',
         'M7 10l5 5 5-5',
         'M5 20h14',
+    ],
+    // The reference icon notes use (main.css --note-reference-icon): a page with an
+    // arrow coming into it.
+    note_reference: [
+        'M14 3H7a2 2 0 0 0-2 2v6',
+        'M14 3v4a1 1 0 0 0 1 1h4',
+        'M19 8v11a2 2 0 0 1-2 2h-6',
+        'M4 21v-3a3 3 0 0 1 3-3h5',
+        'M10 12l3 3-3 3',
     ],
     external: [
         'M14 4h6v6',

@@ -28,11 +28,25 @@ function installSearchEventsDom(t) {
     const originalHTMLElement = globalThis.HTMLElement;
     const originalHTMLButtonElement = globalThis.HTMLButtonElement;
 
-    class FakeHTMLElement {}
+    class FakeHTMLElement {
+        constructor() {
+            const classes = new Set();
+            this.classList = {
+                contains: (name) => classes.has(name),
+                remove: (name) => classes.delete(name),
+                toggle: (name, force) => (force ? classes.add(name) : classes.delete(name)),
+            };
+        }
+
+        removeAttribute(name) {
+            delete this[name];
+        }
+    }
 
     const referenceSourceIndicator = new FakeHTMLElement();
     const referenceSourceLabel = new FakeHTMLElement();
-    referenceSourceIndicator.hidden = true;
+    const referenceChipBack = new FakeHTMLElement();
+    const referenceChipIcon = new FakeHTMLElement();
     const searchSuggestions = {
         hidden: true,
         style: {},
@@ -44,6 +58,9 @@ function installSearchEventsDom(t) {
     };
     const notesContainer = {
         childNodes: [{ nodeType: 1 }],
+        querySelectorAll() {
+            return [];
+        },
         get firstChild() {
             return this.childNodes.length > 0 ? this.childNodes[0] : null;
         },
@@ -57,6 +74,8 @@ function installSearchEventsDom(t) {
             }
         },
     };
+
+    Object.setPrototypeOf(notesContainer, FakeHTMLElement.prototype);
 
     globalThis.document = {
         activeElement: null,
@@ -81,6 +100,12 @@ function installSearchEventsDom(t) {
             }
             if (id === 'reference-source-indicator-label') {
                 return referenceSourceLabel;
+            }
+            if (id === 'reference-view-chip-back') {
+                return referenceChipBack;
+            }
+            if (id === 'reference-view-chip-icon') {
+                return referenceChipIcon;
             }
             return null;
         },

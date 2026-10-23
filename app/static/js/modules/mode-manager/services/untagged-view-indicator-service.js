@@ -1,3 +1,5 @@
+import { showSearchInputChip } from './search-input-chip-service.js';
+
 export function updateUntaggedViewIndicator(snapshot) {
     if (!snapshot || typeof snapshot !== 'object') {
         throw new Error('updateUntaggedViewIndicator requires snapshot object');
@@ -9,5 +11,5 @@ export function updateUntaggedViewIndicator(snapshot) {
     if (!(indicator instanceof HTMLElement)) {
         throw new Error('untagged-view-indicator element missing');
     }
-    indicator.hidden = !snapshot.isUntaggedView;
+    showSearchInputChip(indicator, { isShown: snapshot.isUntaggedView });
 }

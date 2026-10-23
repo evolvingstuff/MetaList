@@ -36,25 +36,25 @@ Opening or dismissing the command palette does not clear undo/redo. Global actio
 - Actions run with `Enter`.
 
 ## Sort Order
-- The notes-view background and side-rail right-click menus also offer **Sort by**: Normal, Datetime created, Datetime last updated, Alphabetical, and Content volume (largest first). The current mode is labeled and disabled. Choosing a mode updates the same saved per-tab setting as the command palette; Normal restores manual order.
+- The notes-view background and side-rail right-click menus also offer **Sort by**: Normal, Datetime created, Datetime last updated, Alphabetical, and Content volume, then **Reverse Order**, a check item that combines with any of them (Normal too: the manual order bottom to top). Reversed, Alphabetical is Z to A, the date orders start from the oldest, and Content volume from the smallest; date separators flip with the notes. Picking another order keeps Reverse Order. The current mode is ticked and disabled. Choosing a mode updates the same saved per-tab setting as the command palette; Normal restores manual order.
 - `Sort order` is a per-tab, server-owned view setting. Duplicating a tab inherits its current sort mode.
-- Modes are exposed as distinct actions: `Sort order: Normal`, `Sort order: Datetime created`, `Sort order: Datetime last updated`, `Sort order: Alphabetical`, and `Sort order: Content volume (largest first)`.
+- Modes are exposed as distinct actions: `Sort order: Normal`, `Sort order: Datetime created`, `Sort order: Datetime last updated`, `Sort order: Alphabetical`, and `Sort order: Content volume`, plus `Sort order: Reverse`, which turns Reverse Order on or off.
 - Datetime created orders roots newest-first by each root note's own creation timestamp; children do not affect its position or date group.
 - Datetime last updated orders roots newest-first by the latest update timestamp anywhere in the root's subtree, including the root and all descendants. Date groups use that same timestamp.
 - Changing a reference between link and embedded form preserves the host note's update time, including undo/redo and manually changing only that marker. Adding/removing references, changing their targets, or editing surrounding content still advances the timestamp.
 - In alphabetical mode, root notes are ordered by root-note content without rewriting the stored manual order.
 - In content-volume mode, roots are ordered largest-first by the total plain-text character count of every note in each root subtree. HTML markup does not count, and equal totals preserve manual root order. Search phrases include `character count`, `content volume`, `length`, and `longest`.
 - The server returns the ordered root window plus `sortMode`/`rootSortBuckets`; the client inserts day-separator rows between visible roots.
-- In a non-normal sort order, new root notes are limited and editing freezes the order: Datetime created and Datetime last updated allow a new root note only at the top (`Enter` outside edit mode, Add Note, pasting into a new note), never below a root note; Alphabetical and Content volume allow no new root notes. Child notes can always be added. Blocked actions show a banner. While a note is edited, it stays in place even if saving changes its sort position (in date orders, under its neighbour's date header); after leaving edit mode it moves to its sorted place and the screen stays on the surrounding notes. Details: `help-notes` (Sorted tabs).
-- When a non-normal sort mode is active, the UI shows a floating dismissible pill above the sticky top bar so the view override is visually obvious and can be cleared in one click.
+- In a non-normal sort order, new root notes are limited and editing freezes the order: Datetime created and Datetime last updated allow a new root note only at the top (`Enter` outside edit mode, Add Note, pasting into a new note), never below a root note; Alphabetical, Content volume and any reversed order (Normal too) allow no new root notes. Child notes can always be added. Blocked actions show a banner. While a note is edited, it stays in place even if saving changes its sort position (in date orders, under its neighbour's date header); after leaving edit mode it moves to its sorted place and the screen stays on the surrounding notes. Details: `help-notes` (Sorted tabs).
+- When a non-normal sort mode is active, a gray chip at the right end inside the search input names it (`Created`, `Updated`, `A–Z`, `Size`; reversed: `Created ↑`, `Updated ↑`, `Z–A`, `Size ↑`, or `Reversed` for Normal reversed; the full name is its tooltip). Its `×` returns to Normal order, not reversed. Untagged notes shows the same kind of chip, `Untagged`, before it.
 - Changing sort mode is treated as a global view-context switch: the tab scroll state resets and undo/redo history is blanked for that tab context.
-- Changing the search input resets the active tab's sort mode to Normal before executing the search.
+- Changing the search input resets the active tab's sort mode to Normal (and ends Reverse Order) before executing the search. Leaving a tab (picking another or opening a new one) does the same for the tab left; a new blank tab starts in Normal order. Following a reference and coming back keeps the sort.
 
 ## Untagged Notes View
 - `View: Untagged notes` temporarily overrides the displayed results with notes that have no non-meta effective tags while preserving the active tab and its search. Its search box is visually blank because the preserved query is not active.
-- `View: All notes` returns to the underlying tab view. The active untagged view also appears as a dismissible pill above the sticky top bar.
+- `View: All notes` returns to the underlying tab view. The active untagged view also appears as an `Untagged` chip inside the search input, before any sort chip.
 - The setting is transient and tab-agnostic: it is not persisted or inherited when a tab is duplicated.
-- Clicking any tab, changing the search input, or dismissing the pill exits the untagged view. Changing it resets the active display's scroll state and undo/redo context.
+- Clicking any tab, changing the search input, or dismissing the chip exits the untagged view. Changing it resets the active display's scroll state and undo/redo context.
 
 ## Config
 - Tag mappings live in `app/static/config/command_palette_tags.json`.
