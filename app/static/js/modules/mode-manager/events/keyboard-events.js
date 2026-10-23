@@ -68,13 +68,22 @@ import { analyzeSearchQueryInput } from '../services/search-syntax-service.js';
 import { buildBacklinksQuery } from '../services/backlinks-navigation-service.js';
 import {
     captureReferenceOriginScopeForActiveTab,
+    getActiveReferenceViewKind,
     getReferenceNavigationLabelForTab,
     isViewingReferenceSource,
+    popActiveReferenceChain,
     popReferenceNavigationEntryForActiveTab,
     pushReferenceNavigationEntry,
     replaceActiveReferenceNavigationQuery,
+    showNewSearchInReferenceView,
     updateReferenceSourceIndicator,
 } from '../services/reference-source-navigation-service.js';
+import {
+    beginReferenceViewTransition,
+    cancelReferenceViewTransition,
+    isReferenceViewTransitionPending,
+    playReferenceViewTransition,
+} from '../services/reference-view-transition-service.js';
 import { shouldFocusSearchInputForViewModeTab } from '../services/view-mode-search-shortcut-service.js';
 import {
     getTagBarValue,
@@ -367,7 +376,7 @@ function handleKeyDown(event) {
 
     if ((event.key === 'Enter' || event.key === ' ')
         && event.target instanceof HTMLElement
-        && event.target.closest('.note-source-arrow, #reference-source-indicator-clear')) {
+        && event.target.closest('.note-source-arrow, #reference-source-indicator-clear, #reference-view-chip-back, #reference-view-new-search')) {
         return;
     }
 
@@ -668,6 +677,10 @@ function handleViewModeSearchFocusShortcut(event) {
     event.preventDefault();
     event.stopPropagation();
 
+    // In a reference view the input is behind the chip: bring it out, as the magnifier does.
+    if (isViewingReferenceSource()) {
+        showNewSearchInReferenceView();
+    }
     void actionEnterSearchMode();
     const didFocus = focusSearchInputAndSelectAllText();
     Logger.logDebug('Search input focused via view-mode Tab shortcut', {
@@ -3648,7 +3661,7 @@ export async function openReferenceQueryInNewTab(referenceQuery) {
         referenceQuery,
         'reference.collection_open_tab',
         true,
-        'source',
+        'references',
     );
 }
 
@@ -3671,7 +3684,68 @@ async function openReferenceQueryInNewTabWithContext(
     if (typeof replaceActiveReference !== 'boolean') {
         throw new Error('Reference navigation requires replacement policy');
     }
-    if (replaceActiveReference && isViewingReferenceSource()) {
+    let resultTabId = '';
+    await navigateWithReferenceSlide('forward', async () => {
+        resultTabId = await openReferenceQueryBehindTransition(
+            referenceQuery,
+            context,
+            replaceActiveReference,
+            viewKind,
+        );
+        return true;
+    });
+    return resultTabId;
+}
+
+/**
+ * Run a reference navigation behind a still copy of the view it leaves, then show
+ * the result: the column slides (forward: left, back: right) and the chip grows in
+ * or out. navigate resolves to false when it did not navigate after all.
+ */
+async function navigateWithReferenceSlide(direction, navigate) {
+    beginReferenceViewTransition(direction);
+    let hasNavigated = false;
+    await navigate().then((result) => {
+        hasNavigated = result;
+    }).finally(() => {
+        // A navigation that stopped or failed leaves the view as it was.
+        if (hasNavigated !== true && isReferenceViewTransitionPending()) {
+            cancelReferenceViewTransition();
+        }
+    });
+    if (typeof hasNavigated !== 'boolean') {
+        throw new Error('A reference navigation must say whether it navigated');
+    }
+    if (!hasNavigated) {
+        return false;
+    }
+    const isReferenceView = isViewingReferenceSource();
+    // Back at the search, the input fades in with its text; into a reference view, it
+    // fades out with the text it had and is emptied once out of sight.
+    await playReferenceViewTransition(() => {
+        if (!isReferenceView) {
+            syncSearchInputField();
+        }
+        updateReferenceSourceIndicator();
+    });
+    if (isReferenceView) {
+        syncSearchInputField();
+    }
+    return true;
+}
+
+async function openReferenceQueryBehindTransition(
+    referenceQuery,
+    context,
+    replaceActiveReference,
+    viewKind,
+) {
+    // A later AI reference replaces the AI references being viewed: no new level.
+    if (
+        replaceActiveReference
+        && isViewingReferenceSource()
+        && getActiveReferenceViewKind() === 'references'
+    ) {
         replaceActiveReferenceNavigationQuery(referenceQuery, viewKind);
         await runReferenceSearchInActiveTab(referenceQuery, context);
         return ModeContext.activeTabId;
@@ -3867,7 +3941,56 @@ async function deleteTabContext(deleteTabId) {
 	    }
 }
 
+/** ← on the chip, or Escape: back one level, to where the user left it. */
 export async function navigateBackFromReferenceContext() {
+    if (!isViewingReferenceSource()) {
+        return false;
+    }
+    return navigateWithReferenceSlide('back', () => leaveActiveReferenceLevel());
+}
+
+/** × on the chip: back to the search the reference views started from, at any depth. */
+export async function navigateToReferenceOrigin() {
+    if (!isViewingReferenceSource()) {
+        return false;
+    }
+    return navigateWithReferenceSlide('back', () => leaveActiveReferenceChain());
+}
+
+function requireCloseReferenceTabOnBack() {
+    if (
+        !CONFIG.REFERENCE_NAVIGATION
+        || typeof CONFIG.REFERENCE_NAVIGATION.CLOSE_REF_TAB_ON_BACK !== 'boolean'
+    ) {
+        throw new Error('CONFIG.REFERENCE_NAVIGATION.CLOSE_REF_TAB_ON_BACK must be a boolean');
+    }
+    return CONFIG.REFERENCE_NAVIGATION.CLOSE_REF_TAB_ON_BACK;
+}
+
+async function leaveActiveReferenceChain() {
+    const chain = popActiveReferenceChain();
+    const originTabId = chain[0].fromTabId;
+    if (typeof originTabId !== 'string' || originTabId.length === 0) {
+        throw new Error('Reference chain missing its origin tab');
+    }
+    if (!ModeContext.tabs[originTabId]) {
+        return false;
+    }
+
+    await switchToTabContext(originTabId, { animateNoteChanges: false });
+
+    if (requireCloseReferenceTabOnBack()) {
+        for (const entry of chain) {
+            if (ModeContext.tabs[entry.toTabId]) {
+                await deleteTabContext(entry.toTabId);
+            }
+        }
+    }
+    updateReferenceSourceIndicator();
+    return true;
+}
+
+async function leaveActiveReferenceLevel() {
     const entry = popReferenceNavigationEntryForActiveTab();
     if (entry === null) {
         return false;
@@ -3887,14 +4010,7 @@ export async function navigateBackFromReferenceContext() {
 
     await switchToTabContext(fromTabId, { animateNoteChanges: false });
 
-    if (
-        !CONFIG.REFERENCE_NAVIGATION
-        || typeof CONFIG.REFERENCE_NAVIGATION.CLOSE_REF_TAB_ON_BACK !== 'boolean'
-    ) {
-        throw new Error('CONFIG.REFERENCE_NAVIGATION.CLOSE_REF_TAB_ON_BACK must be a boolean');
-    }
-
-    if (CONFIG.REFERENCE_NAVIGATION.CLOSE_REF_TAB_ON_BACK) {
+    if (requireCloseReferenceTabOnBack()) {
         if (ModeContext.tabs[toTabId]) {
             await deleteTabContext(toTabId);
         }
@@ -3907,6 +4023,10 @@ export async function navigateBackFromReferenceContext() {
 function syncSearchInputField() {
     const searchInput = document.getElementById('search-input');
     if (!searchInput) {
+        return;
+    }
+    // A reference navigation keeps the bar as the user left it until it plays.
+    if (isReferenceViewTransitionPending()) {
         return;
     }
 

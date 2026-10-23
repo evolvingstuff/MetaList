@@ -13,23 +13,28 @@ const KEYBOARD_EVENTS_URL = new URL(
     import.meta.url,
 );
 
-test('reference source navigation uses a dismissible mode indicator instead of a back arrow', async () => {
+test('a reference view shows a chip in the search bar: × back to the search, ← back one level', async () => {
     const [template, css, mouseEvents] = await Promise.all([
         readFile(TEMPLATE_URL, 'utf8'),
         readFile(CSS_URL, 'utf8'),
         readFile(MOUSE_EVENTS_URL, 'utf8'),
     ]);
 
-    assert.doesNotMatch(template, /id="reference-back-button"/);
-    assert.match(template, /id="reference-source-indicator"[^>]*hidden/);
-    assert.match(template, /class="reference-source-indicator-label">Reference source</);
-    assert.match(template, /id="reference-source-indicator-clear"/);
-    assert.match(css, /\.controls \.reference-source-indicator/);
-    assert.match(css, /\.controls \.reference-source-indicator-clear/);
+    const row = template.slice(
+        template.indexOf('class="search-input-row"'),
+        template.indexOf('id="search-validation-message"'),
+    );
+    assert.match(row, /id="reference-source-indicator" class="reference-view-chip"/);
+    assert.match(row, /id="reference-view-chip-back"[^>]*title="Back"[^>]*hidden/);
+    assert.match(row, /id="reference-source-indicator-clear"[^>]*title="Back to your search"/);
+    assert.match(row, /id="reference-view-new-search"/);
+    assert.doesNotMatch(row, /id="reference-view-new-search"[^>]*title=/, 'the magnifier has no tooltip');
+    assert.match(css, /\.controls \.reference-view-chip\.is-shown/);
     assert.match(
         mouseEvents,
         /event\.target\.closest\('#reference-source-indicator-clear'\)/,
     );
+    assert.match(mouseEvents, /await navigateToReferenceOrigin\(\)/);
     assert.match(mouseEvents, /await navigateBackFromReferenceContext\(\)/);
 });
 
@@ -45,11 +50,11 @@ test('AI reference collections use a temporary labeled view without entering sea
     assert.match(keyboardEvents, /runReferenceSearchInActiveTab\(referenceQuery/);
     assert.match(
         keyboardEvents,
-        /'reference\.collection_open_tab',\s*true,/,
+        /'reference\.collection_open_tab',\s*true,\s*'references',/,
     );
     assert.match(
         keyboardEvents,
-        /replaceActiveReference && isViewingReferenceSource\(\)/,
+        /replaceActiveReference\s*&& isViewingReferenceSource\(\)\s*&& getActiveReferenceViewKind\(\) === 'references'/,
     );
     assert.match(
         keyboardEvents,

@@ -17,6 +17,13 @@ from app.services.snapshot import build_view_state
 from tests.unit.snapshot_note_fixture import SnapshotTestNote as _Note
 
 
+@pytest.fixture(autouse=True)
+def _backlinks_button_on(monkeypatch):
+    """The backlinks button is off for now (snapshot.SHOWS_BACKLINKS_BUTTON); these
+    tests keep checking how it renders for when it returns."""
+    monkeypatch.setattr(snapshot_module, "SHOWS_BACKLINKS_BUTTON", True)
+
+
 class _FakeNoteStore:
     def __init__(self, *, notes: Dict[str, _Note], children_by_parent: Dict[Optional[str], List[str]]):
         self._notes = notes

@@ -2445,14 +2445,12 @@ html[data-theme="dark"] .prioritize-modal-content input.prioritize-modal-tag-inp
         max-width: calc(100% - 16px);
     }
 
-    .controls .reference-source-indicator,
     .controls .root-sort-indicator,
     .controls .untagged-view-indicator {
         padding-left: 10px;
         padding-right: 6px;
     }
 
-    .controls .reference-source-indicator-label,
     .controls .root-sort-indicator-label,
     .controls .untagged-view-indicator-label {
         font-size: 11px;
@@ -5158,6 +5156,11 @@ html[data-theme="dark"] .note-embed-holds-embed .note-reference-block.note-embed
     z-index: 1;
 }
 
+/* A reference view's chip reads its source note's first line without the arrows. */
+.note .note-content.is-reading-reference-title .note-source-arrow {
+    display: none;
+}
+
 .note-source-arrow:focus-visible {
     outline: 2px solid #2563eb;
     outline-offset: 1px;
@@ -6163,7 +6166,6 @@ body:not(.pref-show-search-results-count) .controls .search-results-count {
     max-width: calc(100% - 24px);
 }
 
-.controls .reference-source-indicator,
 .controls .root-sort-indicator,
 .controls .untagged-view-indicator {
     display: inline-flex;
@@ -6178,20 +6180,17 @@ body:not(.pref-show-search-results-count) .controls .search-results-count {
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
 }
 
-.controls .reference-source-indicator,
 .controls .untagged-view-indicator {
     background: linear-gradient(135deg, #b7d7ff, #74a9f5);
     color: #06172f;
     border-color: rgba(6, 23, 47, 0.2);
 }
 
-.controls .reference-source-indicator[hidden],
 .controls .root-sort-indicator[hidden],
 .controls .untagged-view-indicator[hidden] {
     display: none;
 }
 
-.controls .reference-source-indicator-label,
 .controls .root-sort-indicator-label,
 .controls .untagged-view-indicator-label {
     display: block;
@@ -6205,7 +6204,6 @@ body:not(.pref-show-search-results-count) .controls .search-results-count {
     text-transform: uppercase;
 }
 
-.controls .reference-source-indicator-clear,
 .controls .root-sort-indicator-clear,
 .controls .untagged-view-indicator-clear {
     width: 22px;
@@ -6224,8 +6222,6 @@ body:not(.pref-show-search-results-count) .controls .search-results-count {
     cursor: pointer;
 }
 
-.controls .reference-source-indicator-clear:hover,
-.controls .reference-source-indicator-clear:focus-visible,
 .controls .root-sort-indicator-clear:hover,
 .controls .root-sort-indicator-clear:focus-visible,
 .controls .untagged-view-indicator-clear:hover,
@@ -6295,6 +6291,155 @@ body:not(.pref-show-search-results-count) .controls .search-results-count {
     width: 16px;
     height: 16px;
     transform: translateY(-50%);
+}
+
+/* Reference views (docs/ui/references.md): a chip, centered in the bar, takes the
+   search input's place, with a magnifier where the input began to start a new
+   search. The change animates only while a reference navigation plays it
+   (.is-chip-animating, reference-view-transition-service.js): never on a reload or
+   a tab switch. */
+.controls .reference-view-chip {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-sizing: border-box;
+    max-width: calc(var(--search-input-width) - 80px);
+    height: 30px;
+    padding: 0 4px 0 12px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 999px;
+    background: linear-gradient(135deg, #e4e6e9, #c3c8ce);
+    color: #1d2125;
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0;
+    visibility: hidden;
+}
+
+.controls .reference-view-chip:has(> .reference-view-chip-button:not([hidden]):first-child) {
+    padding-left: 4px;
+}
+
+.controls .reference-view-chip-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.controls .reference-view-chip-button {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 999px;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.1);
+    color: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.controls .reference-view-chip-button[hidden] {
+    display: none;
+}
+
+.controls .reference-view-chip-button:hover,
+.controls .reference-view-chip-button:focus-visible {
+    background: rgba(0, 0, 0, 0.22);
+    outline: none;
+}
+
+.controls .reference-view-new-search {
+    position: absolute;
+    top: 50%;
+    left: calc(50% - var(--search-input-half-width) + 4px);
+    width: 32px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    background: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transform: translateY(-50%);
+    opacity: 0;
+    visibility: hidden;
+}
+
+.controls .reference-view-new-search svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: var(--search-shell-ink);
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.controls .reference-view-chip.is-shown {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+    visibility: visible;
+}
+
+.controls .search-input-row:has(> .reference-view-chip.is-shown) .reference-view-new-search {
+    opacity: 1;
+    visibility: visible;
+}
+
+.controls .search-input-row:has(> .reference-view-chip.is-shown) .search-input,
+.controls .search-input-row:has(> .reference-view-chip.is-shown) .search-input-empty-icon {
+    opacity: 0;
+    visibility: hidden;
+}
+
+/* What disappears fades first and then stops taking clicks; what appears takes
+   them at once. */
+.controls .search-input-row.is-chip-animating .reference-view-chip,
+.controls .search-input-row.is-chip-animating .reference-view-new-search,
+.controls .search-input-row.is-chip-animating .search-input,
+.controls .search-input-row.is-chip-animating .search-input-empty-icon {
+    transition: opacity 200ms ease-out, transform 200ms ease-out, visibility 0s linear 200ms;
+}
+
+.controls .search-input-row.is-chip-animating:has(> .reference-view-chip.is-shown) .reference-view-chip,
+.controls .search-input-row.is-chip-animating:has(> .reference-view-chip.is-shown) .reference-view-new-search,
+.controls .search-input-row.is-chip-animating:not(:has(> .reference-view-chip.is-shown)) .search-input,
+.controls .search-input-row.is-chip-animating:not(:has(> .reference-view-chip.is-shown)) .search-input-empty-icon {
+    transition: opacity 200ms ease-out, transform 200ms ease-out, visibility 0s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .controls .reference-view-chip {
+        transform: translate(-50%, -50%);
+    }
+}
+
+/* The still copy of the column that slides out while the new one slides in. */
+.reference-slide-ghost {
+    position: fixed;
+    z-index: 1;
+    margin: 0;
+    background: var(--bg-color);
+    pointer-events: none;
+}
+
+html.reference-sliding,
+html.reference-sliding body {
+    overflow-x: clip;
 }
 
 /* Global Controls */

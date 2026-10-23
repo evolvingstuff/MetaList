@@ -1,9 +1,30 @@
 import { NOT_FOUND } from '../../not-found.js';
 import { ApplicationState } from '../../application-state.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
+import { isReferenceViewTransitionPending } from './reference-view-transition-service.js';
 
-// The kinds of temporary view a note can open: its source, or the notes referencing it.
-const REFERENCE_VIEW_KINDS = new Set(['source', 'backlinks']);
+// The kinds of temporary view: a note's source, the notes referencing it, or the
+// notes an AI answer cites.
+const REFERENCE_VIEW_KINDS = new Set(['source', 'backlinks', 'references']);
+// What the tab list calls each kind of view.
+const TAB_LABEL_BY_VIEW_KIND = Object.freeze({
+    source: 'Reference source',
+    backlinks: 'Referenced by',
+    references: 'References',
+});
+// What the chip in the search bar says for the views that are not one note's source.
+const CHIP_LABEL_BY_VIEW_KIND = Object.freeze({
+    backlinks: 'Referenced by',
+    references: 'References',
+});
+// A source view's chip: this arrow, then the source note's first line.
+const SOURCE_CHIP_ARROW = '\u2196';
+// On the chip, it shows in place of the search input (main.css).
+const CHIP_SHOWN_CLASS = 'is-shown';
+// On a note's content while its first line is read (main.css).
+const READING_TITLE_CLASS = 'is-reading-reference-title';
+// Reference views can stack: the one opened directly from a search is the first level.
+const FIRST_REFERENCE_LEVEL = 1;
 
 // Reference tabs are ordinary server tabs whose search is a hidden note-ID query.
 // The navigation stack that hides that query is kept per browser tab in
@@ -14,7 +35,19 @@ const REFERENCE_NAVIGATION_STORAGE_KEY = 'metalist_reference_navigation_stack';
 const moduleState = ApplicationState.createFields('reference-source-navigation-service', {
     referenceNavigationStack: [],
     hasRestoredFromSession: false,
+    // Each source view's note title, read from its rendered note, by reference tab id.
+    // Kept in memory only: sessionStorage holds opaque ids, never note text.
+    sourceTitlesByTabId: new Map(),
+    // The reference tab whose chip gave way to an empty search input (the magnifier),
+    // or '' when the chip shows.
+    newSearchTabId: '',
 });
+
+function requireReferenceViewKind(viewKind) {
+    if (!REFERENCE_VIEW_KINDS.has(viewKind)) {
+        throw new Error('Reference navigation requires a source, backlinks or references viewKind');
+    }
+}
 
 
 function copyOriginScope(originScope) {
@@ -49,9 +82,7 @@ function copyReferenceNavigationEntry(entry) {
             throw new Error(`Reference navigation stack entry missing ${key}`);
         }
     }
-    if (entry.viewKind !== 'source' && entry.viewKind !== 'backlinks') {
-        throw new Error('Reference navigation stack entry requires source or backlinks viewKind');
-    }
+    requireReferenceViewKind(entry.viewKind);
     return {
         fromTabId: entry.fromTabId,
         toTabId: entry.toTabId,
@@ -180,8 +211,38 @@ export function getReferenceNavigationLabelForTab(tabId) {
     pruneReferenceNavigationStackToExistingTabs();
     const entryIndex = findReferenceNavigationEntryIndexForTab(tabId);
     if (entryIndex === NOT_FOUND) return '';
-    return moduleState.referenceNavigationStack[entryIndex].viewKind === 'backlinks'
-        ? 'Referenced by' : 'Reference source';
+    return TAB_LABEL_BY_VIEW_KIND[moduleState.referenceNavigationStack[entryIndex].viewKind];
+}
+
+export function getActiveReferenceViewKind() {
+    pruneReferenceNavigationStackToExistingTabs();
+    const entryIndex = findReferenceNavigationEntryIndexForActiveTab();
+    if (entryIndex === NOT_FOUND) {
+        throw new Error('Active tab is not a reference view');
+    }
+    return moduleState.referenceNavigationStack[entryIndex].viewKind;
+}
+
+/**
+ * The stack entries leading from the original search to the active reference view,
+ * the first one opened from the search and the last one the active view's.
+ */
+export function getActiveReferenceChain() {
+    pruneReferenceNavigationStackToExistingTabs();
+    let entryIndex = findReferenceNavigationEntryIndexForActiveTab();
+    if (entryIndex === NOT_FOUND) {
+        throw new Error('Active tab is not a reference view');
+    }
+    const chain = [];
+    while (entryIndex !== NOT_FOUND) {
+        const entry = moduleState.referenceNavigationStack[entryIndex];
+        if (chain.some((chained) => chained.toTabId === entry.toTabId)) {
+            throw new Error('Reference navigation stack forms a cycle');
+        }
+        chain.unshift(entry);
+        entryIndex = findReferenceNavigationEntryIndexForTab(entry.fromTabId);
+    }
+    return chain;
 }
 
 export function getActiveReferenceSourceQuery() {
@@ -222,18 +283,125 @@ export function captureReferenceOriginScopeForActiveTab() {
     });
 }
 
+function forgetSourceTitle(tabId) {
+    if (moduleState.sourceTitlesByTabId.has(tabId)) {
+        moduleState.sourceTitlesByTabId.delete(tabId);
+    }
+}
+
+function requireChipElement(id) {
+    const element = document.getElementById(id);
+    if (!(element instanceof HTMLElement)) {
+        throw new Error(`${id} element missing`);
+    }
+    return element;
+}
+
+// The source note's first line as the view shows it (a password stays hidden), or
+// null while the note is not rendered.
+function readRenderedSourceTitle(noteId) {
+    const notesContainer = requireChipElement('notes-container');
+    const note = Array.from(notesContainer.querySelectorAll('.note[data-note-id]'))
+        .find((element) => element.dataset.noteId === noteId);
+    if (note === undefined) {
+        return null;
+    }
+    const content = note.querySelector(':scope > .note-content');
+    if (content === null) {
+        throw new Error('A rendered note is missing its content');
+    }
+    // The note's arrows (↖ backlinks, an embed's ↗) are not its text: hidden while read.
+    content.classList.add(READING_TITLE_CLASS);
+    const text = content.innerText;
+    content.classList.remove(READING_TITLE_CLASS);
+    const firstLine = text.split('\n').map((line) => line.trim()).find((line) => line !== '');
+    return firstLine === undefined ? '' : firstLine;
+}
+
+function resolveSourceTitle(entry) {
+    const renderedTitle = readRenderedSourceTitle(entry.referenceQuery);
+    if (renderedTitle !== null) {
+        // Each render reads the title again; it changes only when the note's first line does.
+        if (moduleState.sourceTitlesByTabId.get(entry.toTabId) !== renderedTitle) {
+            moduleState.sourceTitlesByTabId.set(entry.toTabId, renderedTitle);
+        }
+        return renderedTitle;
+    }
+    // The view has not rendered yet (a reload): its title comes with the first render.
+    if (moduleState.sourceTitlesByTabId.has(entry.toTabId)) {
+        return moduleState.sourceTitlesByTabId.get(entry.toTabId);
+    }
+    return '';
+}
+
+function renderReferenceViewChip() {
+    const chip = requireChipElement('reference-source-indicator');
+    const label = requireChipElement('reference-source-indicator-label');
+    const backButton = requireChipElement('reference-view-chip-back');
+    const isReferenceView = isViewingReferenceSource();
+    // The empty input shown for a new search belongs to one reference view; any
+    // other view brings the chip back.
+    if (moduleState.newSearchTabId !== ''
+        && (!isReferenceView || moduleState.newSearchTabId !== ModeContext.activeTabId)) {
+        moduleState.newSearchTabId = '';
+    }
+    if (!isReferenceView) {
+        chip.classList.remove(CHIP_SHOWN_CLASS);
+        return;
+    }
+    const chain = getActiveReferenceChain();
+    const entry = chain[chain.length - 1];
+    if (entry.viewKind === 'source') {
+        const title = resolveSourceTitle(entry);
+        label.textContent = `${SOURCE_CHIP_ARROW} ${title}`;
+        label.title = title;
+    } else {
+        label.textContent = CHIP_LABEL_BY_VIEW_KIND[entry.viewKind];
+        label.removeAttribute('title');
+    }
+    backButton.hidden = chain.length === FIRST_REFERENCE_LEVEL;
+    chip.classList.toggle(CHIP_SHOWN_CLASS, moduleState.newSearchTabId === '');
+}
+
+/**
+ * Show the active tab's reference view, if any, in the search bar: the chip with
+ * its label and back arrow in place of the search input. While a reference
+ * navigation is pending the bar keeps showing the view the user left.
+ */
 export function updateReferenceSourceIndicator() {
-    const indicator = document.getElementById('reference-source-indicator');
-    if (!(indicator instanceof HTMLElement)) {
-        throw new Error('reference-source-indicator element missing');
+    if (isReferenceViewTransitionPending()) {
+        return;
     }
-    indicator.hidden = !isViewingReferenceSource();
-    const label = document.getElementById('reference-source-indicator-label');
-    if (!(label instanceof HTMLElement)) {
-        throw new Error('reference-source-indicator-label element missing');
+    renderReferenceViewChip();
+}
+
+/**
+ * The magnifier, or focus reaching the hidden search input: the chip gives way to
+ * the empty input so a new search can be typed. The reference view stays until
+ * the user types, as it always has.
+ */
+export function showNewSearchInReferenceView() {
+    if (!isViewingReferenceSource()) {
+        throw new Error('A new search from the chip requires a reference view');
     }
-    const referenceLabel = getReferenceNavigationLabelForTab(ModeContext.activeTabId);
-    label.textContent = referenceLabel === '' ? 'Reference source' : referenceLabel;
+    if (moduleState.newSearchTabId === ModeContext.activeTabId) {
+        return;
+    }
+    moduleState.newSearchTabId = ModeContext.activeTabId;
+    updateReferenceSourceIndicator();
+}
+
+/** The empty search input lost focus without a search: the chip comes back. */
+export function restoreReferenceChipAfterEmptySearch() {
+    if (moduleState.newSearchTabId === '') {
+        return;
+    }
+    moduleState.newSearchTabId = '';
+    updateReferenceSourceIndicator();
+}
+
+export function isShowingNewSearchInReferenceView() {
+    return moduleState.newSearchTabId !== '' && moduleState.newSearchTabId === ModeContext.activeTabId;
 }
 
 export function pushReferenceNavigationEntry(
@@ -243,9 +411,7 @@ export function pushReferenceNavigationEntry(
     originScope,
     viewKind,
 ) {
-    if (viewKind !== 'source' && viewKind !== 'backlinks') {
-        throw new Error('Reference navigation requires source or backlinks viewKind');
-    }
+    requireReferenceViewKind(viewKind);
     if (typeof fromTabId !== 'string' || fromTabId.length === 0) {
         throw new Error('pushReferenceNavigationEntry requires fromTabId');
     }
@@ -267,9 +433,7 @@ export function pushReferenceNavigationEntry(
 }
 
 export function replaceActiveReferenceNavigationQuery(referenceQuery, viewKind) {
-    if (viewKind !== 'source' && viewKind !== 'backlinks') {
-        throw new Error('Reference navigation requires source or backlinks viewKind');
-    }
+    requireReferenceViewKind(viewKind);
     if (typeof referenceQuery !== 'string' || referenceQuery.length === 0) {
         throw new Error('replaceActiveReferenceNavigationQuery requires referenceQuery');
     }
@@ -284,6 +448,7 @@ export function replaceActiveReferenceNavigationQuery(referenceQuery, viewKind) 
         referenceQuery,
         viewKind,
     };
+    forgetSourceTitle(entry.toTabId);
     persistReferenceNavigationStack();
     updateReferenceSourceIndicator();
 }
@@ -299,9 +464,34 @@ export function popReferenceNavigationEntryForActiveTab() {
     if (!entry || typeof entry !== 'object') {
         throw new Error('Reference navigation stack entry must be an object');
     }
+    forgetSourceTitle(entry.toTabId);
     persistReferenceNavigationStack();
     updateReferenceSourceIndicator();
     return entry;
+}
+
+/**
+ * Leave every reference view between the active one and the original search:
+ * removes their entries and returns them, the one opened from the search first.
+ */
+export function popActiveReferenceChain() {
+    const chain = getActiveReferenceChain();
+    const chainTabIds = new Set(chain.map((entry) => entry.toTabId));
+    const stack = moduleState.referenceNavigationStack;
+    let writeIndex = 0;
+    for (let i = 0; i < stack.length; i += 1) {
+        const entry = stack[i];
+        if (chainTabIds.has(entry.toTabId)) continue;
+        if (writeIndex !== i) stack[writeIndex] = entry;
+        writeIndex += 1;
+    }
+    stack.length = writeIndex;
+    for (const tabId of chainTabIds) {
+        forgetSourceTitle(tabId);
+    }
+    persistReferenceNavigationStack();
+    updateReferenceSourceIndicator();
+    return chain;
 }
 
 export function dismissReferenceSourceModeForActiveTab() {

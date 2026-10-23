@@ -12,6 +12,7 @@ import { attachEditorSurface, detachEditorSurface } from '../../editor-toolbar.j
 import { rebuildRootDateSeparators } from '../services/root-date-separator-service.js';
 import { updateRootSortIndicator } from '../services/root-sort-indicator-service.js';
 import { updateUntaggedViewIndicator } from '../services/untagged-view-indicator-service.js';
+import { updateReferenceSourceIndicator } from '../services/reference-source-navigation-service.js';
 import { hasRootsBelowLoadedWindow, resetInfiniteScrollState } from '../services/infinite-scroll-service.js';
 import {
     captureEditingFocus, captureViewportRoot, holdViewportRoot, placeCaretAtClickAnchor, restoreEditingFocus,
@@ -238,6 +239,8 @@ export async function actionRefreshAndMaybeSelect(options) {
         if (!notesContainer) {
             throw new Error('Notes container not found after diff application');
         }
+        // A source view's chip shows its note's first line, read from the render.
+        updateReferenceSourceIndicator();
         rebuildRootDateSeparators(snapshot);
         holdViewportRoot(viewportRoot);
 

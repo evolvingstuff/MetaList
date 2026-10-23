@@ -37,18 +37,37 @@ test('reference tabs keep their hidden query and label across a page reload', as
         constructor() {
             this.hidden = true;
             this.textContent = '';
+            const classes = new Set();
+            this.classList = {
+                contains: (name) => classes.has(name),
+                remove: (name) => classes.delete(name),
+                toggle: (name, force) => (force ? classes.add(name) : classes.delete(name)),
+            };
+        }
+
+        removeAttribute(name) {
+            delete this[name];
+        }
+
+        querySelectorAll() {
+            return [];
         }
     }
     const indicator = new FakeHTMLElement();
     const label = new FakeHTMLElement();
+    const elements = {
+        'reference-source-indicator': indicator,
+        'reference-source-indicator-label': label,
+        'reference-view-chip-back': new FakeHTMLElement(),
+        'notes-container': new FakeHTMLElement(),
+    };
     globalThis.HTMLElement = FakeHTMLElement;
     const storage = createStorage();
     globalThis.sessionStorage = storage;
     globalThis.document = {
         body: { classList: { add() {}, remove() {} } },
         getElementById(id) {
-            if (id === 'reference-source-indicator-label') return label;
-            return id === 'reference-source-indicator' ? indicator : null;
+            return elements[id] === undefined ? null : elements[id];
         },
     };
     t.after(() => {
@@ -75,7 +94,7 @@ test('reference tabs keep their hidden query and label across a page reload', as
     // searched for something else, and one whose tab no longer exists.
     storage.setItem(STORAGE_KEY, JSON.stringify([
         { fromTabId: 'original', toTabId: 'refs', referenceQuery: openAllQuery,
-            originScope: ORIGIN_SCOPE, viewKind: 'source' },
+            originScope: ORIGIN_SCOPE, viewKind: 'references' },
         { fromTabId: 'original', toTabId: 'edited', referenceQuery: 'id-9',
             originScope: ORIGIN_SCOPE, viewKind: 'source' },
         { fromTabId: 'original', toTabId: 'closed', referenceQuery: 'id-8',
@@ -96,8 +115,8 @@ test('reference tabs keep their hidden query and label across a page reload', as
 
     assert.equal(isViewingReferenceSource(), true);
     assert.equal(getActiveReferenceSourceQuery(), openAllQuery);
-    assert.equal(indicator.hidden, false);
-    assert.equal(label.textContent, 'Reference source');
+    assert.equal(indicator.classList.contains('is-shown'), true);
+    assert.equal(label.textContent, 'References');
     assert.deepEqual(JSON.parse(storage.getItem(STORAGE_KEY)).map((entry) => entry.toTabId), ['refs']);
 
     ModeContext.hydrateTabState({

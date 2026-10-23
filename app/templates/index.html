@@ -228,22 +228,41 @@
                             <circle cx="11" cy="11" r="7" />
                             <path d="m16 16 5 5" />
                         </svg>
+                        <button
+                            id="reference-view-new-search"
+                            class="reference-view-new-search interactive"
+                            type="button"
+                            aria-label="New search"
+                        >
+                            <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                                <circle cx="11" cy="11" r="7" />
+                                <path d="m16 16 5 5" />
+                            </svg>
+                        </button>
+                        <div id="reference-source-indicator" class="reference-view-chip">
+                            <button
+                                id="reference-view-chip-back"
+                                class="reference-view-chip-button interactive"
+                                type="button"
+                                aria-label="Back"
+                                title="Back"
+                                hidden
+                            >←</button>
+                            <span id="reference-source-indicator-label" class="reference-view-chip-label"></span>
+                            <button
+                                id="reference-source-indicator-clear"
+                                class="reference-view-chip-button interactive"
+                                type="button"
+                                aria-label="Back to your search"
+                                title="Back to your search"
+                            >×</button>
+                        </div>
                         <div id="search-results-count" class="search-results-count">0</div>
                         <div id="search-suggestions" class="search-suggestions" hidden></div>
                     </div>
                     <div id="search-validation-message" class="search-validation-message" hidden></div>
                 </div>
                 <div class="view-indicators">
-                    <div id="reference-source-indicator" class="reference-source-indicator" hidden>
-                        <span id="reference-source-indicator-label" class="reference-source-indicator-label">Reference source</span>
-                        <button
-                            id="reference-source-indicator-clear"
-                            class="reference-source-indicator-clear interactive"
-                            type="button"
-                            aria-label="Return to previous context"
-                            title="Return to previous context"
-                        >×</button>
-                    </div>
                     <div id="root-sort-indicator" class="root-sort-indicator" hidden>
                         <span id="root-sort-indicator-label" class="root-sort-indicator-label"></span>
                         <button

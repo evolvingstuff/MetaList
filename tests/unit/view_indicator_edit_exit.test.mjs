@@ -26,9 +26,11 @@ function editExitExclusions() {
 
 test('every view indicator pill is pressed without ending the edit', () => {
     const ids = viewIndicatorIds();
-    assert.deepEqual(ids, ['reference-source-indicator', 'root-sort-indicator', 'untagged-view-indicator']);
+    assert.deepEqual(ids, ['root-sort-indicator', 'untagged-view-indicator']);
+    // A reference view's chip sits in the search bar instead.
+    assert.match(template, /<div id="reference-source-indicator" class="reference-view-chip"/);
     const exclusions = editExitExclusions();
-    for (const id of ids) {
+    for (const id of [...ids, 'reference-source-indicator']) {
         assert.ok(exclusions.includes(id), `#${id} must not end editing on mousedown`);
     }
 });
