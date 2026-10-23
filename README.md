@@ -12,6 +12,16 @@ A minimalist single-user note-taking app focused on server-side rendering (SSR),
 - Multi-tab search contexts with server-persisted scroll/search state (survives browser restarts)
 - Manual namespace backups/restores to a user-selected backup folder with retention controls
 
+## Changes in 0.24.0
+
+- **Super tags.** A tag can carry values: `jogging:miles=3:duration=30`, `drug:dosage=10mg`, `run:start=10:30pm`. Search by them with `jogging:miles>2`, `jogging:miles?` (notes missing it), `date>=2024-01`, or `jogging:miles=MAX` / `=MIN` for the largest or smallest among the notes found. Values compare as numbers (a unit is a label: `dosage>5mg` compares only mg, `dosage>5` every unit), dates, times (`10:30pm` = `22:30`) or text. A search reads values through tag rules too: with `jogging => exercise`, `exercise:miles>2` finds your runs. The tag bar and the search box suggest the property names and units you already use, and `MAX`/`MIN` after `=`. A plain `jogging` search still finds `jogging:miles=3`; children inherit the tag, never its values.
+- Tag rules can test values: `jogging:miles>10 => long-run`, `task:due? => needs-date`. The tag a rule gives passes to the note's children; Edit Tag Relationships shows such a rule in the left column of the tag it gives, suggests names and units while you type one, and warns about a property no note has (a typo). Saving one re-tags only the notes it can concern.
+- The AI can propose super tags with values a note states (`jogging:miles=3` for "ran 3 miles"), reusing your property names and units; accepting one adds its values to the note's tag.
+- **Date range** (right-click menu, search box menu and command palette): show only notes created, or last updated, today, in the last 7 or 30 days, this year, or in a custom range. A chip in the search box names it; its `×`, a new search or leaving the tab ends it.
+- File names are searchable: a quoted search (`"congratulation"`) and find (Cmd/Ctrl+F) match the names of files a note holds, and the AI sees them.
+- ⌘+ / ⌘− with the pointer on a picture or diagram makes it bigger or smaller, viewing or editing.
+- Right-clicking the search box past what you typed offers View, Sort by and Date range.
+
 ## Changes in 0.23.0
 
 - **Reference views.** Following a reference (a link, an embed's reference icon, Go to Source Note) or an AI answer's references slides the list to the left, and a gray chip takes the search box's place: **Source note** (its first line is the tooltip), **Reference** or **All references**. `←` or Escape goes back one level, `×` straight back to your search, each to the exact place you left; the list slides back to the right. With Reduce Motion it is a quick fade. The magnifier beside the chip starts a new search. Reference tabs keep their label and chip after a reload and in every window: no tab is named by a note ID any more.
