@@ -1,6 +1,6 @@
 ---
 name: async-lifecycle
-description: Keep asynchronous work observable in a repository that runs shockharness. Use when writing or changing async Python (asyncio, anyio, trio) or JavaScript (Promises, async functions), when a call to an async function is not awaited, when starting background tasks, when using asyncio.gather(return_exceptions=True) or Promise.allSettled, and when shockharness reports ASYNC001, ASYNC002 or ASYNC003. Explains each finding and the owned, awaited or returned alternatives.
+description: Keep asynchronous work observable in a repository that runs shockharness. Use when writing or changing async Python (asyncio, anyio, trio) or JavaScript (Promises, async functions), when a call to an async function is not awaited, when starting background tasks, when using asyncio.gather(return_exceptions=True) or Promise.allSettled, when scrolling or animating to a position after awaiting something that changes the page, and when shockharness reports ASYNC001, ASYNC002 or ASYNC003. Explains each finding and the owned, awaited or returned alternatives.
 ---
 
 # Async lifecycle
@@ -120,6 +120,29 @@ the tasks, logs their exceptions, and is shut down cleanly; or a job queue. Regi
 custom supervisor in `rules.async_lifecycle.supervisors` (a policy deviation, so review
 sees it). Do not silence the finding with `void` or by assigning the task to `_`.
 
+## Positions measured across an await
+
+After awaiting something that changes the page (a list refresh, a load of more items, a
+re-render), a position measured once is already a guess, and it goes on aging while an
+animation runs: background work can load or remove items above the target mid-scroll, and
+the animation ends at the old number. No rule reports this. Do not animate to a position
+measured once. Place at once, or scroll to the element and re-measure it each frame.
+
+```javascript
+// Stale: measured once, then animated over many frames while the list may still change.
+await refreshList();
+const y = window.scrollY + row.getBoundingClientRect().top;
+animateScrollTo(y);
+
+// At once: nothing can move the list between the measurement and the scroll.
+await refreshList();
+window.scrollTo(0, window.scrollY + row.getBoundingClientRect().top);
+
+// Animated: each frame measures the element again, so the target follows it.
+await refreshList();
+animateScrollTo(() => window.scrollY + row.getBoundingClientRect().top);
+```
+
 ## Checklist
 
 - [ ] Every call to an async function is awaited, returned, or handed to an owner.
@@ -127,6 +150,7 @@ sees it). Do not silence the finding with `void` or by assigning the task to `_`
 - [ ] Every `gather(return_exceptions=True)` / `Promise.allSettled` result is checked for failures, or the batch is returned to a caller that checks it.
 - [ ] No `void` on a Promise; top-level entry points end in a `.catch` that reports and sets the exit code.
 - [ ] Tests await what they call: an unawaited coroutine in a test makes it pass without checking anything.
+- [ ] After an await that changes the page, a scroll is placed at once or re-measures its element each frame, never animated to a position measured once.
 
 ## Setting ShockHarness up
 
