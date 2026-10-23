@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict';
+import {waitForAppQuiet} from './browser-app-idle.mjs';
+
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 100;
 
 // Intercept only release metadata and installer jobs. App startup, authentication,
 // preference persistence, menu search and modal rendering use the disposable server.
@@ -43,7 +47,7 @@ export async function checkAppUpdates(page, fixture) {
     assert.equal(await page.$('#app-update-notice'), null, 'app must become ready before the delayed release response');
     fixture.releaseInitial();
     await page.waitForSelector('#app-update-notice');
-    await page.waitForNetworkIdle({idleTime: 100});
+    await waitForAppQuiet(page, REQUESTS_QUIET_MS);
     await page.click('#app-update-notice button');
     await page.waitForSelector('#version-info-modal [data-update-action="install"]', {visible: true});
     assert.match(await page.$eval('#version-info-modal', node => node.textContent), /restarts all namespaces/);
@@ -51,14 +55,14 @@ export async function checkAppUpdates(page, fixture) {
     const checksBeforeRefresh = fixture.checks;
     await page.reload();
     await page.waitForSelector('[data-app-ready="true"]');
-    await page.waitForNetworkIdle({idleTime: 100});
+    await waitForAppQuiet(page, REQUESTS_QUIET_MS);
     assert.equal(fixture.checks, checksBeforeRefresh + 1);
     assert.equal(await page.$('#app-update-notice'), null, 'refresh must not repeat the announced release');
     fixture.version = '99.0.2';
     await page.reload();
     await page.waitForSelector('[data-app-ready="true"]');
     await page.waitForSelector('#app-update-notice');
-    await page.waitForNetworkIdle({idleTime: 100});
+    await waitForAppQuiet(page, REQUESTS_QUIET_MS);
     await page.click('#app-update-notice button[aria-label]');
     await page.evaluate(async () => {
         const {CommandPalette} = await import('/static/js/modules/command-palette/command-palette-controller.js');
@@ -86,11 +90,11 @@ export async function checkAppUpdates(page, fixture) {
     await page.keyboard.press('Escape');
     await page.reload();
     await page.waitForSelector('[data-app-ready="true"]');
-    await page.waitForNetworkIdle({idleTime: 100});
+    await waitForAppQuiet(page, REQUESTS_QUIET_MS);
     fixture.outage = true;
     await page.reload();
     await page.waitForSelector('[data-app-ready="true"]');
-    await page.waitForNetworkIdle({idleTime: 100});
+    await waitForAppQuiet(page, REQUESTS_QUIET_MS);
     assert.equal(await page.$('#app-update-notice'), null);
     await page.evaluate(async () => {
         const {CommandPalette} = await import('/static/js/modules/command-palette/command-palette-controller.js');

@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { runThenCleanUp } from './suite-outcome.mjs';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
 
 // The Reminders popup handles its own clicks (docs/ui/reminders.md): pressing
 // "Got it" while a note is being edited clears the reminder on the first press,
 // and the note stays in edit mode with its caret, as pressing any floating card does.
 
-// The network counts as idle after this long without a request.
-const NETWORK_IDLE_MS = 300;
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 const SETTLE_MS = 400;
 const MS_PER_MINUTE = 60 * 1000;
 const ACKNOWLEDGE_SELECTOR = '#reminder-surface [data-reminder-surface-action="acknowledge"]';
@@ -15,8 +15,7 @@ const OPEN_REMINDERS_SELECTOR = '#reminder-surface [data-reminder-surface-open-r
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 function modeState(page) {

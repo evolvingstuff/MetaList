@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { runThenCleanUp } from './suite-outcome.mjs';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
 
 // A picture is part of its note: a single click on it edits the note, and a
 // press-and-drag that starts on it moves, indents or outdents the note exactly
@@ -10,8 +10,8 @@ import { waitForAppIdle } from './browser-app-idle.mjs';
 // Copy Image and Save Image in the picture's menu take a picture out instead.
 
 const SETTLE_MS = 400;
-// The network counts as idle after this long without a request.
-const NETWORK_IDLE_MS = 300;
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 const DRAG_STEPS = 12;
 const DRAG_STEP_MS = 16;
 // Past the neighbor note's bottom edge, so the drop lands below it.
@@ -23,8 +23,7 @@ const PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAAQklEQVR4nO3O
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
   await pause(SETTLE_MS);
 }
 

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
 
 // A Send the server refuses before it starts the turn (the AI not set up, the
 // active tab changed, a message it rejects) stays on screen with the server's
@@ -80,7 +81,7 @@ async function send(page, text, {refused}) {
         const {AiChatPanel} = await import('/static/js/modules/ai-chat/ai-chat-panel-controller.js');
         return window.chatRefusalTest.chats === before + 1 && !AiChatPanel._isBusy;
     }, {}, before);
-    await page.waitForNetworkIdle({idleTime: SETTLE_MS});
+    await waitForAppQuiet(page, SETTLE_MS);
 }
 
 const refusedTurn = text => [`user: ${text}`, `error: ${REFUSAL_DETAIL}`];
@@ -116,7 +117,7 @@ export async function checkAiChatRefusal(page) {
         await page.click('#ai-chat-close');
         await pause(SETTLE_MS);
         await page.click('#chat-toggle-button');
-        await page.waitForNetworkIdle({idleTime: SETTLE_MS});
+        await waitForAppQuiet(page, SETTLE_MS);
         assert.deepEqual(await shownChat(page), afterThreeRefusals, 'closing and reopening the chat keeps refused turns');
 
         // The server trims its oldest turn, the one the second and third refusals followed.
@@ -127,7 +128,7 @@ export async function checkAiChatRefusal(page) {
         ], 'refused turns after a trimmed message go with it; one from before any message stays');
 
         await page.click('#ai-chat-clear');
-        await page.waitForNetworkIdle({idleTime: SETTLE_MS});
+        await waitForAppQuiet(page, SETTLE_MS);
         assert.deepEqual(await shownChat(page), [], 'Clear chat clears refused turns too');
 
         await send(page, 'Refused before a reload', {refused: true});
@@ -137,6 +138,6 @@ export async function checkAiChatRefusal(page) {
     }
     await page.reload();
     await page.waitForSelector('[data-app-ready="true"]');
-    await page.waitForNetworkIdle({idleTime: SETTLE_MS});
+    await waitForAppQuiet(page, SETTLE_MS);
     assert.deepEqual(await shownChat(page), [], 'a page reload forgets refused turns');
 }

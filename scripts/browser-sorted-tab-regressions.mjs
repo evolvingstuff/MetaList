@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
 
 // Sorted tabs: which new root notes may be added, the order staying frozen
 // while a note is edited, and the surrounding notes staying on screen when the
@@ -11,6 +11,8 @@ import { waitForAppIdle } from './browser-app-idle.mjs';
 const ROOT_COUNT = 200;
 const SETTLE_MS = 1500;
 const TOLERANCE_PX = 2;
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 const BLOCKED_MESSAGE = 'sort order';
 
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -40,7 +42,7 @@ async function deleteNotes(page, ids) {
 async function reload(page) {
   await page.reload();
   await page.waitForSelector('[data-app-ready="true"]');
-  await page.waitForNetworkIdle({idleTime: 300});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 async function runPaletteCommand(page, query) {
@@ -51,7 +53,7 @@ async function runPaletteCommand(page, query) {
   await page.keyboard.type(query);
   await pause(300);
   await page.keyboard.press('Enter');
-  await page.waitForNetworkIdle({idleTime: 300});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
   await pause(300);
 }
 
@@ -64,8 +66,7 @@ function modeState(page) {
 }
 
 async function waitIdle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: 300});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 async function waitForEditing(page, noteId) {

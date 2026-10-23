@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { runThenCleanUp } from './suite-outcome.mjs';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
 
 // Typing reaches only the note being edited. A note is editable only while it
 // is edited, so typing into another one is a bug the input handler reports
@@ -11,8 +11,8 @@ import { waitForAppIdle } from './browser-app-idle.mjs';
 // types, arrive before the note is editable and are not typed anywhere.)
 
 const SETTLE_MS = 400;
-// The network counts as idle after this long without a request.
-const NETWORK_IDLE_MS = 300;
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 const ROUNDS = 4;
 const TYPED = 'qz';
 // From the click to the first key: quicker than a person, slower than the 20 ms above.
@@ -20,8 +20,7 @@ const CLICK_TO_TYPING_MS = 50;
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 async function createNotes(page) {

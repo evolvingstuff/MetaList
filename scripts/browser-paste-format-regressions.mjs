@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 
 import {runThenCleanUp} from './suite-outcome.mjs';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
+
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 
 // Paste format guesses (docs/ui/content-formatting.md, "Paste format guesses"):
 // CSV-like, Markdown-like and code-like pastes are pasted as plain text and a
@@ -21,8 +24,7 @@ const RUBY = 'def greet(name)\n  puts "Hi #{name}"\nend';
 const FENCED_PYTHON = '```python\ndef f(x):\n    return x\n```';
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: 300});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 // A new note at the top, shown after a reload.

@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict';
+import {waitForAppQuiet} from './browser-app-idle.mjs';
+
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 100;
 
 async function openFixture(page) {
   const noteId = await page.evaluate(async () => {
@@ -18,7 +22,7 @@ async function openFixture(page) {
 }
 
 async function assertCorrectionPersisted(page, noteId) {
-  await page.waitForNetworkIdle({idleTime:100});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
   await page.reload();
   await page.waitForSelector('[data-app-ready="true"]');
   assert.equal(await page.$eval(`[data-note-id="${noteId}"] > .note-content em`, el => el.textContent),
@@ -66,7 +70,7 @@ export async function checkWritingAssistantCorrections(page) {
     }, {noteId, hostName, shadowMode, hostAttribute});
     if (keyboard) await page.keyboard.press('Enter');
     else await page.click('#writing-assistant-fixture');
-    await page.waitForNetworkIdle({idleTime:100});
+    await waitForAppQuiet(page, REQUESTS_QUIET_MS);
     const state = await page.evaluate(async noteId => {
       const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
       return {editing:mode.isEditing, noteId:mode.currentNoteId,

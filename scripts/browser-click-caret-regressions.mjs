@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
 
 // The caret after a click (docs/ui/interaction-principles.md, "Click into a
 // note": the clicked spot stays under the pointer, caret there). One click
@@ -10,8 +10,8 @@ import { waitForAppIdle } from './browser-app-idle.mjs';
 // clicked in the text (a pasted note, a robot press) the caret stays hidden.
 
 const SETTLE_MS = 400;
-// The network counts as idle after this long without a request.
-const NETWORK_IDLE_MS = 300;
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 // Clicks this far inside the note's corner land on its padding, not its text.
 const PADDING_INSET_PX = 4;
 // Clicks this far into a line land between its first letters.
@@ -22,8 +22,7 @@ const COLLAPSED_NOTE_PARAGRAPHS = 12;
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 async function reloadApp(page) {

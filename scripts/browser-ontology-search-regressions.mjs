@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { runThenCleanUp } from './suite-outcome.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
 
 // Edit Tag Relationships' tag search acts only on a result list built for the
 // text in its box, as the search box and the tag bar do. While a new list is
@@ -9,14 +10,14 @@ import { runThenCleanUp } from './suite-outcome.mjs';
 // list is on screen for certain.
 
 const SETTLE_MS = 400;
-// The network counts as idle after this long without a request.
-const NETWORK_IDLE_MS = 300;
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 const TAGS = ['quxalpha', 'quxbeta', 'zebrafoo'];
 const INPUT = '#ontology-search-input';
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
   await pause(SETTLE_MS);
 }
 

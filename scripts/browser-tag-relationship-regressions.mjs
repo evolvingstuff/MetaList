@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { runThenCleanUp } from './suite-outcome.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
 
 // Edit tag relationships (app/services/agent/skills/help-ontology.md, "Relationship dialogs"), as reported on 2026-10-22:
 // - with no focus tag the columns' + buttons are dimmed and say why, and pressing one
@@ -13,8 +14,8 @@ import { runThenCleanUp } from './suite-outcome.mjs';
 //   so it reads as one condition; a long part wraps instead of being cut off.
 
 const SETTLE_MS = 400;
-// The network counts as idle after this long without a request.
-const NETWORK_IDLE_MS = 300;
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 const FOCUS = 'zq-copy-paste';
 // zq-ctrl-v is on 3 notes, all copy-paste; zq-keyboard on 5, 2 of them copy-paste;
 // zq-journal on 8, none copy-paste, and the most used of these.
@@ -35,7 +36,7 @@ const WIDE_VIEWPORT = {width: 1440, height: 900};
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
   await pause(SETTLE_MS);
 }
 

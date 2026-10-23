@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { runThenCleanUp } from './suite-outcome.mjs';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
 
 // A file shown as a link (`.MD pkms_multi_provider_ai_integration.md`) downloads
 // only from its badge and its underlined name (docs/ui/references.md). The rest
@@ -9,8 +9,8 @@ import { waitForAppIdle } from './browser-app-idle.mjs';
 // right of the name downloaded the file (2026-10-21).
 
 const SETTLE_MS = 400;
-// The network counts as idle after this long without a request.
-const NETWORK_IDLE_MS = 300;
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 // How far right of the name's end "beside the name" is.
 const BESIDE_NAME_PX = 40;
 // A floating window is narrower: its click goes halfway into the gap after the name, which must be this wide.
@@ -26,8 +26,7 @@ const LONG_NAME = `${'a_very_long_attachment_name_that_keeps_going_'.repeat(6)}e
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
   await pause(SETTLE_MS);
 }
 

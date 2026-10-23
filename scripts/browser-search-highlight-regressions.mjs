@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { runThenCleanUp } from './suite-outcome.mjs';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
 
 // A search's quoted phrases are marked where they occur in the notes list
 // (docs/ui/search-semantics.md; interaction principle 5: the user cannot know where the
@@ -21,14 +21,13 @@ import { waitForAppIdle } from './browser-app-idle.mjs';
 
 const FIXTURE_TAG = 'searchmarkfixture';
 const HIGHLIGHT_NAME = 'metalist-search';
-const NETWORK_IDLE_MS = 300;
+const REQUESTS_QUIET_MS = 300;
 const PAINT_FRAMES = 2;
 const IS_COLLAPSED = true;
 const IS_EXPANDED = false;
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
   // Marks are painted on the frame after the list changes.
   await page.evaluate(frames => new Promise(resolve => {
     let left = frames;

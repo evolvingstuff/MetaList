@@ -9,11 +9,6 @@ import { waitForAppIdle } from './browser-app-idle.mjs';
 const PASTE_SETTLE_MS = 400;
 const DICTATED = 'Neural network, neural network. Neural-Dash Network.';
 
-async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: 300});
-}
-
 // Synthetic paste of plain text into the focused element.
 function paste(page, selector, text) {
   return page.evaluate(({selector, text}) => {
@@ -34,12 +29,20 @@ const VALUE_WAIT_MS = 5000;
 const VALUE_POLL_MS = 50;
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-// Waits for the field to hold the value, then asserts it: a miss reports the
-// value the field actually has.
-async function waitForValue(page, selector, expected, label) {
+// Waits for read() to give the value, then asserts it: a miss reports the
+// value it actually gives.
+async function waitForEqual(read, expected, label) {
   const deadline = Date.now() + VALUE_WAIT_MS;
-  while (Date.now() < deadline && await valueOf(page, selector) !== expected) await pause(VALUE_POLL_MS);
-  assert.equal(await valueOf(page, selector), expected, label);
+  while (Date.now() < deadline && await read() !== expected) await pause(VALUE_POLL_MS);
+  assert.equal(await read(), expected, label);
+}
+
+function waitForValue(page, selector, expected, label) {
+  return waitForEqual(() => valueOf(page, selector), expected, label);
+}
+
+function clipboardModeOf(page) {
+  return page.evaluate(async () => (await import('/static/js/modules/mode-manager/mode-context.js')).ModeContextInstance.clipboardMode);
 }
 
 // The browser's own undo for the focused field (what Cmd/Ctrl+Z runs there;
@@ -97,10 +100,18 @@ function shownNoteIds(page) {
   return page.evaluate(() => [...document.querySelectorAll('.note[data-note-id]')].map(note => note.dataset.noteId));
 }
 
+// The click started editing the note and its edit session has loaded.
+function waitForEditing(page, noteId) {
+  return page.waitForFunction(async noteId => {
+    const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
+    return mode.isEditing && mode.currentNoteId === noteId && !mode.isLoading;
+  }, {}, noteId);
+}
+
 async function startEditing(page, noteId) {
   const box = await (await page.$(`.note[data-note-id="${noteId}"] > .note-content`)).boundingBox();
   await page.mouse.click(box.x + box.width - 10, box.y + box.height / 2);
-  await idle(page);
+  await waitForEditing(page, noteId);
   await page.keyboard.press('End');
 }
 
@@ -122,17 +133,17 @@ async function dictationAfterNoteCopyCase(page) {
   });
   await page.reload();
   await page.waitForSelector('[data-app-ready="true"]');
-  await idle(page);
+  await waitForAppIdle(page);
   try {
     await startEditing(page, ids.copied);
     await page.keyboard.down('Meta');
     await page.keyboard.press('c');
     await page.keyboard.up('Meta');
-    await idle(page);
-    const clipboardMode = await page.evaluate(async () => (await import('/static/js/modules/mode-manager/mode-context.js')).ModeContextInstance.clipboardMode);
-    assert.equal(clipboardMode, 'note', 'D7: Cmd+C copied the note');
+    // The copy is done once the system clipboard holds the note, after its command.
+    await waitForEqual(() => clipboardModeOf(page), 'note', 'D7: Cmd+C copied the note');
+    await waitForAppIdle(page);
     await page.keyboard.press('Escape');
-    await idle(page);
+    await waitForAppIdle(page);
 
     await startEditing(page, ids.target);
     const notesBefore = await shownNoteIds(page);
@@ -142,9 +153,9 @@ async function dictationAfterNoteCopyCase(page) {
     await page.keyboard.press('v', {commands: ['paste']});
     await page.keyboard.up('Meta');
     await new Promise(resolve => setTimeout(resolve, PASTE_SETTLE_MS));
-    await idle(page);
+    await waitForEqual(() => noteText(page, ids.target), `Dictating into this note${words}`, 'D7: the dictated words go into the note being edited');
+    await waitForAppIdle(page);
     assert.deepEqual(await shownNoteIds(page), notesBefore, 'D7: no copy of the copied note appears');
-    assert.equal(await noteText(page, ids.target), `Dictating into this note${words}`, 'D7: the dictated words go into the note being edited');
 
     // The same in the tag bar: dictating "at heading" gives the tag, not a copy.
     await page.keyboard.press('Tab');
@@ -155,11 +166,11 @@ async function dictationAfterNoteCopyCase(page) {
     await page.keyboard.press('v', {commands: ['paste']});
     await page.keyboard.up('Meta');
     await new Promise(resolve => setTimeout(resolve, PASTE_SETTLE_MS));
-    await idle(page);
+    await waitForAppIdle(page);
     assert.deepEqual(await shownNoteIds(page), notesBefore, 'D7 tag bar: no copy of the copied note appears');
     await waitForValue(page, tagBar, '@heading', 'D7 tag bar: the dictated words become the tag');
     await page.keyboard.press('Escape');
-    await idle(page);
+    await waitForAppIdle(page);
   } finally {
     await page.evaluate(async ids => {
       const {NotesAPI} = await import('/static/js/modules/api-client.js');
@@ -176,7 +187,7 @@ async function dictationAfterNoteCopyCase(page) {
 export async function checkDictationPaste(page) {
   await page.reload();
   await page.waitForSelector('[data-app-ready="true"]');
-  await idle(page);
+  await waitForAppIdle(page);
   const noteId = await page.evaluate(async () => {
     const {NotesAPI} = await import('/static/js/modules/api-client.js');
     const note = await NotesAPI.createNote(null, '');
@@ -194,12 +205,12 @@ export async function checkDictationPaste(page) {
   try {
     await page.reload();
     await page.waitForSelector('[data-app-ready="true"]');
-    await idle(page);
+    await waitForAppIdle(page);
 
     // Search bar: the dictated phrase becomes the existing tag, and searches.
     await paste(page, '#search-input', DICTATED);
     await waitForValue(page, '#search-input', 'neural-network', 'search paste: dictated text becomes the existing tag');
-    await idle(page);
+    await waitForAppIdle(page);
     // One undo brings back exactly what was pasted.
     await undo(page);
     await waitForValue(page, '#search-input', DICTATED, 'search paste: one undo restores the pasted text');
@@ -208,47 +219,47 @@ export async function checkDictationPaste(page) {
       input.select();
     });
     await page.keyboard.press('Backspace');
-    await idle(page);
+    await waitForAppIdle(page);
 
     // The spoken exclusion before a quoted phrase excludes that text.
     await paste(page, '#search-input', 'Neural network minus quote attention end quote');
     await waitForValue(page, '#search-input', 'neural-network -"attention"', 'search paste: minus before a quoted phrase excludes it');
     await page.evaluate(() => document.getElementById('search-input').select());
     await page.keyboard.press('Backspace');
-    await idle(page);
+    await waitForAppIdle(page);
     // What Superwhisper types for "at green at bold" (it drops the repeated "at").
     await paste(page, '#search-input', 'At green, bold.');
     await waitForValue(page, '#search-input', '@green @bold', 'search paste: Superwhisper\'s "At green, bold." gives two meta tags');
     await page.evaluate(() => document.getElementById('search-input').select());
     await page.keyboard.press('Backspace');
-    await idle(page);
+    await waitForAppIdle(page);
     // What Superwhisper actually types for "neural network minus quote attention
     // end quote": an em dash for "minus", quote marks, and a leftover "end quote".
     await paste(page, '#search-input', 'Neural network\u2014"attention"\u2014end quote.');
     await waitForValue(page, '#search-input', 'neural-network -"attention"', 'search paste: Superwhisper\'s em dash before a quote excludes it');
     await page.evaluate(() => document.getElementById('search-input').select());
     await page.keyboard.press('Backspace');
-    await idle(page);
+    await waitForAppIdle(page);
 
     // After an opening quote, a paste is text to find: inserted as copied.
     await page.focus('#search-input');
     await page.keyboard.type('"');
-    await idle(page);
+    await waitForAppIdle(page);
     await paste(page, '#search-input', 'This is a test');
     await waitForValue(page, '#search-input', '"This is a test', 'search paste: after an opening quote, text goes in as copied');
     await page.keyboard.type('"');
-    await idle(page);
+    await waitForAppIdle(page);
     await waitForValue(page, '#search-input', '"This is a test"', 'search paste: the quoted paste can be closed');
     await page.evaluate(() => document.getElementById('search-input').select());
     await page.keyboard.press('Backspace');
-    await idle(page);
+    await waitForAppIdle(page);
     await page.keyboard.type('"');
-    await idle(page);
+    await waitForAppIdle(page);
     await paste(page, '#search-input', 'youtube.com/watch?v=abc');
     await waitForValue(page, '#search-input', '"youtube.com/watch?v=abc', 'search paste: a URL fragment after an opening quote goes in as copied');
     await page.evaluate(() => document.getElementById('search-input').select());
     await page.keyboard.press('Backspace');
-    await idle(page);
+    await waitForAppIdle(page);
 
     // Tag bar: known tags are not added again, unknown words become new tags.
     const point = await page.evaluate(noteId => {
@@ -300,7 +311,7 @@ export async function checkDictationPaste(page) {
     await waitForValue(page, tagBar, 'neural-network python', 'note paste: undo removes tags pasted alone');
     assert.equal(await noteText(page, noteId), textBefore, 'note paste: undoing tags pasted alone leaves the text');
     await page.keyboard.press('Escape');
-    await idle(page);
+    await waitForAppIdle(page);
 
     // One-tag fields: Edit Tag Relationships' search box and its "Implied tag"
     // field take the whole paste as one existing tag.
@@ -313,7 +324,9 @@ export async function checkDictationPaste(page) {
     await waitForValue(page, '#ontology-search-input', 'python', 'tag relationships search: a dictated tag becomes the tag');
     await page.focus('#ontology-search-input');
     await page.keyboard.press('Enter');
-    await page.waitForSelector('[data-action="add-right"]', {visible: true});
+    // The "+ Add more…" button is always shown; it works once the focus tag has
+    // loaded, which titles the column with it.
+    await page.waitForFunction(() => document.getElementById('ontology-right-title').textContent === 'Tags that \'python\' implies');
     await page.click('[data-action="add-right"]');
     await page.waitForSelector('#ontology-dialog-input', {visible: true});
     await paste(page, '#ontology-dialog-input', 'Neural network.');

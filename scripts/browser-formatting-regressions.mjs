@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict';
+import {waitForAppQuiet} from './browser-app-idle.mjs';
+
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 100;
 
 async function removeSelectedFormattingFromMenu(page) {
   const point = await page.evaluate(() => {
@@ -15,7 +19,7 @@ async function removeSelectedFormattingFromMenu(page) {
     return button.dataset.index;
   });
   await page.click(`#context-menu .context-menu-item[data-index="${menuIndex}"]`);
-  await page.waitForNetworkIdle({idleTime:100});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 async function readTitleTypography(page, noteId) {
@@ -72,7 +76,7 @@ export async function checkPastedHeadingFormatting(page) {
       editor.dispatchEvent(new ClipboardEvent('paste', {bubbles:true, cancelable:true, clipboardData}));
     }, noteId, html);
     await page.waitForFunction(noteId => document.querySelector(`[data-note-id="${noteId}"] h1`) !== null, {}, noteId);
-    await page.waitForNetworkIdle({idleTime:100});
+    await waitForAppQuiet(page, REQUESTS_QUIET_MS);
   }
   const before = await page.$eval(`[data-note-id="${noteId}"] > .note-content`, editor => ({
     text: editor.textContent,
@@ -114,7 +118,7 @@ export async function checkPastedHeadingFormatting(page) {
   }, noteId);
   assert.equal(resized.plain, resized.baseline, 'Plain title fragments must follow note-size preferences');
   await page.keyboard.press('Escape');
-  await page.waitForNetworkIdle({idleTime:100});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
   await page.reload();
   await page.waitForSelector('[data-app-ready="true"]');
   const persisted = await readTitleTypography(page, noteId);
@@ -161,7 +165,7 @@ export async function checkPastedHeadingFormatting(page) {
   assert.equal(after.body, before.body);
   assert.equal(after.link, 'https://example.com/paper');
   await page.keyboard.press('Escape');
-  await page.waitForNetworkIdle({idleTime:100});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
   await page.reload();
   await page.waitForSelector('[data-app-ready="true"]');
   assert.equal(await page.$(`[data-note-id="${noteId}"] h1`), null, 'Heading removal must survive reload');
@@ -199,6 +203,6 @@ export async function checkPastedHeadingFormatting(page) {
   assert.equal(cleanLines, 'Spacing title<br><br>Author<br><br>Abstract');
   assert.equal(await page.$eval(`[data-note-id="${noteId}"] a`, link => link.getAttribute('href')), 'https://example.com/author');
   await page.keyboard.press('Escape');
-  await page.waitForNetworkIdle({idleTime:100});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
   console.log('PASS Cmd+U trims edge blank lines and caps internal spacing at one blank line');
 }

@@ -3,6 +3,11 @@ const moduleState = ApplicationState.createFields('search-debounce-service', {
     timeoutId: null,
 });
 
+// A search is waiting for its delay to pass (it then runs under CommandGate).
+export function isDebouncedSearchPending() {
+    return moduleState.timeoutId !== null;
+}
+
 export function cancelDebouncedSearchExecution() {
     if (moduleState.timeoutId === null) {
         return;

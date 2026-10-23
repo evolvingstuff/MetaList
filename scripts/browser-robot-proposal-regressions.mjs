@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
+
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 
 // The robot count on a note with AI tag proposals (🤖 N; docs/ui/tag-bar.md,
 // docs/ui/interaction-principles.md). On a collapsed note it also counts the
@@ -15,8 +18,7 @@ const SETTLE_MS = 400;
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: 300});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 // A tree: root (proposal japan) > days > day1 (temples gion); root > costs > hotel;

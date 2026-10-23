@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { runThenCleanUp } from './suite-outcome.mjs';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
 
 // The tag bar's suggestions act only on a list built for the text in the bar,
 // as the search box's do. While a new list is on its way, the list on screen
@@ -9,14 +9,13 @@ import { waitForAppIdle } from './browser-app-idle.mjs';
 // so the old list is on screen for certain.
 
 const SETTLE_MS = 400;
-// The network counts as idle after this long without a request.
-const NETWORK_IDLE_MS = 300;
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 const TAGS = ['quxalpha', 'quxbeta', 'zebrafoo'];
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 // The edited note first, then one note per tag giving it its use.

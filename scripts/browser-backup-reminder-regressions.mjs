@@ -3,7 +3,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runThenCleanUp } from './suite-outcome.mjs';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
 
 // The backup reminder (docs/ui/controls.md, "Backup reminder"), one check per agreed
 // case. The card floats in the bottom-right notice stack: it takes no space, never
@@ -17,8 +17,8 @@ import { waitForAppIdle } from './browser-app-idle.mjs';
 // (AGENTS.md). With no fixture the real server answers, as after a real backup.
 
 const SETTLE_MS = 400;
-// The network counts as idle after this long without a request.
-const NETWORK_IDLE_MS = 300;
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 // The notice stack's distance from the window's right and bottom edges (main.css).
 const STACK_EDGE_PX = 18;
 // Firefox lays out in sixtieths of a pixel, so two edges it places at the same spot
@@ -31,8 +31,7 @@ const FIXTURE_KEY = 'backup-reminder-test-times';
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 async function reloadApp(page) {

@@ -1,13 +1,20 @@
 import assert from 'node:assert/strict';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet, waitForAppQuietWithin } from './browser-app-idle.mjs';
+
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
+
+// A drop's uploads and preview children follow one another; requests quiet this long
+// mean the last has been made.
+const DROP_REQUESTS_QUIET_MS = 800;
+const DROP_SETTLE_TIMEOUT_MS = 15000;
 
 // A dropped .txt, .md, .csv or .json file keeps its pill (labelled by extension) and
 // gets its text as the last child of the note holding the pill, rendered by
 // @markdown, @csv or @json (docs/ui/references.md, "Dropped text files").
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: 300});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 // A synthetic file drop, as Finder or Explorer sends one, at a point in `selector`.
@@ -67,8 +74,7 @@ function byFirstPill(view, title) {
 // A drop is finished when its uploads and preview children are in (while
 // editing, a pill shows as its raw ![[…]] token, so wait for the requests).
 async function settle(page) {
-  await page.waitForNetworkIdle({idleTime: 800, timeout: 15000});
-  await idle(page);
+  await waitForAppQuietWithin(page, DROP_REQUESTS_QUIET_MS, DROP_SETTLE_TIMEOUT_MS);
 }
 
 async function waitForNote(page, title) {

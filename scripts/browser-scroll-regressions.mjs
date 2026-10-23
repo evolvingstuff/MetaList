@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 
 import {runThenCleanUp} from './suite-outcome.mjs';
-import {waitForPageSettled} from './browser-app-idle.mjs';
+import {waitForAppQuiet, waitForPageSettled} from './browser-app-idle.mjs';
+
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 
 // Leaving edit mode keeps your place: the text you were working on (the caret,
 // when it is on screen) or reading (the line about a third down the screen)
@@ -68,7 +71,7 @@ async function waitForAppReady(page) {
 async function reload(page) {
   await page.reload();
   await waitForAppReady(page);
-  await page.waitForNetworkIdle({idleTime: 300});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 async function setCollapsed(page, noteId, collapsed) {
@@ -88,7 +91,7 @@ async function runPaletteCommand(page, query) {
   await page.keyboard.type(query);
   await pause(300);
   await page.keyboard.press('Enter');
-  await page.waitForNetworkIdle({idleTime: 300});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 // Screen Y of the paragraph whose text starts with `prefix` (edit or view DOM).
@@ -668,7 +671,6 @@ async function dragNoteTo(page, source, to) {
     return line === null || line.hidden ? null : line.getBoundingClientRect().top;
   });
   await page.mouse.up();
-  await page.waitForNetworkIdle({idleTime: 300});
   await waitForPageSettled(page);
   return {scrolls: await page.evaluate(() => window.__dragScrolls), lineTop};
 }

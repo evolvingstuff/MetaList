@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { waitForAppIdle } from './browser-app-idle.mjs';
+import { waitForAppQuiet } from './browser-app-idle.mjs';
 
 // Toggling a note's collapse arrow only collapses or expands it
 // (docs/ui/interaction-principles.md: only the user's action changes the
@@ -8,15 +8,14 @@ import { waitForAppIdle } from './browser-app-idle.mjs';
 // animation and after it, and the arrow stays visible under the pointer.
 
 const SETTLE_MS = 400;
-// The network counts as idle after this long without a request.
-const NETWORK_IDLE_MS = 300;
+// Requests count as quiet after this long without one starting or ending.
+const REQUESTS_QUIET_MS = 300;
 // Longer than the collapse animation (140ms) plus its fallback (200ms).
 const SAMPLE_MS = 700;
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function idle(page) {
-  await waitForAppIdle(page);
-  await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
 }
 
 async function reloadApp(page) {

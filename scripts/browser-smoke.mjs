@@ -58,6 +58,12 @@ import {checkDeleteWarning} from './browser-delete-warning-regressions.mjs';
 import {FOCUSED_SUITES} from './browser-suite-names.mjs';
 import {checkPaletteActivation} from './browser-palette-activation-regressions.mjs';
 import {checkSearchHighlight} from './browser-search-highlight-regressions.mjs';
+import {installRequestMonitor, waitForAppQuiet} from './browser-app-idle.mjs';
+
+// Requests count as quiet after this long without one starting or ending: after a
+// step, and longer before the document mouse-movement checks.
+const REQUESTS_QUIET_MS = 100;
+const BEFORE_MOUSE_CHECKS_QUIET_MS = 500;
 
 const directory = await mkdtemp(join(tmpdir(), 'metalist-browser-'));
 // Free ports for HTTP and HTTPS: the user's own MetaList keeps its usual ports (HTTPS 8443).
@@ -110,6 +116,7 @@ try {
   browser = await browserDriver.launch({headless:true, browser:browserName,
     ...(process.env.BROWSER_TEST_EXECUTABLE ? {executablePath:process.env.BROWSER_TEST_EXECUTABLE} : {})});
   const page = await browser.newPage();
+  await installRequestMonitor(page);
   page.on('console', message => browserDiagnostics.push(`${new Date().toISOString()} ${message.type()} ${message.text()}`));
   page.on('framenavigated', frame => {
     if (frame === page.mainFrame()) browserDiagnostics.push(`${new Date().toISOString()} navigate ${frame.url()}`);
@@ -338,7 +345,7 @@ try {
     await checkDeleteWarning(page);
     await checkSortedTabs(page);
   }
-  await page.waitForNetworkIdle({idleTime:500});
+  await waitForAppQuiet(page, BEFORE_MOUSE_CHECKS_QUIET_MS);
   // Exercise initial document mouse movement, including stationary axes and
   // duplicate browser observations that must not become duplicate state writes.
   await page.mouse.move(30, 300);
@@ -408,7 +415,7 @@ try {
     if (release !== 'held') await page.mouse.move(5, 500);
     if (release === 'blur') await page.evaluate(() => window.dispatchEvent(new Event('blur')));
     await page.mouse.up();
-    await page.waitForNetworkIdle({idleTime:100});
+    await waitForAppQuiet(page, REQUESTS_QUIET_MS);
     assert.equal(await page.$eval(`[data-note-id="${noteId}"]`, note => note.classList.contains('collapsed')), !before);
     assert.deepEqual(errors, []);
   }
@@ -524,7 +531,7 @@ try {
       const {CommandPalette} = await import('/static/js/modules/command-palette/command-palette-controller.js');
       await CommandPalette[method](...args);
     }, {method, args});
-    await page.waitForNetworkIdle({idleTime:100});
+    await waitForAppQuiet(page, REQUESTS_QUIET_MS);
     if (method === 'openVersionInfo') {
       await page.waitForSelector('#version-info-modal .version-info-table');
       const version = await page.evaluate(async () => {
@@ -620,7 +627,7 @@ try {
       if (state.activeTabId !== originalTabId) throw new Error('Original tab was not restored');
     });
   });
-  await page.waitForNetworkIdle({idleTime:100});
+  await waitForAppQuiet(page, REQUESTS_QUIET_MS);
   assert.deepEqual(errors, []);
   console.log('PASS tab creation and switching with shared query and scroll values');
 
@@ -678,7 +685,13 @@ try {
     return sanitizeNoteHtmlForStorage(`<p>Probe</p><img src="/static/img/favicon.ico" `
       + `data-remote-image-source-url="${remoteImage}"><img src="${probeImage}">`);
   }, {probeImage, remoteImage});
-  await page.waitForNetworkIdle({idleTime: 300});
+  // A live image made after the sanitizer returned: once the page has asked for it, an
+  // image the sanitizer had made live would have been asked for already, so an empty
+  // probeRequests then means none was.
+  const controlImage = `${origin}/static/img/favicon.ico?sanitizer-probe-control`;
+  const controlRequested = page.waitForRequest(controlImage);
+  await page.evaluate(controlImage => { new Image().src = controlImage; }, controlImage);
+  await controlRequested;
   page.off('request', recordProbe);
   assert.deepEqual(probeRequests, [], 'sanitizing a note for storage made the page load its images');
   assert(storedProbe.includes(remoteImage), `the remote image keeps its original source: ${storedProbe}`);
