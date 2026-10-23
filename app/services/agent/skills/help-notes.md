@@ -67,11 +67,12 @@ Sources: docs/ui/controls.md, docs/ui/find.md
 | `?` | Open keyboard shortcuts / cheatsheet (idle mode) |
 | `⌘ + Z` | Undo |
 | `⌘ + Y` | Redo |
+| `⌘ + +` / `⌘ + −` | With the pointer on a picture or diagram: Make Bigger / Make Smaller, viewing or editing; elsewhere the page zooms as usual |
 
 On macOS, `⌘ + Y` normally opens Safari History rather than performing native text redo. MetaList intercepts it while editing and maps it to the active editor's local redo operation; this does not call the server.
 
-- When a non-normal sort mode is active, a floating pill above the sticky top bar shows the active mode and includes an `×` to return to normal sorting without reopening the command palette.
-- These dismissible pills are **view indicators** (also called view chips). Entering or leaving a view with an indicator—sorted notes, Untagged notes, Reference source, or Referenced by—applies note changes immediately without appearance/disappearance or collapse animations, including tab switches into or out of these views.
+- When a non-normal sort mode is active, a gray chip at the right end inside the search input names it (`A–Z`, `Created ↑`, …), with an `×` to return to normal sorting.
+- These dismissible chips are **view indicators**: sorted notes and Untagged notes inside the search input; reference views (Source note, Reference, All references) centered in the bar in place of the input. Entering or leaving them applies note changes immediately, without appearance/disappearance or collapse animations; only reference views slide the list.
 - Scroll restoration preserves an exact top position without delayed anchor alignment. Resetting a view cancels pending scroll restores from its previous content.
 - When tabs are enabled, a white outline stacked-folder icon marks the black trigger region left of the search field. Its left inset matches the results count's right inset. Hovering that region or icon opens the tab/search-context overlay, which remains available while hovering over the dropdown itself. Creating a blank tab with `Enter` does not dismiss the overlay. Open search suggestions render above the tabs.
 - Left/right side lanes hide at narrower desktop widths before they can overlap the centered notes column.

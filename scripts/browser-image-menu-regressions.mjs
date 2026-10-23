@@ -413,6 +413,71 @@ async function wideImageCase(page) {
 }
 
 // MetaList shows a failure in its red overlay; a case that raised one has failed.
+// The size a note's {@size=N} tag gives its image, of the image's own 48px.
+const IMAGE_SIDE_PX = 48;
+
+function sizeOfTags(tags) {
+  const match = /\{@size=([0-9.]+)\}/.exec(tags);
+  assert(match !== null, `a size tag in ${tags}`);
+  return Number(match[1]);
+}
+
+// ⌘+ / ⌘− (Ctrl off a Mac) with the pointer on a picture: what Make Bigger and Make
+// Smaller do, viewing or editing, again and again with the pointer still (the picture
+// is re-rendered under it); with the pointer off the picture they resize nothing.
+async function pressResizeKey(page, code) {
+  const modifier = await page.evaluate(() => (/Mac/.test(navigator.platform) ? 'Meta' : 'Control'));
+  await page.keyboard.down(modifier);
+  await page.keyboard.press(code);
+  await page.keyboard.up(modifier);
+  await idle(page);
+  await pause(SETTLE_MS);
+}
+
+async function pointAtImage(page, noteId) {
+  const selector = `.note[data-note-id="${noteId}"] > .note-content img`;
+  await page.waitForFunction(selector => {
+    const image = document.querySelector(selector);
+    return image !== null && image.complete && image.getBoundingClientRect().width > 0;
+  }, {}, selector);
+  await page.$eval(selector, image => image.scrollIntoView({block: 'center'}));
+  const box = await (await page.$(selector)).boundingBox();
+  await page.mouse.move(box.x + box.width * MIDDLE, box.y + box.height * MIDDLE);
+}
+
+async function noteTags(page, noteId) {
+  return (await editState(page, noteId)).tags;
+}
+
+async function shortcutCase(page) {
+  const ids = await createNotes(page, [['keys', `<p>Key photo ${IMAGE} caption</p>`, '']]);
+  await reloadApp(page);
+  // Viewing: two presses with the pointer still, each a step bigger.
+  await pointAtImage(page, ids.keys);
+  await pressResizeKey(page, 'Equal');
+  const first = sizeOfTags(await noteTags(page, ids.keys));
+  assertWidths('⌘+ while viewing', await imageWidths(page, ids.keys), [IMAGE_SIDE_PX * first]);
+  await pressResizeKey(page, 'Equal');
+  const second = sizeOfTags(await noteTags(page, ids.keys));
+  assert(second > first, `a second ⌘+ with the pointer still makes it bigger again (${first} → ${second})`);
+  assertWidths('second ⌘+', await imageWidths(page, ids.keys), [IMAGE_SIDE_PX * second]);
+  // The pointer off the picture: nothing is resized.
+  await page.mouse.move(5, 400);
+  await pressResizeKey(page, 'Minus');
+  assert.equal(sizeOfTags(await noteTags(page, ids.keys)), second, '⌘− away from a picture resizes nothing');
+  // Editing: ⌘− keeps edit mode, the image's line and the caret, as Make Smaller does.
+  await startEditingAtEndOf(page, ids.keys, 'Key photo');
+  const before = await editState(page, ids.keys);
+  await pointAtImage(page, ids.keys);
+  await pressResizeKey(page, 'Minus');
+  const after = await editState(page, ids.keys);
+  assert.equal(sizeOfTags(after.tags), first, '⌘− while editing is one step smaller');
+  assertStill('⌘− while editing', before, after);
+  await page.keyboard.press('Escape');
+  await idle(page);
+  await deleteNotes(page, [ids.keys]);
+}
+
 async function assertNoFatalOverlay(page, label) {
   const overlay = await page.evaluate(() => {
     const element = document.getElementById('fatal-error-overlay');
@@ -425,7 +490,7 @@ async function assertNoFatalOverlay(page, label) {
 export async function checkImageMenu(page) {
   await reloadApp(page);
   const failures = [];
-  for (const imageCase of [wideImageCase, photoFlashCase, liveSizeCase, sizedCase, unsizedCase, typingUndoCase, otherNoteCase, tokenCase]) {
+  for (const imageCase of [wideImageCase, photoFlashCase, liveSizeCase, sizedCase, unsizedCase, typingUndoCase, otherNoteCase, tokenCase, shortcutCase]) {
     try {
       await imageCase(page);
     } catch (error) {
