@@ -5,6 +5,21 @@ README. Changes made after the newest listed version are not described here.
 Compare with installed_version from the help lookup to tell the user whether
 they already have a release. Version info offers updates (see the data topic).
 
+## 0.23.0
+
+- **Reference views.** Following a reference (a link, an embed's reference icon, Go to Source Note) or an AI answer's references slides the list to the left, and a gray chip takes the search box's place: **Source note** (its first line is the tooltip), **Reference** or **All references**. `←` or Escape goes back one level, `×` straight back to your search, each to the exact place you left; the list slides back to the right. With Reduce Motion it is a quick fade. The magnifier beside the chip starts a new search. Reference tabs keep their label and chip after a reload and in every window: no tab is named by a note ID any more.
+- One reference icon, a page with an arrow coming into it, on embeds, links, the chip, the tab list and the right-click menu's **Go to Source Note**; All references has two pages. A collapsed embed shows its source's first line in its own formatting (a green heading stays a green heading), and embeds are a shade darker grey, deeper again for an embed inside an embed.
+- Sort orders and Untagged show as chips inside the search box (`Created`, `Updated`, `A–Z`, `Size`, `Untagged`; the full name is the tooltip). New **Reverse Order** in Sort by works with any order: Z to A, oldest or smallest first, or your own order bottom to top. Typing a new search or leaving a tab ends its sort; a new tab starts unsorted; a reference view and back keeps it.
+- Right-clicking the list offers **Paste Note as Reference at Top** (⌘R) beside Paste Note at Top.
+- Backlinks (`↖`) are hidden for now, until they have a sign of their own.
+- Coming back to a tab, or from a reference view, lands exactly where you were; a note just below the top could put you up to 80px further down.
+- **Find in the list** (Cmd/Ctrl+F) finds text far below the loaded notes and inside folded ones; a folded match opens just for the find.
+- Namespaces are called **vaults** on screen; `--vault` works like `--namespace`.
+- Edit tag relationships: suggestions list tags linked to the focus tag first, a condition shows one part per line, and with no focus tag the `+` buttons are dimmed instead of stopping MetaList.
+- A file link downloads only from its badge and name; a click beside it edits the note.
+- Make Bigger, Make Smaller and Reset Size keep the caret on its side of the image.
+- Logging out while a log entry was being written could close the log under it; the logout now waits.
+
 ## 0.22.0
 
 - Tag suggestions only narrow as you type, however many letters: `q`, `qu`, `que` keep their order, and a tag that already applies (a parent's, or implied by a rule) stays right after the tags with evidence instead of dropping to the bottom. Each letter after the first answers in a few milliseconds. Measured on a 107,000-note namespace, the wanted tag is in the top five more often after two and three letters (90% and 96%, up from 88% and 93%).
