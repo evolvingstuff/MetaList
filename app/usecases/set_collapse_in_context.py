@@ -100,6 +100,9 @@ def _collect_context_root_ids(search_query: Optional[str]) -> List[str]:
                 )
             )
         for condition in clause.forbidden_properties:
+            if condition.is_extreme:
+                excluded_note_ids.update(search_index.query_clause_note_ids(clause.requiring(condition)))
+                continue
             excluded_note_ids.update(
                 search_index.query_clause_note_ids(
                     SearchClause(

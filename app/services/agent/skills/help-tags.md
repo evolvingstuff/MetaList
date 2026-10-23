@@ -27,26 +27,28 @@ a tag in Edit Tag Relationships) are in the ontology help topic.
 - Double-click selects an entire tag, including `@`, connectors such as `-`, `_`, `.`, `/`, and assignment values such as `@size=2.0`. Inside a scoped wrapper, it selects the individual tag without the wrapper. Comments retain ordinary word selection. The search input uses the same interaction with its own query grammar.
 - Runs of whitespace are normalized to single spaces.
 - Wrapper tokens may contain internal spaces (e.g. `{{@red @monospace}}`), which are preserved (normalized) inside the wrapper. This means a wrapper token can contain multiple tags.
-- A normal tag token allows only ASCII-printable characters and disallows: `: , " \\ > < [ ] { } ( ) * | ; ~ ``. The one exception is `:` introducing tag properties (below).
+- A normal tag token allows only ASCII-printable characters and disallows: `: , " \\ > < [ ] { } ( ) * | ; ~ ``. The one exception is `:` making a super tag (below).
 - One `=` is allowed inside regular or meta tags when valid tag characters occur on both sides (for example `abc=xyz` or `@size=2.0`). It cannot appear at the start/end, and multiple `=` characters are removed during normalization.
 - Tag tokens also cannot start with `-`, `+`, or `/`.
 - Exact uppercase `OR` is reserved as the search disjunction operator and cannot
   be saved as a tag, including inside a wrapper. Lowercase `or` and mixed-case
   variants remain valid tags.
 
-## Tag Properties
-A tag can carry values, written in the tag bar as one token: `jogging:miles=3`, `jogging:miles=3:duration=30`, `drug:dosage=10mg`, `run:start=10:30pm:miles=3`. Design and later steps: `docs/design/tag-properties.md`.
+## Super Tags
+A super tag is a tag carrying values, its properties, written in the tag bar as one token: `jogging:miles=3`, `jogging:miles=3:duration=30`, `drug:dosage=10mg`, `run:start=10:30pm:miles=3`. Call them super tags when explaining them; the values are its properties. Design and later steps: `docs/design/tag-properties.md`.
 - The tag is everything before the first `:`; each `:name=value` after it is a property. Property names start with a letter.
 - A colon followed by a letter starts the next property; any other colon belongs to the value, so times and date-times work: `start=10:30pm`, `at=2026-10-23T10:30`.
 - Values have no spaces (`author=Ursula-Le-Guin`). A unit, if any, is written after the number with no space (`10mg`, `10miles`).
 - While typing, properties stay as typed. On leaving the tag bar, a property without a value (`jogging:miles=` or `jogging:mi`) is removed, and so is a property repeated in the same token (`jogging:miles=3:miles=5` keeps `miles=3`).
-- A note carries a tag with properties once. Adding the same tag again (`jogging` beside `jogging:miles=3`) is refused: the tag bar says "jogging is already on this note" and the second one is not saved. Put all of a tag's properties in its one token instead. Tags without properties are unaffected (`priority=high priority=low` stays).
+- A note carries a super tag once. Adding the same tag again (`jogging` beside `jogging:miles=3`) is refused: the tag bar says "jogging is already on this note" and the second one is not saved. Put all of a tag's properties in its one token instead. Plain tags are unaffected (`priority=high priority=low` stays).
 - Meta tags (`@size=2`) and tags inside scopes (`{{...}}`) have no properties; their colons are removed as before.
-- A tag with properties counts as its tag everywhere: searching `jogging` finds a note tagged `jogging:miles=3`; children and referencing notes inherit `jogging` (never its values); ontology rules about `jogging` apply; tag suggestions treat it as `jogging`. Right-clicking anywhere on the token opens the menu for `jogging`.
+- A super tag counts as its plain tag everywhere: searching `jogging` finds a note tagged `jogging:miles=3`; children and referencing notes inherit `jogging` (never its values); ontology rules about `jogging` apply; tag suggestions treat it as `jogging`. Right-clicking anywhere on the token opens the menu for `jogging`.
 - Renaming a tag (Edit Tag Relationships) keeps its properties: `jogging:miles=3` becomes `running:miles=3`. Deleting the tag removes the whole token.
 - The note list shows the token as written.
-- Searching by values (`jogging:miles>2`, `jogging:miles?`, `date>=2024-01`) is described in `help-search` (Property Terms).
-- Not yet: suggestions for property names and units, finding values through implications (`exercise:miles>2` finding `jogging:miles=3`), and ontology rules that test values. Until then, typing `jogging:` in the tag bar or search box shows no suggestions.
+- Searching by values (`jogging:miles>2`, `jogging:miles?`, `date>=2024-01`) is described in `help-search` (Super Tag Searches).
+- Searches also read values through implications: with `jogging => exercise`, `exercise:miles>2` finds `jogging:miles=3`.
+- Suggestions: after `jogging:` the tag bar suggests property names used with `jogging` and with the tags it implies (`duration` from `exercise`), most used first, leaving out names the token already has; picking one adds it with its `=` (`jogging:miles=`). After a value's number (`drug:dosage=10`) it suggests the units used with that property (`10mg`). The list shows only the name or unit; right-clicking a suggestion says how many notes use it with which tag.
+- Not yet: ontology rules that test values.
 
 ## Wrapper Tags
 A tag token may be wrapped with matching brackets:

@@ -1,4 +1,7 @@
-# Tag Properties
+# Tag Properties (Super Tags)
+
+In the user docs and the AI's help a tag with properties is a **super tag**
+(`jogging:miles=3`); its values are its properties.
 
 Status: design, not built. Settled in a brainstorm on 2026-10-23. Items marked
 **Proposed** are smaller details suggested while writing this down; confirm them
@@ -149,6 +152,10 @@ jogging:miles
 - **A plain tag finds its property tokens.** `jogging` finds a note tagged only
   `jogging:miles=3`, as `priority` finds `priority=high` today.
 - `date>=2024-01` is the implicit `value`: `date:value>=2024-01`.
+- `jogging:miles=MAX` / `=MIN`: the note (or notes, on a tie) with the largest or
+  smallest value among those the rest of the clause finds. Through implications too;
+  `-jogging:miles=MAX` leaves it out. With values of several kinds, the kind most of
+  them are counts; units are labels. Exact capitals, after `=` only.
 
 ### Upward search through implications
 

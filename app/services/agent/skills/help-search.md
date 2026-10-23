@@ -190,9 +190,9 @@ Text matching is:
   it does not match "sulfate"; `" fat "` matches only the word "fat". Without edge
   spaces a term matches anywhere, also inside words (`"fat"` matches "father").
 
-### Property Terms
-Tags can carry values (`jogging:miles=3`, `drug:dosage=10mg`; see the tag bar's Tag
-Properties and `docs/design/tag-properties.md`). A search compares a note's own values:
+### Super Tag Searches
+Super tags carry values (`jogging:miles=3`, `drug:dosage=10mg`; see Super Tags in
+`help-tags`). Call them super tags when explaining them. A search compares a note's own values:
 
 - `jogging:miles>2`: notes whose `jogging` has `miles` over 2. Operators: `>`, `<`,
   `>=`, `<=`, `=`.
@@ -215,8 +215,27 @@ Properties and `docs/design/tag-properties.md`). A search compares a note's own 
 - A note added while such a search is active gets the term's tag; an `=` term also gives
   it the value (`jogging:miles=3` adds `jogging:miles=3`). Other comparisons name no
   value, so the new note has the tag only.
-- Not yet: finding `jogging` values through implications (`exercise:miles>2`), and
-  suggestions for property names and units.
+- **Through implications:** a term about a tag also reads the values of every tag that
+  implies it, synonyms included. With `jogging => exercise`, `exercise:miles>2` finds
+  `jogging:miles=3`; with `trail-run => jogging`, `trail-run:miles=5` too. Ask at any
+  level and find every specific instance. A note matches if any one value meets the
+  term: `jogging:miles=1 cycling:miles=10` matches both `exercise:miles>2` and
+  `exercise:miles<2` (give each activity its own note). `exercise:miles?` finds notes
+  carrying a tag that implies `exercise` (or `exercise` itself) without `miles` on any
+  of them. Only implication rules count, not text rules. While a vault is locked the
+  rules cannot be read, so a term reads only its own tag.
+- **MAX and MIN:** `jogging:miles=MAX` keeps the note (or notes, on a tie) with the
+  largest `miles` among the notes the rest of the clause finds; `=MIN` the smallest.
+  `jogging:miles=MAX date>=2026-01` is the longest run since January, `run:at=MAX` the
+  latest. Through implications too (`exercise:miles=MAX`). `-jogging:miles=MAX` leaves
+  the longest out. Values of several kinds: the kind most values are counts (`far` is
+  skipped among numbers); units are labels and do not count. Exact capitals, as `OR`:
+  `max` is text. They go after `=` only.
+- **Suggestions:** after `exercise:` the search box suggests property names used with
+  `exercise` and with the tags implying it (`miles` from `jogging`), most used first;
+  after a number (`drug:dosage>5`) the units used with that property (`5mg`); after `=`,
+  `MAX` and `MIN`. The list shows only the name, unit or keyword. Picking one earns no
+  activity credit.
 
 ### UUID Terms
 - UUIDs in positive terms are treated as direct note targets (including when pasted as `[[UUID]]`).

@@ -413,6 +413,7 @@ def test_search_suggestions_route_uses_configured_limit(
         "suggestions": [f"tag-{index}" for index in range(7)],
         "personalizedSuggestions": [],
         "reasons": {f"tag-{index}": [f"Why tag-{index}"] for index in range(7)},
+        "labels": {f"tag-{index}": f"tag-{index}" for index in range(7)},
     }
 
 
@@ -430,7 +431,7 @@ def test_search_suggestions_route_excludes_nonexistent_tag_combination(monkeypat
 
     assert notes_route.search_suggestions(
         None, {'query': 'prediction-future security', 'windowDays': [1, 7, 30]},
-    ) == {'suggestions': [], 'personalizedSuggestions': [], 'reasons': {}}
+    ) == {'suggestions': [], 'personalizedSuggestions': [], 'reasons': {}, 'labels': {}}
 
 
 def test_search_suggestions_route_reports_each_promoting_window(
@@ -484,6 +485,7 @@ def test_search_suggestions_route_reports_each_promoting_window(
             ],
             "short-story": ["Tags are listed by how many notes have them", "Searching for it finds 3 notes"],
         },
+        "labels": {"shortcut": "shortcut", "short-selling": "short-selling", "short-story": "short-story"},
     }
 
 
@@ -616,4 +618,5 @@ def test_note_tag_suggestions_route_uses_configured_tag_limit(
     assert result == {
         "suggestions": ["foo"],
         "reasons": {"foo": ["Named in this note: \"foo\"", "You've tagged 3 notes with it"]},
+        "labels": {"foo": "foo"},
     }

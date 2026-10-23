@@ -126,7 +126,8 @@ def _property_tag_tokens(
         if key not in values_by_tag:
             values_by_tag[key] = []
             spelling_by_tag[key] = prefer_existing_tag_case(condition.tag, preferred_by_casefold)
-        if condition.operator == "=":
+        # MAX and MIN pick among notes; they are no value to give one.
+        if condition.operator == "=" and not condition.is_extreme:
             values_by_tag[key].append(f"{condition.name}={condition.value_text}")
     tokens: list[str] = []
     for key, values in values_by_tag.items():

@@ -272,6 +272,7 @@ function suggestionReply(tags) {
     return {
         suggestions: tags,
         reasons: Object.fromEntries(tags.map((tag) => [tag, [`Named in this note: "${tag}"`, "You've tagged 2 notes with it"]])),
+        labels: Object.fromEntries(tags.map((tag) => [tag, tag])),
     };
 }
 
@@ -565,6 +566,7 @@ test('each suggestion carries why it is suggested, for its right-click menu', as
             zorbleflux: ['Named in this note: "zorbleflux"', "You've tagged 2 notes with it"],
             zorbmatic: ['Nothing in this note points to it', "You've tagged 1 note with it"],
         },
+        labels: { zorbleflux: 'zorbleflux', zorbmatic: 'zorbmatic' },
     });
     ModeContext._editing = true;
     ModeContext._currentNoteId = 'note-1';

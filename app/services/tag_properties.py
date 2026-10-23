@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 import re
-from typing import Dict, List, Tuple
+from typing import Dict, FrozenSet, List, Tuple
 
 from app.services.input_errors import InputRejected
 
@@ -48,10 +48,18 @@ COMPARISON_OPERATORS = (">=", "<=", ">", "<", "=")
 # stays the valued tag it has always been.)
 IMPLICIT_COMPARISON_OPERATORS = (">=", "<=", ">", "<")
 
+# jogging:miles=MAX and =MIN: the notes with the largest or smallest value, among those
+# the rest of the search finds. Exact capitals, as OR is.
+MAX_KEYWORD = "MAX"
+MIN_KEYWORD = "MIN"
+EXTREME_KEYWORDS = (MAX_KEYWORD, MIN_KEYWORD)
+
 VALUE_NUMBER = "number"
 VALUE_TEMPORAL = "temporal"
 VALUE_TIME = "time"
 VALUE_TEXT = "text"
+# Which kind MAX and MIN compare when a property's values are of several, on a tie.
+VALUE_KIND_ORDER = (VALUE_NUMBER, VALUE_TEMPORAL, VALUE_TIME, VALUE_TEXT)
 
 _NUMBER_RE = re.compile(r"^(-?(?:\d+(?:\.\d+)?|\.\d+))([A-Za-z%][A-Za-z%/]*)?$")
 _DATE_RE = re.compile(r"^(\d{4})-(\d{2})(?:-(\d{2}))?$")
@@ -212,6 +220,11 @@ class PropertyCondition:
     def key(self) -> Tuple[str, str]:
         return self.tag.casefold(), self.name.casefold()
 
+    @property
+    def is_extreme(self) -> bool:
+        """jogging:miles=MAX or =MIN: decided across the notes found, not one note alone."""
+        return self.operator == "=" and self.value_text in EXTREME_KEYWORDS
+
     def format(self) -> str:
         if self.name == IMPLICIT_PROPERTY and self.operator in IMPLICIT_COMPARISON_OPERATORS:
             return f"{self.tag}{self.operator}{self.value_text}"
@@ -258,6 +271,8 @@ def _condition(tag: str, name: str, operator: str, value_text: str) -> PropertyC
     if _PROPERTY_NAME_RE.match(name) is None:
         raise InputRejected("A property name starts with a letter (for example jogging:miles>2)")
     has_value = operator not in (MISSING_OPERATOR, PRESENT_OPERATOR)
+    if value_text in EXTREME_KEYWORDS and operator != "=":
+        raise InputRejected(f"{value_text} goes after = (for example jogging:miles={value_text})")
     if has_value and value_text == "":
         raise InputRejected(f"Write a value after {operator} (for example jogging:miles{operator}2)")
     if any(mark in value_text for mark in ("<", ">", "?")) or value_text.startswith("="):
@@ -270,7 +285,7 @@ def _condition(tag: str, name: str, operator: str, value_text: str) -> PropertyC
 def value_satisfies(value: PropertyValue, condition: PropertyCondition) -> bool:
     """Whether a note's value meets a comparison. Values of another kind are skipped
     (miles=far never answers miles>2); a query's unit, when it has one, must match."""
-    if condition.operator in (MISSING_OPERATOR, PRESENT_OPERATOR):
+    if condition.operator in (MISSING_OPERATOR, PRESENT_OPERATOR) or condition.is_extreme:
         raise ValueError("Only comparisons compare values")
     wanted = parse_property_value(condition.value_text)
     if value.kind != wanted.kind:
@@ -289,3 +304,120 @@ def value_satisfies(value: PropertyValue, condition: PropertyCondition) -> bool:
         return actual_key >= wanted_key
     assert condition.operator == "<=", condition.operator
     return actual_key <= wanted_key
+
+
+# --- Suggestions --------------------------------------------------------------------
+
+# "1 note", "2 notes", by whether the count is one.
+_NOTE_NOUNS = {True: "note", False: "notes"}
+PROPERTY_SUGGESTIONS_IN_TAG_BAR = "tag-bar"
+PROPERTY_SUGGESTIONS_IN_SEARCH = "search"
+PROPERTY_SUGGESTION_PLACES = frozenset({PROPERTY_SUGGESTIONS_IN_TAG_BAR, PROPERTY_SUGGESTIONS_IN_SEARCH})
+# A number and the start of its unit: 10, 10m, -2.5k.
+_NUMBER_AND_PARTIAL_UNIT_RE = re.compile(r"^(-?(?:\d+(?:\.\d+)?|\.\d+))([A-Za-z%][A-Za-z%/]*)?$")
+
+
+@dataclass(frozen=True, slots=True)
+class PropertySuggestion:
+    # What replaces the typed text (jogging:miles=), what the list shows (miles=), and
+    # why it is suggested (shown when it is right-clicked).
+    replacement: str
+    label: str
+    reasons: Tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class PropertyCompletion:
+    """What is being typed in a property: a name after a tag's colon (property_name
+    None), or the unit after a value's number."""
+
+    tag: str
+    property_name: str | None
+    # The typed start of the name or unit, and everything typed before it.
+    partial: str
+    before: str
+    # A value's number, for the unit's label (5 for 5mg).
+    number: str
+    # Names the token already has (the tag bar never offers one twice).
+    excluded_names: FrozenSet[str]
+    # In the tag bar a chosen name gets its =, ready for the value.
+    name_suffix: str
+    # A search's = with no value yet (or MA, MI): MAX and MIN are offered.
+    offers_extremes: bool
+
+    def suggestion(self, completed: str, notes_by_tag: Dict[str, int]) -> PropertySuggestion:
+        reasons = tuple(
+            f"On {count} {_NOTE_NOUNS[count == 1]} tagged {tag}"
+            for tag, count in sorted(notes_by_tag.items(), key=lambda item: (-item[1], item[0]))
+        )
+        # A name gets its suffix (= in the tag bar); a unit shows with its number.
+        if self.property_name is None:
+            label = f"{completed}{self.name_suffix}"
+            return PropertySuggestion(replacement=f"{self.before}{label}", label=label, reasons=reasons)
+        return PropertySuggestion(
+            replacement=f"{self.before}{completed}", label=f"{self.number}{completed}", reasons=reasons,
+        )
+
+
+def read_property_completion(typed: str, *, in_tag_bar: bool) -> PropertyCompletion | None:
+    """The property name or unit being typed at the end of a tag-bar token
+    (jogging:miles=3:du, drug:dosage=10m) or a search term (exercise:mi, drug:dosage>5m,
+    date>5), or None when neither is."""
+    if typed.startswith(META_TAG_PREFIX):
+        return None
+    # In the tag bar a chosen name gets its =, ready for the value.
+    name_suffix = ""
+    if in_tag_bar:
+        name_suffix = PROPERTY_ASSIGNMENT
+    if has_property_syntax(typed):
+        tag, rest = typed.split(PROPERTY_SEPARATOR, 1)
+        if PROPERTY_ASSIGNMENT in tag:
+            tag = tag.split(PROPERTY_ASSIGNMENT, 1)[0]
+        if in_tag_bar:
+            segments = split_property_segments(rest)
+            current = segments[-1]
+            excluded = frozenset(segment.partition(PROPERTY_ASSIGNMENT)[0].casefold() for segment in segments[:-1])
+            name, operator, value = current.partition(PROPERTY_ASSIGNMENT)
+        else:
+            excluded = frozenset()
+            name, operator, value = _split_at_operator(rest)
+        if operator == "":
+            if name != "" and _PROPERTY_NAME_RE.match(name) is None:
+                return None
+            return PropertyCompletion(
+                tag=tag, property_name=None, partial=name, before=typed[: len(typed) - len(name)], number="",
+                excluded_names=excluded, name_suffix=name_suffix, offers_extremes=False,
+            )
+        if not in_tag_bar and operator == "=" and any(keyword.startswith(value) for keyword in EXTREME_KEYWORDS):
+            return PropertyCompletion(
+                tag=tag, property_name=name, partial=value, before=typed[: len(typed) - len(value)], number="",
+                excluded_names=frozenset(), name_suffix="", offers_extremes=True,
+            )
+        return _unit_completion(typed, tag=tag, property_name=name, value=value)
+    if in_tag_bar:
+        return None
+    name, operator, value = _split_at_operator(typed)
+    if operator not in IMPLICIT_COMPARISON_OPERATORS:
+        return None
+    return _unit_completion(typed, tag=name, property_name=IMPLICIT_PROPERTY, value=value)
+
+
+def _split_at_operator(text: str) -> Tuple[str, str, str]:
+    for operator in COMPARISON_OPERATORS:
+        if operator in text:
+            name, value = text.split(operator, 1)
+            return name, operator, value
+    return text, "", ""
+
+
+def _unit_completion(typed: str, *, tag: str, property_name: str, value: str) -> PropertyCompletion | None:
+    match = _NUMBER_AND_PARTIAL_UNIT_RE.match(value)
+    if tag == "" or match is None or _PROPERTY_NAME_RE.match(property_name) is None:
+        return None
+    partial = match.group(2)
+    if partial is None:
+        partial = ""
+    return PropertyCompletion(
+        tag=tag, property_name=property_name, partial=partial, before=typed[: len(typed) - len(partial)],
+        number=match.group(1), excluded_names=frozenset(), name_suffix="", offers_extremes=False,
+    )

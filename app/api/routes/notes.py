@@ -65,6 +65,11 @@ from app.api.note_requests import (
 from app.api.transactions import serialized_read_route, transactional_route
 from app.services.sync import touch_client
 from app.services.root_date_filter import DATE_RANGE_NONE
+from app.services.tag_properties import PROPERTY_SUGGESTIONS_IN_SEARCH
+from app.services.tag_properties import PROPERTY_SUGGESTIONS_IN_TAG_BAR
+from app.services.tag_properties import PropertySuggestion
+from app.services.tag_properties import has_property_syntax
+from app.services.tag_properties import is_property_term
 from app.services.root_date_filter import RootDateFilter
 from app.services.root_date_filter import make_root_date_filter
 from app.services.snapshot import build_view_state
@@ -552,6 +557,15 @@ def search_suggestions(request: Request, payload: SearchSuggestionsRequest) -> D
         )
     window_days = tuple(raw_window_days)
     validate_tag_activity_windows(window_days)
+    # Typing a property term (exercise:mi, drug:dosage>5): its names or units.
+    typed_term = _typed_property_term(query)
+    if typed_term is not None:
+        return _property_suggestions_response(
+            search_index.suggest_property_completions(
+                typed=typed_term, place=PROPERTY_SUGGESTIONS_IN_SEARCH, limit=MAX_SEARCH_SUGGESTIONS,
+            ),
+            personalized=True,
+        )
     all_suggestions = search_index.suggest_all_tag_completions(query=query)
     suggestions = all_suggestions[:MAX_SEARCH_SUGGESTIONS]
     personalized_selections: list[TagActivityWindowSelection] = []
@@ -590,7 +604,31 @@ def search_suggestions(request: Request, payload: SearchSuggestionsRequest) -> D
             tag: list(search_suggestion_reasons(facts=facts, term=tag, recent_activity=recent_activity))
             for tag in suggestions
         },
+        "labels": {tag: tag for tag in suggestions},
     }
+
+
+def _typed_property_term(query: str) -> str | None:
+    """The property term being typed at the end of a search, without its - or +."""
+    if query == "" or query[-1].isspace():
+        return None
+    term = query.split()[-1].lstrip("+-")
+    if '"' in term or "'" in term or not is_property_term(term):
+        return None
+    return term
+
+
+def _property_suggestions_response(suggestions: list[PropertySuggestion], *, personalized: bool) -> Dict[str, object]:
+    """Property names or units as the suggestion lists take them: the full replacement,
+    the part the list shows (miles= for jogging:miles=) and why."""
+    response: Dict[str, object] = {
+        "suggestions": [suggestion.replacement for suggestion in suggestions],
+        "reasons": {suggestion.replacement: list(suggestion.reasons) for suggestion in suggestions},
+        "labels": {suggestion.replacement: suggestion.label for suggestion in suggestions},
+    }
+    if personalized:
+        response["personalizedSuggestions"] = []
+    return response
 
 
 @router.post("/notes/prioritize-tag-suggestions")
@@ -767,6 +805,15 @@ def tag_suggestions(payload: TagSuggestionsRequest) -> Dict[str, object]:
 
     _require_note_present(note_id, context="notes.tag-suggestions")
 
+    # Typing after a tag's colon (jogging:mi, drug:dosage=10m): property names or units.
+    if has_property_syntax(prefix):
+        return _property_suggestions_response(
+            search_index.suggest_property_completions(
+                typed=prefix, place=PROPERTY_SUGGESTIONS_IN_TAG_BAR, limit=MAX_TAG_SUGGESTIONS,
+            ),
+            personalized=False,
+        )
+
     suggestions = suggest_tags_with_reasons_for_note(
         note_id=note_id,
         anchors=anchors,
@@ -779,6 +826,7 @@ def tag_suggestions(payload: TagSuggestionsRequest) -> Dict[str, object]:
     return {
         "suggestions": [suggestion.tag for suggestion in suggestions],
         "reasons": {suggestion.tag: list(suggestion.reasons) for suggestion in suggestions},
+        "labels": {suggestion.tag: suggestion.tag for suggestion in suggestions},
     }
 
 

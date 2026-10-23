@@ -292,6 +292,10 @@ export async function applySearchSuggestion(searchInput, suggestion) {
     searchInput.dispatchEvent(new Event('input', { bubbles: true }));
     searchInput.focus();
     hideSuggestions({ invalidateRequests: true });
+    // Picking a property's name or unit credits no tag (docs/design/tag-properties.md).
+    if (/[:<>]/.test(suggestion)) {
+        return;
+    }
     const response = await NotesAPI.recordSearchSuggestionSelection(suggestion);
     if (!response || response.credited !== true) {
         throw new Error('Search suggestion selection was not credited');
@@ -334,7 +338,20 @@ function requireSuggestionReasons(reasonsByTag, tag) {
     return reasons;
 }
 
-function renderSuggestions(searchInput, builtForText, suggestions, personalizedSuggestions, showWindowLabels, reasonsByTag) {
+// What the list shows: a tag as it is, a property's name or unit alone (miles for
+// exercise:miles, 5mg for drug:dosage>5mg), as the server labels it.
+function requireSuggestionLabel(labelsBySuggestion, suggestion) {
+    if (!Object.hasOwn(labelsBySuggestion, suggestion)) {
+        throw new Error(`Search suggestion ${suggestion} has no label`);
+    }
+    const label = labelsBySuggestion[suggestion];
+    if (typeof label !== 'string' || label.length === 0) {
+        throw new Error(`Search suggestion ${suggestion} has an empty label`);
+    }
+    return label;
+}
+
+function renderSuggestions(searchInput, builtForText, suggestions, personalizedSuggestions, showWindowLabels, reasonsByTag, labelsBySuggestion) {
     if (typeof builtForText !== 'string') {
         throw new Error('renderSuggestions requires the text the list was built for');
     }
@@ -358,7 +375,8 @@ function renderSuggestions(searchInput, builtForText, suggestions, personalizedS
             if (windowLabel !== '') {
                 labelHtml = `<span class="search-suggestion-window-label">${escapeHtml(windowLabel)}</span>`;
             }
-            return `<button type="button" class="search-suggestion" data-tag="${escapeHtml(tag)}"><span class="search-suggestion-tag">${escapeHtml(tag)}</span>${labelHtml}</button>`;
+            const shown = requireSuggestionLabel(labelsBySuggestion, tag);
+            return `<button type="button" class="search-suggestion" data-tag="${escapeHtml(tag)}"><span class="search-suggestion-tag">${escapeHtml(shown)}</span>${labelHtml}</button>`;
         })
         .join('');
 
@@ -490,6 +508,9 @@ export function updateSearchSuggestions(searchInput, options) {
         if (!response.reasons || typeof response.reasons !== 'object') {
             throw new Error('Search suggestions response requires reasons');
         }
+        if (!response.labels || typeof response.labels !== 'object') {
+            throw new Error('Search suggestions response requires labels');
+        }
         if (requestId !== moduleState.requestSerial) {
             return;
         }
@@ -503,6 +524,7 @@ export function updateSearchSuggestions(searchInput, options) {
             response.personalizedSuggestions,
             getShowSearchSuggestionWindowLabels(),
             response.reasons,
+            response.labels,
         );
     }, SUGGESTION_DEBOUNCE_MS);
 }

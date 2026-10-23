@@ -134,6 +134,7 @@ test('parseTagBarSuggestionContext exposes all explicit tags including the curre
         prefix: 'Pandoc',
         replaceStart: 6,
         replaceEnd: 12,
+        isTypingProperty: false,
     });
 });
 
@@ -245,6 +246,11 @@ test('a tag with properties is on a note once: a second token for it is refused'
 
 test('a tag with properties counts as its tag for menus and suggestions', () => {
     assert.equal(findTagAtIndexInTagBar('foo jogging:miles=3', 15).text, 'jogging');
-    assert.equal(parseTagBarSuggestionContext('foo jogging:mi', 14), null);
+    // Typing a property sends the token so far, replaced whole by the chosen name or unit.
+    const typingProperty = parseTagBarSuggestionContext('foo jogging:mi', 14);
+    assert.equal(typingProperty.isTypingProperty, true);
+    assert.equal(typingProperty.prefix, 'jogging:mi');
+    assert.equal(typingProperty.replaceStart, 4);
+    assert.equal(parseTagBarSuggestionContext('foo jog', 7).isTypingProperty, false);
     assert.deepEqual(parseTagBarSuggestionContext('foo jogging:miles=3 ba', 22).explicitTags, ['foo', 'jogging', 'ba']);
 });

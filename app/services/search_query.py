@@ -18,6 +18,23 @@ class SearchClause:
     forbidden_properties: Tuple[PropertyCondition, ...]
 
     @property
+    def has_extreme_terms(self) -> bool:
+        """jogging:miles=MAX or =MIN, decided across the notes the clause finds."""
+        return any(condition.is_extreme for condition in self.required_properties + self.forbidden_properties)
+
+    def requiring(self, condition: PropertyCondition) -> SearchClause:
+        """This clause with an excluded property term required instead: the notes the
+        exclusion removes (for -jogging:miles=MAX, the longest among those found)."""
+        if condition not in self.forbidden_properties:
+            raise ValueError("Only an excluded property term can be required instead")
+        return SearchClause(
+            required_tags=self.required_tags, forbidden_tags=self.forbidden_tags,
+            required_text=self.required_text, forbidden_text=self.forbidden_text,
+            required_properties=self.required_properties + (condition,),
+            forbidden_properties=tuple(other for other in self.forbidden_properties if other != condition),
+        )
+
+    @property
     def has_property_terms(self) -> bool:
         if self.required_properties:
             return True

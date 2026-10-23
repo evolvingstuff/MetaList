@@ -878,11 +878,10 @@ export function parseTagBarSuggestionContext(rawInput, cursorIndex) {
             break;
         }
     }
-    // Typing a property (after jogging:) suggests no tags.
-    if (currentAtom && hasPropertySyntax(currentAtom.text)
-        && cursorIndex > currentAtom.start + currentAtom.text.indexOf(PROPERTY_SEPARATOR)) {
-        return null;
-    }
+    // Typing a property (after jogging:): the server suggests its names and units from
+    // the token typed so far, replacing it whole.
+    const isTypingProperty = Boolean(currentAtom) && hasPropertySyntax(currentAtom.text)
+        && cursorIndex > currentAtom.start + currentAtom.text.indexOf(PROPERTY_SEPARATOR);
 
     // A tag with properties counts as its tag: jogging:miles=3 is jogging.
     const explicitTags = [];
@@ -916,7 +915,8 @@ export function parseTagBarSuggestionContext(rawInput, cursorIndex) {
         explicitTags,
         prefix,
         replaceStart,
-        replaceEnd
+        replaceEnd,
+        isTypingProperty,
     };
 }
 

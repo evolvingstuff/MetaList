@@ -214,7 +214,11 @@ def _resolve_clause_note_sets(
     for phrase in clause.forbidden_text:
         excluded_note_ids.update(search_index.query_clause_note_ids(_positive_text_clause(phrase)))
     for condition in clause.forbidden_properties:
-        excluded_note_ids.update(search_index.query_clause_note_ids(_positive_property_clause(condition)))
+        # -jogging:miles=MAX removes the longest of the notes the clause finds.
+        excluding_clause = _positive_property_clause(condition)
+        if condition.is_extreme:
+            excluding_clause = clause.requiring(condition)
+        excluded_note_ids.update(search_index.query_clause_note_ids(excluding_clause))
 
     # With every note already allowed, ancestor/descendant closure is a no-op.
     if has_positive_terms:
