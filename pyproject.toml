@@ -47,7 +47,7 @@ dev = [
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
     # Static-analysis report at development startup (docs/testing/harness.md).
-    "shockharness==0.25.0",
+    "shockharness==0.26.0",
     # Type checking against a baseline of known errors (scripts/check_types.py).
     "mypy==2.4.0",
 ]
