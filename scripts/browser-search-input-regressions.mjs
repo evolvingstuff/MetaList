@@ -99,7 +99,7 @@ export async function checkSearchInputRejected(page) {
 }
 
 // Right-clicking the search box past what is typed (or an empty box) offers View,
-// Sort by and Date range, as the background menu does; on a typed tag it still
+// Sort by, Date range and Notes with files, as the background menu does; on a typed tag it still
 // offers the tag's own menu.
 async function rightClickSearch(page, where) {
   const point = await page.evaluate(where => {
@@ -120,16 +120,18 @@ async function rightClickSearch(page, where) {
   return labels;
 }
 
+const SEARCH_BOX_MENU = ['View', 'Sort by', 'Date range', 'Notes with files'];
+
 export async function checkSearchBarMenu(page) {
   await page.reload();
   await page.waitForSelector('[data-app-ready="true"]');
   await idle(page);
-  assert.deepEqual(await rightClickSearch(page, 'past-text'), ['View', 'Sort by', 'Date range'], 'an empty search box offers View, Sort by and Date range');
+  assert.deepEqual(await rightClickSearch(page, 'past-text'), SEARCH_BOX_MENU, 'an empty search box offers the view menus');
   await page.click('#search-input');
   await page.keyboard.type('menucheck');
   await idle(page);
   await page.keyboard.press('Escape');
-  assert.deepEqual(await rightClickSearch(page, 'past-text'), ['View', 'Sort by', 'Date range'], 'past the typed tag: View, Sort by and Date range');
+  assert.deepEqual(await rightClickSearch(page, 'past-text'), SEARCH_BOX_MENU, 'past the typed tag: the view menus');
   assert.deepEqual(await rightClickSearch(page, 'on-text'), ['Edit Tag Relationships'], 'on the typed tag: its own menu');
   await clearSearch(page);
 }
@@ -143,20 +145,25 @@ function dateRangeChip(page) {
 
 // Picks Date range → <range> from the search box's menu past the typed text.
 async function pickDateRange(page, label) {
+  await pickFromSearchBoxMenu(page, 'Date range', label);
+}
+
+// Picks <menu> → <label> from the search box's menu.
+async function pickFromSearchBoxMenu(page, menu, label) {
   const box = await page.evaluate(() => {
     const rect = document.getElementById('search-input').getBoundingClientRect();
     return {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2};
   });
   await page.mouse.click(box.x, box.y, {button: 'right'});
   await page.waitForSelector('#context-menu.is-visible');
-  const item = await page.evaluate(() => {
+  const item = await page.evaluate(menu => {
     const node = [...document.querySelectorAll('#context-menu.is-visible .context-menu-item-label')]
-      .find(label => label.textContent.trim() === 'Date range');
+      .find(label => label.textContent.trim() === menu);
     if (!node) return null;
     const rect = node.getBoundingClientRect();
     return {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2};
-  });
-  assert.ok(item, 'the search box menu offers Date range');
+  }, menu);
+  assert.ok(item, `the search box menu offers ${menu}`);
   // Pointing at it opens its submenu.
   await page.mouse.move(item.x, item.y);
   const point = await page.waitForFunction(label => {
@@ -215,4 +222,61 @@ export async function checkDateRange(page) {
   assert.equal(ended, null, 'the server has no date range for the tab');
   await page.keyboard.press('Escape');
   await clearSearch(page);
+}
+
+function fileFilterChip(page) {
+  return page.evaluate(() => {
+    const chip = document.getElementById('file-filter-indicator');
+    return chip.classList.contains('is-shown') ? document.getElementById('file-filter-indicator-label').textContent : '';
+  });
+}
+
+function shownRootTexts(page) {
+  return page.evaluate(() => [...document.querySelectorAll('#notes-container > [data-note-id] > .note-content')]
+    .map(content => content.textContent.trim()));
+}
+
+// Notes with files keeps the notes with a file of a kind (Images: also a picture
+// pasted inline), shows a chip, stays through a new search, and its × ends it
+// (docs/ui/command-palette.md, Notes With Files).
+export async function checkFileFilter(page) {
+  const noteId = await page.evaluate(async () => {
+    const {NotesAPI} = await import('/static/js/modules/api-client.js');
+    const note = await NotesAPI.createNote(null, '');
+    const dot = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==';
+    await NotesAPI.saveNote(note.id, `<p>filecheck picture</p><p><img src="${dot}" alt="dot"></p>`, '');
+    return note.id;
+  });
+  await page.reload();
+  await page.waitForSelector('[data-app-ready="true"]');
+  await idle(page);
+  const all = await rootCount(page);
+  assert.equal(await fileFilterChip(page), '', 'no Files filter at first');
+
+  await pickFromSearchBoxMenu(page, 'Notes with files', 'Images');
+  assert.equal(await fileFilterChip(page), 'With images', 'the chip names the kind');
+  assert.ok((await shownRootTexts(page)).includes('filecheck picture'), 'a picture pasted inline is an image');
+  assert.ok(await rootCount(page) < all, 'notes without a picture leave the view');
+
+  // A new search keeps it: only the matches with a picture.
+  await page.click('#search-input');
+  await page.keyboard.type('"filecheck"');
+  await idle(page);
+  assert.equal(await fileFilterChip(page), 'With images', 'a new search keeps the Files filter');
+  assert.deepEqual(await shownRootTexts(page), ['filecheck picture']);
+  // Emptied without Enter, which would add a note.
+  await page.evaluate(() => document.getElementById('search-input').select());
+  await page.keyboard.press('Backspace');
+  await idle(page);
+  await page.keyboard.press('Escape');
+
+  await page.click('#file-filter-indicator-clear');
+  await idle(page);
+  assert.equal(await fileFilterChip(page), '', 'the × ends the Files filter');
+  assert.equal(await rootCount(page), all, 'every note is back');
+
+  await page.evaluate(async id => {
+    const {NotesAPI} = await import('/static/js/modules/api-client.js');
+    await NotesAPI.deleteNote(id);
+  }, noteId);
 }
