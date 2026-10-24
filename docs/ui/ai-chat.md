@@ -234,6 +234,9 @@ approximate evidence-token count.
 
 ## OpenAI Configuration
 
+- OpenAI is the only provider today. Claude and Gemini are planned
+  (`docs/ready-to-build/ai-providers.md`).
+
 - Defaults: `gpt-5.6-luna`, 500,000 approximate evidence tokens, and 100,000
   tagging batch tokens. Saved model and token-limit overrides are retained.
 

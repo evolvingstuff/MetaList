@@ -383,6 +383,10 @@ uses model-specific and long-context pricing, is labeled estimated because an
 interrupted request may not return final usage, and is cleared only by Reset or
 process restart.
 
+Planned, not built: Claude and Gemini beside OpenAI, each on the user's own key
+in its own encrypted slot per vault, through the same disclosure boundary, and the
+cost estimate limited to development (`docs/ready-to-build/ai-providers.md`).
+
 ## Main Files
 
 - `app/services/agent/runtime.py`: run start/recording and the staged summary.

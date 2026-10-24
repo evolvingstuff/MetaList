@@ -46,7 +46,8 @@
 - TODO list: `docs/TODO.md`
 - Future UI plan (toolbar): `docs/future-plans/PLAN.toolbar.md`
 - Future plan (hosted MetaList: downloading your own copy, the backup reminder): `docs/future-plans/hosted-own-copy.md`
-- Incoming design notes, not yet processed: `docs/inbox/` (see AGENTS.md, "Design Inbox")
+- Agreed designs ready to build, not started: `docs/ready-to-build/` (AI providers: `docs/ready-to-build/ai-providers.md`)
+- Incoming design notes, processed into the folders above as soon as they are seen: `docs/inbox/` (see AGENTS.md, "Design Inbox")
 
 ## Clients
 - Electron packaging notes (planning doc): `docs/clients/electron.md`

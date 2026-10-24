@@ -4,7 +4,7 @@
 At the start of EVERY conversation/context:
 1. **Check if `docs/AI-SUMMARY.md` exists** – If it does, read it immediately to understand the project. If neither the `docs/` directory nor the summary file exist, ask: "No docs/AI-SUMMARY.md found. Would you like me to create one with SUMMARIZE to help me better understand your project?"
 2. **Check PLAN.md** – If PLAN.md exists, ask whether to use it as-is or replace it. If it doesn’t exist, do nothing unless the user explicitly invokes PLAN.
-3. **Check `docs/inbox/`** – Mention every note sitting in it (see "Design Inbox" below). An empty inbox needs no mention.
+3. **Empty `docs/inbox/`** – If notes are sitting in it, process every one (see "Design Inbox" below) before other work, so the inbox is empty when you report on it. Tell the user what you filed where and which questions are open. An empty inbox needs no mention; ignore OS files such as `.DS_Store` (delete them).
 
 Each action below follows a structured workflow with clear steps and success criteria.
 
@@ -43,10 +43,16 @@ This document defines standardized workflows triggered by action commands in ALL
 
 The maintainer drops design and feature notes from planning work outside this repo into `docs/inbox/`, named `YYYY-MM-DD-topic.md`. Every file there is unfinished work: not yet built, not yet written into this repo's permanent docs, or both. The inbox is meant to be empty, and nothing should exist only in it.
 
+An empty inbox is the sign that every note has been looked at and dealt with. So looking at the inbox means processing it, in the same session, until it is empty; a summary of a note is not processing it. Building what a note describes is separate work that can come later, once the note has a home.
+
 - The notes are written without looking at the code. Read "build X" as "check whether X exists; build only what is missing", and check every code reference in a note before relying on it.
-- To process a note: build what it describes, or, if it is agreed but not scheduled, move it to `docs/future-plans/`. Fold its content into the right permanent docs (`docs/design/`, `docs/ui/`, `docs/AI-SUMMARY.md`, `docs/README.md` and so on) in the repo's own style, and delete the inbox file in the same change.
-- If a note conflicts with the code or the existing docs, or a decision in it is still open, ask the maintainer instead of guessing.
-- Never treat a file in the inbox as already done.
+- To process a note, give it a home by what it is:
+  - **Ready to build** (agreed, not built yet): move it to `docs/ready-to-build/`. Delete it from there when the feature is built, in the same change as the feature, once its content is in the permanent docs.
+  - **Agreed but not scheduled**: move it to `docs/future-plans/`.
+  - **Already built**, or small enough to build now: build what is missing and fold the note into the permanent docs.
+- Wherever it goes, fold its content into the right permanent docs (`docs/design/`, `docs/ui/`, `docs/AI-SUMMARY.md`, `docs/README.md` and so on) in the repo's own style: at least a pointer from where the topic already lives to the note's new home. Remove the inbox file in the same change.
+- Record in the filed note what you found while checking it: wrong code references, conflicts with the code or docs, decisions still open. Then ask the maintainer about those instead of guessing; an open question does not keep a note in the inbox.
+- Never treat a note as already built because it was filed.
 
 ## CRITICAL: Never Work in a Git Worktree
 
