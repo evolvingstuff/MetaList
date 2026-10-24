@@ -12,6 +12,15 @@ A minimalist single-user note-taking app focused on server-side rendering (SSR),
 - Multi-tab search contexts with server-persisted scroll/search state (survives browser restarts)
 - Manual namespace backups/restores to a user-selected backup folder with retention controls
 
+## Changes in 0.24.1
+
+- **Security updates.** pypdf 6.21.2 fixes three ways a crafted PDF could keep MetaList busy for a long time; MetaList reads PDFs only when the AI opens one on the web (web access is off unless you turn it on). Mako 1.4.2 fixes a Windows template-path issue MetaList does not reach. Tooling used only to build and test MetaList is updated too (filelock, setuptools, zod).
+- **Notes with files** (right-click menu, search box menu and command palette): show only the notes with an attached file, or with images, PDFs or Markdown files, each under the notes above it. Images also finds pictures pasted into a note. It works with a search (pick Images, then search, to find those notes with a picture); a chip in the search box names it and its `×` shows every note again. It stays with its tab.
+- Pasting text that carries formatting (an answer copied from Copilot or another AI chat, a web page) is now checked too: Markdown left in it (`##` headings, `**`), CSV, code or LaTeX is offered on the small card, and Apply puts in the plain text with the tag. Headings over paragraphs and plain ``` code blocks are offered as Markdown.
+- A collapsed embed of a note that only holds a link to another note now shows that note's first line in its own formatting, instead of a blank line and plain text. A link on a source's first line no longer breaks the embed.
+- A note that holds only a reference stays an embed even with an invisible character beside the reference (left by ⌘B with nothing selected, or pasted).
+- In a password-protected vault, PDFs and images attached before the last unlock are recognized again, for Notes with files, picture resizing and the image tag.
+
 ## Changes in 0.24.0
 
 - **Super tags.** A tag can carry values: `jogging:miles=3:duration=30`, `drug:dosage=10mg`, `run:start=10:30pm`. Search by them with `jogging:miles>2`, `jogging:miles?` (notes missing it), `date>=2024-01`, or `jogging:miles=MAX` / `=MIN` for the largest or smallest among the notes found. Values compare as numbers (a unit is a label: `dosage>5mg` compares only mg, `dosage>5` every unit), dates, times (`10:30pm` = `22:30`) or text. A search reads values through tag rules too: with `jogging => exercise`, `exercise:miles>2` finds your runs. The tag bar and the search box suggest the property names and units you already use, and `MAX`/`MIN` after `=`. A plain `jogging` search still finds `jogging:miles=3`; children inherit the tag, never its values.
