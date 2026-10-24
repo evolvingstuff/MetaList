@@ -10,6 +10,7 @@ import {
     DATE_RANGE_KINDS,
     DATE_RANGE_PRESETS,
 } from '../mode-manager/services/date-range-kinds.js';
+import { FILE_FILTER_CHOICES, FILE_FILTER_KINDS } from '../mode-manager/services/file-filter-kinds.js';
 
 function buildTagContextItems(context, handlers) {
     if (!context || typeof context !== 'object') {
@@ -743,6 +744,31 @@ function buildDateRangeItem(context, handlers) {
     };
 }
 
+// Notes with files: the notes with an attached file, or one kind of file, the
+// current choice ticked (file-filter-service.js). All notes shows every note again.
+function buildFileFilterItem(context, handlers) {
+    const kind = context.fileFilterKind;
+    if (!Object.values(FILE_FILTER_KINDS).includes(kind)) {
+        throw new Error('View context missing fileFilterKind');
+    }
+    const onSetFileFilter = requireViewHandler(handlers, 'onSetFileFilter');
+    const choices = [[FILE_FILTER_KINDS.NONE, 'All notes'], ...FILE_FILTER_CHOICES];
+    return {
+        id: 'file-filter',
+        label: 'Notes with files',
+        icon: 'attachment',
+        enabled: true,
+        submenu: choices.map(([value, label], index) => ({
+            id: `file-filter-${value}`,
+            label,
+            separated: index === 1,
+            checked: value === kind,
+            enabled: value !== kind,
+            onSelect: () => onSetFileFilter(value),
+        })),
+    };
+}
+
 const MAC_KEY_SYMBOLS = Object.freeze({ Enter: '↩', Backspace: '⌫' });
 
 // A keyboard shortcut as the platform writes it: ⇧⌘Z on a Mac, Ctrl+Shift+Z elsewhere.
@@ -800,6 +826,7 @@ function buildSearchBarContextItems(context, handlers) {
         buildViewModeItem(requireViewFlag(context, 'isUntaggedView'), requireViewHandler(handlers, 'onSetUntaggedView')),
         buildSortModeItem(context.sortMode, requireViewHandler(handlers, 'onSetSortMode')),
         buildDateRangeItem(context, handlers),
+        buildFileFilterItem(context, handlers),
     ];
 }
 
@@ -889,6 +916,7 @@ function buildViewContextItems(context, handlers) {
         { ...buildViewModeItem(isUntaggedView, onSetUntaggedView), separated: true },
         buildSortModeItem(context.sortMode, handlers.onSetSortMode),
         buildDateRangeItem(context, handlers),
+        buildFileFilterItem(context, handlers),
         {
             id: 'show', label: 'Show', icon: 'show', enabled: true,
             submenu: [

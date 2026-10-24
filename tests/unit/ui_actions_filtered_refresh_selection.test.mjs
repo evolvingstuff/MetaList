@@ -69,7 +69,7 @@ function refreshHarness({ isRemoved, isAnimated, isFullSnapshot }) {
             getNoteContentHTML: () => '<p>saved</p>', getNoteContent: () => ({}),
             setNoteEditable() {}, revealCaret() {}, focusNoteEdge() {},
         },
-        updateSearchResultsCount() {}, updateRootSortIndicator() {}, updateDateRangeIndicator() {}, updateUntaggedViewIndicator() {}, updateReferenceSourceIndicator() {},
+        updateSearchResultsCount() {}, updateRootSortIndicator() {}, updateDateRangeIndicator() {}, updateFileFilterIndicator() {}, updateUntaggedViewIndicator() {}, updateReferenceSourceIndicator() {},
         rebuildRootDateSeparators() {}, async refreshBacklinksPanel() {},
         captureViewportRoot: () => null, holdViewportRoot() {},
     };

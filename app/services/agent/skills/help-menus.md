@@ -56,6 +56,12 @@ Opening or dismissing the command palette does not clear undo/redo. Global actio
 - It combines with a search, Untagged notes and any sort order.
 - A gray chip inside the search input names it (`Updated · today`, `Created · Oct 1–22`, `Updated · since Oct 1`); the full wording is its tooltip and its `×` shows every date again.
 - Like a sort order it is kept per tab and ends with its `×`, a new search, or leaving the tab; a new tab starts without one; following a reference and coming back keeps it.
+
+## Notes With Files
+- **Notes with files** (after Date range in the background, side-rail and search-box right-click menus) shows only the notes with an attached file, or a file of one kind, each with the notes above it: **All notes** (no filter), **Any file**, **Images**, **PDFs**, **Markdown files**. A note counts by a `[[file]]` link or `![[file]]` embed in its own text; **Images** also finds pictures pasted into a note. Markdown files are known by a `.md` or `.markdown` name.
+- Palette actions: `Notes with files: All notes`, `Notes with files: Any file`, `Notes with files: Images`, `Notes with files: PDFs`, `Notes with files: Markdown files`.
+- It combines with a search, Untagged notes, a date range and any sort order; a new search keeps it (pick Images, then type a search, to find those notes with a picture), and it stays with its tab.
+- A gray chip inside the search input names it (`Files`, `Images`, `PDFs`, `Markdown files`); its `×` shows every note again.
 - A note being edited stays in view even when saving puts its date outside the range; after leaving edit mode it leaves the view.
 - Export, Print, find (⌘F) and the AI chat's view use the tab's range.
 

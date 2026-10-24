@@ -1199,6 +1199,19 @@ class NoteStore:
                 raise KeyError(f"Note {note_id} not present in NoteStore")
             return frozenset(self._referrers_locked(note_id))
 
+    def note_ids_referencing(self, target_ids: Set[str]) -> Set[str]:
+        """The notes whose own text links to or embeds any of target_ids (notes or files)."""
+        with self._lock:
+            referrer_ids: Set[str] = set()
+            for target_id in target_ids:
+                referrer_ids.update(self._backlink_index.get_counts(target_id))
+            return {note_id for note_id in referrer_ids if note_id in self._note_map}
+
+    def note_ids_with_inline_images(self) -> Set[str]:
+        """The notes whose own text shows a picture inline (an <img>), not an attached file."""
+        with self._lock:
+            return {note_id for note_id in self._backlink_index.inline_image_note_ids() if note_id in self._note_map}
+
     def get_backlink_counts(self, note_id: str) -> Dict[str, int]:
         with self._lock:
             if note_id not in self._note_map:

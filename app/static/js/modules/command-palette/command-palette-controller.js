@@ -107,7 +107,10 @@ import { cancelDebouncedSearchExecution } from '../mode-manager/services/search-
 import { attachPickedFileToCurrentNote, pickFileForAttachment } from '../mode-manager/services/file-reference-service.js';
 import { isRootReorderLocked, normalizeRootSortMode } from '../mode-manager/services/root-sort-service.js';
 import { blockRootNoteCreation } from '../mode-manager/services/root-note-creation-service.js';
-import { setTabDateFilterOnServer, setTabSortModeOnServer } from '../mode-manager/services/tab-state-service.js';
+import {
+    setTabDateFilterOnServer, setTabFileFilterOnServer, setTabSortModeOnServer,
+} from '../mode-manager/services/tab-state-service.js';
+import { FILE_FILTER_KINDS, getActiveFileFilterKind } from '../mode-manager/services/file-filter-service.js';
 import {
     DATE_RANGE_KINDS,
     OPEN_DATE,
@@ -462,6 +465,8 @@ class CommandPaletteController {
                 getIsUntaggedView: this.getIsUntaggedView.bind(this),
                 setIsUntaggedView: this.setIsUntaggedView.bind(this),
                 getDateRangeKind: this.getDateRangeKind.bind(this),
+                getFileFilterKind: this.getFileFilterKind.bind(this),
+                setFileFilter: this.setFileFilter.bind(this),
                 getDateRangeField: getDateRangeField,
                 setDateRangePreset: this.setDateRangePreset.bind(this),
                 setDateRangeField: this.setDateRangeField.bind(this),
@@ -1502,6 +1507,37 @@ class CommandPaletteController {
         await actionRefreshAndMaybeSelect({
             startedAt: performance.now(),
             context: `dateFilter.${filter.rangeKind}`,
+            animateNoteChanges: false,
+        });
+    }
+
+    // The active tab's Files filter (file-filter-service.js): 'none' when it shows every note.
+    getFileFilterKind() {
+        return getActiveFileFilterKind();
+    }
+
+    /** Any note ('none'), every note with an attached file ('any'), or one kind of file. */
+    async setFileFilter(kind) {
+        if (!Object.values(FILE_FILTER_KINDS).includes(kind)) {
+            throw new Error(`setFileFilter requires a Files filter kind, not ${kind}`);
+        }
+        const activeTabId = ModeContext.activeTabId;
+        if (typeof activeTabId !== 'string' || activeTabId.length === 0) {
+            throw new Error('ModeContext.activeTabId must be a non-empty string');
+        }
+        if (getActiveFileFilterKind() === kind) {
+            return;
+        }
+        if (ModeContext.isEditing) {
+            await actionSaveAndExitEditingWithoutRefreshing();
+        }
+        ModeContext.bumpUndoContextEpoch(`fileFilter.${kind}`);
+        const response = await setTabFileFilterOnServer(activeTabId, kind);
+        ModeContext.hydrateTabState(response, { emitUpdate: false });
+        this._showChangedViewFromTop(activeTabId);
+        await actionRefreshAndMaybeSelect({
+            startedAt: performance.now(),
+            context: `fileFilter.${kind}`,
             animateNoteChanges: false,
         });
     }

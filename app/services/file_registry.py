@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 import re
 from threading import RLock
+
+from app.services.file_kinds import FILE_FILTER_ANY, FILE_FILTER_KINDS, file_kind_of
 
 # A reference written in a note's text: [[id]] links, ![[id]] embeds.
 _FILE_REFERENCE_TOKEN_RE = re.compile(
@@ -12,23 +15,53 @@ _FILE_REFERENCE_TOKEN_RE = re.compile(
 )
 
 
+@dataclass(frozen=True)
+class FileDetails:
+    """What the registry reads of a file once it can be decrypted."""
+
+    title: str
+    thumbnail_kind: str
+
+
 class FileRegistry:
     def __init__(self) -> None:
         self._lock = RLock()
         self._ids: set[str] = set()
         self._thumbnail_kinds_by_id: dict[str, str] = {}
-        # File names by id, read from the files database the first time one is
-        # needed (an encrypted vault's names can be read only once it is unlocked,
-        # and notes are read, and searched, only then). None: not read yet.
+        # File names by id, read from the files database with their kinds the first
+        # time one is needed. An encrypted vault registers its files at startup and
+        # at lock time, when only their ids can be read; their names and kinds can be
+        # read once it is unlocked, and notes are read, searched and filtered only
+        # then. None: not read yet.
         self._titles_by_id: dict[str, str] | None = None
-        self._title_loader: Callable[[], dict[str, str]] | None = None
+        self._details_loader: Callable[[], dict[str, FileDetails]] | None = None
 
-    def install_title_loader(self, loader: Callable[[], dict[str, str]]) -> None:
-        """How to read every file's name (file_storage.py, which this module cannot import)."""
+    def install_details_loader(self, loader: Callable[[], dict[str, FileDetails]]) -> None:
+        """How to read every file's name and kind (file_storage.py, which this module cannot import)."""
         if not callable(loader):
-            raise TypeError("install_title_loader requires a callable")
+            raise TypeError("install_details_loader requires a callable")
         with self._lock:
-            self._title_loader = loader
+            self._details_loader = loader
+
+    def _ensure_details_locked(self) -> None:
+        if self._titles_by_id is not None:
+            return
+        if self._details_loader is None:
+            raise RuntimeError("File details are read before file storage installed their loader")
+        details_by_id = self._details_loader()
+        self._titles_by_id = {file_id: details.title for file_id, details in details_by_id.items()}
+        for file_id, details in details_by_id.items():
+            self._thumbnail_kinds_by_id[file_id] = details.thumbnail_kind
+
+    def _thumbnail_kind_locked(self, file_id: str) -> str | None:
+        """A registered file's kind, read with the details when startup could not; None for no file."""
+        if file_id not in self._ids:
+            return None
+        if file_id not in self._thumbnail_kinds_by_id:
+            self._ensure_details_locked()
+        if file_id not in self._thumbnail_kinds_by_id:
+            raise RuntimeError(f"File {file_id} is registered but has no stored kind")
+        return self._thumbnail_kinds_by_id[file_id]
 
     def reset(self) -> None:
         with self._lock:
@@ -106,10 +139,8 @@ class FileRegistry:
         with self._lock:
             if file_id not in self._ids:
                 return None
-            if self._titles_by_id is None:
-                if self._title_loader is None:
-                    raise RuntimeError("File names are read before file storage installed their loader")
-                self._titles_by_id = dict(self._title_loader())
+            self._ensure_details_locked()
+            assert self._titles_by_id is not None
             if file_id not in self._titles_by_id:
                 raise RuntimeError(f"File {file_id} is registered but has no stored name")
             return self._titles_by_id[file_id]
@@ -133,6 +164,22 @@ class FileRegistry:
                 names.append((file_id, title))
         return names
 
+    def file_ids_of_kind(self, kind: str) -> set[str]:
+        """The files a Files filter keeps (file_kinds.py): every file for "any"."""
+        if kind not in FILE_FILTER_KINDS:
+            raise ValueError(f"Unknown file filter kind {kind!r}")
+        with self._lock:
+            if kind == FILE_FILTER_ANY:
+                return set(self._ids)
+            kept: set[str] = set()
+            for file_id in self._ids:
+                thumbnail_kind = self._thumbnail_kind_locked(file_id)
+                file_name = self.title_of(file_id)
+                assert thumbnail_kind is not None and file_name is not None
+                if file_kind_of(thumbnail_kind=thumbnail_kind, file_name=file_name) == kind:
+                    kept.add(file_id)
+            return kept
+
     def list_ids(self) -> set[str]:
         with self._lock:
             return set(self._ids)
@@ -142,13 +189,13 @@ class FileRegistry:
         if not isinstance(file_id, str) or file_id == "":
             raise TypeError("file_id must be a non-empty string")
         with self._lock:
-            return file_id in self._thumbnail_kinds_by_id and self._thumbnail_kinds_by_id[file_id] in {"image", "excalidraw"}
+            return self._thumbnail_kind_locked(file_id) in {"image", "excalidraw"}
 
     def has_image_file(self, file_id: str) -> bool:
         if not isinstance(file_id, str) or file_id == "":
             raise TypeError("file_id must be a non-empty string")
         with self._lock:
-            return file_id in self._thumbnail_kinds_by_id and self._thumbnail_kinds_by_id[file_id] == "image"
+            return self._thumbnail_kind_locked(file_id) == "image"
 
 
 file_registry = FileRegistry()

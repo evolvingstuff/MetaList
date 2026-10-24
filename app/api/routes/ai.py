@@ -499,6 +499,7 @@ def suggest_tags_for_note_with_ai(
         search=payload.search,
         sort_mode=tab_state_store.get_sort_mode(tab_id=payload.tab_id),
         date_filter=tab_state_store.get_date_filter(tab_id=payload.tab_id),
+        file_filter=tab_state_store.get_file_filter(tab_id=payload.tab_id),
         is_untagged_view=payload.is_untagged_view,
     )
     if note_id not in scope.allowed_note_ids:
@@ -561,6 +562,7 @@ def _export_title_request(scope: ExportTitleScope, token: str) -> ExportTitleReq
         search=search,
         sort_mode=tab_state_store.get_sort_mode(tab_id=scope.tab_id),
         date_filter=tab_state_store.get_date_filter(tab_id=scope.tab_id),
+        file_filter=tab_state_store.get_file_filter(tab_id=scope.tab_id),
         is_untagged_view=scope.is_untagged_view, root_note_id=note_id,
     )
     boundary = resolve_cloud_privacy_boundary(preferences=load_client_preferences(token=token), provider=scope.provider)
@@ -906,18 +908,22 @@ def stream_ai_chat(
         tab_id=payload.scope.scope_tab_id
     )
     authoritative_date_filter = tab_state_store.get_date_filter(tab_id=payload.scope.scope_tab_id)
+    authoritative_file_filter = tab_state_store.get_file_filter(tab_id=payload.scope.scope_tab_id)
     active_search_query = authoritative_search_query
     active_sort_mode = authoritative_sort_mode
     active_date_filter = authoritative_date_filter
+    active_file_filter = authoritative_file_filter
     if payload.selected_note_id and payload.scope.active_tab_id != payload.scope.scope_tab_id:
         active_search_query = tab_state_store.get_search_query(tab_id=authoritative_active_tab_id)
         active_sort_mode = tab_state_store.get_sort_mode(tab_id=authoritative_active_tab_id)
         active_date_filter = tab_state_store.get_date_filter(tab_id=authoritative_active_tab_id)
+        active_file_filter = tab_state_store.get_file_filter(tab_id=authoritative_active_tab_id)
     frozen_scope = scoped_search_snapshot_factory.freeze(
         descriptor=payload.scope,
         authoritative_search_query=authoritative_search_query,
         authoritative_sort_mode=authoritative_sort_mode,
         authoritative_date_filter=authoritative_date_filter,
+        authoritative_file_filter=authoritative_file_filter,
         run_id=str(uuid4()),
         session_key=session_key,
         privacy_boundary=privacy_boundary,
@@ -925,6 +931,7 @@ def stream_ai_chat(
         authoritative_active_search_query=active_search_query,
         authoritative_active_sort_mode=active_sort_mode,
         authoritative_active_date_filter=active_date_filter,
+        authoritative_active_file_filter=active_file_filter,
     )
     tagging_run = TaggingRun(token=token, snapshot=frozen_scope, privacy_boundary=privacy_boundary,
         preferences=preferences, sync_uuid=get_current_sync_uuid(),
@@ -1063,6 +1070,7 @@ def manage_bulk_proposals(payload: BulkManageRequest, token: Annotated[str, Depe
         with bulk_operation_guard.acquire(token_service.get_session_key(token)):
             note_ids = proposal_scope_ids(
                 payload.scope, date_filter=tab_state_store.get_date_filter(tab_id=payload.scope.scope_tab_id),
+                file_filter=tab_state_store.get_file_filter(tab_id=payload.scope.scope_tab_id),
             )
             if payload.target == "namespace":
                 note_ids = tuple(note_store.list_note_ids())

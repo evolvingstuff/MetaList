@@ -111,7 +111,7 @@ def test_build_view_state_uses_root_creation_timestamp_despite_newer_child(
     state = build_view_state(
         editing_note_id=None, find_reveal_note_id=None,
         search=None,
-        sort_mode="created", date_filter=None,
+        sort_mode="created", date_filter=None, file_filter=None,
         client_known_note_ids=set(), previous_root_ids=[],
         visible_top_root_id=None,
         visible_bottom_root_id=None,
@@ -175,7 +175,7 @@ def test_build_view_state_uses_newest_updated_timestamp_in_root_subtree(
     state = build_view_state(
         editing_note_id=None, find_reveal_note_id=None,
         search=None,
-        sort_mode="updated", date_filter=None,
+        sort_mode="updated", date_filter=None, file_filter=None,
         client_known_note_ids=set(), previous_root_ids=[],
         visible_top_root_id=None,
         visible_bottom_root_id=None,
@@ -239,7 +239,7 @@ def test_build_view_state_sorts_roots_alphabetically_by_root_content(
     state = build_view_state(
         editing_note_id=None, find_reveal_note_id=None,
         search=None,
-        sort_mode="alphabetical", date_filter=None,
+        sort_mode="alphabetical", date_filter=None, file_filter=None,
         client_known_note_ids=set(), previous_root_ids=[],
         visible_top_root_id=None,
         visible_bottom_root_id=None,
@@ -314,7 +314,7 @@ def test_build_view_state_sorts_roots_by_plain_text_volume_across_subtree(
     state = build_view_state(
         editing_note_id=None, find_reveal_note_id=None,
         search=None,
-        sort_mode="content-volume", date_filter=None,
+        sort_mode="content-volume", date_filter=None, file_filter=None,
         client_known_note_ids=set(), previous_root_ids=[],
         visible_top_root_id=None,
         visible_bottom_root_id=None,
@@ -382,7 +382,7 @@ def _updated_view(editing_note_id: Optional[str]):
     return build_view_state(
         editing_note_id=editing_note_id, find_reveal_note_id=None,
         search=None,
-        sort_mode="updated", date_filter=None,
+        sort_mode="updated", date_filter=None, file_filter=None,
         client_known_note_ids={"root-top", "root-edited", "child-edited", "root-bottom"},
         previous_root_ids=["root-top", "root-edited", "root-bottom"],
         visible_top_root_id=None,

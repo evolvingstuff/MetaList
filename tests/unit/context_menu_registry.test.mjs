@@ -490,6 +490,7 @@ function buildViewContext(overrides) {
     return {
         kind: 'view', isMac: true, isEditing: false, canPasteNoteAtTop: false, canGoToTop: false, canGoToBottom: false,
         isUntaggedView: false, theme: 'system', sortMode: 'normal', dateRangeKind: 'none', dateRangeField: 'updated',
+        fileFilterKind: 'none',
         areTabsVisible: false, isAiChatVisible: false, areNoteTagsVisible: false,
         ...overrides,
     };
@@ -498,7 +499,7 @@ function buildViewContext(overrides) {
 const VIEW_HANDLER_NAMES = [
     'onAddNoteAtTop', 'onPasteNoteAtTop', 'onPasteReferenceAtTop', 'onUndo', 'onRedo', 'onGoToTop', 'onGoToBottom', 'onFullyExpandAll',
     'onFullyCollapseAll', 'onSetUntaggedView', 'onSetSortMode', 'onSetDateRangeField', 'onSetDateRangePreset',
-    'onOpenCustomDateRange', 'onToggleAiChat', 'onToggleTabs',
+    'onOpenCustomDateRange', 'onSetFileFilter', 'onToggleAiChat', 'onToggleTabs',
     'onToggleNoteTags', 'onSetTheme', 'onNewTab', 'onOpenNamespace', 'onOpenReminders',
     'onExportViewHtml', 'onPrintView', 'onLogOut',
 ];
@@ -526,6 +527,7 @@ test('the background menu groups adding, history, the list, the view, opening, e
         '— View',
         'Sort by',
         'Date range',
+        'Notes with files',
         'Show',
         'Theme',
         '— New Tab',
@@ -890,6 +892,25 @@ test('Suggest Tags with AI follows Add Excalidraw Diagram, with the robot icon, 
         const without = buildContextMenuItems(buildNoteContext({ canAddDiagram: true, canSuggestTagsWithAi }), handlers);
         assert.equal(without.some((item) => item.id === 'suggest-tags-with-ai'), false);
     }
+});
+
+// Notes with files: All notes, then the kinds; the current one ticked and not offered again.
+test('the Notes with files menu ticks its kind and calls its handler', () => {
+    const calls = [];
+    const items = buildContextMenuItems(buildViewContext({ fileFilterKind: 'pdf' }), buildViewHandlers(calls));
+    const files = items.find((item) => item.id === 'file-filter');
+    assert.equal(files.icon, 'attachment');
+    assert.deepEqual(files.submenu.map((item) => [item.label, item.checked, item.enabled]), [
+        ['All notes', false, true],
+        ['Any file', false, true],
+        ['Images', false, true],
+        ['PDFs', true, false],
+        ['Markdown files', false, true],
+    ]);
+    assert.equal(files.submenu.find((item) => item.id === 'file-filter-any').separated, true);
+    files.submenu.find((item) => item.id === 'file-filter-image').onSelect();
+    files.submenu.find((item) => item.id === 'file-filter-none').onSelect();
+    assert.deepEqual(calls, [['onSetFileFilter', 'image'], ['onSetFileFilter', 'none']]);
 });
 
 // Date range: which date, then its range; the current ones ticked and not offered again.

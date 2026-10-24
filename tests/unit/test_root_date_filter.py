@@ -198,7 +198,7 @@ def three_roots(monkeypatch: pytest.MonkeyPatch) -> None:
 def _shown_roots(date_filter: RootDateFilter | None, *, editing_note_id: str | None) -> List[str]:
     state = snapshot.build_view_state(
         editing_note_id=editing_note_id, find_reveal_note_id=None, search=None, sort_mode="normal",
-        date_filter=date_filter, client_known_note_ids=set(), previous_root_ids=[], visible_top_root_id=None,
+        date_filter=date_filter, file_filter=None, client_known_note_ids=set(), previous_root_ids=[], visible_top_root_id=None,
         visible_bottom_root_id=None, is_untagged_view=False, start_at_list_end=False,
     )
     # An empty view has no root entry.

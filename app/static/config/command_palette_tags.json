@@ -85,6 +85,26 @@
       "tags": ["date", "range", "filter", "custom", "from", "to", "between", "since", "until", "view"]
     },
     {
+      "id": "view.files.none",
+      "tags": ["files", "attachments", "filter", "any", "all", "clear", "none", "view"]
+    },
+    {
+      "id": "view.files.any",
+      "tags": ["files", "attachments", "attached", "filter", "any", "view"]
+    },
+    {
+      "id": "view.files.image",
+      "tags": ["files", "attachments", "filter", "images", "pictures", "photos", "view"]
+    },
+    {
+      "id": "view.files.pdf",
+      "tags": ["files", "attachments", "filter", "pdf", "pdfs", "documents", "view"]
+    },
+    {
+      "id": "view.files.markdown",
+      "tags": ["files", "attachments", "filter", "markdown", "md", "view"]
+    },
+    {
       "id": "pref.theme",
       "tags": ["theme", "appearance", "light", "dark", "system", "ui"]
     },

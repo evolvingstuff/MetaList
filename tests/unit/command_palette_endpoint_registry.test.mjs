@@ -69,6 +69,8 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
             setDateRangePreset: noop,
             setDateRangeField: noop,
             openCustomDateRange: noop,
+            getFileFilterKind: () => 'none',
+            setFileFilter: noop,
         },
     });
 

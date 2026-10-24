@@ -9,7 +9,7 @@ import pytest
 
 import app.services.content_formatting as content_formatting
 import app.services.search_text as search_text
-from app.services.file_registry import FileRegistry
+from app.services.file_registry import FileDetails, FileRegistry
 
 PDF_ID = "9a7ddc26-a797-4af7-a8ab-f4ac3ca43357"
 IMAGE_ID = "1c9e7b52-3f4a-4d8e-a6b0-7e2f9d1c5a38"
@@ -25,11 +25,14 @@ def registry(monkeypatch: pytest.MonkeyPatch) -> tuple[FileRegistry, list[int]]:
     registry = FileRegistry()
     registry.replace_all_with_thumbnail_kinds({PDF_ID: "pdf", IMAGE_ID: "image"})
 
-    def load() -> dict[str, str]:
+    def load() -> dict[str, FileDetails]:
         loads.append(1)
-        return {PDF_ID: PDF_NAME, IMAGE_ID: IMAGE_NAME}
+        return {
+            PDF_ID: FileDetails(title=PDF_NAME, thumbnail_kind="pdf"),
+            IMAGE_ID: FileDetails(title=IMAGE_NAME, thumbnail_kind="image"),
+        }
 
-    registry.install_title_loader(load)
+    registry.install_details_loader(load)
     monkeypatch.setattr(search_text, "file_registry", registry)
     monkeypatch.setattr(content_formatting, "file_registry", registry)
     return registry, loads

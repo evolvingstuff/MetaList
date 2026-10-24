@@ -34,7 +34,7 @@ from app.security.encryption import (
     is_encryption_required,
 )
 from app.services.embedded_references import collect_reference_tokens_from_html
-from app.services.file_registry import file_registry
+from app.services.file_registry import FileDetails, file_registry
 from app.services.note_store import store as note_store
 
 _ALLOWED_THUMBNAIL_KINDS = {"pdf", "image", "audio", "video", "text", "archive", "excalidraw", "other"}
@@ -168,15 +168,16 @@ def bootstrap_file_registry() -> set[str]:
     return file_ids
 
 
-def _load_file_titles() -> dict[str, str]:
-    """Every file's name by id, decrypted (the file registry asks once, when notes are searched)."""
+def _load_file_details() -> dict[str, FileDetails]:
+    """Every file's name and kind by id, decrypted (the file registry asks once, when
+    notes are read, searched or filtered, which is only once the vault is unlocked)."""
     with connect_file_reader() as connection:
         rows = fetch_all_file_metadata(connection)
     encryption_service = _resolve_encryption_service(None)
-    titles: dict[str, str] = {}
+    details: dict[str, FileDetails] = {}
     for row in rows:
         file_id = row["id"]
-        titles[file_id] = _decrypt_text_field(
+        title = _decrypt_text_field(
             encryption_service=encryption_service,
             value=row["title"],
             nonce=row["title_encryption_nonce"],
@@ -184,10 +185,21 @@ def _load_file_titles() -> dict[str, str]:
             field_name="title",
             file_id=file_id,
         )
-    return titles
+        metadata_json = _decrypt_text_field(
+            encryption_service=encryption_service,
+            value=row["metadata_json"],
+            nonce=row["metadata_encryption_nonce"],
+            tag=row["metadata_encryption_tag"],
+            field_name="metadata_json",
+            file_id=file_id,
+        )
+        thumbnail_kind = _parse_file_metadata(metadata_json, file_id=file_id)["thumbnail_kind"]
+        assert isinstance(thumbnail_kind, str)
+        details[file_id] = FileDetails(title=title, thumbnail_kind=thumbnail_kind)
+    return details
 
 
-file_registry.install_title_loader(_load_file_titles)
+file_registry.install_details_loader(_load_file_details)
 
 
 def create_file(

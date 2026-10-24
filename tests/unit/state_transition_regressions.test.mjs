@@ -240,6 +240,7 @@ test('tab-state persistence accepts a server echo of the state it already has', 
         buildSessionHeaders: () => ({}),
         getReferenceViewsPayload: () => ({}),
         recordDateFiltersFromServer: () => {},
+        recordFileFiltersFromServer: () => {},
         fetch: async () => ({ ok: true, json: async () => structuredClone(serverState) }),
     };
     const { captureServerSignature, persistTabStateSnapshot } = new Function(

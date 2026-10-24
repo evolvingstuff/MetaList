@@ -97,9 +97,9 @@ def tagging_trees(snapshot):
     return tuple(payloads[root_id] for root_id in snapshot.ordered_root_ids)
 
 
-def proposal_scope_ids(descriptor, *, date_filter):
+def proposal_scope_ids(descriptor, *, date_filter, file_filter):
     resolved = resolve_view_scope_membership(search=descriptor.search_query,
-        sort_mode=descriptor.sort_mode, date_filter=date_filter,
+        sort_mode=descriptor.sort_mode, date_filter=date_filter, file_filter=file_filter,
         is_untagged_view=descriptor.scope_kind == "untagged")
     included = set(resolved.matched_note_ids)
     for note_id in tuple(included):
@@ -239,7 +239,9 @@ class TaggingRun:
                 note_ids = tuple(store.list_note_ids())
                 scope_label = "the whole vault"
             else:
-                note_ids = proposal_scope_ids(self.snapshot.descriptor, date_filter=self.snapshot.date_filter)
+                note_ids = proposal_scope_ids(
+                    self.snapshot.descriptor, date_filter=self.snapshot.date_filter, file_filter=self.snapshot.file_filter,
+                )
                 scope_label = "the current view"
             changes, count, _affected = prepare_proposal_changes(note_ids, action, tag_filter, {})
             matching = "pending tag proposals"

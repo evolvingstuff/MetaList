@@ -310,7 +310,7 @@ def build_notes_export_document(
     *,
     search: str | None,
     sort_mode: str,
-    date_filter: RootDateFilter | None,
+    date_filter: RootDateFilter | None, file_filter: str | None,
     is_untagged_view: bool,
     theme: str,
     token: str,
@@ -351,7 +351,7 @@ def build_notes_export_document(
 
     is_download = purpose == "download"
     root_ids, allowed_note_ids = resolve_export_scope(
-        search=search, sort_mode=sort_mode, date_filter=date_filter, is_untagged_view=is_untagged_view,
+        search=search, sort_mode=sort_mode, date_filter=date_filter, file_filter=file_filter, is_untagged_view=is_untagged_view,
         root_note_id=root_note_id,
     )
     notes_markup = _render_exported_notes_markup(
@@ -463,7 +463,7 @@ def build_notes_export_filename(title: str) -> str:
 
 
 def resolve_export_scope(
-    *, search: str | None, sort_mode: str, date_filter: RootDateFilter | None, is_untagged_view: bool,
+    *, search: str | None, sort_mode: str, date_filter: RootDateFilter | None, file_filter: str | None, is_untagged_view: bool,
     root_note_id: str | None,
 ) -> tuple[list[str], set[str] | None]:
     """The roots exported, in order, and the notes allowed under them (None: all)."""
@@ -476,7 +476,7 @@ def resolve_export_scope(
     if search is not None:
         search_text = search
     scope = resolve_view_scope_membership(
-        search=search_text, sort_mode=sort_mode, date_filter=date_filter, is_untagged_view=is_untagged_view,
+        search=search_text, sort_mode=sort_mode, date_filter=date_filter, file_filter=file_filter, is_untagged_view=is_untagged_view,
     )
     if not scope.filter_active:
         return list(scope.ordered_root_ids), None
@@ -491,14 +491,14 @@ class CredentialCounts:
 
 
 def exported_credential_counts(
-    *, search: str | None, sort_mode: str, date_filter: RootDateFilter | None, is_untagged_view: bool,
+    *, search: str | None, sort_mode: str, date_filter: RootDateFilter | None, file_filter: str | None, is_untagged_view: bool,
     root_note_id: str | None,
 ) -> CredentialCounts:
     """How many @password and @username notes an export or print would show: those
     exported, and those shown inside them (embedded notes with their children,
     and the notes references point to)."""
     root_ids, allowed_note_ids = resolve_export_scope(
-        search=search, sort_mode=sort_mode, date_filter=date_filter, is_untagged_view=is_untagged_view,
+        search=search, sort_mode=sort_mode, date_filter=date_filter, file_filter=file_filter, is_untagged_view=is_untagged_view,
         root_note_id=root_note_id,
     )
     passwords: set[str] = set()

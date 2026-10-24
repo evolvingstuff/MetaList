@@ -148,7 +148,7 @@ def test_create_undo_redo_preserves_timestamp_metadata_for_next_view(
     state = snapshot.build_view_state(
         editing_note_id=None, find_reveal_note_id=None,
         search=None,
-        sort_mode=SORT_MODE_NORMAL, date_filter=None,
+        sort_mode=SORT_MODE_NORMAL, date_filter=None, file_filter=None,
         client_known_note_ids=set(),
         previous_root_ids=[],
         visible_top_root_id=None,

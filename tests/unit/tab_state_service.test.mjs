@@ -42,6 +42,7 @@ async function harness() {
         restoreReferenceNavigation: (state) => restoredReferenceTabs.push(state.tabs),
         getReferenceViewsPayload: () => ({}),
         recordDateFiltersFromServer: () => {},
+        recordFileFiltersFromServer: () => {},
         ErrorHandler: { handleApiError(_error, response) { apiErrors.push(response.status); } },
         HttpRequestError, AuthenticationRequiredError,
         fetch: async (_endpoint, options) => {

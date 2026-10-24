@@ -110,6 +110,8 @@ export function buildCommandPaletteEndpoints(deps) {
     const setDateRangePreset = requireAction(actions, 'setDateRangePreset');
     const setDateRangeField = requireAction(actions, 'setDateRangeField');
     const openCustomDateRange = requireAction(actions, 'openCustomDateRange');
+    const getFileFilterKind = requireAction(actions, 'getFileFilterKind');
+    const setFileFilter = requireAction(actions, 'setFileFilter');
     const openAiAgentSettings = requireAction(actions, 'openAiAgentSettings');
     const openCloudPrivacySettings = requireAction(actions, 'openCloudPrivacySettings');
     const openProposalManager = requireAction(actions, 'openProposalManager');
@@ -292,6 +294,20 @@ export function buildCommandPaletteEndpoints(deps) {
             closeOnExecute: true,
             execute: async () => openCustomDateRange(),
         },
+        ...[
+            ['none', 'All notes'],
+            ['any', 'Any file'],
+            ['image', 'Images'],
+            ['pdf', 'PDFs'],
+            ['markdown', 'Markdown files'],
+        ].map(([kind, label]) => ({
+            id: `view.files.${kind}`,
+            kind: 'action',
+            label: `Notes with files: ${label}`,
+            getValue: () => (getFileFilterKind() === kind ? 'Current' : '↵'),
+            closeOnExecute: true,
+            execute: async () => setFileFilter(kind),
+        })),
         {
             id: 'pref.theme',
             kind: 'select',

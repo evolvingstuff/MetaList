@@ -103,7 +103,7 @@ def test_snapshot_finds_offscreen_backlinks_without_reading_offscreen_notes(monk
     monkeypatch.setattr(snapshot_module, "note_store", store)
     monkeypatch.setattr(snapshot_module, "get_all_locks", lambda: {})
     state = build_view_state(
-        editing_note_id=None, find_reveal_note_id=None, search=None, sort_mode="normal", date_filter=None,
+        editing_note_id=None, find_reveal_note_id=None, search=None, sort_mode="normal", date_filter=None, file_filter=None,
         client_known_note_ids=set(), previous_root_ids=[], visible_top_root_id=None,
         visible_bottom_root_id=None, is_untagged_view=False,
         start_at_list_end=False,
@@ -135,7 +135,7 @@ def _state_for(
     return build_view_state(
         editing_note_id=editing_note_id, find_reveal_note_id=None,
         search=None,
-        sort_mode="normal", date_filter=None,
+        sort_mode="normal", date_filter=None, file_filter=None,
         client_known_note_ids=set(), previous_root_ids=[],
         visible_top_root_id=None,
         visible_bottom_root_id=None,
