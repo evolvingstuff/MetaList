@@ -45,6 +45,8 @@
 - Refactor notes: `docs/REFACTORS.md`
 - TODO list: `docs/TODO.md`
 - Future UI plan (toolbar): `docs/future-plans/PLAN.toolbar.md`
+- Future plan (hosted MetaList: downloading your own copy, the backup reminder): `docs/future-plans/hosted-own-copy.md`
+- Incoming design notes, not yet processed: `docs/inbox/` (see AGENTS.md, "Design Inbox")
 
 ## Clients
 - Electron packaging notes (planning doc): `docs/clients/electron.md`

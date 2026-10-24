@@ -4,6 +4,7 @@
 At the start of EVERY conversation/context:
 1. **Check if `docs/AI-SUMMARY.md` exists** – If it does, read it immediately to understand the project. If neither the `docs/` directory nor the summary file exist, ask: "No docs/AI-SUMMARY.md found. Would you like me to create one with SUMMARIZE to help me better understand your project?"
 2. **Check PLAN.md** – If PLAN.md exists, ask whether to use it as-is or replace it. If it doesn’t exist, do nothing unless the user explicitly invokes PLAN.
+3. **Check `docs/inbox/`** – Mention every note sitting in it (see "Design Inbox" below). An empty inbox needs no mention.
 
 Each action below follows a structured workflow with clear steps and success criteria.
 
@@ -37,6 +38,15 @@ This document defines standardized workflows triggered by action commands in ALL
 ## Environment Notes
 - All Python work happens inside the `.venv` virtual environment; activate it (e.g. `source .venv/bin/activate`) or call `.venv/bin/python` directly when running tooling or scripts.
 - Before writing, fixing, refactoring or reviewing code, read the matching ShockHarness skill in .claude/skills/<name>/SKILL.md (write-compliant-code, fix-violations, refactor-complexity, pre-commit-review, verification-integrity, async-lifecycle, property-contracts, adopt-shockharness). After a ShockHarness upgrade, refresh them with `shockharness skills update --agent claude`.
+
+## Design Inbox (`docs/inbox/`)
+
+The maintainer drops design and feature notes from planning work outside this repo into `docs/inbox/`, named `YYYY-MM-DD-topic.md`. Every file there is unfinished work: not yet built, not yet written into this repo's permanent docs, or both. The inbox is meant to be empty, and nothing should exist only in it.
+
+- The notes are written without looking at the code. Read "build X" as "check whether X exists; build only what is missing", and check every code reference in a note before relying on it.
+- To process a note: build what it describes, or, if it is agreed but not scheduled, move it to `docs/future-plans/`. Fold its content into the right permanent docs (`docs/design/`, `docs/ui/`, `docs/AI-SUMMARY.md`, `docs/README.md` and so on) in the repo's own style, and delete the inbox file in the same change.
+- If a note conflicts with the code or the existing docs, or a decision in it is still open, ask the maintainer instead of guessing.
+- Never treat a file in the inbox as already done.
 
 ## CRITICAL: Never Work in a Git Worktree
 
