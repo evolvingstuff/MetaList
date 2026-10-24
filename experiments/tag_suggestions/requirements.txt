@@ -5,4 +5,4 @@ numpy==2.3.3
 scipy==1.16.2
 scikit-learn==1.7.2
 lightgbm==4.6.0
-pytest==8.4.2
+pytest==9.1.1
