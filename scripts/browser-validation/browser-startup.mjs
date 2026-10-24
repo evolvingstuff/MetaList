@@ -313,13 +313,22 @@ async function checkEncryptedLogin(context, origin) {
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => document.getElementById('add-password-modal').style.display !== 'block', {timeout: 10000});
     stage = 'creating encrypted workspace password';
+    // Setting a password ends the passwordless session, and the app's session check then
+    // takes its page to the lock screen at a moment no step can predict: once, it did so
+    // while this request was still answering and cut it off (Firefox, Windows CI, 0.24.2).
+    // So the tab leaves the app for one of the workspace's static files (same address,
+    // cookies and tab identity, no app code), sets the password there, and comes back.
+    await page.goto(new URL('/static/css/main.css', origin).href, {waitUntil: 'domcontentloaded', timeout: 30000});
     await page.evaluate(async value => {
-      const {buildSessionHeaders} = await import('/static/js/modules/session-auth.js');
+      const tabId = sessionStorage.getItem('metalist_tab_id');
+      if (!tabId) throw new Error('The app did not leave its tab identity behind');
       const response = await fetch('/api2/auth/settings/password/create', {
-        method: 'POST', headers: buildSessionHeaders(true), body: JSON.stringify({password: value}),
+        method: 'POST', headers: {'X-Metalist-Tab-Id': tabId, 'Content-Type': 'application/json'},
+        body: JSON.stringify({password: value}),
       });
       if (!response.ok) throw new Error(`Password setup failed: ${response.status}`);
     }, password);
+    await page.goto(origin, {waitUntil: 'domcontentloaded', timeout: 30000});
     for (removeStoredIdentity of [false, true]) {
       stage = `reloading encrypted login (removeStoredIdentity=${removeStoredIdentity})`;
       await page.reload({waitUntil: 'domcontentloaded', timeout: 30000});
