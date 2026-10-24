@@ -296,6 +296,7 @@ function isMouseDownOutsideEditExclusion(target) {
             '#reference-view-new-search',
             '#root-sort-indicator',
             '#date-range-indicator',
+            '#file-filter-indicator',
             '#untagged-view-indicator',
             '#menu-button',
             '#chat-toggle-button',
@@ -1520,6 +1521,18 @@ function handleClick(event) {
         if (event.target.closest('#date-range-indicator-clear')) {
             void CommandGate.run('dateRangeIndicator.clear', async () => {
                 await CommandPalette.setDateRangePreset('none');
+            });
+        }
+        return;
+    }
+
+    const fileFilterIndicator = event.target.closest('#file-filter-indicator');
+    if (fileFilterIndicator) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.target.closest('#file-filter-indicator-clear')) {
+            void CommandGate.run('fileFilterIndicator.clear', async () => {
+                await CommandPalette.setFileFilter('none');
             });
         }
         return;

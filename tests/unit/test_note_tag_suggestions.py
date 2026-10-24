@@ -381,6 +381,7 @@ def test_the_suggestion_route_streams_tags_or_why_the_ai_failed(live_database, m
     monkeypatch.setattr(ai_routes, "load_client_preferences", lambda *, token: {})
     monkeypatch.setattr(ai_routes.tab_state_store, "get_sort_mode", lambda *, tab_id: "normal")
     monkeypatch.setattr(ai_routes.tab_state_store, "get_date_filter", lambda *, tab_id: None)
+    monkeypatch.setattr(ai_routes.tab_state_store, "get_file_filter", lambda *, tab_id: None)
     _set_ai_ready(monkeypatch, is_ready=True)
 
     answers = _FakeInference([{"proposals": [{"note_id": "trip", "tags": ["kyoto", "temples"]}]}])
@@ -580,6 +581,7 @@ def test_suggesting_tags_after_a_chat_answer_records_its_own_trace_run(live_data
     monkeypatch.setattr(ai_routes, "load_client_preferences", lambda *, token: {})
     monkeypatch.setattr(ai_routes.tab_state_store, "get_sort_mode", lambda *, tab_id: "normal")
     monkeypatch.setattr(ai_routes.tab_state_store, "get_date_filter", lambda *, tab_id: None)
+    monkeypatch.setattr(ai_routes.tab_state_store, "get_file_filter", lambda *, tab_id: None)
     _set_ai_ready(monkeypatch, is_ready=True)
     agent_trace_store.clear_trace(session_key="session")
     agent_trace_store.start_run(session_key="session", model="gpt-5.6-luna", user_message="An earlier question")

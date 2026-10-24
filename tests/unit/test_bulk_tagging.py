@@ -1040,7 +1040,7 @@ def test_a_failed_tagging_call_explains_itself_like_the_chat_steps() -> None:
 @pytest.mark.parametrize("answer,applies", [("yes", True), ("no", False)])
 def test_agent_tag_review_shows_the_exact_change_and_applies_only_after_yes(monkeypatch, answer, applies):
     monkeypatch.setattr(runs.TaggingRun, "validate_current", lambda self: None)
-    monkeypatch.setattr(runs, "proposal_scope_ids", lambda descriptor, *, date_filter: ("a", "b"))
+    monkeypatch.setattr(runs, "proposal_scope_ids", lambda descriptor, *, date_filter, file_filter: ("a", "b"))
     monkeypatch.setattr(
         runs,
         "prepare_proposal_changes",
@@ -1048,7 +1048,7 @@ def test_agent_tag_review_shows_the_exact_change_and_applies_only_after_yes(monk
     )
     applied = []
     monkeypatch.setattr(runs, "apply_bulk_proposals", lambda **kwargs: applied.append(kwargs))
-    operation = runs.TaggingRun(token="token", privacy_boundary=_BOUNDARY, snapshot=SimpleNamespace(session_key="review-session", descriptor=None, date_filter=None),
+    operation = runs.TaggingRun(token="token", privacy_boundary=_BOUNDARY, snapshot=SimpleNamespace(session_key="review-session", descriptor=None, date_filter=None, file_filter=None),
                                 preferences={}, sync_uuid="sync", batch_tokens=1000)
 
     async def collect_events():

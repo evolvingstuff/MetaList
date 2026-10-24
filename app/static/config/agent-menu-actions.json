@@ -281,6 +281,36 @@
     "presentation": "palette"
   },
   {
+    "id": "view.files.none",
+    "label": "Notes with files: All notes",
+    "selector": "#command-palette-modal",
+    "presentation": "palette"
+  },
+  {
+    "id": "view.files.any",
+    "label": "Notes with files: Any file",
+    "selector": "#command-palette-modal",
+    "presentation": "palette"
+  },
+  {
+    "id": "view.files.image",
+    "label": "Notes with files: Images",
+    "selector": "#command-palette-modal",
+    "presentation": "palette"
+  },
+  {
+    "id": "view.files.pdf",
+    "label": "Notes with files: PDFs",
+    "selector": "#command-palette-modal",
+    "presentation": "palette"
+  },
+  {
+    "id": "view.files.markdown",
+    "label": "Notes with files: Markdown files",
+    "selector": "#command-palette-modal",
+    "presentation": "palette"
+  },
+  {
     "id": "pref.theme",
     "label": "Theme",
     "selector": "#command-palette-modal",

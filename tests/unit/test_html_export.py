@@ -92,7 +92,7 @@ def test_build_notes_export_document_keeps_collapsed_notes_collapsed_and_redacts
         purpose="download",
         title="",
         include_credentials=False,
-        sort_mode="normal", date_filter=None,
+        sort_mode="normal", date_filter=None, file_filter=None,
         is_untagged_view=False,
         search=None,
         theme="light",
@@ -140,7 +140,7 @@ def test_build_notes_export_document_can_export_single_note_subtree(
         purpose="download",
         title="",
         include_credentials=False,
-        sort_mode="normal", date_filter=None,
+        sort_mode="normal", date_filter=None, file_filter=None,
         is_untagged_view=False,
         search="other",
         theme="light",
@@ -167,9 +167,10 @@ def test_export_notes_html_route_passes_note_id(
     monkeypatch.setattr(notes_route, "build_notes_export_filename", lambda title: "export.html")
     monkeypatch.setattr(notes_route, "_resolve_tab_sort_mode", lambda tab_id: "alphabetical")
     monkeypatch.setattr(notes_route, "_resolve_tab_date_filter", lambda tab_id: None)
+    monkeypatch.setattr(notes_route, "_resolve_tab_file_filter", lambda tab_id: None)
 
     def _build_document(
-        *, search, sort_mode, date_filter, is_untagged_view, theme, token, root_note_id, purpose, title,
+        *, search, sort_mode, date_filter, file_filter, is_untagged_view, theme, token, root_note_id, purpose, title,
         include_credentials, editing_note_id,
     ):
         captured["editing_note_id"] = editing_note_id
@@ -291,7 +292,7 @@ def test_build_notes_export_document_uses_search_scope_and_static_reference_mark
         purpose="download",
         title="",
         include_credentials=False,
-        sort_mode="normal", date_filter=None,
+        sort_mode="normal", date_filter=None, file_filter=None,
         is_untagged_view=False,
         search="match",
         theme="dark",
@@ -334,7 +335,7 @@ def test_build_notes_export_document_redacts_password_reference_preview(
         purpose="download",
         title="",
         include_credentials=False,
-        sort_mode="normal", date_filter=None,
+        sort_mode="normal", date_filter=None, file_filter=None,
         is_untagged_view=False,
         search=None,
         theme="light",
@@ -377,7 +378,7 @@ def test_build_notes_export_document_renders_markdown_meta_server_side(
         purpose="download",
         title="",
         include_credentials=False,
-        sort_mode="normal", date_filter=None,
+        sort_mode="normal", date_filter=None, file_filter=None,
         is_untagged_view=False,
         search=None,
         theme="light",
@@ -423,7 +424,7 @@ def test_build_notes_export_document_renders_latex_meta_server_side(
         purpose="download",
         title="",
         include_credentials=False,
-        sort_mode="normal", date_filter=None,
+        sort_mode="normal", date_filter=None, file_filter=None,
         is_untagged_view=False,
         search=None,
         theme="dark",
@@ -449,7 +450,7 @@ def test_an_exported_view_is_the_view_as_shown(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(export_module, "note_store", store)
     calls = []
 
-    def resolve(*, search, sort_mode, date_filter, is_untagged_view):
+    def resolve(*, search, sort_mode, date_filter, file_filter, is_untagged_view):
         calls.append((search, sort_mode, is_untagged_view))
         return snapshot_module.ResolvedViewScope(
             filter_active=True, allowed_note_ids=frozenset({ROOT_ID, LINKED_ID}),
@@ -458,7 +459,7 @@ def test_an_exported_view_is_the_view_as_shown(monkeypatch: pytest.MonkeyPatch) 
 
     monkeypatch.setattr(export_module, "resolve_view_scope_membership", resolve)
     html = build_notes_export_document(
-        sort_mode="alphabetical", date_filter=None, is_untagged_view=True, search="fruit", theme="light", token="token", root_note_id=None,
+        sort_mode="alphabetical", date_filter=None, file_filter=None, is_untagged_view=True, search="fruit", theme="light", token="token", root_note_id=None,
         purpose="download", title="", include_credentials=False, editing_note_id=None,
     )
     assert calls == [("fruit", "alphabetical", True)]
@@ -475,7 +476,7 @@ def _export(
     monkeypatch.setattr(export_module, "note_store", store)
     monkeypatch.setattr(snapshot_module, "note_store", store)
     return build_notes_export_document(
-        purpose=purpose, title=title, sort_mode="normal", date_filter=None, is_untagged_view=False,
+        purpose=purpose, title=title, sort_mode="normal", date_filter=None, file_filter=None, is_untagged_view=False,
         search=None, theme="dark", token="token", root_note_id=None, include_credentials=include_credentials, editing_note_id=editing_note_id,
     )
 
@@ -606,7 +607,7 @@ def test_the_credential_counts_are_what_the_export_would_show(monkeypatch: pytes
         other_id: [embedded_id, LINKED_ID], embedded_id: [embedded_child_id],
     }
     monkeypatch.setattr(export_module, "note_store", _FakeNoteStore(notes=notes, children_by_parent=children))
-    count = lambda **kwargs: export_module.exported_credential_counts(date_filter=None, **kwargs).passwords  # noqa: E731
+    count = lambda **kwargs: export_module.exported_credential_counts(date_filter=None, file_filter=None, **kwargs).passwords  # noqa: E731
 
     assert count(search=None, sort_mode="normal", is_untagged_view=False, root_note_id=ROOT_ID) == 4
     assert count(search=None, sort_mode="normal", is_untagged_view=False, root_note_id=CHILD_ID) == 1
@@ -614,7 +615,7 @@ def test_the_credential_counts_are_what_the_export_would_show(monkeypatch: pytes
 
     # A view: notes its search leaves out (gray bars) are not exported, so not
     # counted; a password shown twice counts once.
-    def resolve(*, search, sort_mode, date_filter, is_untagged_view):
+    def resolve(*, search, sort_mode, date_filter, file_filter, is_untagged_view):
         allowed = frozenset({ROOT_ID, CHILD_ID, holder_id, other_id})
         return snapshot_module.ResolvedViewScope(
             filter_active=True, allowed_note_ids=allowed, matched_note_ids=allowed,
@@ -637,6 +638,7 @@ def test_the_export_summary_route(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(notes_route, "note_store", _FakePresenceStore({"note-123"}))
     monkeypatch.setattr(notes_route, "_resolve_tab_sort_mode", lambda tab_id: "alphabetical")
     monkeypatch.setattr(notes_route, "_resolve_tab_date_filter", lambda tab_id: None)
+    monkeypatch.setattr(notes_route, "_resolve_tab_file_filter", lambda tab_id: None)
     monkeypatch.setattr(notes_route, "default_export_title", lambda **kwargs: calls.append(("title", kwargs)) or "Trip")  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
     monkeypatch.setattr(notes_route, "exported_credential_counts",
                         lambda **kwargs: calls.append(("count", kwargs)) or export_module.CredentialCounts(passwords=2, usernames=1))  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
@@ -648,7 +650,10 @@ def test_the_export_summary_route(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert summary(b"search_query=&tab_id=tab-1&is_untagged_view=false&note_id=note-123") == {"title": "Trip", "password_count": 2, "username_count": 1}
     assert calls == [
-        ("count", {"search": None, "sort_mode": "alphabetical", "date_filter": None, "is_untagged_view": False, "root_note_id": "note-123"}),
+        ("count", {
+            "search": None, "sort_mode": "alphabetical", "date_filter": None, "file_filter": None,
+            "is_untagged_view": False, "root_note_id": "note-123",
+        }),
         ("title", {"search": "", "is_untagged_view": False, "root_note_id": "note-123"}),
     ]
     with pytest.raises(notes_route.HTTPException) as missing_tab:
@@ -683,7 +688,7 @@ def test_usernames_are_counted_and_hidden_like_passwords(monkeypatch: pytest.Mon
     }
     children = {None: [ROOT_ID], ROOT_ID: [CHILD_ID]}
     monkeypatch.setattr(export_module, "note_store", _FakeNoteStore(notes=notes, children_by_parent=children))
-    counts = export_module.exported_credential_counts(search=None, sort_mode="normal", date_filter=None, is_untagged_view=False, root_note_id=ROOT_ID)
+    counts = export_module.exported_credential_counts(search=None, sort_mode="normal", date_filter=None, file_filter=None, is_untagged_view=False, root_note_id=ROOT_ID)
     assert counts == export_module.CredentialCounts(passwords=0, usernames=2), "the child, and the note a reference points to"
 
     hidden = _export(monkeypatch, notes, children, purpose="download", title="", include_credentials=False, editing_note_id=None)
@@ -768,7 +773,7 @@ def test_a_single_exported_note_starts_as_metalist_shows_it(monkeypatch: pytest.
     monkeypatch.setattr(export_module, "note_store", store)
     monkeypatch.setattr(snapshot_module, "note_store", store)
     html = build_notes_export_document(
-        purpose="download", title="", sort_mode="normal", date_filter=None, is_untagged_view=False, search=None, theme="light",
+        purpose="download", title="", sort_mode="normal", date_filter=None, file_filter=None, is_untagged_view=False, search=None, theme="light",
         token="token", root_note_id=_A, include_credentials=False, editing_note_id=None,
     )
     assert _opening(html, _A).startswith('<article class="note collapsed"')
@@ -887,7 +892,7 @@ def test_exported_code_lines_stay_as_written_at_every_depth(
         purpose=purpose,
         title="",
         include_credentials=False,
-        sort_mode="normal", date_filter=None,
+        sort_mode="normal", date_filter=None, file_filter=None,
         is_untagged_view=False,
         search="",
         theme="light",

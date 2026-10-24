@@ -81,7 +81,7 @@ def _install(monkeypatch: pytest.MonkeyPatch, notes: Dict[str, _Note], referrers
 
 def _find(text: str, *, from_root_index: int, direction: str, search: str) -> snapshot.FindWindow:
     return find_in_view(
-        find_text=text, search=search, sort_mode="normal", date_filter=None, is_untagged_view=False,
+        find_text=text, search=search, sort_mode="normal", date_filter=None, file_filter=None, is_untagged_view=False,
         from_root_index=from_root_index, direction=direction,
     )
 
@@ -204,7 +204,7 @@ def test_the_note_find_opened_shows_open_for_the_view_only(monkeypatch) -> None:
 
     def view(find_reveal_note_id):
         return build_view_state(
-            editing_note_id=None, find_reveal_note_id=find_reveal_note_id, search=None, sort_mode="normal", date_filter=None,
+            editing_note_id=None, find_reveal_note_id=find_reveal_note_id, search=None, sort_mode="normal", date_filter=None, file_filter=None,
             client_known_note_ids=set(), previous_root_ids=[], visible_top_root_id=None,
             visible_bottom_root_id=None, is_untagged_view=False, start_at_list_end=False,
         )

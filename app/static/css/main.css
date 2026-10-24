@@ -5086,7 +5086,7 @@ html[data-theme="dark"] .note.collapsed:not(.editing) .note-content img.note-fil
     position: relative;
 }
 
-.note-reference-embed-first-line .note-reference-link {
+.note-reference-embed-first-line > .note-reference-content > .note-reference-link {
     /* The padding keeps the text clear of the icon: inside the width, not past it. */
     box-sizing: border-box;
     width: 100%;
@@ -5096,19 +5096,20 @@ html[data-theme="dark"] .note.collapsed:not(.editing) .note-content img.note-fil
     pointer-events: none;
 }
 
-.note-reference-embed-first-line .note-reference-link-title {
+.note-reference-embed-first-line > .note-reference-content > .note-reference-link > .note-reference-link-title {
     text-decoration: none;
 }
 
 /* The source's first line comes in its own blocks (a paragraph, a heading): each
-   stays on one line and ends with … where it would run under the icon. */
-.note-reference-embed-first-line .note-reference-link-title :not(img) {
+   stays on one line and ends with … where it would run under the icon. These
+   rules reach only the embed's own line, not a link written on it. */
+.note-reference-embed-first-line > .note-reference-content > .note-reference-link > .note-reference-link-title :not(img) {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.note-reference-embed-first-line .note-reference-link-icon {
+.note-reference-embed-first-line > .note-reference-content > .note-reference-link > .note-reference-link-icon {
     position: absolute;
     top: 0;
     right: 0;
@@ -5119,11 +5120,11 @@ html[data-theme="dark"] .note.collapsed:not(.editing) .note-content img.note-fil
     cursor: pointer;
 }
 
-.note-reference-embed-first-line .note-reference-link-icon:hover {
+.note-reference-embed-first-line > .note-reference-content > .note-reference-link > .note-reference-link-icon:hover {
     color: #2563eb;
 }
 
-html[data-theme="dark"] .note-reference-embed-first-line .note-reference-link-icon {
+html[data-theme="dark"] .note-reference-embed-first-line > .note-reference-content > .note-reference-link > .note-reference-link-icon {
     color: #a9bbd3;
 }
 

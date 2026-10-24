@@ -14,7 +14,7 @@ Sources: docs/ui/references.md
 
 ## Status
 - One syntax for note references: `[[UUID]]`. How it shows depends on where it is:
-  - **Embed**: a note whose only content is the reference shows the source in place (its whole note is the embed).
+  - **Embed**: a note whose only content is the reference shows the source in place (its whole note is the embed). Characters with no width (a zero-width space, a byte-order mark) are not content.
   - **Link**: with any other content in the note, even an extra line, the reference is a link.
   - An older `![[UUID]]` to a note reads the same as `[[UUID]]`; the `!` changes nothing. MetaList writes `[[UUID]]` (⌘R, ⇧⌘R, Paste Reference Into Note).
 - File references keep two forms: `![[UUID]]` shows the picture or diagram, `[[UUID]]` a file card.
@@ -27,7 +27,7 @@ Sources: docs/ui/references.md
 - **View mode**:
   - Note targets:
     - **Embeds.** The note holding the reference shows the source in place, tinted grey (light `#e4e7eb`; dark `#202224`), drawn exactly as the main tree draws notes: the same boxes, indent, spacing and ▾/▸ arrows. An embed inside an embed (a note in the source that is itself only a reference) is a shade deeper (`#d5dade`, then `#c6ccd2`; dark `#2a2d30`, `#35393d`).
-    - The holder folds as its source: its ▾/▸ collapses or expands the source everywhere (the original in the tree and every other embed of it), and its own children with it. When the source is folded anywhere, the holder shows folded. Undo reverts both. A folded embed shows the source's first line as a collapsed note shows it, in the source's own formatting (a heading, a colour), still tinted and cut with … before its icon; a hidden password, footnote markers and a picture or diagram keep their compact preview.
+    - The holder folds as its source: its ▾/▸ collapses or expands the source everywhere (the original in the tree and every other embed of it), and its own children with it. When the source is folded anywhere, the holder shows folded. Undo reverts both. A folded embed shows the source's first line as a collapsed note shows it, in the source's own formatting (a heading, a colour), still tinted and cut with … before its icon; a source that is only a reference is followed to the note it shows, and a link on that line shows as it does in the source; a hidden password, footnote markers and a picture or diagram keep their compact preview.
     - Each note inside an embed shows the collapse saved for it, with its own ▾/▸ where it can collapse; pressing it folds that note everywhere. A note being edited is saved and left first. Full screen and floating windows show no embed arrows.
     - The holder's own children (indented under it in the tree) show after the source's children, as notes of the level around the holder (white in the main tree). They belong to the holder, not the source: the source knows nothing of them, and they cannot be moved in among the source's children.
     - An embed's reference icon, a page with an arrow coming into it (tooltip: `Go to source note`), sits at its top right and opens the source note in a temporary reference-source context.

@@ -148,3 +148,26 @@ def test_outside_referrers_count_each_referring_note_once(hydrated_store):
     assert hydrated_store.get_outside_referrer_ids(TARGET) == frozenset({REFERRER, CHILD})
     # REFERRER's subtree holds both referring notes and nothing refers to it.
     assert hydrated_store.get_outside_referrer_ids(REFERRER) == frozenset()
+
+
+def test_the_notes_referencing_any_of_some_ids_come_from_the_index(hydrated_store, monkeypatch):
+    # The Files filter asks this for the files of a kind (file_kinds.py); a file is
+    # an id the index keeps edges to like a note's.
+    def unexpected_parse(*args):
+        pytest.fail("Referrers come from the hydrated index")
+
+    monkeypatch.setattr(backlink_index_module, "collect_active_reference_tokens", unexpected_parse)
+    assert hydrated_store.note_ids_referencing({TARGET}) == {REFERRER, CHILD}
+    assert hydrated_store.note_ids_referencing({"99999999-9999-4999-8999-999999999999"}) == set()
+    assert hydrated_store.note_ids_referencing(set()) == set()
+
+
+def test_the_notes_showing_a_picture_inline_follow_their_text(hydrated_store):
+    assert hydrated_store.note_ids_with_inline_images() == set()
+    picture = '<div>dot <img src="data:image/png;base64,AAAA" alt=""></div>'
+    hydrated_store.update_note_content(note_id=CHILD, plaintext=picture, tags="", proposed_tags="", updated_at=None)
+    assert hydrated_store.note_ids_with_inline_images() == {CHILD}
+    hydrated_store.update_note_content(
+        note_id=CHILD, plaintext="<div>no picture now</div>", tags="", proposed_tags="", updated_at=None,
+    )
+    assert hydrated_store.note_ids_with_inline_images() == set()

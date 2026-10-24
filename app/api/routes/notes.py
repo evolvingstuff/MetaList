@@ -14,6 +14,7 @@ from app.api.note_requests import (
     FindInListRequest,
     UpdateTabStateRequest,
     UpdateTabDateFilterRequest,
+    UpdateTabFileFilterRequest,
     UpdateTabSortModeRequest,
     CreateNewTabRequest,
     DeleteTabRequest,
@@ -64,6 +65,7 @@ from app.api.note_requests import (
 )
 from app.api.transactions import serialized_read_route, transactional_route
 from app.services.sync import touch_client
+from app.services.file_kinds import FILE_FILTER_NONE
 from app.services.root_date_filter import DATE_RANGE_NONE
 from app.services.tag_properties import PROPERTY_SUGGESTIONS_IN_SEARCH
 from app.services.tag_properties import PROPERTY_SUGGESTIONS_IN_TAG_BAR
@@ -271,6 +273,13 @@ def _resolve_tab_sort_mode(tab_id: object) -> str:
     return sort_mode
 
 
+def _resolve_tab_file_filter(tab_id: str) -> str | None:
+    """The tab's Files filter kind (None: every note)."""
+    if not isinstance(tab_id, str) or tab_id == "":
+        raise TypeError("tabId must be a non-empty string")
+    return tab_state_store.get_file_filter(tab_id=tab_id)
+
+
 def _resolve_tab_date_filter(tab_id: str) -> RootDateFilter | None:
     """The tab's date range filter (None: every date), as its sort order is resolved."""
     if not isinstance(tab_id, str) or tab_id == "":
@@ -384,6 +393,7 @@ def view_diff(payload: ViewDiffRequest):
         search=normalized_search,
         sort_mode=sort_mode,
         date_filter=_resolve_tab_date_filter(tab_id),
+        file_filter=_resolve_tab_file_filter(tab_id),
         client_known_note_ids=client_known_note_ids,
         previous_root_ids=previous_root_ids,
         visible_top_root_id=visible_top_root_id,
@@ -503,6 +513,19 @@ def update_tab_date_filter(payload: UpdateTabDateFilterRequest) -> Dict[str, obj
             from_date=payload["fromDate"], to_date=payload["toDate"],
         )
     response = tab_state_store.set_date_filter(tab_id=payload["tabId"], date_filter=date_filter)
+    if response["changed"] is True:
+        reset_undo_stack(payload["clientId"], payload["undoContext"])
+    return response
+
+
+@router.post("/notes/tab-state/file-filter")
+@transactional_route
+def update_tab_file_filter(payload: UpdateTabFileFilterRequest) -> Dict[str, object]:
+    """Set or clear a tab's Files filter (file_kinds.py)."""
+    file_filter: str | None = None
+    if payload["kind"] != FILE_FILTER_NONE:
+        file_filter = payload["kind"]
+    response = tab_state_store.set_file_filter(tab_id=payload["tabId"], file_filter=file_filter)
     if response["changed"] is True:
         reset_undo_stack(payload["clientId"], payload["undoContext"])
     return response
@@ -732,6 +755,7 @@ def find_in_list(payload: FindInListRequest) -> Dict[str, object]:
     window = find_in_view(
         find_text=payload["text"], search=search, sort_mode=_resolve_tab_sort_mode(payload["tabId"]),
         date_filter=_resolve_tab_date_filter(payload["tabId"]),
+        file_filter=_resolve_tab_file_filter(payload["tabId"]),
         is_untagged_view=payload["isUntaggedView"], from_root_index=payload["fromRootIndex"],
         direction=payload["direction"],
     )
@@ -876,6 +900,7 @@ def export_summary(request: Request) -> Dict[str, object]:
     counts = exported_credential_counts(
         search=normalized_search, sort_mode=_resolve_tab_sort_mode(tab_id),
         date_filter=_resolve_tab_date_filter(tab_id),
+        file_filter=_resolve_tab_file_filter(tab_id),
         is_untagged_view=is_untagged_view == "true", root_note_id=note_id,
     )
     return {
@@ -936,6 +961,7 @@ def export_notes_html(request: Request) -> Response:
         search=normalized_search,
         sort_mode=_resolve_tab_sort_mode(tab_id),
         date_filter=_resolve_tab_date_filter(tab_id),
+        file_filter=_resolve_tab_file_filter(tab_id),
         is_untagged_view=is_untagged_view == "true",
         theme=normalized_theme,
         token=token,
@@ -1199,6 +1225,7 @@ def _robot_scope_note_ids(body: dict) -> frozenset[str]:
         search=body["search"],
         sort_mode=_resolve_tab_sort_mode(body["tabId"]),
         date_filter=_resolve_tab_date_filter(body["tabId"]),
+        file_filter=_resolve_tab_file_filter(body["tabId"]),
         is_untagged_view=body["isUntaggedView"],
     ).allowed_note_ids
 

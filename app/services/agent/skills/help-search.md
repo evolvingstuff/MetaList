@@ -137,6 +137,9 @@ Ontology rules also add **inferred tags** before search matching:
 - The dismissible `Untagged notes` pill returns to the underlying tab view and restores its query in the search box. Clicking any tab or changing the search input also dismisses the temporary view.
 - Changing the search input additionally resets the active tab's sort mode to Normal before executing the search.
 
+### Notes With Files
+- **Notes with files** in the right-click menus and the palette (`Notes with files: Images`, …) keeps a search to the matches whose own text links to or embeds an attached file, or a file of one kind (images, PDFs, Markdown files; Images also counts a picture pasted into the note), with the notes above them. Without a search it alone picks the notes. It is not a search term: a chip in the search box shows it, and a new search keeps it (`docs/ui/command-palette.md`, Notes With Files).
+
 ### Search Suggestions
 - Search-bar tag suggestions are segment-aware for connector-separated tags.
 - A suggestion must leave at least one matching note in the active `OR` clause, satisfying every completed tag, text term, and exclusion. For example, after `prediction-future`, typing `security` only suggests `computer-security` if that combination actually matches a note. Partial tag overlap alone is insufficient. Matching uses the same effective tags as search, including inheritance, references, and ontology inference. This filtering happens before personalization and the visible limit; note-tag recommendations can still propose new combinations.

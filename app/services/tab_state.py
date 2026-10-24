@@ -17,6 +17,7 @@ from app.security.encryption import (
 )
 from app.services.root_sorting import SORT_MODE_NORMAL, SORT_MODES, normalize_sort_mode
 from app.services.input_errors import InputRejected
+from app.services.file_kinds import make_file_filter
 from app.services.root_date_filter import RootDateFilter, root_date_filter_from_payload, root_date_filter_payload
 
 
@@ -137,6 +138,13 @@ def _normalize_date_filters(
     return normalized
 
 
+def _normalize_file_filters(filters: object, tabs: Dict[str, Dict[str, object]]) -> Dict[str, str]:
+    """Files filters by tab (file_kinds.py); a tab that is gone has none."""
+    if not isinstance(filters, dict):
+        raise InputRejected("fileFilters must be an object")
+    return {tab_id: make_file_filter(kind) for tab_id, kind in filters.items() if tab_id in tabs}
+
+
 def _is_uuid_string(value: str) -> bool:
     if not isinstance(value, str):
         return False
@@ -158,6 +166,7 @@ class TabStateStore:
         self._tabs: Dict[str, Dict[str, object]] = {}
         self._reference_views: Dict[str, Dict[str, object]] = {}
         self._date_filters: Dict[str, Dict[str, str]] = {}
+        self._file_filters: Dict[str, str] = {}
         self._install_default_state_locked(version=0)
 
     def bootstrap(self, *, connection) -> None:
@@ -275,6 +284,8 @@ class TabStateStore:
             )
             if tab_id in self._date_filters:
                 del self._date_filters[tab_id]
+            if tab_id in self._file_filters:
+                del self._file_filters[tab_id]
             self._version += 1
             self._persist_locked(connection=None, encryption_service=None, force_plaintext=False)
             return self._snapshot_locked()
@@ -339,6 +350,47 @@ class TabStateStore:
                 return None
             return root_date_filter_from_payload(self._date_filters[tab_id])
 
+    def get_file_filter(self, *, tab_id: str) -> str | None:
+        """The tab's Files filter kind, or None when it shows every note."""
+        with self._lock:
+            self._try_decrypt_locked(token="", require_success=True)
+            if tab_id not in self._tabs:
+                raise InputRejected("tab_id must reference an existing tab")
+            if tab_id not in self._file_filters:  # shockharness: ignore[DEF002] reason="a tab without a Files filter shows every note: None is that, as get_date_filter's None is every date"
+                return None
+            return self._file_filters[tab_id]
+
+    def set_file_filter(self, *, tab_id: str, file_filter: str | None) -> Dict[str, object]:
+        """Set (or, with None, remove) a tab's Files filter. Like a date range it changes
+        what the view shows, so the tab's scroll starts again at the top."""
+        if not isinstance(tab_id, str) or not tab_id:
+            raise InputRejected("tabId must be a non-empty string")
+        with self._lock:
+            self._try_decrypt_locked(token="", require_success=True)
+            if tab_id not in self._tabs:
+                raise InputRejected("tabId must reference an existing tab")
+            current = None
+            if tab_id in self._file_filters:
+                current = self._file_filters[tab_id]
+            changed = current != file_filter
+            if changed:
+                if file_filter is None:
+                    del self._file_filters[tab_id]
+                else:
+                    self._file_filters[tab_id] = make_file_filter(file_filter)
+                self._restart_tab_scroll_locked(tab_id)
+            snapshot = self._snapshot_locked()
+            snapshot["changed"] = changed
+            return snapshot
+
+    def _restart_tab_scroll_locked(self, tab_id: str) -> None:
+        entry = self._tabs[tab_id]
+        entry["scrollY"] = 0
+        entry["scrollAnchor"] = None
+        entry["anchorRootId"] = None
+        self._version += 1
+        self._persist_locked(connection=None, encryption_service=None, force_plaintext=False)
+
     def set_date_filter(self, *, tab_id: str, date_filter: RootDateFilter | None) -> Dict[str, object]:
         """Set (or, with None, remove) a tab's date range filter. Like a sort order it
         changes what the view shows, so the tab's scroll starts again at the top."""
@@ -361,12 +413,7 @@ class TabStateStore:
                 if changed:
                     self._date_filters[tab_id] = next_payload
             if changed:
-                entry = self._tabs[tab_id]
-                entry["scrollY"] = 0
-                entry["scrollAnchor"] = None
-                entry["anchorRootId"] = None
-                self._version += 1
-                self._persist_locked(connection=None, encryption_service=None, force_plaintext=False)
+                self._restart_tab_scroll_locked(tab_id)
             snapshot = self._snapshot_locked()
             snapshot["changed"] = changed
             return snapshot
@@ -450,6 +497,7 @@ class TabStateStore:
         self._tab_order = [default_tab_id]
         self._reference_views = {}
         self._date_filters = {}
+        self._file_filters = {}
         self._version = version
 
     def _snapshot_locked(self) -> Dict[str, object]:
@@ -459,6 +507,7 @@ class TabStateStore:
             "tabOrder": list(self._tab_order),
             "referenceViews": deepcopy(self._reference_views),
             "dateFilters": deepcopy(self._date_filters),
+            "fileFilters": dict(self._file_filters),
             "version": self._version,
         }
 
@@ -484,20 +533,24 @@ class TabStateStore:
             raise RuntimeError("tab-state JSON version must be a non-negative integer")
         if not isinstance(tab_order, list):
             raise RuntimeError("tab-state JSON tabOrder must be a list")
-        # Tab state saved before reference views (or date filters) were kept with the
-        # tabs has none.
+        # Tab state saved before reference views (or date or Files filters) were kept
+        # with the tabs has none.
         reference_views: object = {}
         if "referenceViews" in parsed:
             reference_views = parsed["referenceViews"]
         date_filters: object = {}
         if "dateFilters" in parsed:
             date_filters = parsed["dateFilters"]
+        file_filters: object = {}
+        if "fileFilters" in parsed:
+            file_filters = parsed["fileFilters"]
         return {
             "activeTabId": active_tab_id,
             "tabs": self._normalize_tabs(tabs, from_storage=True),
             "tabOrder": [str(entry) for entry in tab_order],
             "referenceViews": reference_views,
             "dateFilters": date_filters,
+            "fileFilters": file_filters,
             "version": version,
         }
 
@@ -528,6 +581,7 @@ class TabStateStore:
         self._date_filters = _normalize_date_filters(
             snapshot["dateFilters"], normalized_tabs,
         )
+        self._file_filters = _normalize_file_filters(snapshot["fileFilters"], normalized_tabs)
         self._active_tab_id = active_tab_id
         self._version = version
 

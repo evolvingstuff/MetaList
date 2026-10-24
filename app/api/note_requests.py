@@ -137,6 +137,14 @@ class UpdateTabDateFilterRequest(TypedDict):
     undoContext: UndoContext
 
 @with_config(ConfigDict(strict=True))
+class UpdateTabFileFilterRequest(TypedDict):
+    tabId: Identifier
+    # "none" shows every note again; "any" every note with an attached file.
+    kind: Literal["none", "any", "image", "pdf", "markdown"]
+    clientId: Identifier
+    undoContext: UndoContext
+
+@with_config(ConfigDict(strict=True))
 class CreateNewTabRequest(TypedDict):
     copyFromTabId: Identifier
     clientId: Identifier

@@ -19,6 +19,7 @@ from app.services.embedded_references import is_content_collapsible
 from app.services.embedded_references import resolve_held_source
 from app.services.embedded_references import render_collapsed_note_content_with_embeds
 from app.services.embedded_references import render_note_content_with_embeds
+from app.services.file_kinds import FILE_KIND_IMAGE
 from app.services.file_registry import file_registry
 from app.services.file_storage import get_file_reference_record
 from app.services.find_text import count_occurrences, read_comment_text, read_visible_text
@@ -236,6 +237,15 @@ def _resolve_clause_note_sets(
     return allowed_note_ids, positively_matched_note_ids
 
 
+_NO_SEARCH_SCOPE = SearchScope(
+    search_active=False,
+    allowed_note_ids=None,
+    matched_note_ids=None,
+    search_root_ids_ordered=None,
+    search_root_count_total=0,
+)
+
+
 def resolve_search_scope(
     *,
     search: Optional[str],
@@ -335,11 +345,53 @@ def _note_ids_under_roots(root_ids: List[str]) -> Set[str]:
     return note_ids
 
 
+def _root_id_in_store(note_id: str) -> str:
+    current = note_store.get_note(note_id)
+    while current.parent_id is not None:
+        current = note_store.get_note(current.parent_id)
+    return current.id
+
+
+def _narrow_to_file_filter(
+    search_scope: SearchScope, *, file_filter: str | None, ordered_root_ids: List[str], editing_note_id: str | None,
+) -> SearchScope:
+    """The scope kept to the notes whose own text references a file of the Files
+    filter's kind (file_kinds.py), or for Images shows a picture inline, with the
+    notes above them. Without a search the
+    filter alone picks the notes, under the roots the view lists. The note being
+    edited stays while it is edited, also once its file is taken out."""
+    if file_filter is None:
+        return search_scope
+    file_note_ids = note_store.note_ids_referencing(file_registry.file_ids_of_kind(file_filter))
+    if file_filter == FILE_KIND_IMAGE:
+        # A picture pasted into a note is an image too, though not an attached file.
+        file_note_ids |= note_store.note_ids_with_inline_images()
+    if editing_note_id is not None and note_store.has_note(editing_note_id):
+        file_note_ids.add(editing_note_id)
+    if search_scope.search_active:
+        assert search_scope.matched_note_ids is not None
+        matched_note_ids = search_scope.matched_note_ids & file_note_ids
+    else:
+        listed_root_ids = set(ordered_root_ids)
+        matched_note_ids = {note_id for note_id in file_note_ids if _root_id_in_store(note_id) in listed_root_ids}
+    allowed_note_ids = set(matched_note_ids)
+    _include_ancestors(allowed_note_ids, starting_ids=set(matched_note_ids))
+    root_ids_ordered = [root_id for root_id in ordered_root_ids if root_id in allowed_note_ids]
+    return SearchScope(
+        search_active=True,
+        allowed_note_ids=allowed_note_ids,
+        matched_note_ids=matched_note_ids,
+        search_root_ids_ordered=root_ids_ordered,
+        search_root_count_total=len(root_ids_ordered),
+    )
+
+
 def resolve_view_scope_membership(
     *,
     search: str,
     sort_mode: str,
     date_filter: RootDateFilter | None,
+    file_filter: str | None,
     is_untagged_view: bool,
 ) -> ResolvedViewScope:
     """Resolve evidence membership using the same rules as ``/notes/view``.
@@ -366,6 +418,9 @@ def resolve_view_scope_membership(
             date_filter=date_filter,
             ordered_root_ids=ordered_root_ids,
         )
+    search_scope = _narrow_to_file_filter(
+        search_scope, file_filter=file_filter, ordered_root_ids=ordered_root_ids, editing_note_id=None,
+    )
 
     filter_active = search_scope.search_active
     if search_scope.search_active:
@@ -638,7 +693,7 @@ def _roots_in_date_range(
 
 def _select_view(
     *, editing_note_id: str | None, find_reveal_note_id: str | None, search: str | None, sort_mode: str,
-    date_filter: RootDateFilter | None, client_known_note_ids: Set[str], previous_root_ids: List[str], visible_top_root_id: str | None,
+    date_filter: RootDateFilter | None, file_filter: str | None, client_known_note_ids: Set[str], previous_root_ids: List[str], visible_top_root_id: str | None,
     visible_bottom_root_id: str | None, is_untagged_view: bool, start_at_list_end: bool,
     traversal_cache: _SnapshotTraversalCache,
 ) -> _ViewSelection:
@@ -668,7 +723,21 @@ def _select_view(
             date_filter=date_filter,
             ordered_root_ids=ordered_root_ids,
         )
-
+    if file_filter is not None:
+        # The Files filter, like a date range, sets the roots the view lists without
+        # a search: the browser pages through that many.
+        files_only_scope = _narrow_to_file_filter(
+            _NO_SEARCH_SCOPE, file_filter=file_filter, ordered_root_ids=ordered_root_ids,
+            editing_note_id=editing_note_id,
+        )
+        root_count_total = files_only_scope.search_root_count_total
+        if search_scope.search_active:
+            search_scope = _narrow_to_file_filter(
+                search_scope, file_filter=file_filter, ordered_root_ids=ordered_root_ids,
+                editing_note_id=editing_note_id,
+            )
+        else:
+            search_scope = files_only_scope
 
     forced_open_ids: Set[str] = set()
     if editing_note_id is not None and note_store.has_note(editing_note_id):
@@ -1021,6 +1090,7 @@ def build_view_state(
     search: Optional[str],
     sort_mode: str,
     date_filter: RootDateFilter | None,
+    file_filter: str | None,
     client_known_note_ids: Set[str],
     previous_root_ids: List[str],
     visible_top_root_id: Optional[str],
@@ -1041,7 +1111,8 @@ def build_view_state(
 
     selection = _select_view(
         editing_note_id=editing_note_id, find_reveal_note_id=find_reveal_note_id, search=search, sort_mode=sort_mode,
-        date_filter=date_filter, client_known_note_ids=client_known_note_ids, previous_root_ids=previous_root_ids,
+        date_filter=date_filter, file_filter=file_filter, client_known_note_ids=client_known_note_ids,
+        previous_root_ids=previous_root_ids,
         visible_top_root_id=visible_top_root_id,
         visible_bottom_root_id=visible_bottom_root_id, is_untagged_view=is_untagged_view,
         start_at_list_end=start_at_list_end, traversal_cache=traversal_cache,
@@ -1296,8 +1367,8 @@ def _find_in_root(
 
 
 def find_in_view(
-    *, find_text: str, search: str, sort_mode: str, date_filter: RootDateFilter | None, is_untagged_view: bool,
-    from_root_index: int, direction: str,
+    *, find_text: str, search: str, sort_mode: str, date_filter: RootDateFilter | None, file_filter: str | None,
+    is_untagged_view: bool, from_root_index: int, direction: str,
 ) -> FindWindow:
     """One step of find through the list a view shows: forward, the roots from
     from_root_index on; backward, the roots before it, until FIND_WINDOW_MATCHED_NOTES
@@ -1307,7 +1378,8 @@ def find_in_view(
     if direction not in FIND_DIRECTIONS:
         raise ValueError(f"direction must be one of {FIND_DIRECTIONS}, got {direction!r}")
     scope = resolve_view_scope_membership(
-        search=search, sort_mode=sort_mode, date_filter=date_filter, is_untagged_view=is_untagged_view,
+        search=search, sort_mode=sort_mode, date_filter=date_filter, file_filter=file_filter,
+        is_untagged_view=is_untagged_view,
     )
     roots = scope.ordered_root_ids
     if not isinstance(from_root_index, int) or from_root_index < 0:

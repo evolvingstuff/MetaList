@@ -218,6 +218,7 @@ def test_the_routes_say_whether_the_ai_can_ask_and_stream_its_title(live_databas
     monkeypatch.setattr(ai_routes, "load_client_preferences", lambda *, token: _policy("private"))
     monkeypatch.setattr(ai_routes.tab_state_store, "get_sort_mode", lambda *, tab_id: "normal")
     monkeypatch.setattr(ai_routes.tab_state_store, "get_date_filter", lambda *, tab_id: None)
+    monkeypatch.setattr(ai_routes.tab_state_store, "get_file_filter", lambda *, tab_id: None)
 
     _set_ai_ready(monkeypatch, is_ready=False)
     assert _availability("note", "trip") == "unavailable"
@@ -253,6 +254,7 @@ def test_a_title_after_a_chat_in_the_session_is_traced_as_its_own_run(live_datab
     monkeypatch.setattr(ai_routes, "load_client_preferences", lambda *, token: _policy("private"))
     monkeypatch.setattr(ai_routes.tab_state_store, "get_sort_mode", lambda *, tab_id: "normal")
     monkeypatch.setattr(ai_routes.tab_state_store, "get_date_filter", lambda *, tab_id: None)
+    monkeypatch.setattr(ai_routes.tab_state_store, "get_file_filter", lambda *, tab_id: None)
     _set_ai_ready(monkeypatch, is_ready=True)
     monkeypatch.setattr(openai_inference_module, "OpenAIInferenceAdapter", lambda **kwargs: _Answers("Kyoto in Spring"))
     agent_trace_store.clear_session(session_key="session")

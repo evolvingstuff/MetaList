@@ -71,7 +71,7 @@ def test_untagged_view_shows_notes_without_non_meta_effective_tags(
     state = build_view_state(
         editing_note_id=None, find_reveal_note_id=None,
         search="journal",
-        sort_mode="normal", date_filter=None,
+        sort_mode="normal", date_filter=None, file_filter=None,
         client_known_note_ids=set(), previous_root_ids=[],
         visible_top_root_id=None,
         visible_bottom_root_id=None,
@@ -130,7 +130,7 @@ def test_search_redacts_descendants_of_matching_root(monkeypatch: pytest.MonkeyP
     state = build_view_state(
         editing_note_id=None, find_reveal_note_id=None,
         search="asdf",
-        sort_mode="normal", date_filter=None,
+        sort_mode="normal", date_filter=None, file_filter=None,
         client_known_note_ids=set(), previous_root_ids=[],
         visible_top_root_id=None,
         visible_bottom_root_id=None,
@@ -185,7 +185,7 @@ def test_search_snapshot_does_not_include_children_of_collapsed_root(monkeypatch
     state = build_view_state(
         editing_note_id=None, find_reveal_note_id=None,
         search="asdf",
-        sort_mode="normal", date_filter=None,
+        sort_mode="normal", date_filter=None, file_filter=None,
         client_known_note_ids=set(), previous_root_ids=[],
         visible_top_root_id=None,
         visible_bottom_root_id=None,
@@ -243,7 +243,7 @@ def test_search_redacts_descendants_of_matching_non_root(monkeypatch: pytest.Mon
     state = build_view_state(
         editing_note_id=None, find_reveal_note_id=None,
         search="asdf",
-        sort_mode="normal", date_filter=None,
+        sort_mode="normal", date_filter=None, file_filter=None,
         client_known_note_ids=set(), previous_root_ids=[],
         visible_top_root_id=None,
         visible_bottom_root_id=None,
@@ -330,7 +330,7 @@ def test_or_query_for_two_child_uuids_redacts_unrelated_same_root_sibling(
     state = build_view_state(
         editing_note_id=None, find_reveal_note_id=None,
         search=f"{first_match_id} OR {second_match_id}",
-        sort_mode="normal", date_filter=None,
+        sort_mode="normal", date_filter=None, file_filter=None,
         client_known_note_ids=set(), previous_root_ids=[],
         visible_top_root_id=None,
         visible_bottom_root_id=None,
@@ -387,7 +387,7 @@ def test_search_does_not_force_include_nonmatching_editing_root(monkeypatch: pyt
     state = build_view_state(
         editing_note_id="r2", find_reveal_note_id=None,
         search="scratchpad",
-        sort_mode="normal", date_filter=None,
+        sort_mode="normal", date_filter=None, file_filter=None,
         client_known_note_ids=set(), previous_root_ids=[],
         visible_top_root_id=None,
         visible_bottom_root_id=None,

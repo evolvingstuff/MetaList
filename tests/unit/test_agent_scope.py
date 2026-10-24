@@ -209,8 +209,8 @@ def test_selected_note_is_frozen_and_privacy_filtered(selected_id, expected) -> 
         matched_note_ids=ids, ordered_root_ids=("root",), total_root_count=1)
     snapshot = _factory(notes, lambda **kwargs: resolved).freeze(
         authoritative_active_search_query="useful-tag",
-        authoritative_active_sort_mode="normal", authoritative_active_date_filter=None,
-        descriptor=_descriptor(), authoritative_search_query="useful-tag", authoritative_sort_mode="normal", authoritative_date_filter=None,
+        authoritative_active_sort_mode="normal", authoritative_active_date_filter=None, authoritative_active_file_filter=None,
+        descriptor=_descriptor(), authoritative_search_query="useful-tag", authoritative_sort_mode="normal", authoritative_date_filter=None, authoritative_file_filter=None,
         run_id="selected-run", session_key="session-1", privacy_boundary=_local_privacy_boundary(),
         selected_note_id=selected_id,
     )
@@ -240,8 +240,8 @@ def test_selected_note_in_reference_view_does_not_expand_origin_scope() -> None:
             matched_note_ids=ids, ordered_root_ids=("root",), total_root_count=1)
     snapshot = _factory(notes, resolve).freeze(
         descriptor=_descriptor().model_copy(update={"active_tab_id": "reference-tab"}),
-        authoritative_search_query="useful-tag", authoritative_sort_mode="normal", authoritative_date_filter=None,
-        authoritative_active_search_query="gray", authoritative_active_sort_mode="normal", authoritative_active_date_filter=None,
+        authoritative_search_query="useful-tag", authoritative_sort_mode="normal", authoritative_date_filter=None, authoritative_file_filter=None,
+        authoritative_active_search_query="gray", authoritative_active_sort_mode="normal", authoritative_active_date_filter=None, authoritative_active_file_filter=None,
         run_id="selected-run", session_key="session-1", privacy_boundary=_local_privacy_boundary(),
         selected_note_id="gray",
     )
@@ -272,8 +272,8 @@ def test_cached_titles_are_frozen_with_parent_and_never_read_for_excluded_notes(
     resolved = ResolvedViewScope(filter_active=True, allowed_note_ids=ids,
         matched_note_ids=ids, ordered_root_ids=("root",), total_root_count=1)
     snapshot = _factory(notes, lambda **kwargs: resolved).freeze(
-        descriptor=_descriptor(), authoritative_search_query="useful-tag", authoritative_sort_mode="normal", authoritative_date_filter=None,
-        authoritative_active_search_query="useful-tag", authoritative_active_sort_mode="normal", authoritative_active_date_filter=None,
+        descriptor=_descriptor(), authoritative_search_query="useful-tag", authoritative_sort_mode="normal", authoritative_date_filter=None, authoritative_file_filter=None,
+        authoritative_active_search_query="useful-tag", authoritative_active_sort_mode="normal", authoritative_active_date_filter=None, authoritative_active_file_filter=None,
         run_id="selected-run", session_key="session-1", privacy_boundary=boundary, selected_note_id="match")
     assert lookups
     payload = snapshot.selected_note.as_payload()
@@ -294,8 +294,8 @@ def test_selected_note_respects_cloud_blacklist() -> None:
         blacklist_tags=("useful-tag",), blacklist_phrases=())
     snapshot = _factory(notes, lambda **kwargs: resolved).freeze(
         authoritative_active_search_query="useful-tag",
-        authoritative_active_sort_mode="normal", authoritative_active_date_filter=None,
-        descriptor=_descriptor(), authoritative_search_query="useful-tag", authoritative_sort_mode="normal", authoritative_date_filter=None,
+        authoritative_active_sort_mode="normal", authoritative_active_date_filter=None, authoritative_active_file_filter=None,
+        descriptor=_descriptor(), authoritative_search_query="useful-tag", authoritative_sort_mode="normal", authoritative_date_filter=None, authoritative_file_filter=None,
         run_id="selected-run", session_key="session-1", privacy_boundary=_cloud_privacy_boundary(policy),
         selected_note_id="match",
     )
@@ -317,8 +317,8 @@ def test_selected_block_reason_includes_ancestors_without_exposing_rule(tags, ph
     boundary = _cloud_privacy_boundary(CloudPrivacyPolicy(whitelist_tags=whitelist, whitelist_phrases=(),
         blacklist_tags=tags, blacklist_phrases=phrases))
     snapshot = _factory(notes, lambda **kwargs: resolved).freeze(
-        descriptor=_descriptor(), authoritative_search_query="useful-tag", authoritative_sort_mode="normal", authoritative_date_filter=None,
-        authoritative_active_search_query="useful-tag", authoritative_active_sort_mode="normal", authoritative_active_date_filter=None,
+        descriptor=_descriptor(), authoritative_search_query="useful-tag", authoritative_sort_mode="normal", authoritative_date_filter=None, authoritative_file_filter=None,
+        authoritative_active_search_query="useful-tag", authoritative_active_sort_mode="normal", authoritative_active_date_filter=None, authoritative_active_file_filter=None,
         run_id="selected-run", session_key="session-1", privacy_boundary=boundary, selected_note_id="match")
     assert snapshot.selected_note.as_payload() == _unavailable("private")
     assert snapshot.selected_note.unavailable_reason == reason
@@ -343,8 +343,8 @@ def test_selected_tree_never_discloses_redacted_children_even_when_selected(sele
     resolved = ResolvedViewScope(filter_active=True, allowed_note_ids=allowed,
         matched_note_ids=allowed, ordered_root_ids=("root",), total_root_count=1)
     snapshot = _factory(notes, lambda **kwargs: resolved).freeze(
-        descriptor=_descriptor(), authoritative_search_query="useful-tag", authoritative_sort_mode="normal", authoritative_date_filter=None,
-        authoritative_active_search_query="useful-tag", authoritative_active_sort_mode="normal", authoritative_active_date_filter=None,
+        descriptor=_descriptor(), authoritative_search_query="useful-tag", authoritative_sort_mode="normal", authoritative_date_filter=None, authoritative_file_filter=None,
+        authoritative_active_search_query="useful-tag", authoritative_active_sort_mode="normal", authoritative_active_date_filter=None, authoritative_active_file_filter=None,
         run_id="selected-run", session_key="session-1", privacy_boundary=boundary, selected_note_id=selected_id)
     payload = snapshot.selected_note.as_payload()
     if selected_id == "gray":
@@ -379,8 +379,8 @@ def test_selection_respects_real_search_membership(monkeypatch, search, selected
     monkeypatch.setattr(view_snapshot, "search_index", index)
     snapshot = _factory(notes, view_snapshot.resolve_view_scope_membership).freeze(
         descriptor=_descriptor().model_copy(update={"search_query": search, "label": search}),
-        authoritative_search_query=search, authoritative_sort_mode="normal", authoritative_date_filter=None,
-        authoritative_active_search_query=search, authoritative_active_sort_mode="normal", authoritative_active_date_filter=None,
+        authoritative_search_query=search, authoritative_sort_mode="normal", authoritative_date_filter=None, authoritative_file_filter=None,
+        authoritative_active_search_query=search, authoritative_active_sort_mode="normal", authoritative_active_date_filter=None, authoritative_active_file_filter=None,
         run_id="selected-run", session_key="session-1", privacy_boundary=_local_privacy_boundary(), selected_note_id=selected_id)
     if selected_id == "gray":
         assert snapshot.selected_note.as_payload() == _unavailable("search_redacted")
@@ -404,8 +404,8 @@ def test_selected_note_includes_entire_containing_tree_and_highlights_editing_no
     resolved = ResolvedViewScope(filter_active=True, allowed_note_ids=frozenset(notes.records),
         matched_note_ids=ids, ordered_root_ids=("root",), total_root_count=1)
     snapshot = _factory(notes, lambda **kwargs: resolved).freeze(
-        descriptor=_descriptor(), authoritative_search_query="useful-tag", authoritative_sort_mode="normal", authoritative_date_filter=None,
-        authoritative_active_search_query="useful-tag", authoritative_active_sort_mode="normal", authoritative_active_date_filter=None,
+        descriptor=_descriptor(), authoritative_search_query="useful-tag", authoritative_sort_mode="normal", authoritative_date_filter=None, authoritative_file_filter=None,
+        authoritative_active_search_query="useful-tag", authoritative_active_sort_mode="normal", authoritative_active_date_filter=None, authoritative_active_file_filter=None,
         run_id="selected-run", session_key="session-1", privacy_boundary=_local_privacy_boundary(), selected_note_id=selected_id)
     payload = snapshot.selected_note.as_payload()
     assert payload["root_note_id"] == "root" and payload["note_id"] == selected_id
@@ -437,8 +437,8 @@ def test_selected_subtree_omits_password_and_cloud_excluded_branches(cloud_polic
         boundary = _cloud_privacy_boundary(CloudPrivacyPolicy(whitelist_tags=(), whitelist_phrases=(),
             blacklist_tags=("gray-exclusive",), blacklist_phrases=()))
     snapshot = _factory(notes, lambda **kwargs: resolved).freeze(
-        descriptor=_descriptor(), authoritative_search_query="useful-tag", authoritative_sort_mode="normal", authoritative_date_filter=None,
-        authoritative_active_search_query="useful-tag", authoritative_active_sort_mode="normal", authoritative_active_date_filter=None,
+        descriptor=_descriptor(), authoritative_search_query="useful-tag", authoritative_sort_mode="normal", authoritative_date_filter=None, authoritative_file_filter=None,
+        authoritative_active_search_query="useful-tag", authoritative_active_sort_mode="normal", authoritative_active_date_filter=None, authoritative_active_file_filter=None,
         run_id="selected-run", session_key="session-1", privacy_boundary=boundary, selected_note_id="root")
     payload = snapshot.selected_note.as_payload()
     expected = ["root", "match", "gray"]
@@ -478,10 +478,10 @@ def test_frozen_scope_uses_matches_not_render_only_ancestors_or_gray_bars() -> N
     snapshot = factory.freeze(
         selected_note_id="",
         authoritative_active_search_query="useful-tag",
-        authoritative_active_sort_mode="normal", authoritative_active_date_filter=None,
+        authoritative_active_sort_mode="normal", authoritative_active_date_filter=None, authoritative_active_file_filter=None,
         descriptor=_descriptor(),
         authoritative_search_query="useful-tag",
-        authoritative_sort_mode="normal", authoritative_date_filter=None,
+        authoritative_sort_mode="normal", authoritative_date_filter=None, authoritative_file_filter=None,
         run_id="run-1",
         session_key="session-1",
         privacy_boundary=_local_privacy_boundary(),
@@ -520,10 +520,10 @@ def test_frozen_scope_excludes_protected_notes_and_their_tags() -> None:
     snapshot = factory.freeze(
         selected_note_id="",
         authoritative_active_search_query="useful-tag",
-        authoritative_active_sort_mode="normal", authoritative_active_date_filter=None,
+        authoritative_active_sort_mode="normal", authoritative_active_date_filter=None, authoritative_active_file_filter=None,
         descriptor=descriptor,
         authoritative_search_query="",
-        authoritative_sort_mode="normal", authoritative_date_filter=None,
+        authoritative_sort_mode="normal", authoritative_date_filter=None, authoritative_file_filter=None,
         run_id="run-1",
         session_key="session-1",
         privacy_boundary=_local_privacy_boundary(),
@@ -565,10 +565,10 @@ def test_frozen_cloud_scope_filters_notes_before_counts_and_tree_payload() -> No
     snapshot = factory.freeze(
         selected_note_id="",
         authoritative_active_search_query="useful-tag",
-        authoritative_active_sort_mode="normal", authoritative_active_date_filter=None,
+        authoritative_active_sort_mode="normal", authoritative_active_date_filter=None, authoritative_active_file_filter=None,
         descriptor=descriptor,
         authoritative_search_query="",
-        authoritative_sort_mode="normal", authoritative_date_filter=None,
+        authoritative_sort_mode="normal", authoritative_date_filter=None, authoritative_file_filter=None,
         run_id="run-cloud",
         session_key="session-cloud",
         privacy_boundary=_cloud_privacy_boundary(policy),
@@ -592,10 +592,10 @@ def test_frozen_scope_rejects_stale_client_view_state() -> None:
         factory.freeze(
             selected_note_id="",
             authoritative_active_search_query="useful-tag",
-            authoritative_active_sort_mode="normal", authoritative_active_date_filter=None,
+            authoritative_active_sort_mode="normal", authoritative_active_date_filter=None, authoritative_active_file_filter=None,
             descriptor=_descriptor(),
             authoritative_search_query="different-tag",
-            authoritative_sort_mode="normal", authoritative_date_filter=None,
+            authoritative_sort_mode="normal", authoritative_date_filter=None, authoritative_file_filter=None,
             run_id="run-1",
             session_key="session-1",
             privacy_boundary=_local_privacy_boundary(),
@@ -698,8 +698,8 @@ def test_freezing_a_view_extracts_no_note_text_until_a_note_is_read(monkeypatch)
     resolved = ResolvedViewScope(filter_active=True, allowed_note_ids=ids | {"root"},
         matched_note_ids=ids, ordered_root_ids=("root",), total_root_count=1)
     snapshot = _factory(notes, lambda **kwargs: resolved).freeze(
-        authoritative_active_search_query="useful-tag", authoritative_active_sort_mode="normal", authoritative_active_date_filter=None,
-        descriptor=_descriptor(), authoritative_search_query="useful-tag", authoritative_sort_mode="normal", authoritative_date_filter=None,
+        authoritative_active_search_query="useful-tag", authoritative_active_sort_mode="normal", authoritative_active_date_filter=None, authoritative_active_file_filter=None,
+        descriptor=_descriptor(), authoritative_search_query="useful-tag", authoritative_sort_mode="normal", authoritative_date_filter=None, authoritative_file_filter=None,
         run_id="lazy-run", session_key="session-1", privacy_boundary=_local_privacy_boundary(),
         selected_note_id="",
     )
@@ -762,8 +762,8 @@ def test_the_ai_is_not_sent_a_search_term_whose_notes_it_cannot_see() -> None:
             matched_note_ids=matched, ordered_root_ids=("root",), total_root_count=1)
     snapshot = _factory(notes, resolve).freeze(
         descriptor=_descriptor().model_copy(update={"search_query": query, "label": query}),
-        authoritative_search_query=query, authoritative_sort_mode="normal", authoritative_date_filter=None,
-        authoritative_active_search_query=query, authoritative_active_sort_mode="normal", authoritative_active_date_filter=None,
+        authoritative_search_query=query, authoritative_sort_mode="normal", authoritative_date_filter=None, authoritative_file_filter=None,
+        authoritative_active_search_query=query, authoritative_active_sort_mode="normal", authoritative_active_date_filter=None, authoritative_active_file_filter=None,
         run_id="private-search-run", session_key="session-1",
         privacy_boundary=_cloud_privacy_boundary(EMPTY_CLOUD_PRIVACY_POLICY), selected_note_id="",
     )

@@ -1360,12 +1360,21 @@ function buildViewAndOrderHandlers() {
         onOpenCustomDateRange: () => {
             void CommandPalette.openCustomDateRange();
         },
+        onSetFileFilter: (kind) => {
+            void CommandGate.run('contextMenu.view.file_filter', async () => {
+                await CommandPalette.setFileFilter(kind);
+            });
+        },
     };
 }
 
-// The date range as the Date range menu ticks it.
+// The date range and Files filter as their menus tick them.
 function dateRangeMenuContext() {
-    return { dateRangeKind: CommandPalette.getDateRangeKind(), dateRangeField: getDateRangeField() };
+    return {
+        dateRangeKind: CommandPalette.getDateRangeKind(),
+        dateRangeField: getDateRangeField(),
+        fileFilterKind: CommandPalette.getFileFilterKind(),
+    };
 }
 
 // Right-clicking the search box past what is typed (or an empty box): View and Sort by.

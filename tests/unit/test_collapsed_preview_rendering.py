@@ -48,7 +48,7 @@ def _state_for(
     return build_view_state(
         editing_note_id=editing_note_id, find_reveal_note_id=None,
         search=None,
-        sort_mode="normal", date_filter=None,
+        sort_mode="normal", date_filter=None, file_filter=None,
         client_known_note_ids=set(), previous_root_ids=[],
         visible_top_root_id=None,
         visible_bottom_root_id=None,

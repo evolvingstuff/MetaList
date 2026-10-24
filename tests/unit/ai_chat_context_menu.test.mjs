@@ -16,13 +16,13 @@ function chatToggle(isAiChatVisible, toggles) {
     const items = buildContextMenuItems(
         {
             kind: 'view', isMac: true, isEditing: false, canPasteNoteAtTop: false, canGoToTop: false, canGoToBottom: false,
-            isUntaggedView: false, theme: 'system', sortMode: 'normal', dateRangeKind: 'none', dateRangeField: 'updated',
+            isUntaggedView: false, theme: 'system', sortMode: 'normal', dateRangeKind: 'none', dateRangeField: 'updated', fileFilterKind: 'none',
             areTabsVisible: false, isAiChatVisible, areNoteTagsVisible: false,
         },
         {
             onAddNoteAtTop: noop, onUndo: noop, onRedo: noop, onFullyExpandAll: noop, onFullyCollapseAll: noop,
             onSetUntaggedView: noop, onSetSortMode: noop, onToggleTabs: noop, onToggleNoteTags: noop,
-            onSetDateRangeField: noop, onSetDateRangePreset: noop, onOpenCustomDateRange: noop,
+            onSetDateRangeField: noop, onSetDateRangePreset: noop, onOpenCustomDateRange: noop, onSetFileFilter: noop,
             onToggleAiChat: (nextValue) => toggles.push(nextValue),
             onSetTheme: noop, onNewTab: noop, onOpenNamespace: noop, onOpenReminders: noop,
             onExportViewHtml: noop, onPrintView: noop, onLogOut: noop,
