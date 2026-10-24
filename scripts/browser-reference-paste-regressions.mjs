@@ -82,11 +82,13 @@ async function leaveEditing(page) {
 }
 
 // modifier is 'Meta' (⌘) or 'Control'; with Shift, the letter goes in upper case.
-// V also runs the browser's paste, as a real ⌘V does: MetaList decides from
-// what is pasted.
+// V also runs the browser's own command, as a real keystroke does: ⌘V pastes, and
+// ⇧⌘V is Chrome's Paste and Match Style, whose paste carries the clipboard's plain
+// text only. MetaList decides from what is pasted.
 async function shortcut(page, modifier, letter, withShift) {
   let options = {};
   if (letter === 'v') options = {commands: ['paste']};
+  if (letter === 'v' && withShift) options = {commands: ['pasteAndMatchStyle']};
   await page.keyboard.down(modifier);
   if (withShift) {
     await page.keyboard.down('Shift');
