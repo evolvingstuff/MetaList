@@ -43,10 +43,28 @@ export function shouldCreateTopNoteForPaste({
         && !isModalOpen;
 }
 
+// Line endings may change on their way through the system clipboard.
+function sameClipboardText(left, right) {
+    return left.replace(/\r\n?/g, '\n') === right.replace(/\r\n?/g, '\n');
+}
+
+// Whether a paste is the note MetaList copied. A paste with HTML says so with the
+// note marker. ⇧⌘V is the browser's Paste and Match Style, whose paste carries the
+// plain text only: it is the copied note when that text is exactly what the copy
+// put on the clipboard, while MetaList's clipboard holds a note.
+function isCopiedNotePaste({ clipboardMode, clipboardHtml, clipboardPlainText, copiedNotePlainText }) {
+    if (clipboardHtml !== '') return clipboardHtmlContainsNoteContent(clipboardHtml);
+    return clipboardMode === 'note'
+        && copiedNotePlainText !== ''
+        && sameClipboardText(clipboardPlainText, copiedNotePlainText);
+}
+
 export function resolveClipboardTrackingAfterPasteEvent({
     clipboardMode,
     noteClipboardRequiresBrowserValidation,
     clipboardHtml,
+    clipboardPlainText,
+    copiedNotePlainText,
 }) {
     assertClipboardMode(clipboardMode);
     if (typeof noteClipboardRequiresBrowserValidation !== 'boolean') {
@@ -55,8 +73,11 @@ export function resolveClipboardTrackingAfterPasteEvent({
     if (typeof clipboardHtml !== 'string') {
         throw new Error('clipboardHtml must be a string');
     }
+    if (typeof clipboardPlainText !== 'string' || typeof copiedNotePlainText !== 'string') {
+        throw new Error('clipboardPlainText and copiedNotePlainText must be strings');
+    }
 
-    const hasNoteClipboardHtml = clipboardHtmlContainsNoteContent(clipboardHtml);
+    const hasNoteClipboardHtml = isCopiedNotePaste({ clipboardMode, clipboardHtml, clipboardPlainText, copiedNotePlainText });
     if (clipboardMode === 'note' && noteClipboardRequiresBrowserValidation) {
         if (hasNoteClipboardHtml) {
             return {

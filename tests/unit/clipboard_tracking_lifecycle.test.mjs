@@ -8,11 +8,12 @@ const source = readFileSync(new URL('../../app/static/js/modules/mode-manager/ev
 const helpers = source.slice(source.indexOf('function markSystemClipboardAsTrusted('), source.indexOf('function handleKeyDown('));
 
 function harness() {
-    const state = ApplicationState.createFields('clipboard-test', { clipboardMode: 'system', noteClipboardRequiresBrowserValidation: false });
+    const state = ApplicationState.createFields('clipboard-test', { clipboardMode: 'system', noteClipboardRequiresBrowserValidation: false, copiedNotePlainText: '' });
     const context = { get clipboardMode() { return state.clipboardMode; }, setClipboardMode(mode) { state.clipboardMode = mode; } };
     const handlers = new Function('moduleState', 'ModeContext', 'resolveClipboardTrackingAfterPasteEvent', `${helpers}\nreturn {
-        system: markSystemClipboardAsTrusted, note: markNoteClipboardAsTrusted,
-        invalidate: invalidateTrustedNoteClipboard, paste: syncClipboardTrackingFromPasteEventHtml,
+        system: markSystemClipboardAsTrusted, note: () => markNoteClipboardAsTrusted('Copied note'),
+        invalidate: invalidateTrustedNoteClipboard, paste: (html) => syncClipboardTrackingFromPasteEvent(html, 'Pasted text'),
+        plainPaste: (text) => syncClipboardTrackingFromPasteEvent('', text),
     };`)(state, context, resolveClipboardTrackingAfterPasteEvent);
     return {state, ...handlers};
 }
@@ -41,5 +42,16 @@ test('blur plus visibility loss invalidate once and browser paste revalidates in
     h.invalidate();
     assert.equal(h.paste('<p>External</p>'), false);
     assert.equal(h.state.clipboardMode, 'system');
+    assert.equal(h.state.noteClipboardRequiresBrowserValidation, false);
+});
+
+
+test('a Paste and Match Style paste (⇧⌘V) of the copied note is the note, of other text is text', () => {
+    const h = harness();
+    h.note();
+    assert.equal(h.plainPaste('Copied note'), true);
+    assert.equal(h.plainPaste('Words from a dictation app'), false);
+    h.invalidate();
+    assert.equal(h.plainPaste('Copied note'), true);
     assert.equal(h.state.noteClipboardRequiresBrowserValidation, false);
 });

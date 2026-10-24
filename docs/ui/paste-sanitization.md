@@ -19,6 +19,13 @@
   pasted: only that marker pastes the copied note. Another app's `⌘V` (a
   dictation app typing words, for example) pastes its text, even right after a
   note was copied and with no window switch in between.
+- `⇧⌘V` pastes the copied note as a child. In Chrome it is the browser's Paste and
+  Match Style, whose paste carries the clipboard's plain text only, without the
+  marker: a plain-text paste is the copied note when its text is exactly the plain
+  text the copy or cut put on the clipboard and MetaList's clipboard still holds a
+  note (`clipboard-shortcut-policy-service.js`). Broken from 0.21.0 to 0.24.1: the
+  marker alone decided, so `⇧⌘V` pasted the note's text into the selected note. The
+  reference-paste browser suite sends `⇧⌘V` as Paste and Match Style, as Chrome does.
 - The structural note clipboard is process-local. If a server restart expires it,
   note paste reports that the note must be copied again instead of returning an
   internal-server error.

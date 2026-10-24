@@ -171,6 +171,9 @@ const NO_BACKLINKS_BANNER_SECONDS = 3;
 const moduleState = ApplicationState.createFields('keyboard-events', {
     savedEditingSelection: null,
     noteClipboardRequiresBrowserValidation: false,
+    // The plain text the last note copy or cut put on the clipboard: a paste that
+    // carries only it (⇧⌘V, Paste and Match Style) is that note.
+    copiedNotePlainText: '',
     tabDragCandidateId: null,
     draggedTabId: null,
     ignoreClickAfterTabDragUntil: null,
@@ -248,7 +251,23 @@ function markSystemClipboardAsTrusted() {
     }
 }
 
-function markNoteClipboardAsTrusted() {
+// The plain text a note copy puts on the clipboard (note-clipboard-write-service.js):
+// a note rendered without it writes empty text.
+function copiedPlainText(copyResult) {
+    if (!copyResult || typeof copyResult !== 'object') {
+        throw new Error('A note copy needs the rendered note');
+    }
+    if (copyResult.plain_text === null || copyResult.plain_text === undefined) return '';
+    if (typeof copyResult.plain_text !== 'string') throw new Error('A copied note\'s plain text must be text');
+    return copyResult.plain_text;
+}
+
+function markNoteClipboardAsTrusted(copiedNotePlainText) {
+    if (typeof copiedNotePlainText !== 'string') {
+        throw new Error('markNoteClipboardAsTrusted requires the plain text the copy wrote');
+    }
+    // Copying the same note again writes the same text.
+    if (moduleState.copiedNotePlainText !== copiedNotePlainText) moduleState.copiedNotePlainText = copiedNotePlainText;
     if (moduleState.noteClipboardRequiresBrowserValidation) {
         moduleState.noteClipboardRequiresBrowserValidation = false;
     }
@@ -280,11 +299,13 @@ function handleVisibilityChange() {
     invalidateTrustedNoteClipboard();
 }
 
-function syncClipboardTrackingFromPasteEventHtml(clipboardHtml) {
+function syncClipboardTrackingFromPasteEvent(clipboardHtml, clipboardPlainText) {
     const resolved = resolveClipboardTrackingAfterPasteEvent({
         clipboardMode: ModeContext.clipboardMode,
         noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
         clipboardHtml,
+        clipboardPlainText,
+        copiedNotePlainText: moduleState.copiedNotePlainText,
     });
     // Paste observes browser contents, including repeated pastes of trusted data.
     if (moduleState.noteClipboardRequiresBrowserValidation !== resolved.noteClipboardRequiresBrowserValidation) {
@@ -1266,7 +1287,7 @@ async function handleCopyNoteShortcut(event) {
     if (copyResult === null) {
         return;
     }
-    markNoteClipboardAsTrusted();
+    markNoteClipboardAsTrusted(copiedPlainText(copyResult));
 
     const copiedNoteId = copyResult?.note_id;
     if (typeof copiedNoteId === 'string' && copiedNoteId.length > 0) {
@@ -1458,8 +1479,10 @@ async function handleCutNoteShortcut(event) {
     if (decision === null || decision === 'cancelled') {
         return;
     }
+    let cutPlainText = '';
     const cutResult = await CommandGate.run('keyboard.cut_note', async () => {
         const copyResult = await actionCopyNoteById(currentNoteId);
+        cutPlainText = copiedPlainText(copyResult);
         const renderedHtml = copyResult?.html;
         const renderedPlainText = copyResult?.plain_text;
 
@@ -1480,7 +1503,7 @@ async function handleCutNoteShortcut(event) {
     if (cutResult === null) {
         return;
     }
-    markNoteClipboardAsTrusted();
+    markNoteClipboardAsTrusted(cutPlainText);
 }
 
 
@@ -2900,7 +2923,7 @@ function handlePasteEvent(event) {
     // pasted HTML loses them in the sanitizer, link by link.
     const rawPlainText = event.clipboardData.getData('text/plain');
     const plainText = cleanTrackingInText(rawPlainText);
-    const hasTrackedNoteClipboardHtml = syncClipboardTrackingFromPasteEventHtml(html);
+    const hasTrackedNoteClipboardHtml = syncClipboardTrackingFromPasteEvent(html, rawPlainText);
     const hasClipboardPayload = (
         imageFiles.length > 0
         || hasTrackedNoteClipboardHtml

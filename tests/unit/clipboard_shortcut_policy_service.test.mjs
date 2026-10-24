@@ -12,6 +12,8 @@ test('demotes stale note clipboard tracking when actual paste contents are exter
         clipboardMode: 'note',
         noteClipboardRequiresBrowserValidation: true,
         clipboardHtml: '',
+        clipboardPlainText: 'Words from a dictation app',
+        copiedNotePlainText: 'Copied note',
     });
 
     assert.deepEqual(resolved, {
@@ -26,6 +28,8 @@ test('does not mistake ordinary copied note content for an explicit copied note'
         clipboardMode: 'system',
         noteClipboardRequiresBrowserValidation: false,
         clipboardHtml: '<div class="note-content"><a href="https://example.com">Example</a></div>',
+        clipboardPlainText: 'Example',
+        copiedNotePlainText: '',
     });
 
     assert.deepEqual(resolved, {
@@ -40,6 +44,8 @@ test('keeps note clipboard tracking when actual paste contents still contain a M
         clipboardMode: 'note',
         noteClipboardRequiresBrowserValidation: true,
         clipboardHtml: '<div data-metalist-note-clipboard="true"><div class="note-content">Copied note</div></div>',
+        clipboardPlainText: 'Copied note',
+        copiedNotePlainText: 'Copied note',
     });
 
     assert.deepEqual(resolved, {
@@ -47,6 +53,35 @@ test('keeps note clipboard tracking when actual paste contents still contain a M
         noteClipboardRequiresBrowserValidation: false,
         hasNoteClipboardHtml: true,
     });
+});
+
+// ⇧⌘V is the browser's Paste and Match Style: its paste carries the plain text only.
+test('a plain-text paste of exactly what the note copy wrote is the copied note', () => {
+    for (const noteClipboardRequiresBrowserValidation of [false, true]) {
+        const resolved = resolveClipboardTrackingAfterPasteEvent({
+            clipboardMode: 'note', noteClipboardRequiresBrowserValidation, clipboardHtml: '',
+            clipboardPlainText: 'First line\r\nSecond line', copiedNotePlainText: 'First line\nSecond line',
+        });
+        assert.deepEqual(resolved, {
+            clipboardMode: 'note', noteClipboardRequiresBrowserValidation: false, hasNoteClipboardHtml: true,
+        });
+    }
+});
+
+test('a plain-text paste of other text, or after a text copy, is text', () => {
+    assert.equal(resolveClipboardTrackingAfterPasteEvent({
+        clipboardMode: 'note', noteClipboardRequiresBrowserValidation: false, clipboardHtml: '',
+        clipboardPlainText: 'Words from a dictation app', copiedNotePlainText: 'Copied note',
+    }).hasNoteClipboardHtml, false);
+    assert.equal(resolveClipboardTrackingAfterPasteEvent({
+        clipboardMode: 'system', noteClipboardRequiresBrowserValidation: false, clipboardHtml: '',
+        clipboardPlainText: 'Copied note', copiedNotePlainText: 'Copied note',
+    }).hasNoteClipboardHtml, false);
+    // A note with no text (an image alone) cannot be told apart from an empty paste.
+    assert.equal(resolveClipboardTrackingAfterPasteEvent({
+        clipboardMode: 'note', noteClipboardRequiresBrowserValidation: false, clipboardHtml: '',
+        clipboardPlainText: '', copiedNotePlainText: '',
+    }).hasNoteClipboardHtml, false);
 });
 
 test('creates a top note when clipboard content is pasted with no active note', () => {

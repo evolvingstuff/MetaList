@@ -5,6 +5,10 @@ README. Changes made after the newest listed version are not described here.
 Compare with installed_version from the help lookup to tell the user whether
 they already have a release. Version info offers updates (see the data topic).
 
+## 0.24.2
+
+- ⇧⌘V pastes a copied note as a child again. Since 0.21.0, in Chrome, it put the copied note's text into the selected note instead.
+
 ## 0.24.1
 
 - **Security updates.** pypdf 6.21.2 fixes three ways a crafted PDF could keep MetaList busy for a long time; MetaList reads PDFs only when the AI opens one on the web (web access is off unless you turn it on). Mako 1.4.2 fixes a Windows template-path issue MetaList does not reach. Tooling used only to build and test MetaList is updated too (filelock, setuptools, zod).
