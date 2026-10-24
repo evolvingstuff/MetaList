@@ -356,7 +356,7 @@ class TabStateStore:
             self._try_decrypt_locked(token="", require_success=True)
             if tab_id not in self._tabs:
                 raise InputRejected("tab_id must reference an existing tab")
-            if tab_id not in self._file_filters:
+            if tab_id not in self._file_filters:  # shockharness: ignore[DEF002] reason="a tab without a Files filter shows every note: None is that, as get_date_filter's None is every date"
                 return None
             return self._file_filters[tab_id]
 
